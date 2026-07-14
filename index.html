@@ -1,0 +1,71 @@
+<div id="lobby">
+
+<h1>
+Giochi Societa - Gioco dell'Oca
+</h1>
+
+<input id="nome" placeholder="Inserisci nome giocatore">
+
+
+<h2>Scegli la stanza</h2>
+
+
+<button onclick="entraStanza('BAR')">
+BAR
+</button>
+
+
+<button onclick="entraStanza('PUB')">
+PUB
+</button>
+
+
+<button onclick="entraStanza('DISCOPUB')">
+DISCOPUB
+</button>
+
+
+<button onclick="entraStanza('SERATE')">
+SERATE
+</button>
+
+
+</div>
+
+
+
+<div id="gioco" style="display:none">
+
+<h2 id="nomeStanza"></h2>
+
+
+<h3>Giocatori presenti:</h3>
+
+<div id="lista"></div>
+
+
+<div id="tabellone">
+
+</div>
+
+
+<button onclick="dado()">
+🎲 Tira dado
+</button>
+
+
+</div>
+
+
+<script src="gioco.js"></script>
+
+<script>
+
+function entraStanza(nome){
+
+    window.location.href =
+    "lobby.html?stanza=" + encodeURIComponent(nome);
+
+}
+
+</script>
