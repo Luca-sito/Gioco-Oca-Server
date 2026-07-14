@@ -11,22 +11,22 @@ Giochi Societa - Gioco dell'Oca
 
 
 <button onclick="entraStanza('BAR')">
-🍺 Bar
+BAR
 </button>
 
 
 <button onclick="entraStanza('PUB')">
-🍻 Pub
+PUB
 </button>
 
 
 <button onclick="entraStanza('DISCOPUB')">
-🎧 Discopub
+DISCOPUB
 </button>
 
 
 <button onclick="entraStanza('SERATE')">
-🎉 Serate
+SERATE
 </button>
 
 
@@ -58,3 +58,14 @@ Giochi Societa - Gioco dell'Oca
 
 
 <script src="gioco.js"></script>
+
+<script>
+
+function entraStanza(nome){
+
+    window.location.href =
+    "lobby.html?stanza=" + encodeURIComponent(nome);
+
+}
+
+</script>

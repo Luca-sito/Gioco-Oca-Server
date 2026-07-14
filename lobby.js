@@ -1,45 +1,69 @@
 let socket;
 
-let tipoPartita = "pubblica";
+let tipoPartita="pubblica";
 
 
-// CAMBIO TIPO PARTITA
+const parametri =
+new URLSearchParams(
+window.location.search
+);
 
-function tipo(tipo){
 
-    tipoPartita = tipo;
+const stanza =
+parametri.get("stanza") || "BAR";
+
+
+
+document.getElementById("nomeStanza").innerHTML =
+"🏠 "+stanza;
+
+
+
+let nomeGiocatore =
+localStorage.getItem("nickname");
+
+
+if(!nomeGiocatore){
+
+nomeGiocatore =
+prompt(
+"Come vuoi essere chiamato?",
+"Giocatore"
+);
+
+
+localStorage.setItem(
+"nickname",
+nomeGiocatore
+);
 
 }
 
 
 
-// COLLEGAMENTO SERVER
 
 socket = new WebSocket(
-    "ws://localhost:3000"
+location.origin.replace("http","ws")
 );
 
 
 
-socket.onopen = ()=>{
+socket.onopen=()=>{
 
 
-    console.log(
-        "Connesso alla lobby"
-    );
+console.log("Connesso");
 
 
-    // Entrata stanza
+socket.send(JSON.stringify({
 
-    socket.send(JSON.stringify({
+tipo:"entraLobby",
 
-        tipo:"entraLobby",
+stanza:stanza,
 
-        stanza:"PUB",
+nome:nomeGiocatore
 
-        nome:"Giocatore"
+}));
 
-    }));
 
 
 };
@@ -47,60 +71,36 @@ socket.onopen = ()=>{
 
 
 
-// RICEZIONE DATI SERVER
+
+socket.onmessage=(msg)=>{
 
 
-socket.onmessage = (msg)=>{
-
-
-    let dati =
-    JSON.parse(msg.data);
-
-
-
-    // PARTITE DISPONIBILI
-
-    if(dati.tipo==="listaPartite"){
-
-
-        mostraPartite(
-            dati.partite
-        );
-
-
-    }
+let dati =
+JSON.parse(msg.data);
 
 
 
-    // CHAT
+if(dati.tipo==="online"){
 
 
-    if(dati.tipo==="chat"){
+document.getElementById("online").innerHTML =
+dati.numero;
 
 
-        aggiungiMessaggio(
-            dati.nome,
-            dati.testo
-        );
-
-
-    }
+}
 
 
 
-    // UTENTI ONLINE
+if(dati.tipo==="chat"){
 
 
-    if(dati.tipo==="online"){
+aggiungiMessaggio(
+dati.nome,
+dati.testo
+);
 
 
-        document.getElementById(
-            "online"
-        ).innerHTML =
-        dati.numero;
-
-
-    }
+}
 
 
 
@@ -112,210 +112,68 @@ socket.onmessage = (msg)=>{
 
 
 
-// CREAZIONE PARTITA
+function tipo(t){
+
+tipoPartita=t;
+
+}
+
+
 
 
 function creaPartita(){
 
 
-    let tempo =
-    document.getElementById(
-        "tempo"
-    ).value;
+socket.send(JSON.stringify({
+
+tipo:"creaPartita",
+
+tempo:
+document.getElementById("tempo").value,
 
 
-
-    let punti =
-    document.getElementById(
-        "punti"
-    ).value;
+punti:
+document.getElementById("punti").value,
 
 
+modalita:
+tipoPartita
 
 
-    socket.send(JSON.stringify({
-
-
-        tipo:"creaPartita",
-
-
-        tempo:tempo,
-
-
-        punti:punti,
-
-
-        modalita:
-        tipoPartita
-
-
-
-    }));
-
+}));
 
 
 }
 
 
 
-
-
-
-// VISUALIZZA PARTITE
-
-
-function mostraPartite(lista){
-
-
-    let html="";
-
-
-
-    if(lista.length===0){
-
-
-        html=
-        "<p>Nessuna partita disponibile</p>";
-
-
-    }
-
-
-
-    lista.forEach(
-    partita=>{
-
-
-        html += `
-
-
-        <div class="partita">
-
-
-        🎲 ${partita.creatore}
-
-
-        <br>
-
-
-        ${partita.modalita==="privata"?
-        "🔒 Privata":
-        "🔓 Pubblica"}
-
-
-
-        <br>
-
-
-        ⏱ ${partita.tempo} secondi
-
-
-        <br>
-
-
-        🏆 ${partita.punti} punti
-
-
-        <br><br>
-
-
-        <button onclick="entraPartita('${partita.id}')">
-
-        Entra
-
-        </button>
-
-
-        </div>
-
-
-        `;
-
-
-
-    });
-
-
-
-    document.getElementById(
-        "partite"
-    ).innerHTML=html;
-
-
-
-}
-
-
-
-
-
-
-
-// ENTRA PARTITA
-
-
-function entraPartita(id){
-
-
-    socket.send(JSON.stringify({
-
-
-        tipo:"entraPartita",
-
-
-        id:id
-
-
-    }));
-
-
-}
-
-
-
-
-
-
-
-// CHAT
 
 
 function inviaChat(){
 
 
-    let testo =
-    document.getElementById(
-        "messaggio"
-    ).value;
+let testo =
+document.getElementById("messaggio").value;
+
+
+if(testo==="") return;
 
 
 
-    if(testo==="")
-    return;
+socket.send(JSON.stringify({
+
+tipo:"chat",
+
+testo:testo
 
 
-
-    socket.send(JSON.stringify({
-
-
-        tipo:"chat",
+}));
 
 
-        testo:testo
-
-
-    }));
-
-
-
-    document.getElementById(
-        "messaggio"
-    ).value="";
-
+document.getElementById("messaggio").value="";
 
 
 }
-
 
 
 
@@ -324,30 +182,20 @@ function inviaChat(){
 function aggiungiMessaggio(nome,testo){
 
 
-
-    let chat =
-    document.getElementById(
-        "chat"
-    );
+let chat =
+document.getElementById("chat");
 
 
-
-    chat.innerHTML += `
-
-    <div class="messaggio">
-
-    <b>${nome}</b>:
-    ${testo}
-
-    </div>
+chat.innerHTML +=
+`
+<div>
+<b>${nome}</b>: ${testo}
+</div>
+`;
 
 
-    `;
-
-
-
-    chat.scrollTop =
-    chat.scrollHeight;
+chat.scrollTop =
+chat.scrollHeight;
 
 
 }

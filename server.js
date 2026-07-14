@@ -1,116 +1,101 @@
-
 const express = require("express");
 const http = require("http");
 const WebSocket = require("ws");
+const path = require("path");
 
 const app = express();
-const fs = require("fs");
 
-console.log("Cartella server:", __dirname);
-console.log("Contenuto:", fs.readdirSync(__dirname));
-
-app.use(express.static("public"));
+app.use(express.static(path.join(__dirname, "public")));
 
 const server = http.createServer(app);
 
 const wss = new WebSocket.Server({
-    server: server
+    server
 });
 
-server.listen(process.env.PORT || 3000, () => {
-    console.log("Server online");
-});
-
-let giocatori = [];
-
-let partite = [];
+const PORT = process.env.PORT || 3000;
 
 
-
-wss.on("connection",(socket)=>{
-
-
-console.log("Nuovo giocatore");
-
-
-
-socket.on("message",(msg)=>{
-
-
-let dati = JSON.parse(msg);
-
-
-
-if(dati.tipo==="entraLobby"){
-
-
-socket.nome=dati.nome;
-socket.stanza=dati.stanza;
-
-
-
-giocatori.push(socket);
-
-
-
-aggiornaOnline();
-
-
-}
-
-
-
-if(dati.tipo==="chat"){
-
-
-inviaAStanza({
-
-tipo:"chat",
-nome:socket.nome,
-testo:dati.testo
-
-},socket.stanza);
-
-
-
-}
-
-
-
-if(dati.tipo==="creaPartita"){
-
-
-let partita={
-
-id:Date.now(),
-
-creatore:socket.nome,
-
-stanza:socket.stanza,
-
-giocatori:[
-socket.nome
-],
-
-massimoGiocatori:
-dati.massimoGiocatori,
-
-tempo:
-dati.tempo
-
+let stanze = {
+    BAR: [],
+    PUB: [],
+    DISCOPUB: [],
+    SERATE: []
 };
 
 
+wss.on("connection", socket => {
 
-partite.push(partita);
-
-
-
-inviaPartite(socket.stanza);
+    let stanza = null;
+    let nome = null;
 
 
-}
+    socket.on("message", msg => {
 
+        const dati = JSON.parse(msg);
+
+
+        if(dati.tipo === "entraLobby"){
+
+            stanza = dati.stanza;
+            nome = dati.nome;
+
+
+            if(!stanze[stanza]){
+                stanze[stanza] = [];
+            }
+
+
+            stanze[stanza].push({
+                nome,
+                socket
+            });
+
+
+            aggiornaOnline(stanza);
+
+        }
+
+
+
+        if(dati.tipo === "chat"){
+
+            mandaStanza(stanza,{
+                tipo:"chat",
+                nome,
+                testo:dati.testo
+            });
+
+        }
+
+
+
+        if(dati.tipo === "creaPartita"){
+
+            mandaStanza(stanza,{
+                tipo:"listaPartite",
+                partite:[]
+            });
+
+        }
+
+
+    });
+
+
+
+    socket.on("close",()=>{
+
+        if(stanza){
+
+            stanze[stanza] =
+            stanze[stanza].filter(g=>g.socket!==socket);
+
+            aggiornaOnline(stanza);
+
+        }
+
+    });
 
 
 });
@@ -118,118 +103,41 @@ inviaPartite(socket.stanza);
 
 
 
+function aggiornaOnline(stanza){
 
-socket.on("close",()=>{
+    mandaStanza(stanza,{
+        tipo:"online",
+        numero:stanze[stanza].length
+    });
+
+}
 
 
-giocatori =
-giocatori.filter(
-g=>g!==socket
+
+function mandaStanza(stanza,dati){
+
+    if(!stanze[stanza]) return;
+
+
+    stanze[stanza].forEach(g=>{
+
+        if(g.socket.readyState===WebSocket.OPEN){
+
+            g.socket.send(JSON.stringify(dati));
+
+        }
+
+    });
+
+}
+
+
+
+
+server.listen(PORT,()=>{
+
+console.log(
+"Server avviato sulla porta "+PORT
 );
 
-
-
-aggiornaOnline();
-
-
 });
-
-
-
-});
-
-
-
-
-
-function aggiornaOnline(){
-
-
-let lista=giocatori.map(
-g=>g.nome
-);
-
-
-
-giocatori.forEach(g=>{
-
-
-g.send(JSON.stringify({
-
-tipo:"aggiornamento",
-
-numero:lista.length,
-
-giocatori:lista
-
-}));
-
-});
-
-
-}
-
-
-
-
-
-function inviaPartite(stanza){
-
-
-let lista =
-partite.filter(
-p=>p.stanza===stanza
-);
-
-
-
-giocatori.forEach(g=>{
-
-
-if(g.stanza===stanza){
-
-
-g.send(JSON.stringify({
-
-tipo:"listaPartite",
-
-partite:lista
-
-}));
-
-
-}
-
-
-});
-
-
-}
-
-
-
-
-function inviaAStanza(msg,stanza){
-
-
-giocatori.forEach(g=>{
-
-
-if(g.stanza===stanza){
-
-
-g.send(JSON.stringify(msg));
-
-
-}
-
-
-});
-
-
-}
-
-
-
-
-
