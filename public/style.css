@@ -1,0 +1,100 @@
+body{
+
+    background:#101820;
+
+    color:white;
+
+    font-family:Arial, sans-serif;
+
+    text-align:center;
+
+}
+
+
+
+#lobby,
+#gioco{
+
+    width:500px;
+
+    margin:50px auto;
+
+    padding:30px;
+
+    background:#1e2a38;
+
+    border-radius:20px;
+
+}
+
+
+
+h1{
+
+    color:#ffd700;
+
+}
+
+
+
+input{
+
+
+    display:block;
+
+    margin:15px auto;
+
+    padding:12px;
+
+    width:250px;
+
+    border-radius:10px;
+
+    border:none;
+
+}
+
+
+
+button{
+
+
+    padding:15px 30px;
+
+    background:#ffd700;
+
+    color:#111;
+
+    border:none;
+
+    border-radius:10px;
+
+    cursor:pointer;
+
+    font-size:18px;
+
+
+}
+
+
+
+button:hover{
+
+    background:#ffaa00;
+
+}
+
+
+
+#tabellone{
+
+
+    height:300px;
+
+    background:#246b3c;
+
+    border-radius:15px;
+
+    margin:20px;
+
+}

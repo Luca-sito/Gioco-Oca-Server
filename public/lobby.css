@@ -1,0 +1,297 @@
+*{
+    box-sizing:border-box;
+    font-family:Arial, sans-serif;
+}
+
+
+
+body{
+
+    margin:0;
+    background:#f2f2f2;
+
+}
+
+
+
+/* CONTENITORE PRINCIPALE */
+
+.contenitore{
+
+    display:flex;
+    height:100vh;
+    gap:5px;
+    padding:5px;
+
+}
+
+
+
+/* COLONNE */
+
+.sinistra,
+.centro,
+.destra{
+
+    background:white;
+    border:2px solid #ff6600;
+    border-radius:5px;
+    overflow:hidden;
+
+}
+
+
+
+/* SINISTRA */
+
+.sinistra{
+
+    width:25%;
+
+}
+
+
+
+.centro{
+
+    width:50%;
+
+}
+
+
+
+.destra{
+
+    width:25%;
+
+}
+
+
+
+
+h2{
+
+    margin:0;
+    padding:12px;
+    background:#111;
+    color:white;
+    text-align:center;
+    font-size:18px;
+
+}
+
+
+
+
+/* BOX COMANDI */
+
+.box{
+
+    padding:15px;
+
+}
+
+
+
+.box p{
+
+    font-weight:bold;
+
+}
+
+
+
+select,
+button,
+input{
+
+    width:100%;
+    padding:10px;
+    margin-bottom:10px;
+    border-radius:5px;
+    border:1px solid #ccc;
+    font-size:15px;
+
+}
+
+
+
+button{
+
+    cursor:pointer;
+    background:#333;
+    color:white;
+    font-weight:bold;
+
+}
+
+
+
+button:hover{
+
+    opacity:0.8;
+
+}
+
+
+
+.crea{
+
+    background:#ffc400;
+    color:#000;
+
+}
+
+
+
+
+
+/* PARTITE */
+
+#partite{
+
+    height:45%;
+    overflow-y:auto;
+    padding:10px;
+
+}
+
+
+
+.partita{
+
+    border:1px solid #ddd;
+    padding:12px;
+    margin-bottom:10px;
+    border-radius:8px;
+    background:#fafafa;
+
+}
+
+
+
+.partita:hover{
+
+    background:#eee;
+
+}
+
+
+
+
+
+/* CHAT */
+
+#chat{
+
+    height:35%;
+    border-top:1px solid #ddd;
+    padding:10px;
+    overflow-y:auto;
+    background:#fff;
+
+}
+
+
+
+.messaggio{
+
+    padding:5px;
+    border-bottom:1px dashed #ddd;
+
+}
+
+
+
+
+#messaggio{
+
+    width:75%;
+    display:inline-block;
+
+}
+
+
+
+#messaggio+button{
+
+    width:23%;
+    display:inline-block;
+
+}
+
+
+
+
+
+/* DESTRA TOP PLAYERS */
+
+
+#top{
+
+    padding:10px;
+
+}
+
+
+
+.giocatore{
+
+    display:flex;
+    align-items:center;
+    padding:10px;
+    border-bottom:1px dashed #ccc;
+
+}
+
+
+
+.avatar{
+
+    width:40px;
+    height:40px;
+    border-radius:50%;
+    background:#ddd;
+    margin-right:10px;
+
+}
+
+
+
+
+
+#online{
+
+    color:#00a000;
+    font-size:25px;
+    font-weight:bold;
+
+}
+
+
+
+
+
+/* RESPONSIVE */
+
+@media(max-width:900px){
+
+
+.contenitore{
+
+    flex-direction:column;
+
+}
+
+
+
+.sinistra,
+.centro,
+.destra{
+
+    width:100%;
+
+}
+
+
+}
