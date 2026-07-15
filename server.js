@@ -160,10 +160,10 @@ function inviaConteggioStanze() {
 
   for (const nome in stanze) {
 
-    conteggi[nome] =
-      Object.keys(stanze[nome].giocatoriOnline).length;
-
-  }
+conteggi[nome] = {
+    numero: Object.keys(stanze[nome].giocatoriOnline).length,
+    giocatori: Object.values(stanze[nome].giocatoriOnline)
+};
 
 
   const messaggio = JSON.stringify({
