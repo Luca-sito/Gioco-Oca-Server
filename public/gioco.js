@@ -99,6 +99,46 @@ function mostraDadi(valore1, valore2) {
   document.getElementById("dado2").innerHTML = creaFacciaDado(valore2);
 }
 
+function animaLancioDadi(valoreFinale1, valoreFinale2, callback) {
+  const dado1El = document.getElementById("dado1");
+  const dado2El = document.getElementById("dado2");
+  dado1El.classList.add("dado-rotola");
+  dado2El.classList.add("dado-rotola");
+
+  let cicli = 0;
+  const intervallo = setInterval(() => {
+    const casuale1 = Math.floor(Math.random() * 6) + 1;
+    const casuale2 = Math.floor(Math.random() * 6) + 1;
+    dado1El.innerHTML = creaFacciaDado(casuale1);
+    dado2El.innerHTML = creaFacciaDado(casuale2);
+    cicli++;
+    if (cicli >= 8) {
+      clearInterval(intervallo);
+      dado1El.classList.remove("dado-rotola");
+      dado2El.classList.remove("dado-rotola");
+      mostraDadi(valoreFinale1, valoreFinale2);
+      if (callback) callback();
+    }
+  }, 80);
+}
+
+function schiarisciColore(hex, percentuale) {
+  return mescolaColore(hex, 255, percentuale);
+}
+function scuriscColore(hex, percentuale) {
+  return mescolaColore(hex, 0, percentuale);
+}
+function mescolaColore(hex, target, percentuale) {
+  const num = parseInt(hex.replace("#", ""), 16);
+  let r = (num >> 16) & 255;
+  let g = (num >> 8) & 255;
+  let b = num & 255;
+  r = Math.round(r + (target - r) * (percentuale / 100));
+  g = Math.round(g + (target - g) * (percentuale / 100));
+  b = Math.round(b + (target - b) * (percentuale / 100));
+  return `rgb(${r},${g},${b})`;
+}
+
 function connetti() {
   socket = new WebSocket("wss://gioco-oca-server.onrender.com");
 
@@ -116,28 +156,20 @@ function connetti() {
   };
 
   socket.onmessage = (msg) => {
-    const dati = JSON.parse(msg.data);
+if (dati.tipo === "aggiornamentoPartita") {
+      animaLancioDadi(dati.dado1, dati.dado2, () => {
+        ultimoStatoGiocatori = dati.giocatori;
+        disegnaGiocatori();
+        document.getElementById("messaggi-gioco").textContent =
+          "🎲 " + dati.dado1 + " + " + dati.dado2 + " = " + dati.valoreDado +
+          (dati.messaggi.length ? " — " + dati.messaggi.join(" ") : "");
 
-    if (dati.tipo === "statoPartita") {
-      ultimoStatoGiocatori = dati.giocatori;
-      disegnaGiocatori();
-      aggiornaTurno(dati.turnoDiNome);
-      mostraDadi(1, 1);
-    }
-
-    if (dati.tipo === "aggiornamentoPartita") {
-      ultimoStatoGiocatori = dati.giocatori;
-      disegnaGiocatori();
-      mostraDadi(dati.dado1, dati.dado2);
-      document.getElementById("messaggi-gioco").textContent =
-        "🎲 " + dati.dado1 + " + " + dati.dado2 + " = " + dati.valoreDado +
-        (dati.messaggi.length ? " — " + dati.messaggi.join(" ") : "");
-
-      if (dati.vittoria) {
-        mostraVittoria(dati.vincitore);
-      } else {
-        aggiornaTurno(dati.turnoDiNome);
-      }
+        if (dati.vittoria) {
+          mostraVittoria(dati.vincitore);
+        } else {
+          aggiornaTurno(dati.turnoDiNome);
+        }
+      });
     }
 
     if (dati.tipo === "errore") {
@@ -173,6 +205,7 @@ function disegnaGiocatori() {
 
   ultimoStatoGiocatori.forEach((giocatore, indice) => {
     const colore = coloriGiocatori[indice % coloriGiocatori.length];
+    const idGradiente = "gradPedina" + indice;
     const casella = giocatore.posizione === 0 ? { x: 100, y: 1900 } : posizioniCaselle[giocatore.posizione];
     if (!casella) return;
 
@@ -181,10 +214,20 @@ function disegnaGiocatori() {
     pedina.style.left = (casella.x * scaleX) + "px";
     pedina.style.top = (casella.y * scaleY) + "px";
     pedina.innerHTML = `
-      <svg width="22" height="30" viewBox="0 0 30 40">
-        <ellipse cx="15" cy="32" rx="10" ry="4" fill="rgba(0,0,0,0.25)"/>
-        <path d="M15 2 C22 2 27 9 27 16 C27 24 15 38 15 38 C15 38 3 24 3 16 C3 9 8 2 15 2 Z"
-              fill="${colore}" stroke="#000" stroke-opacity="0.5" stroke-width="1.5"/>
+      <svg width="26" height="38" viewBox="0 0 34 48">
+        <defs>
+          <radialGradient id="${idGradiente}" cx="35%" cy="25%" r="75%">
+            <stop offset="0%" stop-color="${schiarisciColore(colore, 55)}"/>
+            <stop offset="55%" stop-color="${colore}"/>
+            <stop offset="100%" stop-color="${scuriscColore(colore, 35)}"/>
+          </radialGradient>
+        </defs>
+        <ellipse cx="17" cy="44" rx="12" ry="3.5" fill="rgba(0,0,0,0.3)"/>
+        <ellipse cx="17" cy="42" rx="11" ry="4" fill="${scuriscColore(colore, 25)}"/>
+        <path d="M17 42 C10 42 4 40 4 37 L10 15 C10 15 12 12 17 12 C22 12 24 15 24 15 L30 37 C30 40 24 42 17 42 Z"
+              fill="url(#${idGradiente})" stroke="${scuriscColore(colore, 45)}" stroke-width="0.8"/>
+        <circle cx="17" cy="9" r="7.5" fill="url(#${idGradiente})" stroke="${scuriscColore(colore, 45)}" stroke-width="0.8"/>
+        <ellipse cx="14" cy="6" rx="2.5" ry="1.8" fill="rgba(255,255,255,0.55)"/>
       </svg>
     `;
     container.appendChild(pedina);
