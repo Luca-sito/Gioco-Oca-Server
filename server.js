@@ -28,6 +28,7 @@ let stanze = {
 
 let contatoreId = 0;
 const socketsPerId = {};
+let osservatori = new Set();
 
 function calcolaMovimento(posizioneAttuale, valoreDado) {
   let nuovaPosizione = posizioneAttuale + valoreDado;
@@ -202,6 +203,11 @@ inviaAllaStanza(
         numero:Object.keys(stanze[stanzaAttuale].giocatoriOnline).length
     }
 );
+
+if (dati.tipo === "osservaConteggi") {
+      osservatori.add(socket);
+      inviaConteggiOsservatori();
+    }
 
     if (dati.tipo === "riprendiPartita") {
       const trovato = trovaPartita(dati.partitaId);
