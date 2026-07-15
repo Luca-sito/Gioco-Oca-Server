@@ -75,6 +75,30 @@ let socket;
 let ultimoStatoGiocatori = [];
 let mioTurno = false;
 
+function creaFacciaDado(valore) {
+  const posizioniPip = {
+    1: [[50, 50]],
+    2: [[25, 25], [75, 75]],
+    3: [[25, 25], [50, 50], [75, 75]],
+    4: [[25, 25], [75, 25], [25, 75], [75, 75]],
+    5: [[25, 25], [75, 25], [50, 50], [25, 75], [75, 75]],
+    6: [[25, 25], [75, 25], [25, 50], [75, 50], [25, 75], [75, 75]]
+  };
+  const colorePip = (valore === 1 || valore === 4) ? "#e53935" : "#222";
+  const pips = posizioniPip[valore].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="8" fill="${colorePip}"/>`).join("");
+  return `
+    <svg width="55" height="55" viewBox="0 0 100 100">
+      <rect x="4" y="4" width="92" height="92" rx="14" fill="#fff" stroke="#ccc" stroke-width="3"/>
+      ${pips}
+    </svg>
+  `;
+}
+
+function mostraDadi(valore1, valore2) {
+  document.getElementById("dado1").innerHTML = creaFacciaDado(valore1);
+  document.getElementById("dado2").innerHTML = creaFacciaDado(valore2);
+}
+
 function connetti() {
   socket = new WebSocket("wss://gioco-oca-server.onrender.com");
 
@@ -98,13 +122,16 @@ function connetti() {
       ultimoStatoGiocatori = dati.giocatori;
       disegnaGiocatori();
       aggiornaTurno(dati.turnoDiNome);
+      mostraDadi(1, 1);
     }
 
     if (dati.tipo === "aggiornamentoPartita") {
       ultimoStatoGiocatori = dati.giocatori;
       disegnaGiocatori();
+      mostraDadi(dati.dado1, dati.dado2);
       document.getElementById("messaggi-gioco").textContent =
-        "🎲 " + dati.valoreDado + (dati.messaggi.length ? " — " + dati.messaggi.join(" ") : "");
+        "🎲 " + dati.dado1 + " + " + dati.dado2 + " = " + dati.valoreDado +
+        (dati.messaggi.length ? " — " + dati.messaggi.join(" ") : "");
 
       if (dati.vittoria) {
         mostraVittoria(dati.vincitore);
@@ -125,11 +152,11 @@ function aggiornaTurno(nomeDiTurno) {
     ? "🎲 È il tuo turno!"
     : "⏳ Turno di: " + nomeDiTurno;
 
-  const dadi = document.getElementById("dadi");
+  const areaDadi = document.getElementById("area-dadi");
   if (mioTurno) {
-    dadi.classList.remove("disabilitato");
+    areaDadi.classList.remove("disabilitato");
   } else {
-    dadi.classList.add("disabilitato");
+    areaDadi.classList.add("disabilitato");
   }
 }
 
@@ -157,14 +184,14 @@ function disegnaGiocatori() {
       <svg width="22" height="30" viewBox="0 0 30 40">
         <ellipse cx="15" cy="32" rx="10" ry="4" fill="rgba(0,0,0,0.25)"/>
         <path d="M15 2 C22 2 27 9 27 16 C27 24 15 38 15 38 C15 38 3 24 3 16 C3 9 8 2 15 2 Z"
-              fill="${colore}" stroke="#000" stroke-opacity="0.3" stroke-width="1.5"/>
+              fill="${colore}" stroke="#000" stroke-opacity="0.5" stroke-width="1.5"/>
       </svg>
     `;
     container.appendChild(pedina);
 
     const riga = document.createElement("div");
     riga.className = "giocatore-riga";
-    riga.innerHTML = `<span style="color:${colore}">●</span> ${giocatore.nome} (casella ${giocatore.posizione})`;
+    riga.innerHTML = `<span style="color:${colore}; text-shadow:0 0 1px #000;">●</span> ${giocatore.nome} (casella ${giocatore.posizione})`;
     listaLista.appendChild(riga);
   });
 }
@@ -178,9 +205,10 @@ function tornaAllaLobby() {
   window.location.href = `lobby.html?stanza=${stanza}`;
 }
 
-document.getElementById("dadi").onclick = () => {
+document.getElementById("area-dadi").onclick = () => {
   if (!mioTurno) return;
   socket.send(JSON.stringify({ tipo: "tiraDadi", partitaId: partitaId }));
 };
 
+mostraDadi(1, 1);
 connetti();
