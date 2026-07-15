@@ -253,7 +253,45 @@ wss.on("connection", (socket) => {
 
       }
 
-      
+
+
+      stanzaAttuale = dati.stanza;
+
+      nickname = dati.nome;
+
+
+
+      stanze[stanzaAttuale].giocatoriOnline[socketId] = nickname;
+
+
+
+      // aggiorna tutti i giocatori online
+
+      inviaConteggioStanze();
+
+
+
+      inviaAllaStanza(
+
+        stanzaAttuale,
+
+        {
+
+          tipo:"online",
+
+          numero:Object.keys(
+            stanze[stanzaAttuale].giocatoriOnline
+          ).length
+
+        }
+
+      );
+
+
+      return;
+
+    }
+
     stanzaAttuale = dati.stanza;
     nickname = dati.nome || "Giocatore";
 
@@ -413,10 +451,6 @@ function inviaListaPartite(nomeStanza) {
     id: p.id, creatore: p.creatore, tempo: p.tempo, punti: p.punti,
     modalita: p.modalita, maxGiocatori: p.maxGiocatori, numGiocatoriAttuali: Object.keys(p.giocatori).length
   }));
-  inviaAllaStanza(nomeStanza, { tipo: "listaPartite", partite: lista });
-}
-
-server.listen(PORT, () => console.log("Server avviato sulla porta " + PORT));
   inviaAllaStanza(nomeStanza, { tipo: "listaPartite", partite: lista });
 }
 
