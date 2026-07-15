@@ -372,6 +372,25 @@ if (dati.tipo === "creaPartita") {
       if (!partita) return;
       if (Object.keys(partita.giocatori).length >= partita.maxGiocatori) return;
 
+
+if (partita.modalita === "privata") {
+
+  if (dati.codicePrivato !== partita.codicePrivato) {
+
+    socket.send(JSON.stringify({
+
+      tipo: "errore",
+
+      messaggio: "Codice privato errato!"
+
+    }));
+
+    return;
+
+  }
+
+}
+
       partita.giocatori[socketId] = { nome: nickname, posizione: 0, socket, turniSaltati: 0 };
       partita.ordineGiocatori.push(socketId);
       inviaListaPartite(stanzaAttuale);
