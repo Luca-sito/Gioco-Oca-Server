@@ -252,7 +252,8 @@ inviaAllaStanza(stanzaAttuale, {
 inviaListaPartite(stanzaAttuale);
 
 return;
-
+      
+}
 
       if (!dati.stanza || !stanze[dati.stanza]) {
 
