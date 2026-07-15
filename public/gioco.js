@@ -64,7 +64,7 @@ const posizioniCaselle = {
   63: { x: 1486, y: 926 }
 };
 
-const coloriGiocatori = ["#e53935", "#1e88e5", "#43a047", "#fdd835", "#8e24aa", "#fb8c00", "#00acc1", "#6d4c41"];
+const coloriGiocatori = ["#6a2c70", "#ffffff", "#1e40af", "#43a047", "#f57c00", "#c0ca33", "#e53935", "#1a1a1a"];
 
 const params = new URLSearchParams(window.location.search);
 const partitaId = params.get("partita");
