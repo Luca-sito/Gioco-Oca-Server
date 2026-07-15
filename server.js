@@ -143,63 +143,148 @@ function passaAlProssimoTurno(partita) {
 function trovaPartita(partitaId) {
   for (const nomeStanza in stanze) {
     if (stanze[nomeStanza].partite[partitaId]) {
-      return { partita: stanze[nomeStanza].partite[partitaId], nomeStanza };
+      return {
+        partita: stanze[nomeStanza].partite[partitaId],
+        nomeStanza
+      };
     }
   }
+
   return null;
 }
 
+
 function inviaConteggioStanze() {
 
-    const conteggi = {};
+  const conteggi = {};
 
-    for (const nome in stanze) {
+  for (const nome in stanze) {
 
-        conteggi[nome] =
-        Object.keys(stanze[nome].giocatoriOnline).length;
+    conteggi[nome] =
+      Object.keys(stanze[nome].giocatoriOnline).length;
+
+  }
+
+
+  const messaggio = JSON.stringify({
+    tipo: "conteggioStanze",
+    stanze: conteggi
+  });
+
+
+  wss.clients.forEach(client => {
+
+    if (client.readyState === WebSocket.OPEN) {
+
+      client.send(messaggio);
 
     }
 
-    const messaggio = JSON.stringify({
-
-        tipo: "conteggioStanze",
-
-        stanze: conteggi
-
-    });
-
-    wss.clients.forEach(client => {
-
-        if (client.readyState === WebSocket.OPEN) {
-
-            client.send(messaggio);
-
-        }
-
-    });
+  });
 
 }
 
 
+
 wss.on("connection", (socket) => {
+
   const socketId = "s" + (contatoreId++);
+
   socketsPerId[socketId] = socket;
+
+
   let stanzaAttuale = null;
   let nickname = null;
 
+
+
   socket.on("message", (message) => {
 
+
     let dati;
-    try { dati = JSON.parse(message); } catch (e) { return; }
 
-if (dati.tipo === "entra") {
+    try {
 
-    if (!dati.stanza || !stanze[dati.stanza]) {
+      dati = JSON.parse(message);
+
+    } catch(e) {
+
+      return;
+
+    }
+
+
+
+    // INVIA IL CONTEGGIO QUANDO UNA PAGINA SI COLLEGA
+
+    if (dati.tipo === "richiediConteggio") {
+
+      inviaConteggioStanze();
+
+      return;
+
+    }
+
+
+
+
+    // ENTRATA IN UNA STANZA
+
+    if (dati.tipo === "entra") {
+
+
+      if (!dati.stanza || !stanze[dati.stanza]) {
+
+
         socket.send(JSON.stringify({
-            tipo:"errore",
-            messaggio:"Stanza inesistente"
+
+          tipo:"errore",
+
+          messaggio:"Stanza inesistente"
+
         }));
+
         return;
+
+      }
+
+
+
+      stanzaAttuale = dati.stanza;
+
+      nickname = dati.nome;
+
+
+
+      stanze[stanzaAttuale].giocatoriOnline[socketId] = nickname;
+
+
+
+      // aggiorna tutti i giocatori online
+
+      inviaConteggioStanze();
+
+
+
+      inviaAllaStanza(
+
+        stanzaAttuale,
+
+        {
+
+          tipo:"online",
+
+          numero:Object.keys(
+            stanze[stanzaAttuale].giocatoriOnline
+          ).length
+
+        }
+
+      );
+
+
+      return;
+
     }
 
     stanzaAttuale = dati.stanza;
@@ -225,7 +310,7 @@ if (dati.tipo === "entra") {
 
 
     return;
-}
+
 
     if (dati.tipo === "riprendiPartita") {
       const trovato = trovaPartita(dati.partitaId);
