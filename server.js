@@ -239,118 +239,35 @@ if (dati.tipo === "entraLobby") {
       }));
     }
 
-if (dati.tipo === "creaPartita") {
-
-  if (!stanzaAttuale) return;
 
 
-  const haGiaCreato = Object.values(stanze[stanzaAttuale].partite)
-    .some(p => p.creatoDa === socketId);
+      const partitaId = "p" + Date.now() + Math.floor(Math.random() * 1000);
+      stanze[stanzaAttuale].partite[partitaId] = {
+        id: partitaId,
+        creatore: nickname,
+        creatoDa: socketId,
+        tempo: dati.tempo,
+        punti: dati.punti,
+modalita: dati.modalita,
 
+codicePrivato: dati.modalita === "privata"
+? dati.codicePrivato
+: null,
 
-  if (haGiaCreato) {
-
-    socket.send(JSON.stringify({
-
-      tipo: "errore",
-
-      messaggio: "Hai già una partita attiva."
-
-    }));
-
-    return;
-
-  }
-
-
-
-  // Controllo codice partita privata
-
-  if (dati.modalita === "privata") {
-
-
-    if (!dati.codicePrivato || dati.codicePrivato.trim() === "") {
-
-
-      socket.send(JSON.stringify({
-
-        tipo: "errore",
-
-        messaggio: "Devi inserire un codice per la partita privata."
-
-      }));
-
-      return;
-
+maxGiocatori: parseInt(dati.maxGiocatori) || 2,
+        giocatori: { [socketId]: { nome: nickname, posizione: 0, socket, turniSaltati: 0 } },
+        ordineGiocatori: [socketId],
+        turnoAttuale: 0,
+        iniziata: false
+      };
+      inviaListaPartite(stanzaAttuale);
     }
-
-  }
-
-
-
-
-
-  const partitaId = "p" + Date.now() + Math.floor(Math.random() * 1000);
-
-
-
-  stanze[stanzaAttuale].partite[partitaId] = {
-
-    id: partitaId,
-    creatore: nickname,
-    creatoDa: socketId,
-    tempo: dati.tempo,
-    punti: dati.punti,
-    modalita: dati.modalita,
-
-    codicePrivato:
-      dati.modalita === "privata"
-      ? dati.codicePrivato.trim()
-      : null,
-
-    maxGiocatori: parseInt(dati.maxGiocatori) || 2,
-
-    giocatori: {
-      [socketId]: {
-        nome: nickname,
-        posizione: 0,
-        socket,
-        turniSaltati: 0
-      }
-    },
-
-    ordineGiocatori: [socketId],
-    turnoAttuale: 0,
-    iniziata: false
-  };
-
-  inviaListaPartite(stanzaAttuale);
-}
 
     if (dati.tipo === "entraPartita") {
       if (!stanzaAttuale) return;
       const partita = stanze[stanzaAttuale].partite[dati.id];
       if (!partita) return;
       if (Object.keys(partita.giocatori).length >= partita.maxGiocatori) return;
-
-
-if (partita.modalita === "privata") {
-
-  if (dati.codicePrivato !== partita.codicePrivato) {
-
-    socket.send(JSON.stringify({
-
-      tipo: "errore",
-
-      messaggio: "Codice privato errato!"
-
-    }));
-
-    return;
-
-  }
-
-}
 
       partita.giocatori[socketId] = { nome: nickname, posizione: 0, socket, turniSaltati: 0 };
       partita.ordineGiocatori.push(socketId);
