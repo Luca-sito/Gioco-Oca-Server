@@ -1,0 +1,87 @@
+* { box-sizing: border-box; }
+body {
+  background: #101820;
+  color: #eee;
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 20px;
+}
+
+#turno-banner {
+  background: #1e2a38;
+  color: #ffd700;
+  text-align: center;
+  padding: 12px;
+  border-radius: 10px;
+  font-weight: bold;
+  font-size: 18px;
+  margin-bottom: 15px;
+}
+
+#area-tabellone {
+  position: relative;
+  max-width: 900px;
+  margin: 0 auto 20px;
+}
+#immagine-tabellone {
+  width: 100%;
+  display: block;
+  border-radius: 12px;
+}
+#contenitore-pedine {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+}
+.pedina {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  transition: left 0.5s ease, top 0.5s ease;
+}
+
+#pannello-controlli {
+  max-width: 900px;
+  margin: 0 auto;
+  background: #1e2a38;
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+}
+
+#lista-giocatori { margin-bottom: 15px; }
+.giocatore-riga { display: inline-block; margin: 0 10px; font-size: 14px; }
+
+#area-dadi {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  cursor: pointer;
+  padding: 10px;
+}
+#area-dadi.disabilitato {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+#dado1, #dado2 {
+  transition: transform 0.15s;
+}
+#area-dadi:not(.disabilitato):hover #dado1,
+#area-dadi:not(.disabilitato):hover #dado2 {
+  transform: scale(1.08);
+}
+
+#messaggi-gioco { margin-top: 15px; color: #ffd700; font-size: 14px; min-height: 20px; }
+
+.overlay {
+  display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.8); align-items: center; justify-content: center; z-index: 1000;
+}
+.overlay.aperto { display: flex; }
+.popup-vittoria {
+  background: #1e2a38; border: 2px solid #ffd700; border-radius: 12px; padding: 40px; text-align: center;
+}
+.popup-vittoria button {
+  margin-top: 20px; padding: 12px 24px; background: #ffd700; border: none;
+  border-radius: 8px; font-weight: bold; cursor: pointer;
+}

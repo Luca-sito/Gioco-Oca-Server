@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Gioco dell'Oca - Partita</title>
+<link rel="stylesheet" href="gioco.css">
+</head>
+<body>
+
+<div id="turno-banner">Caricamento...</div>
+
+<div id="area-tabellone">
+  <img id="immagine-tabellone" src="immagini/tabellone.png" alt="Tabellone">
+  <div id="contenitore-pedine"></div>
+</div>
+
+<div id="pannello-controlli">
+  <div id="lista-giocatori"></div>
+  <div id="area-dadi" title="Clicca per tirare">
+    <div id="dado1"></div>
+    <div id="dado2"></div>
+  </div>
+  <div id="messaggi-gioco"></div>
+</div>
+
+<div id="overlay-vittoria" class="overlay">
+  <div class="popup-vittoria">
+    <h2 id="testo-vincitore"></h2>
+    <button onclick="tornaAllaLobby()">Torna alla Lobby</button>
+  </div>
+</div>
+
+<script src="gioco.js"></script>
+</body>
+</html>
