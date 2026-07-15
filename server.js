@@ -191,33 +191,17 @@ wss.on("connection", (socket) => {
     let dati;
     try { dati = JSON.parse(message); } catch (e) { return; }
 
-if (dati.tipo === "entraLobby") {
+stanze[stanzaAttuale].giocatoriOnline[socketId] = nickname;
 
-    stanzaAttuale = dati.stanza;
-    nickname = dati.nome;
+inviaConteggioStanze();
 
-    if (!stanze[stanzaAttuale]) {
-        stanze[stanzaAttuale] = {
-            giocatoriOnline: {},
-            partite: {}
-        };
+inviaAllaStanza(
+    stanzaAttuale,
+    {
+        tipo:"online",
+        numero:Object.keys(stanze[stanzaAttuale].giocatoriOnline).length
     }
-
-    stanze[stanzaAttuale].giocatoriOnline[socketId] = nickname;
-
-    inviaConteggioStanze();
-
-    inviaAllaStanza(stanzaAttuale, {
-        tipo: "online",
-        numero: Object.keys(stanze[stanzaAttuale].giocatoriOnline).length
-    });
-
-    socket.send(JSON.stringify({
-        tipo: "listaPartite",
-        partite: Object.values(stanze[stanzaAttuale].partite)
-    }));
-
-}
+);
 
     if (dati.tipo === "riprendiPartita") {
       const trovato = trovaPartita(dati.partitaId);
@@ -239,7 +223,13 @@ if (dati.tipo === "entraLobby") {
       }));
     }
 
-
+    if (dati.tipo === "creaPartita") {
+      if (!stanzaAttuale) return;
+      const haGiaCreato = Object.values(stanze[stanzaAttuale].partite).some(p => p.creatoDa === socketId);
+      if (haGiaCreato) {
+        socket.send(JSON.stringify({ tipo: "errore", messaggio: "Hai già una partita attiva." }));
+        return;
+      }
 
       const partitaId = "p" + Date.now() + Math.floor(Math.random() * 1000);
       stanze[stanzaAttuale].partite[partitaId] = {
@@ -248,13 +238,8 @@ if (dati.tipo === "entraLobby") {
         creatoDa: socketId,
         tempo: dati.tempo,
         punti: dati.punti,
-modalita: dati.modalita,
-
-codicePrivato: dati.modalita === "privata"
-? dati.codicePrivato
-: null,
-
-maxGiocatori: parseInt(dati.maxGiocatori) || 2,
+        modalita: dati.modalita,
+        maxGiocatori: parseInt(dati.maxGiocatori) || 2,
         giocatori: { [socketId]: { nome: nickname, posizione: 0, socket, turniSaltati: 0 } },
         ordineGiocatori: [socketId],
         turnoAttuale: 0,
