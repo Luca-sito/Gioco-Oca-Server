@@ -296,72 +296,35 @@ if (dati.tipo === "creaPartita") {
 
   stanze[stanzaAttuale].partite[partitaId] = {
 
-
     id: partitaId,
-
-
     creatore: nickname,
-
-
     creatoDa: socketId,
-
-
     tempo: dati.tempo,
-
-
     punti: dati.punti,
-
-
     modalita: dati.modalita,
-
-
-
-    // Salva il codice solo se privata
 
     codicePrivato:
       dati.modalita === "privata"
       ? dati.codicePrivato.trim()
       : null,
 
-
-
     maxGiocatori: parseInt(dati.maxGiocatori) || 2,
 
-
-
     giocatori: {
-
       [socketId]: {
-
         nome: nickname,
-
         posizione: 0,
-
         socket,
-
         turniSaltati: 0
-
       }
-
     },
 
-
-
     ordineGiocatori: [socketId],
-
-
     turnoAttuale: 0,
-
-
     iniziata: false
-
-
   };
 
-
-
   inviaListaPartite(stanzaAttuale);
-
 }
 
     if (dati.tipo === "entraPartita") {
