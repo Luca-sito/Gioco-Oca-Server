@@ -237,6 +237,22 @@ wss.on("connection", (socket) => {
 
     if (dati.tipo === "entra") {
 
+stanzaAttuale = dati.stanza;
+nickname = dati.nome;
+
+stanze[stanzaAttuale].giocatoriOnline[socketId] = nickname;
+
+inviaConteggioStanze();
+
+inviaAllaStanza(stanzaAttuale, {
+    tipo: "online",
+    numero: Object.keys(stanze[stanzaAttuale].giocatoriOnline).length
+});
+
+inviaListaPartite(stanzaAttuale);
+
+return;
+
 
       if (!dati.stanza || !stanze[dati.stanza]) {
 
@@ -253,65 +269,6 @@ wss.on("connection", (socket) => {
 
       }
 
-
-
-      stanzaAttuale = dati.stanza;
-
-      nickname = dati.nome;
-
-
-
-      stanze[stanzaAttuale].giocatoriOnline[socketId] = nickname;
-
-
-
-      // aggiorna tutti i giocatori online
-
-      inviaConteggioStanze();
-
-
-
-      inviaAllaStanza(
-
-        stanzaAttuale,
-
-        {
-
-          tipo:"online",
-
-          numero:Object.keys(
-            stanze[stanzaAttuale].giocatoriOnline
-          ).length
-
-        }
-
-      );
-
-
-      return;
-
-    }
-
-        stanzaAttuale = dati.stanza;
-    nickname = dati.nome || "Giocatore";
-
-
-    stanze[stanzaAttuale].giocatoriOnline[socketId] = nickname;
-
-
-    inviaConteggioStanze();
-
-
-    inviaAllaStanza(
-        stanzaAttuale,
-        {
-            tipo:"online",
-            numero:Object.keys(stanze[stanzaAttuale].giocatoriOnline).length
-        }
-    );
-
-
-    inviaListaPartite(stanzaAttuale);
 
     if (dati.tipo === "riprendiPartita") {
       const trovato = trovaPartita(dati.partitaId);
