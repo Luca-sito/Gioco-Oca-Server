@@ -125,7 +125,7 @@ function animaLancioDadi(valoreFinale1, valoreFinale2, callback) {
 function schiarisciColore(hex, percentuale) {
   return mescolaColore(hex, 255, percentuale);
 }
-function scuriscColore(hex, percentuale) {
+function scurisciColore(hex, percentuale) {
   return mescolaColore(hex, 0, percentuale);
 }
 function mescolaColore(hex, target, percentuale) {
@@ -155,27 +155,41 @@ function connetti() {
     setTimeout(connetti, 3000);
   };
 
-  socket.onmessage = (msg) => {
-if (dati.tipo === "aggiornamentoPartita") {
-      animaLancioDadi(dati.dado1, dati.dado2, () => {
-        ultimoStatoGiocatori = dati.giocatori;
-        disegnaGiocatori();
-        document.getElementById("messaggi-gioco").textContent =
-          "🎲 " + dati.dado1 + " + " + dati.dado2 + " = " + dati.valoreDado +
-          (dati.messaggi.length ? " — " + dati.messaggi.join(" ") : "");
+socket.onmessage = (msg) => {
 
-        if (dati.vittoria) {
-          mostraVittoria(dati.vincitore);
-        } else {
-          aggiornaTurno(dati.turnoDiNome);
-        }
-      });
-    }
+  const dati = JSON.parse(msg.data);
 
-    if (dati.tipo === "errore") {
-      alert(dati.messaggio);
-    }
-  };
+  if (dati.tipo === "statoPartita") {
+    ultimoStatoGiocatori = dati.giocatori;
+    disegnaGiocatori();
+    aggiornaTurno(dati.turnoDiNome);
+    mostraDadi(1, 1);
+  }
+
+  if (dati.tipo === "aggiornamentoPartita") {
+    animaLancioDadi(dati.dado1, dati.dado2, () => {
+
+      ultimoStatoGiocatori = dati.giocatori;
+      disegnaGiocatori();
+
+      document.getElementById("messaggi-gioco").textContent =
+        "🎲 " + dati.dado1 + " + " + dati.dado2 + " = " + dati.valoreDado +
+        (dati.messaggi.length ? " — " + dati.messaggi.join(" ") : "");
+
+      if (dati.vittoria) {
+        mostraVittoria(dati.vincitore);
+      } else {
+        aggiornaTurno(dati.turnoDiNome);
+      }
+
+    });
+  }
+
+  if (dati.tipo === "errore") {
+    alert(dati.messaggio);
+  }
+};
+
 }
 
 function aggiornaTurno(nomeDiTurno) {
