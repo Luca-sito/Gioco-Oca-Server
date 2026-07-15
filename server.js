@@ -204,11 +204,6 @@ inviaAllaStanza(
     }
 );
 
-if (dati.tipo === "osservaConteggi") {
-      osservatori.add(socket);
-      inviaConteggiOsservatori();
-    }
-
     if (dati.tipo === "riprendiPartita") {
       const trovato = trovaPartita(dati.partitaId);
       if (!trovato) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Partita non trovata." })); return; }
