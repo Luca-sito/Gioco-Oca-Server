@@ -365,29 +365,6 @@ if (dati.tipo === "creaPartita") {
 
 }
 
-      const partitaId = "p" + Date.now() + Math.floor(Math.random() * 1000);
-      stanze[stanzaAttuale].partite[partitaId] = {
-        id: partitaId,
-        creatore: nickname,
-        creatoDa: socketId,
-        tempo: dati.tempo,
-        punti: dati.punti,
-modalita: dati.modalita,
-
-codicePrivato: dati.modalita === "privata"
-? dati.codicePrivato
-: null,
-
-    maxGiocatori: parseInt(dati.maxGiocatori) || 2,
-
-    giocatori: { 
-        [socketId]: { 
-            nome: nickname, 
-            posizione: 0, 
-            socket, 
-            turniSaltati: 0 
-        } 
-    },
 
     if (dati.tipo === "entraPartita") {
       if (!stanzaAttuale) return;
