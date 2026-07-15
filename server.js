@@ -292,6 +292,27 @@ wss.on("connection", (socket) => {
 
     }
 
+        stanzaAttuale = dati.stanza;
+    nickname = dati.nome || "Giocatore";
+
+
+    stanze[stanzaAttuale].giocatoriOnline[socketId] = nickname;
+
+
+    inviaConteggioStanze();
+
+
+    inviaAllaStanza(
+        stanzaAttuale,
+        {
+            tipo:"online",
+            numero:Object.keys(stanze[stanzaAttuale].giocatoriOnline).length
+        }
+    );
+
+
+    inviaListaPartite(stanzaAttuale);
+
     if (dati.tipo === "riprendiPartita") {
       const trovato = trovaPartita(dati.partitaId);
       if (!trovato) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Partita non trovata." })); return; }
