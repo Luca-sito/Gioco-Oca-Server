@@ -1,224 +1,200 @@
 <!DOCTYPE html>
 <html lang="it">
-
 <head>
-
 <meta charset="UTF-8">
-
-<title>
-Gioco di Società - Lobby
-</title>
-
-<link rel="stylesheet" href="lobby.css">
-
+<title>Gioco di Società - Lobby</title>
+<style>
+*{ box-sizing:border-box; font-family:Arial, sans-serif; }
+body{ margin:0; background:#f2f2f2; }
+.contenitore{ display:flex; height:100vh; gap:5px; padding:5px; }
+.sinistra, .centro, .destra{ background:white; border:2px solid #ff6600; border-radius:5px; overflow:hidden; }
+.sinistra{ width:25%; }
+.centro{ width:50%; }
+.destra{ width:25%; }
+h2{ margin:0; padding:12px; background:#111; color:white; text-align:center; font-size:18px; }
+.box{ padding:15px; }
+.box p{ font-weight:bold; }
+select, button, input{ width:100%; padding:10px; margin-bottom:10px; border-radius:5px; border:1px solid #ccc; font-size:15px; }
+button{ cursor:pointer; background:#333; color:white; font-weight:bold; }
+button:hover{ opacity:0.8; }
+.crea{ background:#ffc400; color:#000; }
+#partite{ height:45%; overflow-y:auto; padding:10px; }
+.partita{ border:1px solid #ddd; padding:12px; margin-bottom:10px; border-radius:8px; background:#fafafa; }
+.partita button{ background:#ff6600; color:#fff; margin-top:8px; }
+.partita button:disabled{ background:#ccc; cursor:not-allowed; }
+#chat{ height:35%; border-top:1px solid #ddd; padding:10px; overflow-y:auto; background:#fff; }
+.messaggio{ padding:5px; border-bottom:1px dashed #ddd; }
+#messaggio{ width:75%; display:inline-block; }
+#messaggio+button{ width:23%; display:inline-block; }
+#top{ padding:10px; }
+#online{ color:#00a000; font-size:25px; font-weight:bold; }
+@media(max-width:900px){
+  .contenitore{ flex-direction:column; }
+  .sinistra, .centro, .destra{ width:100%; }
+}
+</style>
 </head>
-
-
 <body>
-
 
 <div class="contenitore">
 
+  <div class="sinistra">
+    <h2>Opzioni di gioco</h2>
+    <div class="box">
+      <p>Tempo di mossa</p>
+      <select id="tempo">
+        <option value="15">15 secondi</option>
+        <option value="30">30 secondi</option>
+        <option value="60">60 secondi</option>
+      </select>
 
-<!-- SINISTRA -->
+      <p>Punti partita</p>
+      <select id="punti">
+        <option>100</option>
+        <option>150</option>
+        <option>200</option>
+      </select>
 
-<div class="sinistra">
+      <p>Tipo partita</p>
+      <select id="tipoPartita">
+        <option value="pubblica">🔓 Pubblica</option>
+        <option value="privata">🔒 Privata</option>
+      </select>
 
-<h2>
-⚙️ Comandi
-</h2>
+      <button class="crea" onclick="creaPartita()">Crea partita</button>
+    </div>
+  </div>
 
+  <div class="centro">
+    <h2>GIOCO DELL'OCA</h2>
+    <div id="partite">
+      <p>Nessuna partita disponibile</p>
+    </div>
 
-<div class="box">
+    <h2>Chat</h2>
+    <div id="chat"></div>
+    <input id="messaggio" placeholder="Scrivi un messaggio">
+    <button onclick="inviaChat()">Invia</button>
+  </div>
 
-
-<p>
-⏱ Tempo di mossa
-</p>
-
-
-<select id="tempo">
-
-<option value="15">
-15 secondi
-</option>
-
-<option value="30">
-30 secondi
-</option>
-
-<option value="60">
-60 secondi
-</option>
-
-</select>
-
-
-
-<p>
-🏆 Punti partita
-</p>
-
-
-<select id="punti">
-
-<option>
-100
-</option>
-
-<option>
-150
-</option>
-
-<option>
-200
-</option>
-
-</select>
-
-
-
-<p>
-Tipo partita
-</p>
-
-
-<button onclick="tipo('pubblica')">
-🔓 Pubblica
-</button>
-
-
-<button onclick="tipo('privata')">
-🔒 Privata
-</button>
-
-
-<br><br>
-
-
-<button class="crea"
-onclick="creaPartita()">
-
-Crea partita
-
-</button>
-
+  <div class="destra">
+    <h2>🏆 Top giocatori</h2>
+    <div id="top">Caricamento...</div>
+    <hr>
+    <h2 id="nomeStanza">STANZA</h2>
+    <h3>👥 <span id="online">0</span> online</h3>
+  </div>
 
 </div>
 
-</div>
-
-
-
-
-
-<!-- CENTRO -->
-
-<div class="centro">
-
-
-<h2>
-Partite
-</h2>
-
-
-<div id="partite">
-
-
-<p>
-Nessuna partita disponibile
-</p>
-
-
-</div>
-
-
-
-
-<h2>
-Chat
-</h2>
-
-
-
-<div id="chat">
-
-
-</div>
-
-
-
-<input id="messaggio"
-placeholder="Scrivi un messaggio">
-
-
-<button onclick="inviaChat()">
-
-Invia
-
-</button>
-
-
-
-</div>
-
-
-
-
-
-
-
-<!-- DESTRA -->
-
-
-<div class="destra">
-
-
-<h2>
-⭐ Top Players
-</h2>
-
-
-<div id="top">
-
-Caricamento...
-
-</div>
-
-
-
-<hr>
-
-
-
-<h2 id="nomeStanza">
-STANZA
-</h2>
-
-
-
-<h3>
-
-👥
-
-<span id="online">
-0
-</span>
-
-online
-
-</h3>
-
-
-
-</div>
-
-
-
-
-</div>
-
-
+<script>
+let socket;
+
+const parametri = new URLSearchParams(window.location.search);
+const stanza = parametri.get("stanza") || "BAR";
+
+document.getElementById("nomeStanza").innerHTML = "🏠 " + stanza;
+
+let nomeGiocatore = localStorage.getItem("nickname");
+if (!nomeGiocatore) {
+  nomeGiocatore = prompt("Come vuoi essere chiamato?", "Giocatore") || "Giocatore";
+  localStorage.setItem("nickname", nomeGiocatore);
+}
+
+socket = new WebSocket("wss://gioco-oca-server.onrender.com");
+
+socket.onopen = () => {
+  console.log("Connesso");
+  socket.send(JSON.stringify({
+    tipo: "entraLobby",
+    stanza: stanza,
+    nome: nomeGiocatore
+  }));
+};
+
+socket.onclose = () => {
+  console.log("Disconnesso, riprovo tra 3 secondi...");
+  setTimeout(() => location.reload(), 3000);
+};
+
+socket.onmessage = (msg) => {
+  let dati = JSON.parse(msg.data);
+
+  if (dati.tipo === "online") {
+    document.getElementById("online").innerHTML = dati.numero;
+  }
+
+  if (dati.tipo === "chat") {
+    aggiungiMessaggio(dati.nome, dati.testo);
+  }
+
+  if (dati.tipo === "listaPartite") {
+    mostraPartite(dati.partite);
+  }
+
+  if (dati.tipo === "errore") {
+    alert(dati.messaggio);
+  }
+
+  if (dati.tipo === "partitaAvviata") {
+    localStorage.setItem('partitaId', dati.partitaId);
+    window.location.href = `gioco.html?partita=${dati.partitaId}&stanza=${stanza}`;
+  }
+};
+
+function creaPartita() {
+  const tipoPartita = document.getElementById("tipoPartita").value;
+  socket.send(JSON.stringify({
+    tipo: "creaPartita",
+    tempo: document.getElementById("tempo").value,
+    punti: document.getElementById("punti").value,
+    modalita: tipoPartita
+  }));
+}
+
+function mostraPartite(lista) {
+  let html = "";
+  if (lista.length === 0) {
+    html = "<p>Nessuna partita disponibile</p>";
+  }
+  lista.forEach(partita => {
+    const piena = partita.numGiocatoriAttuali >= partita.maxGiocatori;
+    html += `
+    <div class="partita">
+      🎲 ${partita.creatore}<br>
+      ${partita.modalita === "privata" ? "🔒 Privata" : "🔓 Pubblica"}<br>
+      ⏱ ${partita.tempo} secondi<br>
+      🏆 ${partita.punti} punti<br>
+      👥 ${partita.numGiocatoriAttuali} su ${partita.maxGiocatori}<br>
+      <button onclick="entraPartita('${partita.id}')" ${piena ? 'disabled' : ''}>
+        ${piena ? 'Piena' : 'Entra'}
+      </button>
+    </div>
+    `;
+  });
+  document.getElementById("partite").innerHTML = html;
+}
+
+function entraPartita(id) {
+  socket.send(JSON.stringify({ tipo: "entraPartita", id: id }));
+}
+
+function inviaChat() {
+  let testo = document.getElementById("messaggio").value;
+  if (testo === "") return;
+  socket.send(JSON.stringify({ tipo: "chat", testo: testo }));
+  document.getElementById("messaggio").value = "";
+}
+
+function aggiungiMessaggio(nome, testo) {
+  let chat = document.getElementById("chat");
+  chat.innerHTML += `<div class="messaggio"><b>${nome}</b>: ${testo}</div>`;
+  chat.scrollTop = chat.scrollHeight;
+}
+</script>
+
+</body>
+</html>
 
 <script src="lobby.js"></script>
 
