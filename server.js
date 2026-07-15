@@ -149,6 +149,38 @@ function trovaPartita(partitaId) {
   return null;
 }
 
+function inviaConteggioStanze() {
+
+    const conteggi = {};
+
+    for (const nome in stanze) {
+
+        conteggi[nome] =
+        Object.keys(stanze[nome].giocatoriOnline).length;
+
+    }
+
+    const messaggio = JSON.stringify({
+
+        tipo: "conteggioStanze",
+
+        stanze: conteggi
+
+    });
+
+    wss.clients.forEach(client => {
+
+        if (client.readyState === WebSocket.OPEN) {
+
+            client.send(messaggio);
+
+        }
+
+    });
+
+}
+
+
 wss.on("connection", (socket) => {
   const socketId = "s" + (contatoreId++);
   socketsPerId[socketId] = socket;
@@ -159,15 +191,33 @@ wss.on("connection", (socket) => {
     let dati;
     try { dati = JSON.parse(message); } catch (e) { return; }
 
-    if (dati.tipo === "entraLobby") {
-      stanzaAttuale = dati.stanza;
-      nickname = dati.nome;
-      if (!stanze[stanzaAttuale]) stanze[stanzaAttuale] = { giocatoriOnline: {}, partite: {} };
-      stanze[stanzaAttuale].giocatoriOnline[socketId] = nickname;
+if (dati.tipo === "entraLobby") {
 
-      inviaAllaStanza(stanzaAttuale, { tipo: "online", numero: Object.keys(stanze[stanzaAttuale].giocatoriOnline).length });
-      socket.send(JSON.stringify({ tipo: "listaPartite", partite: Object.values(stanze[stanzaAttuale].partite) }));
+    stanzaAttuale = dati.stanza;
+    nickname = dati.nome;
+
+    if (!stanze[stanzaAttuale]) {
+        stanze[stanzaAttuale] = {
+            giocatoriOnline: {},
+            partite: {}
+        };
     }
+
+    stanze[stanzaAttuale].giocatoriOnline[socketId] = nickname;
+
+    inviaConteggioStanze();
+
+    inviaAllaStanza(stanzaAttuale, {
+        tipo: "online",
+        numero: Object.keys(stanze[stanzaAttuale].giocatoriOnline).length
+    });
+
+    socket.send(JSON.stringify({
+        tipo: "listaPartite",
+        partite: Object.values(stanze[stanzaAttuale].partite)
+    }));
+
+}
 
     if (dati.tipo === "riprendiPartita") {
       const trovato = trovaPartita(dati.partitaId);
@@ -189,13 +239,131 @@ wss.on("connection", (socket) => {
       }));
     }
 
-    if (dati.tipo === "creaPartita") {
-      if (!stanzaAttuale) return;
-      const haGiaCreato = Object.values(stanze[stanzaAttuale].partite).some(p => p.creatoDa === socketId);
-      if (haGiaCreato) {
-        socket.send(JSON.stringify({ tipo: "errore", messaggio: "Hai già una partita attiva." }));
-        return;
+if (dati.tipo === "creaPartita") {
+
+  if (!stanzaAttuale) return;
+
+
+  const haGiaCreato = Object.values(stanze[stanzaAttuale].partite)
+    .some(p => p.creatoDa === socketId);
+
+
+  if (haGiaCreato) {
+
+    socket.send(JSON.stringify({
+
+      tipo: "errore",
+
+      messaggio: "Hai già una partita attiva."
+
+    }));
+
+    return;
+
+  }
+
+
+
+  // Controllo codice partita privata
+
+  if (dati.modalita === "privata") {
+
+
+    if (!dati.codicePrivato || dati.codicePrivato.trim() === "") {
+
+
+      socket.send(JSON.stringify({
+
+        tipo: "errore",
+
+        messaggio: "Devi inserire un codice per la partita privata."
+
+      }));
+
+      return;
+
+    }
+
+  }
+
+
+
+
+
+  const partitaId = "p" + Date.now() + Math.floor(Math.random() * 1000);
+
+
+
+  stanze[stanzaAttuale].partite[partitaId] = {
+
+
+    id: partitaId,
+
+
+    creatore: nickname,
+
+
+    creatoDa: socketId,
+
+
+    tempo: dati.tempo,
+
+
+    punti: dati.punti,
+
+
+    modalita: dati.modalita,
+
+
+
+    // Salva il codice solo se privata
+
+    codicePrivato:
+      dati.modalita === "privata"
+      ? dati.codicePrivato.trim()
+      : null,
+
+
+
+    maxGiocatori: parseInt(dati.maxGiocatori) || 2,
+
+
+
+    giocatori: {
+
+      [socketId]: {
+
+        nome: nickname,
+
+        posizione: 0,
+
+        socket,
+
+        turniSaltati: 0
+
       }
+
+    },
+
+
+
+    ordineGiocatori: [socketId],
+
+
+    turnoAttuale: 0,
+
+
+    iniziata: false
+
+
+  };
+
+
+
+  inviaListaPartite(stanzaAttuale);
+
+
+}
 
       const partitaId = "p" + Date.now() + Math.floor(Math.random() * 1000);
       stanze[stanzaAttuale].partite[partitaId] = {
@@ -204,8 +372,13 @@ wss.on("connection", (socket) => {
         creatoDa: socketId,
         tempo: dati.tempo,
         punti: dati.punti,
-        modalita: dati.modalita,
-        maxGiocatori: parseInt(dati.maxGiocatori) || 2,
+modalita: dati.modalita,
+
+codicePrivato: dati.modalita === "privata"
+? dati.codicePrivato
+: null,
+
+maxGiocatori: parseInt(dati.maxGiocatori) || 2,
         giocatori: { [socketId]: { nome: nickname, posizione: 0, socket, turniSaltati: 0 } },
         ordineGiocatori: [socketId],
         turnoAttuale: 0,
@@ -273,6 +446,7 @@ wss.on("connection", (socket) => {
     if (!stanzaAttuale || !stanze[stanzaAttuale]) return;
 
     delete stanze[stanzaAttuale].giocatoriOnline[socketId];
+    inviaConteggioStanze();
     inviaAllaStanza(stanzaAttuale, { tipo: "online", numero: Object.keys(stanze[stanzaAttuale].giocatoriOnline).length });
 
     const partite = stanze[stanzaAttuale].partite;
