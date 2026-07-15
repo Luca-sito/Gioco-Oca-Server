@@ -20,7 +20,8 @@ body {
 
 #area-tabellone {
   position: relative;
-  max-width: 900px;
+  max-width: 1400px;
+  width: 90%;
   margin: 0 auto 20px;
 }
 #immagine-tabellone {
@@ -40,7 +41,8 @@ body {
 }
 
 #pannello-controlli {
-  max-width: 900px;
+  max-width: 1400px;
+  width: 90%;
   margin: 0 auto;
   background: #1e2a38;
   border-radius: 12px;
@@ -52,23 +54,37 @@ body {
 .giocatore-riga { display: inline-block; margin: 0 10px; font-size: 14px; }
 
 #area-dadi {
+  position: absolute;
+  bottom: 8%;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
-  justify-content: center;
-  gap: 12px;
+  gap: 14px;
   cursor: pointer;
-  padding: 10px;
+  padding: 14px 18px;
+  background: rgba(16, 24, 32, 0.55);
+  border-radius: 16px;
+  backdrop-filter: blur(2px);
+  z-index: 10;
 }
 #area-dadi.disabilitato {
-  opacity: 0.35;
+  opacity: 0.4;
   cursor: not-allowed;
   pointer-events: none;
 }
-#dado1, #dado2 {
-  transition: transform 0.15s;
+#area-dadi:not(.disabilitato):hover {
+  background: rgba(16, 24, 32, 0.75);
 }
-#area-dadi:not(.disabilitato):hover #dado1,
-#area-dadi:not(.disabilitato):hover #dado2 {
-  transform: scale(1.08);
+#dado1, #dado2 {
+  transition: transform 0.08s linear;
+}
+@keyframes rotolaDado {
+  0%   { transform: rotate(0deg) scale(1); }
+  50%  { transform: rotate(180deg) scale(1.15); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+.dado-rotola {
+  animation: rotolaDado 0.15s linear infinite;
 }
 
 #messaggi-gioco { margin-top: 15px; color: #ffd700; font-size: 14px; min-height: 20px; }
@@ -84,4 +100,4 @@ body {
 .popup-vittoria button {
   margin-top: 20px; padding: 12px 24px; background: #ffd700; border: none;
   border-radius: 8px; font-weight: bold; cursor: pointer;
-}
+#area-dadi
