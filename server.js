@@ -362,9 +362,7 @@ if (dati.tipo === "creaPartita") {
 
   inviaListaPartite(stanzaAttuale);
 
-
 }
-
 
     if (dati.tipo === "entraPartita") {
       if (!stanzaAttuale) return;
