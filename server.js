@@ -188,10 +188,15 @@ function inviaConteggioStanze() {
 
 wss.on("connection", (socket) => {
 
+  socket.isAlive = true;
+
+  socket.on("pong", () => {
+    socket.isAlive = true;
+  });
+
+
   const socketId = "s" + (contatoreId++);
-
   socketsPerId[socketId] = socket;
-
 
   let stanzaAttuale = null;
   let nickname = null;
