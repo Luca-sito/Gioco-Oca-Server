@@ -378,14 +378,16 @@ codicePrivato: dati.modalita === "privata"
 ? dati.codicePrivato
 : null,
 
-maxGiocatori: parseInt(dati.maxGiocatori) || 2,
-        giocatori: { [socketId]: { nome: nickname, posizione: 0, socket, turniSaltati: 0 } },
-        ordineGiocatori: [socketId],
-        turnoAttuale: 0,
-        iniziata: false
-      };
-      inviaListaPartite(stanzaAttuale);
-    }
+    maxGiocatori: parseInt(dati.maxGiocatori) || 2,
+
+    giocatori: { 
+        [socketId]: { 
+            nome: nickname, 
+            posizione: 0, 
+            socket, 
+            turniSaltati: 0 
+        } 
+    },
 
     if (dati.tipo === "entraPartita") {
       if (!stanzaAttuale) return;
