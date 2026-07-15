@@ -28,7 +28,6 @@ let stanze = {
 
 let contatoreId = 0;
 const socketsPerId = {};
-let osservatori = new Set();
 
 function calcolaMovimento(posizioneAttuale, valoreDado) {
   let nuovaPosizione = posizioneAttuale + valoreDado;
@@ -189,20 +188,35 @@ wss.on("connection", (socket) => {
   let nickname = null;
 
   socket.on("message", (message) => {
+
     let dati;
     try { dati = JSON.parse(message); } catch (e) { return; }
 
-stanze[stanzaAttuale].giocatoriOnline[socketId] = nickname;
+if (dati.tipo === "entra") {
 
-inviaConteggioStanze();
+    stanzaAttuale = dati.stanza;
+    nickname = dati.nome;
 
-inviaAllaStanza(
-    stanzaAttuale,
-    {
+    if (!stanze[stanzaAttuale]) {
+        socket.send(JSON.stringify({
+            tipo:"errore",
+            messaggio:"Stanza inesistente"
+        }));
+        return;
+    }
+
+    stanze[stanzaAttuale].giocatoriOnline[socketId] = nickname;
+
+    inviaConteggioStanze();
+
+    inviaAllaStanza(stanzaAttuale, {
         tipo:"online",
         numero:Object.keys(stanze[stanzaAttuale].giocatoriOnline).length
-    }
-);
+    });
+
+    return;
+}
+
 
     if (dati.tipo === "riprendiPartita") {
       const trovato = trovaPartita(dati.partitaId);
@@ -248,6 +262,7 @@ inviaAllaStanza(
       };
       inviaListaPartite(stanzaAttuale);
     }
+
 
     if (dati.tipo === "entraPartita") {
       if (!stanzaAttuale) return;
