@@ -194,10 +194,7 @@ wss.on("connection", (socket) => {
 
 if (dati.tipo === "entra") {
 
-    stanzaAttuale = dati.stanza;
-    nickname = dati.nome;
-
-    if (!stanze[stanzaAttuale]) {
+    if (!dati.stanza || !stanze[dati.stanza]) {
         socket.send(JSON.stringify({
             tipo:"errore",
             messaggio:"Stanza inesistente"
@@ -205,18 +202,30 @@ if (dati.tipo === "entra") {
         return;
     }
 
+    stanzaAttuale = dati.stanza;
+    nickname = dati.nome || "Giocatore";
+
+
     stanze[stanzaAttuale].giocatoriOnline[socketId] = nickname;
+
 
     inviaConteggioStanze();
 
-    inviaAllaStanza(stanzaAttuale, {
-        tipo:"online",
-        numero:Object.keys(stanze[stanzaAttuale].giocatoriOnline).length
-    });
+
+    inviaAllaStanza(
+        stanzaAttuale,
+        {
+            tipo:"online",
+            numero:Object.keys(stanze[stanzaAttuale].giocatoriOnline).length
+        }
+    );
+
+
+    inviaListaPartite(stanzaAttuale);
+
 
     return;
 }
-
 
     if (dati.tipo === "riprendiPartita") {
       const trovato = trovaPartita(dati.partitaId);
