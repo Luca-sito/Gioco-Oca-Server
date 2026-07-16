@@ -143,303 +143,14 @@ function passaAlProssimoTurno(partita) {
 function trovaPartita(partitaId) {
   for (const nomeStanza in stanze) {
     if (stanze[nomeStanza].partite[partitaId]) {
-      return {
-        partita: stanze[nomeStanza].partite[partitaId],
-        nomeStanza
-      };
+      return { partita: stanze[nomeStanza].partite[partitaId], nomeStanza };
     }
   }
-
   return null;
 }
 
-
-function inviaConteggioStanze() {
-
-  const conteggi = {};
-
-  for (const nome in stanze) {
-
-    conteggi[nome] =
-      Object.keys(stanze[nome].giocatoriOnline).length;
-
-  }
-
-
-  const messaggio = JSON.stringify({
-    tipo: "conteggioStanze",
-    stanze: conteggi
-  });
-
-
-  wss.clients.forEach(client => {
-
-    if (client.readyState === WebSocket.OPEN) {
-
-      client.send(messaggio);
-
-    }
-
-  });
-
-}
-
-
-
-wss.on("connection", (socket) => {
-
-  socket.isAlive = true;
-
-  socket.on("pong", () => {
-    socket.isAlive = true;
-  });
-
-
-  const socketId = "s" + (contatoreId++);
-  socketsPerId[socketId] = socket;
-
-  let stanzaAttuale = null;
-  let nickname = null;
-
-
-
-  socket.on("message", (message) => {
-
-
-    let dati;
-
-    try {
-
-      dati = JSON.parse(message);
-
-    } catch(e) {
-
-      return;
-
-    }
-
-
-
-    // INVIA IL CONTEGGIO QUANDO UNA PAGINA SI COLLEGA
-
-    if (dati.tipo === "richiediConteggio") {
-
-      inviaConteggioStanze();
-
-      return;
-
-    }
-
-
-
-
-    // ENTRATA IN UNA STANZA
-
-    if (dati.tipo === "entra") {
-
-
-      if (!dati.stanza || !stanze[dati.stanza]) {
-
-
-        socket.send(JSON.stringify({
-
-          tipo:"errore",
-
-          messaggio:"Stanza inesistente"
-
-        }));
-
-        return;
-
-      }
-
-
-
-      stanzaAttuale = dati.stanza;
-
-      nickname = dati.nome;
-
-
-
-      stanze[stanzaAttuale].giocatoriOnline[socketId] = nickname;
-
-
-
-      // aggiorna tutti i giocatori online
-
-      inviaConteggioStanze();
-
-
-
-      inviaAllaStanza(
-
-        stanzaAttuale,
-
-        {
-
-          tipo:"online",
-
-          numero:Object.keys(
-            stanze[stanzaAttuale].giocatoriOnline
-          ).length
-
-        }
-
-      );
-
-
-      return;
-
-    }
-
-    stanzaAttuale = dati.stanza;
-    nickname = dati.nome || "Giocatore";
-
-
-    stanze[stanzaAttuale].giocatoriOnline[socketId] = nickname;
-
-
-    inviaConteggioStanze();
-
-
-    inviaAllaStanza(
-        stanzaAttuale,
-        {
-            tipo:"online",
-            numero:Object.keys(stanze[stanzaAttuale].giocatoriOnline).length
-        }
-    );
-
-
-    inviaListaPartite(stanzaAttuale);
-
-
-    return;
-
-
-    if (dati.tipo === "riprendiPartita") {
-      const trovato = trovaPartita(dati.partitaId);
-      if (!trovato) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Partita non trovata." })); return; }
-      const { partita, nomeStanza } = trovato;
-      stanzaAttuale = nomeStanza;
-      nickname = dati.nome;
-
-      const idEsistente = Object.keys(partita.giocatori).find(id => partita.giocatori[id].nome === dati.nome);
-      if (idEsistente) partita.giocatori[idEsistente].socket = socket;
-
-      const statoGiocatori = partita.ordineGiocatori.map(id => ({ nome: partita.giocatori[id].nome, posizione: partita.giocatori[id].posizione }));
-
-      socket.send(JSON.stringify({
-        tipo: "statoPartita",
-        giocatori: statoGiocatori,
-        turnoDiNome: partita.giocatori[partita.ordineGiocatori[partita.turnoAttuale]].nome,
-        mioNome: dati.nome
-      }));
-    }
-
-    if (dati.tipo === "creaPartita") {
-      if (!stanzaAttuale) return;
-      const haGiaCreato = Object.values(stanze[stanzaAttuale].partite).some(p => p.creatoDa === socketId);
-      if (haGiaCreato) {
-        socket.send(JSON.stringify({ tipo: "errore", messaggio: "Hai già una partita attiva." }));
-        return;
-      }
-
-      const partitaId = "p" + Date.now() + Math.floor(Math.random() * 1000);
-      stanze[stanzaAttuale].partite[partitaId] = {
-        id: partitaId,
-        creatore: nickname,
-        creatoDa: socketId,
-        tempo: dati.tempo,
-        punti: dati.punti,
-        modalita: dati.modalita,
-        maxGiocatori: parseInt(dati.maxGiocatori) || 2,
-        giocatori: { [socketId]: { nome: nickname, posizione: 0, socket, turniSaltati: 0 } },
-        ordineGiocatori: [socketId],
-        turnoAttuale: 0,
-        iniziata: false
-      };
-      inviaListaPartite(stanzaAttuale);
-    }
-
-
-    if (dati.tipo === "entraPartita") {
-      if (!stanzaAttuale) return;
-      const partita = stanze[stanzaAttuale].partite[dati.id];
-      if (!partita) return;
-      if (Object.keys(partita.giocatori).length >= partita.maxGiocatori) return;
-
-      partita.giocatori[socketId] = { nome: nickname, posizione: 0, socket, turniSaltati: 0 };
-      partita.ordineGiocatori.push(socketId);
-      inviaListaPartite(stanzaAttuale);
-
-      if (Object.keys(partita.giocatori).length === partita.maxGiocatori) {
-        avviaPartitaAutomaticamente(partita);
-      }
-    }
-
-    if (dati.tipo === "chat") {
-      if (!stanzaAttuale) return;
-      inviaAllaStanza(stanzaAttuale, { tipo: "chat", nome: nickname, testo: dati.testo });
-    }
-
-    if (dati.tipo === "tiraDadi") {
-      const trovato = trovaPartita(dati.partitaId);
-      if (!trovato) return;
-      const partita = trovato.partita;
-
-      const idDiTurno = partita.ordineGiocatori[partita.turnoAttuale];
-      const idMio = Object.keys(partita.giocatori).find(id => partita.giocatori[id].nome === nickname);
-      if (idDiTurno !== idMio) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Non è il tuo turno!" })); return; }
-
-      const dado1 = Math.floor(Math.random() * 6) + 1;
-      const dado2 = Math.floor(Math.random() * 6) + 1;
-      const valoreDado = dado1 + dado2;
-
-      const giocatore = partita.giocatori[idMio];
-      const risultato = calcolaMovimento(giocatore.posizione, valoreDado);
-      giocatore.posizione = risultato.nuovaPosizione;
-      if (risultato.turniDaSaltare > 0) giocatore.turniSaltati = risultato.turniDaSaltare;
-      if (!risultato.tiraAncora && !risultato.vittoria) passaAlProssimoTurno(partita);
-
-      const statoGiocatori = partita.ordineGiocatori.map(id => ({ nome: partita.giocatori[id].nome, posizione: partita.giocatori[id].posizione }));
-      const prossimoNome = partita.giocatori[partita.ordineGiocatori[partita.turnoAttuale]].nome;
-
-      Object.values(partita.giocatori).forEach(g => {
-        if (g.socket && g.socket.readyState === WebSocket.OPEN) {
-          g.socket.send(JSON.stringify({
-            tipo: "aggiornamentoPartita", giocatori: statoGiocatori, dado1, dado2, valoreDado,
-            messaggi: risultato.messaggi, turnoDiNome: prossimoNome,
-            vittoria: risultato.vittoria, vincitore: risultato.vittoria ? giocatore.nome : null
-          }));
-        }
-      });
-    }
-  });
-
-  socket.on("close", () => {
-    delete socketsPerId[socketId];
-    if (!stanzaAttuale || !stanze[stanzaAttuale]) return;
-
-    delete stanze[stanzaAttuale].giocatoriOnline[socketId];
-    inviaConteggioStanze();
-    inviaAllaStanza(stanzaAttuale, { tipo: "online", numero: Object.keys(stanze[stanzaAttuale].giocatoriOnline).length });
-
-    const partite = stanze[stanzaAttuale].partite;
-    for (const pid in partite) {
-      const partita = partite[pid];
-      if (!partita.giocatori[socketId]) continue;
-      if (!partita.iniziata) {
-        delete partita.giocatori[socketId];
-        partita.ordineGiocatori = partita.ordineGiocatori.filter(id => id !== socketId);
-        if (Object.keys(partita.giocatori).length === 0) delete partite[pid];
-      }
-    }
-    inviaListaPartite(stanzaAttuale);
-  });
-});
-
 function inviaAllaStanza(nomeStanza, messaggio) {
+  if (!stanze[nomeStanza]) return;
   Object.keys(stanze[nomeStanza].giocatoriOnline).forEach(id => {
     const s = socketsPerId[id];
     if (s && s.readyState === WebSocket.OPEN) s.send(JSON.stringify(messaggio));
@@ -447,11 +158,246 @@ function inviaAllaStanza(nomeStanza, messaggio) {
 }
 
 function inviaListaPartite(nomeStanza) {
+  if (!stanze[nomeStanza]) return;
   const lista = Object.values(stanze[nomeStanza].partite).map(p => ({
     id: p.id, creatore: p.creatore, tempo: p.tempo, punti: p.punti,
-    modalita: p.modalita, maxGiocatori: p.maxGiocatori, numGiocatoriAttuali: Object.keys(p.giocatori).length
+    modalita: p.modalita, maxGiocatori: p.maxGiocatori,
+    numGiocatoriAttuali: Object.keys(p.giocatori).length
   }));
   inviaAllaStanza(nomeStanza, { tipo: "listaPartite", partite: lista });
 }
+
+function inviaConteggioStanze() {
+  const conteggi = {};
+  for (const nome in stanze) {
+    conteggi[nome] = Object.keys(stanze[nome].giocatoriOnline).length;
+  }
+  const messaggio = JSON.stringify({ tipo: "conteggioStanze", stanze: conteggi });
+  wss.clients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) client.send(messaggio);
+  });
+}
+
+// ===== HEARTBEAT: rileva in fretta chi si disconnette senza chiudere "pulito" =====
+const HEARTBEAT_MS = 15000;
+const heartbeatInterval = setInterval(() => {
+  wss.clients.forEach(socket => {
+    if (socket.isAlive === false) {
+      return socket.terminate(); // fa scattare "close" -> aggiorna i conteggi subito
+    }
+    socket.isAlive = false;
+    socket.ping();
+  });
+}, HEARTBEAT_MS);
+wss.on("close", () => clearInterval(heartbeatInterval));
+
+// ===== CONNESSIONI =====
+wss.on("connection", (socket) => {
+  socket.isAlive = true;
+  socket.on("pong", () => { socket.isAlive = true; });
+
+  const socketId = "s" + (contatoreId++);
+  socketsPerId[socketId] = socket;
+
+  let stanzaAttuale = null;
+  let nickname = null;
+
+  socket.on("message", (message) => {
+    try {
+      let dati;
+      try { dati = JSON.parse(message); } catch (e) { return; }
+
+      if (dati.tipo === "richiediConteggio") {
+        inviaConteggioStanze();
+        return;
+      }
+
+      if (dati.tipo === "entraLobby") {
+        if (!dati.stanza) return;
+        stanzaAttuale = dati.stanza;
+        nickname = dati.nome || "Giocatore";
+
+        if (!stanze[stanzaAttuale]) {
+          stanze[stanzaAttuale] = { giocatoriOnline: {}, partite: {} };
+        }
+
+        stanze[stanzaAttuale].giocatoriOnline[socketId] = nickname;
+
+        inviaConteggioStanze();
+        inviaAllaStanza(stanzaAttuale, {
+          tipo: "online",
+          numero: Object.keys(stanze[stanzaAttuale].giocatoriOnline).length
+        });
+        inviaListaPartite(stanzaAttuale);
+        return;
+      }
+
+      if (dati.tipo === "riprendiPartita") {
+        const trovato = trovaPartita(dati.partitaId);
+        if (!trovato) {
+          socket.send(JSON.stringify({ tipo: "errore", messaggio: "Partita non trovata." }));
+          return;
+        }
+        const { partita, nomeStanza } = trovato;
+        stanzaAttuale = nomeStanza;
+        nickname = dati.nome;
+
+        const idEsistente = Object.keys(partita.giocatori).find(id => partita.giocatori[id].nome === dati.nome);
+        if (idEsistente) partita.giocatori[idEsistente].socket = socket;
+
+        const statoGiocatori = partita.ordineGiocatori.map(id => ({
+          nome: partita.giocatori[id].nome,
+          posizione: partita.giocatori[id].posizione
+        }));
+
+        socket.send(JSON.stringify({
+          tipo: "statoPartita",
+          giocatori: statoGiocatori,
+          turnoDiNome: partita.giocatori[partita.ordineGiocatori[partita.turnoAttuale]].nome,
+          mioNome: dati.nome
+        }));
+        return;
+      }
+
+      if (dati.tipo === "creaPartita") {
+        if (!stanzaAttuale) return;
+        const haGiaCreato = Object.values(stanze[stanzaAttuale].partite).some(p => p.creatoDa === socketId);
+        if (haGiaCreato) {
+          socket.send(JSON.stringify({ tipo: "errore", messaggio: "Hai già una partita attiva." }));
+          return;
+        }
+
+        const partitaId = "p" + Date.now() + Math.floor(Math.random() * 1000);
+        stanze[stanzaAttuale].partite[partitaId] = {
+          id: partitaId,
+          creatore: nickname,
+          creatoDa: socketId,
+          tempo: dati.tempo,
+          punti: dati.punti,
+          modalita: dati.modalita,
+          codicePrivato: dati.modalita === "privata" ? dati.codicePrivato : null,
+          maxGiocatori: parseInt(dati.maxGiocatori) || 2,
+          giocatori: { [socketId]: { nome: nickname, posizione: 0, socket, turniSaltati: 0 } },
+          ordineGiocatori: [socketId],
+          turnoAttuale: 0,
+          iniziata: false
+        };
+        inviaListaPartite(stanzaAttuale);
+        return;
+      }
+
+      if (dati.tipo === "entraPartita") {
+        if (!stanzaAttuale) return;
+        const partita = stanze[stanzaAttuale].partite[dati.id];
+        if (!partita) return;
+        if (Object.keys(partita.giocatori).length >= partita.maxGiocatori) return;
+
+        if (partita.modalita === "privata" && dati.codicePrivato !== partita.codicePrivato) {
+          socket.send(JSON.stringify({ tipo: "errore", messaggio: "Codice partita non corretto." }));
+          return;
+        }
+
+        partita.giocatori[socketId] = { nome: nickname, posizione: 0, socket, turniSaltati: 0 };
+        partita.ordineGiocatori.push(socketId);
+        inviaListaPartite(stanzaAttuale);
+
+        if (Object.keys(partita.giocatori).length === partita.maxGiocatori) {
+          avviaPartitaAutomaticamente(partita);
+        }
+        return;
+      }
+
+      if (dati.tipo === "eliminaPartita") {
+        if (!stanzaAttuale) return;
+        const partite = stanze[stanzaAttuale].partite;
+        const idDaEliminare = Object.keys(partite).find(pid => partite[pid].creatoDa === socketId);
+        if (!idDaEliminare) {
+          socket.send(JSON.stringify({ tipo: "errore", messaggio: "Non hai nessuna partita da eliminare." }));
+          return;
+        }
+        delete partite[idDaEliminare];
+        inviaListaPartite(stanzaAttuale);
+        return;
+      }
+
+      if (dati.tipo === "chat") {
+        if (!stanzaAttuale) return;
+        inviaAllaStanza(stanzaAttuale, { tipo: "chat", nome: nickname, testo: dati.testo });
+        return;
+      }
+
+      if (dati.tipo === "tiraDadi") {
+        const trovato = trovaPartita(dati.partitaId);
+        if (!trovato) return;
+        const partita = trovato.partita;
+
+        const idDiTurno = partita.ordineGiocatori[partita.turnoAttuale];
+        const idMio = Object.keys(partita.giocatori).find(id => partita.giocatori[id].nome === nickname);
+        if (idDiTurno !== idMio) {
+          socket.send(JSON.stringify({ tipo: "errore", messaggio: "Non è il tuo turno!" }));
+          return;
+        }
+
+        const dado1 = Math.floor(Math.random() * 6) + 1;
+        const dado2 = Math.floor(Math.random() * 6) + 1;
+        const valoreDado = dado1 + dado2;
+
+        const giocatore = partita.giocatori[idMio];
+        const risultato = calcolaMovimento(giocatore.posizione, valoreDado);
+        giocatore.posizione = risultato.nuovaPosizione;
+        if (risultato.turniDaSaltare > 0) giocatore.turniSaltati = risultato.turniDaSaltare;
+        if (!risultato.tiraAncora && !risultato.vittoria) passaAlProssimoTurno(partita);
+
+        const statoGiocatori = partita.ordineGiocatori.map(id => ({
+          nome: partita.giocatori[id].nome,
+          posizione: partita.giocatori[id].posizione
+        }));
+        const prossimoNome = partita.giocatori[partita.ordineGiocatori[partita.turnoAttuale]].nome;
+
+        Object.values(partita.giocatori).forEach(g => {
+          if (g.socket && g.socket.readyState === WebSocket.OPEN) {
+            g.socket.send(JSON.stringify({
+              tipo: "aggiornamentoPartita", giocatori: statoGiocatori, dado1, dado2, valoreDado,
+              messaggi: risultato.messaggi, turnoDiNome: prossimoNome,
+              vittoria: risultato.vittoria, vincitore: risultato.vittoria ? giocatore.nome : null
+            }));
+          }
+        });
+        return;
+      }
+
+    } catch (erroreInterno) {
+      console.error("Errore nella gestione di un messaggio:", erroreInterno);
+    }
+  });
+
+  socket.on("close", () => {
+    try {
+      delete socketsPerId[socketId];
+      if (!stanzaAttuale || !stanze[stanzaAttuale]) return;
+
+      delete stanze[stanzaAttuale].giocatoriOnline[socketId];
+      inviaConteggioStanze();
+      inviaAllaStanza(stanzaAttuale, {
+        tipo: "online",
+        numero: Object.keys(stanze[stanzaAttuale].giocatoriOnline).length
+      });
+
+      const partite = stanze[stanzaAttuale].partite;
+      for (const pid in partite) {
+        const partita = partite[pid];
+        if (!partita.giocatori[socketId]) continue;
+        if (!partita.iniziata) {
+          delete partita.giocatori[socketId];
+          partita.ordineGiocatori = partita.ordineGiocatori.filter(id => id !== socketId);
+          if (Object.keys(partita.giocatori).length === 0) delete partite[pid];
+        }
+      }
+      inviaListaPartite(stanzaAttuale);
+    } catch (erroreInterno) {
+      console.error("Errore nella chiusura di una connessione:", erroreInterno);
+    }
+  });
+});
 
 server.listen(PORT, () => console.log("Server avviato sulla porta " + PORT));
