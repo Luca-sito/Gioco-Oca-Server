@@ -1,38 +1,37 @@
 * { box-sizing: border-box; }
-body {
-  background: #101820;
+html, body {
+  margin: 0; padding: 0; height: 100%;
+  background: #0d1620;
   color: #eee;
   font-family: Arial, sans-serif;
-  margin: 0;
-  padding: 20px;
+  overflow: hidden;
 }
 
-#turno-banner {
-  background: #1e2a38;
-  color: #ffd700;
-  text-align: center;
-  padding: 12px;
-  border-radius: 10px;
-  font-weight: bold;
-  font-size: 18px;
-  margin-bottom: 15px;
+#scena {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 #area-tabellone {
   position: relative;
-  max-width: 1400px;
-  width: 90%;
-  margin: 0 auto 20px;
+  width: 92vmin;
+  max-width: 1500px;
 }
 #immagine-tabellone {
   width: 100%;
   display: block;
-  border-radius: 12px;
+  border-radius: 14px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.6);
 }
 #contenitore-pedine {
   position: absolute;
   top: 0; left: 0;
   width: 100%; height: 100%;
+  pointer-events: none;
 }
 .pedina {
   position: absolute;
@@ -40,64 +39,139 @@ body {
   transition: left 0.5s ease, top 0.5s ease;
 }
 
-#pannello-controlli {
-  max-width: 1400px;
-  width: 90%;
-  margin: 0 auto;
-  background: #1e2a38;
-  border-radius: 12px;
-  padding: 20px;
-  text-align: center;
-}
-
-#lista-giocatori { margin-bottom: 15px; }
-.giocatore-riga { display: inline-block; margin: 0 10px; font-size: 14px; }
-
 #area-dadi {
   position: absolute;
-  bottom: 8%;
+  bottom: 6%;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
   gap: 14px;
   cursor: pointer;
-  padding: 14px 18px;
-  background: rgba(16, 24, 32, 0.55);
+  padding: 14px 20px;
+  background: rgba(10, 16, 22, 0.6);
+  border: 1px solid rgba(255,215,0,0.3);
   border-radius: 16px;
-  backdrop-filter: blur(2px);
-  z-index: 10;
+  backdrop-filter: blur(3px);
+  z-index: 20;
+  transition: opacity 0.2s, background 0.2s;
 }
 #area-dadi.disabilitato {
-  opacity: 0.4;
+  opacity: 0.35;
   cursor: not-allowed;
   pointer-events: none;
 }
 #area-dadi:not(.disabilitato):hover {
-  background: rgba(16, 24, 32, 0.75);
+  background: rgba(10, 16, 22, 0.85);
 }
-#dado1, #dado2 {
-  transition: transform 0.08s linear;
-}
+#dado1, #dado2 { transition: transform 0.08s linear; }
 @keyframes rotolaDado {
   0%   { transform: rotate(0deg) scale(1); }
   50%  { transform: rotate(180deg) scale(1.15); }
   100% { transform: rotate(360deg) scale(1); }
 }
-.dado-rotola {
-  animation: rotolaDado 0.15s linear infinite;
+.dado-rotola { animation: rotolaDado 0.15s linear infinite; }
+
+#pannello-giocatori {
+  position: absolute;
+  top: 18px; left: 18px;
+  background: rgba(10, 16, 22, 0.78);
+  border: 1px solid rgba(255,215,0,0.25);
+  border-radius: 12px;
+  padding: 12px 16px;
+  min-width: 200px;
+  max-width: 260px;
+  z-index: 20;
+  backdrop-filter: blur(3px);
+}
+#riga-turno {
+  color: #ffd700;
+  font-weight: bold;
+  font-size: 14px;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.15);
+}
+.giocatore-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  font-size: 13px;
+}
+.giocatore-card.attivo { font-weight: bold; color: #ffd700; }
+.avatar-mini {
+  width: 24px; height: 24px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: bold; color: #fff;
+  flex-shrink: 0;
+  border: 1.5px solid rgba(255,255,255,0.4);
+}
+.casella-mini { margin-left: auto; opacity: 0.75; font-size: 12px; }
+
+#menu-wrapper { position: absolute; top: 18px; right: 18px; z-index: 30; }
+#btn-menu {
+  width: 42px; height: 42px; border-radius: 50%;
+  background: rgba(10,16,22,0.78); border: 1px solid rgba(255,215,0,0.3);
+  color: #ffd700; font-size: 18px; cursor: pointer;
+}
+#pannello-menu {
+  position: absolute; top: 50px; right: 0;
+  background: #121c26; border: 1px solid rgba(255,215,0,0.25);
+  border-radius: 10px; overflow: hidden; width: 190px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+}
+#pannello-menu.nascosto { display: none; }
+#pannello-menu button {
+  display: block; width: 100%; text-align: left;
+  padding: 12px 16px; background: none; border: none;
+  color: #eee; font-size: 14px; cursor: pointer;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+#pannello-menu button:hover { background: rgba(255,255,255,0.06); }
+#pannello-menu .voce-pericolo { color: #ff6b6b; }
+
+#messaggi-gioco {
+  position: absolute;
+  top: 18px; left: 50%; transform: translateX(-50%);
+  background: rgba(10,16,22,0.78);
+  color: #ffd700; padding: 8px 18px; border-radius: 20px;
+  font-size: 13px; min-height: 14px; text-align: center;
+  z-index: 15; max-width: 60vw;
 }
 
-#messaggi-gioco { margin-top: 15px; color: #ffd700; font-size: 14px; min-height: 20px; }
+#chat-wrapper { position: absolute; bottom: 18px; right: 18px; z-index: 30; }
+#btn-chat {
+  width: 46px; height: 46px; border-radius: 50%;
+  background: rgba(10,16,22,0.78); border: 1px solid rgba(255,215,0,0.3);
+  color: #ffd700; font-size: 20px; cursor: pointer;
+}
+#pannello-chat {
+  position: absolute; bottom: 56px; right: 0;
+  width: 280px; height: 320px;
+  background: #121c26; border: 1px solid rgba(255,215,0,0.25);
+  border-radius: 12px; display: flex; flex-direction: column; overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+}
+#pannello-chat.nascosto { display: none; }
+#chat-messaggi { flex-grow: 1; overflow-y: auto; padding: 10px; font-size: 13px; }
+.chat-msg { margin-bottom: 6px; color: #ddd; }
+.chat-msg b { color: #ffd700; }
+#chat-input-riga { display: flex; border-top: 1px solid rgba(255,255,255,0.1); }
+#chat-input { flex-grow: 1; border: none; background: #0d1620; color: #fff; padding: 10px; font-size: 13px; }
+#chat-input-riga button { border: none; background: #ffd700; color: #000; width: 44px; cursor: pointer; font-weight: bold; }
 
 .overlay {
   display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
   background: rgba(0,0,0,0.8); align-items: center; justify-content: center; z-index: 1000;
 }
 .overlay.aperto { display: flex; }
-.popup-vittoria {
-  background: #1e2a38; border: 2px solid #ffd700; border-radius: 12px; padding: 40px; text-align: center;
-}
+.popup-vittoria { background: #121c26; border: 2px solid #ffd700; border-radius: 12px; padding: 40px; text-align: center; }
 .popup-vittoria button {
   margin-top: 20px; padding: 12px 24px; background: #ffd700; border: none;
   border-radius: 8px; font-weight: bold; cursor: pointer;
-#area-dadi
+}
+
+@media (max-width: 700px) {
+  #pannello-giocatori { max-width: 150px; font-size: 12px; }
+  #pannello-chat { width: 240px; }
+}
