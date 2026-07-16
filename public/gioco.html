@@ -7,20 +7,44 @@
 </head>
 <body>
 
-<div id="turno-banner">Caricamento...</div>
+<div id="scena">
 
-<div id="area-tabellone">
-  <img id="immagine-tabellone" src="immagini/tabellone.png" alt="Tabellone">
-  <div id="contenitore-pedine"></div>
-  <div id="area-dadi" title="Clicca per tirare">
-    <div id="dado1"></div>
-    <div id="dado2"></div>
+  <div id="area-tabellone">
+    <img id="immagine-tabellone" src="immagini/tabellone.png" alt="Tabellone">
+    <div id="contenitore-pedine"></div>
+    <div id="area-dadi" class="disabilitato" title="Clicca per tirare">
+      <div id="dado1"></div>
+      <div id="dado2"></div>
+    </div>
   </div>
-</div>
 
-<div id="pannello-controlli">
-  <div id="lista-giocatori"></div>
+  <div id="pannello-giocatori">
+    <div id="riga-turno">Caricamento...</div>
+    <div id="lista-giocatori"></div>
+  </div>
+
+  <div id="menu-wrapper">
+    <button id="btn-menu" title="Menu">☰</button>
+    <div id="pannello-menu" class="nascosto">
+      <button onclick="apriProfilo()">👤 Profilo</button>
+      <button onclick="apriImpostazioni()">⚙️ Impostazioni</button>
+      <button class="voce-pericolo" onclick="abbandonaPartita()">🚪 Abbandona partita</button>
+    </div>
+  </div>
+
   <div id="messaggi-gioco"></div>
+
+  <div id="chat-wrapper">
+    <button id="btn-chat" title="Apri chat">💬</button>
+    <div id="pannello-chat" class="nascosto">
+      <div id="chat-messaggi"></div>
+      <div id="chat-input-riga">
+        <input id="chat-input" placeholder="Scrivi un messaggio">
+        <button onclick="inviaChatPartita()">➤</button>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <div id="overlay-vittoria" class="overlay">
