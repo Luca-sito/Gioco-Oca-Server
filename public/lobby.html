@@ -111,7 +111,7 @@ socket = new WebSocket("wss://gioco-oca-server.onrender.com");
 socket.onopen = () => {
   console.log("Connesso");
   socket.send(JSON.stringify({
-    tipo: "entraLobby",
+    tipo: "entra",
     stanza: stanza,
     nome: nomeGiocatore,
     giocatoreId: giocatoreId
