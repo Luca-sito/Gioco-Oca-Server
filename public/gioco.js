@@ -1,80 +1,46 @@
 const posizioniCaselle = {
-  1: { x: 2246, y: 817 },
-  2: { x: 2227, y: 1064 },
-  3: { x: 2102, y: 1329 },
-  4: { x: 1801, y: 1545 },
-  5: { x: 1421, y: 1599 },
-  6: { x: 1126, y: 1591 },
-  7: { x: 873, y: 1591 },
-  8: { x: 567, y: 1518 },
-  9: { x: 321, y: 1286 },
-  10: { x: 249, y: 1017 },
-  11: { x: 244, y: 759 },
-  12: { x: 334, y: 492 },
-  13: { x: 591, y: 298 },
-  14: { x: 897, y: 258 },
-  15: { x: 1139, y: 257 },
-  16: { x: 1366, y: 246 },
-  17: { x: 1674, y: 286 },
-  18: { x: 1933, y: 490 },
-  19: { x: 2008, y: 720 },
-  20: { x: 2016, y: 974 },
-  21: { x: 1930, y: 1232 },
-  22: { x: 1694, y: 1395 },
-  23: { x: 1325, y: 1423 },
-  24: { x: 993, y: 1428 },
-  25: { x: 673, y: 1386 },
-  26: { x: 465, y: 1205 },
-  27: { x: 435, y: 992 },
-  28: { x: 425, y: 802 },
-  29: { x: 480, y: 590 },
-  30: { x: 685, y: 427 },
-  31: { x: 999, y: 403 },
-  32: { x: 1287, y: 398 },
-  33: { x: 1578, y: 425 },
-  34: { x: 1779, y: 579 },
-  35: { x: 1811, y: 766 },
-  36: { x: 1816, y: 943 },
-  37: { x: 1765, y: 1134 },
-  38: { x: 1566, y: 1264 },
-  39: { x: 1269, y: 1275 },
-  40: { x: 1022, y: 1267 },
-  41: { x: 776, y: 1248 },
-  42: { x: 622, y: 1106 },
-  43: { x: 606, y: 967 },
-  44: { x: 592, y: 829 },
-  45: { x: 629, y: 676 },
-  46: { x: 767, y: 554 },
-  47: { x: 1044, y: 546 },
-  48: { x: 1260, y: 527 },
-  49: { x: 1505, y: 546 },
-  50: { x: 1635, y: 722 },
-  51: { x: 1639, y: 979 },
-  52: { x: 1484, y: 1135 },
-  53: { x: 1243, y: 1146 },
-  54: { x: 1049, y: 1143 },
-  55: { x: 857, y: 1129 },
-  56: { x: 739, y: 986 },
-  57: { x: 733, y: 798 },
-  58: { x: 866, y: 679 },
-  59: { x: 1040, y: 670 },
-  60: { x: 1236, y: 668 },
-  61: { x: 1400, y: 665 },
-  62: { x: 1506, y: 738 },
-  63: { x: 1486, y: 926 }
+  1: { x: 2246, y: 817 }, 2: { x: 2227, y: 1064 }, 3: { x: 2102, y: 1329 },
+  4: { x: 1801, y: 1545 }, 5: { x: 1421, y: 1599 }, 6: { x: 1126, y: 1591 },
+  7: { x: 873, y: 1591 }, 8: { x: 567, y: 1518 }, 9: { x: 321, y: 1286 },
+  10: { x: 249, y: 1017 }, 11: { x: 244, y: 759 }, 12: { x: 334, y: 492 },
+  13: { x: 591, y: 298 }, 14: { x: 897, y: 258 }, 15: { x: 1139, y: 257 },
+  16: { x: 1366, y: 246 }, 17: { x: 1674, y: 286 }, 18: { x: 1933, y: 490 },
+  19: { x: 2008, y: 720 }, 20: { x: 2016, y: 974 }, 21: { x: 1930, y: 1232 },
+  22: { x: 1694, y: 1395 }, 23: { x: 1325, y: 1423 }, 24: { x: 993, y: 1428 },
+  25: { x: 673, y: 1386 }, 26: { x: 465, y: 1205 }, 27: { x: 435, y: 992 },
+  28: { x: 425, y: 802 }, 29: { x: 480, y: 590 }, 30: { x: 685, y: 427 },
+  31: { x: 999, y: 403 }, 32: { x: 1287, y: 398 }, 33: { x: 1578, y: 425 },
+  34: { x: 1779, y: 579 }, 35: { x: 1811, y: 766 }, 36: { x: 1816, y: 943 },
+  37: { x: 1765, y: 1134 }, 38: { x: 1566, y: 1264 }, 39: { x: 1269, y: 1275 },
+  40: { x: 1022, y: 1267 }, 41: { x: 776, y: 1248 }, 42: { x: 622, y: 1106 },
+  43: { x: 606, y: 967 }, 44: { x: 592, y: 829 }, 45: { x: 629, y: 676 },
+  46: { x: 767, y: 554 }, 47: { x: 1044, y: 546 }, 48: { x: 1260, y: 527 },
+  49: { x: 1505, y: 546 }, 50: { x: 1635, y: 722 }, 51: { x: 1639, y: 979 },
+  52: { x: 1484, y: 1135 }, 53: { x: 1243, y: 1146 }, 54: { x: 1049, y: 1143 },
+  55: { x: 857, y: 1129 }, 56: { x: 739, y: 986 }, 57: { x: 733, y: 798 },
+  58: { x: 866, y: 679 }, 59: { x: 1040, y: 670 }, 60: { x: 1236, y: 668 },
+  61: { x: 1400, y: 665 }, 62: { x: 1506, y: 738 }, 63: { x: 1486, y: 926 }
 };
 
-const coloriGiocatori = ["#6a2c70", "#ffffff", "#1e40af", "#43a047", "#f57c00", "#c0ca33", "#e53935", "#1a1a1a"];
+const coloriGiocatori = ["#6a2c70", "#dddddd", "#1e40af", "#43a047", "#f57c00", "#c0ca33", "#e53935", "#2b2b2b"];
 
 const params = new URLSearchParams(window.location.search);
 const partitaId = params.get("partita");
 const stanza = params.get("stanza");
 const mioNome = localStorage.getItem("nickname") || "Giocatore";
 
+let giocatoreId = localStorage.getItem("giocatoreId");
+if (!giocatoreId) {
+  giocatoreId = "g" + Date.now() + Math.random().toString(36).slice(2, 10);
+  localStorage.setItem("giocatoreId", giocatoreId);
+}
+
 let socket;
 let ultimoStatoGiocatori = [];
 let mioTurno = false;
+let turnoAttualeId = null;
 
+// ---- Dadi ----
 function creaFacciaDado(valore) {
   const posizioniPip = {
     1: [[50, 50]],
@@ -107,10 +73,8 @@ function animaLancioDadi(valoreFinale1, valoreFinale2, callback) {
 
   let cicli = 0;
   const intervallo = setInterval(() => {
-    const casuale1 = Math.floor(Math.random() * 6) + 1;
-    const casuale2 = Math.floor(Math.random() * 6) + 1;
-    dado1El.innerHTML = creaFacciaDado(casuale1);
-    dado2El.innerHTML = creaFacciaDado(casuale2);
+    dado1El.innerHTML = creaFacciaDado(Math.floor(Math.random() * 6) + 1);
+    dado2El.innerHTML = creaFacciaDado(Math.floor(Math.random() * 6) + 1);
     cicli++;
     if (cicli >= 8) {
       clearInterval(intervallo);
@@ -122,88 +86,86 @@ function animaLancioDadi(valoreFinale1, valoreFinale2, callback) {
   }, 80);
 }
 
-function schiarisciColore(hex, percentuale) {
-  return mescolaColore(hex, 255, percentuale);
-}
-function scurisciColore(hex, percentuale) {
-  return mescolaColore(hex, 0, percentuale);
-}
-function mescolaColore(hex, target, percentuale) {
+// ---- Colori/avatar ----
+function schiarisciColore(hex, p) { return mescolaColore(hex, 255, p); }
+function scuriscColore(hex, p) { return mescolaColore(hex, 0, p); }
+function mescolaColore(hex, target, p) {
   const num = parseInt(hex.replace("#", ""), 16);
-  let r = (num >> 16) & 255;
-  let g = (num >> 8) & 255;
-  let b = num & 255;
-  r = Math.round(r + (target - r) * (percentuale / 100));
-  g = Math.round(g + (target - g) * (percentuale / 100));
-  b = Math.round(b + (target - b) * (percentuale / 100));
+  let r = (num >> 16) & 255, g = (num >> 8) & 255, b = num & 255;
+  r = Math.round(r + (target - r) * (p / 100));
+  g = Math.round(g + (target - g) * (p / 100));
+  b = Math.round(b + (target - b) * (p / 100));
   return `rgb(${r},${g},${b})`;
 }
+function iniziale(nome) { return (nome || "?").trim().charAt(0).toUpperCase(); }
 
+// ---- Connessione ----
 function connetti() {
   socket = new WebSocket("wss://gioco-oca-server.onrender.com");
 
   socket.onopen = () => {
-    socket.send(JSON.stringify({
-      tipo: "riprendiPartita",
-      partitaId: partitaId,
-      nome: mioNome
-    }));
+    socket.send(JSON.stringify({ tipo: "riprendiPartita", partitaId, nome: mioNome, giocatoreId }));
   };
 
   socket.onclose = () => {
-    document.getElementById("turno-banner").textContent = "🔴 Disconnesso, riconnessione...";
+    document.getElementById("riga-turno").textContent = "🔴 Disconnesso, riconnessione...";
     setTimeout(connetti, 3000);
   };
 
-socket.onmessage = (msg) => {
+  socket.onmessage = (msg) => {
+    const dati = JSON.parse(msg.data);
 
-  const dati = JSON.parse(msg.data);
-
-  if (dati.tipo === "statoPartita") {
-    ultimoStatoGiocatori = dati.giocatori;
-    disegnaGiocatori();
-    aggiornaTurno(dati.turnoDiNome);
-    mostraDadi(1, 1);
-  }
-
-  if (dati.tipo === "aggiornamentoPartita") {
-    animaLancioDadi(dati.dado1, dati.dado2, () => {
-
+    if (dati.tipo === "statoPartita") {
       ultimoStatoGiocatori = dati.giocatori;
-      disegnaGiocatori();
-
-      document.getElementById("messaggi-gioco").textContent =
-        "🎲 " + dati.dado1 + " + " + dati.dado2 + " = " + dati.valoreDado +
-        (dati.messaggi.length ? " — " + dati.messaggi.join(" ") : "");
-
       if (dati.vittoria) {
+        turnoAttualeId = null;
+        document.getElementById("area-dadi").classList.add("disabilitato");
+        disegnaGiocatori();
         mostraVittoria(dati.vincitore);
       } else {
-        aggiornaTurno(dati.turnoDiNome);
+        aggiornaTurno(dati.turnoDiId);
+        disegnaGiocatori();
       }
+      if (dati.messaggi && dati.messaggi.length) {
+        document.getElementById("messaggi-gioco").textContent = dati.messaggi.join(" ");
+      }
+      mostraDadi(1, 1);
+    }
 
-    });
-  }
+    if (dati.tipo === "aggiornamentoPartita") {
+      animaLancioDadi(dati.dado1, dati.dado2, () => {
+        ultimoStatoGiocatori = dati.giocatori;
+        document.getElementById("messaggi-gioco").textContent =
+          "🎲 " + dati.dado1 + " + " + dati.dado2 + " = " + dati.valoreDado +
+          (dati.messaggi.length ? " — " + dati.messaggi.join(" ") : "");
 
-  if (dati.tipo === "errore") {
-    alert(dati.messaggio);
-  }
-};
+        if (dati.vittoria) {
+          turnoAttualeId = null;
+          document.getElementById("area-dadi").classList.add("disabilitato");
+          disegnaGiocatori();
+          mostraVittoria(dati.vincitore);
+        } else {
+          aggiornaTurno(dati.turnoDiId);
+          disegnaGiocatori();
+        }
+      });
+    }
 
+    if (dati.tipo === "chatPartita") {
+      aggiungiMessaggioChatPartita(dati.nome, dati.testo);
+    }
+
+    if (dati.tipo === "errore") {
+      alert(dati.messaggio);
+    }
+  };
 }
 
-function aggiornaTurno(nomeDiTurno) {
-  mioTurno = (nomeDiTurno === mioNome);
-  document.getElementById("turno-banner").textContent = mioTurno
-    ? "🎲 È il tuo turno!"
-    : "⏳ Turno di: " + nomeDiTurno;
-
-  const areaDadi = document.getElementById("area-dadi");
-  if (mioTurno) {
-    areaDadi.classList.remove("disabilitato");
-  } else {
-    areaDadi.classList.add("disabilitato");
-  }
+function aggiornaTurno(turnoDiId) {
+  turnoAttualeId = turnoDiId;
+  mioTurno = (turnoDiId === giocatoreId);
+  document.getElementById("riga-turno").textContent = mioTurno ? "🎲 È il tuo turno!" : "⏳ In attesa...";
+  document.getElementById("area-dadi").classList.toggle("disabilitato", !mioTurno);
 }
 
 function disegnaGiocatori() {
@@ -214,42 +176,47 @@ function disegnaGiocatori() {
   const scaleX = immagine.clientWidth / immagine.naturalWidth;
   const scaleY = immagine.clientHeight / immagine.naturalHeight;
 
-  const listaLista = document.getElementById("lista-giocatori");
-  listaLista.innerHTML = "";
+  const listaPannello = document.getElementById("lista-giocatori");
+  listaPannello.innerHTML = "";
 
   ultimoStatoGiocatori.forEach((giocatore, indice) => {
     const colore = coloriGiocatori[indice % coloriGiocatori.length];
     const idGradiente = "gradPedina" + indice;
     const casella = giocatore.posizione === 0 ? { x: 100, y: 1900 } : posizioniCaselle[giocatore.posizione];
-    if (!casella) return;
 
-    const pedina = document.createElement("div");
-    pedina.className = "pedina";
-    pedina.style.left = (casella.x * scaleX) + "px";
-    pedina.style.top = (casella.y * scaleY) + "px";
-    pedina.innerHTML = `
-      <svg width="26" height="38" viewBox="0 0 34 48">
-        <defs>
-          <radialGradient id="${idGradiente}" cx="35%" cy="25%" r="75%">
-            <stop offset="0%" stop-color="${schiarisciColore(colore, 55)}"/>
-            <stop offset="55%" stop-color="${colore}"/>
-            <stop offset="100%" stop-color="${scuriscColore(colore, 35)}"/>
-          </radialGradient>
-        </defs>
-        <ellipse cx="17" cy="44" rx="12" ry="3.5" fill="rgba(0,0,0,0.3)"/>
-        <ellipse cx="17" cy="42" rx="11" ry="4" fill="${scuriscColore(colore, 25)}"/>
-        <path d="M17 42 C10 42 4 40 4 37 L10 15 C10 15 12 12 17 12 C22 12 24 15 24 15 L30 37 C30 40 24 42 17 42 Z"
-              fill="url(#${idGradiente})" stroke="${scuriscColore(colore, 45)}" stroke-width="0.8"/>
-        <circle cx="17" cy="9" r="7.5" fill="url(#${idGradiente})" stroke="${scuriscColore(colore, 45)}" stroke-width="0.8"/>
-        <ellipse cx="14" cy="6" rx="2.5" ry="1.8" fill="rgba(255,255,255,0.55)"/>
-      </svg>
+    if (casella) {
+      const pedina = document.createElement("div");
+      pedina.className = "pedina";
+      pedina.style.left = (casella.x * scaleX) + "px";
+      pedina.style.top = (casella.y * scaleY) + "px";
+      pedina.innerHTML = `
+        <svg width="26" height="38" viewBox="0 0 34 48">
+          <defs>
+            <radialGradient id="${idGradiente}" cx="35%" cy="25%" r="75%">
+              <stop offset="0%" stop-color="${schiarisciColore(colore, 55)}"/>
+              <stop offset="55%" stop-color="${colore}"/>
+              <stop offset="100%" stop-color="${scuriscColore(colore, 35)}"/>
+            </radialGradient>
+          </defs>
+          <ellipse cx="17" cy="44" rx="12" ry="3.5" fill="rgba(0,0,0,0.3)"/>
+          <ellipse cx="17" cy="42" rx="11" ry="4" fill="${scuriscColore(colore, 25)}"/>
+          <path d="M17 42 C10 42 4 40 4 37 L10 15 C10 15 12 12 17 12 C22 12 24 15 24 15 L30 37 C30 40 24 42 17 42 Z"
+                fill="url(#${idGradiente})" stroke="${scuriscColore(colore, 45)}" stroke-width="0.8"/>
+          <circle cx="17" cy="9" r="7.5" fill="url(#${idGradiente})" stroke="${scuriscColore(colore, 45)}" stroke-width="0.8"/>
+          <ellipse cx="14" cy="6" rx="2.5" ry="1.8" fill="rgba(255,255,255,0.55)"/>
+        </svg>
+      `;
+      container.appendChild(pedina);
+    }
+
+    const card = document.createElement("div");
+    card.className = "giocatore-card" + (giocatore.id === turnoAttualeId ? " attivo" : "");
+    card.innerHTML = `
+      <div class="avatar-mini" style="background:${colore};">${iniziale(giocatore.nome)}</div>
+      <span>${giocatore.nome}</span>
+      <span class="casella-mini">${giocatore.posizione}</span>
     `;
-    container.appendChild(pedina);
-
-    const riga = document.createElement("div");
-    riga.className = "giocatore-riga";
-    riga.innerHTML = `<span style="color:${colore}; text-shadow:0 0 1px #000;">●</span> ${giocatore.nome} (casella ${giocatore.posizione})`;
-    listaLista.appendChild(riga);
+    listaPannello.appendChild(card);
   });
 }
 
@@ -262,9 +229,60 @@ function tornaAllaLobby() {
   window.location.href = `lobby.html?stanza=${stanza}`;
 }
 
+function abbandonaPartita() {
+  const conferma = confirm("Sei sicuro di voler abbandonare la partita?");
+  if (!conferma) return;
+  socket.send(JSON.stringify({ tipo: "abbandonaPartita", partitaId, giocatoreId }));
+  tornaAllaLobby();
+}
+
+function apriProfilo() {
+  chiudiMenu();
+  alert("Sezione Profilo in arrivo prossimamente!");
+}
+function apriImpostazioni() {
+  chiudiMenu();
+  alert("Sezione Impostazioni in arrivo prossimamente!");
+}
+function chiudiMenu() {
+  document.getElementById("pannello-menu").classList.add("nascosto");
+}
+
+document.getElementById("btn-menu").onclick = (e) => {
+  e.stopPropagation();
+  document.getElementById("pannello-menu").classList.toggle("nascosto");
+};
+document.addEventListener("click", () => chiudiMenu());
+
+// ---- Chat in partita ----
+function aggiungiMessaggioChatPartita(nome, testo) {
+  const box = document.getElementById("chat-messaggi");
+  const riga = document.createElement("div");
+  riga.className = "chat-msg";
+  riga.innerHTML = `<b>${nome}:</b> ${testo}`;
+  box.appendChild(riga);
+  box.scrollTop = box.scrollHeight;
+}
+
+function inviaChatPartita() {
+  const input = document.getElementById("chat-input");
+  const testo = input.value.trim();
+  if (!testo) return;
+  socket.send(JSON.stringify({ tipo: "chatPartita", partitaId, giocatoreId, testo }));
+  input.value = "";
+}
+document.getElementById("chat-input").addEventListener("keypress", (e) => {
+  if (e.key === "Enter") inviaChatPartita();
+});
+document.getElementById("btn-chat").onclick = (e) => {
+  e.stopPropagation();
+  document.getElementById("pannello-chat").classList.toggle("nascosto");
+};
+
+// ---- Dadi ----
 document.getElementById("area-dadi").onclick = () => {
   if (!mioTurno) return;
-  socket.send(JSON.stringify({ tipo: "tiraDadi", partitaId: partitaId }));
+  socket.send(JSON.stringify({ tipo: "tiraDadi", partitaId, giocatoreId }));
 };
 
 mostraDadi(1, 1);
