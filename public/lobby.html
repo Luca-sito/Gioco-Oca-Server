@@ -8,12 +8,9 @@
 body{ margin:0; background:#f2f2f2; }
 .contenitore{ display:flex; height:100vh; gap:5px; padding:5px; }
 .sinistra,.centro,.destra{ background:white; border:2px solid #ff6600; border-radius:5px; overflow:hidden; }
-.sinistra{ width:25%; }
-.centro{ width:50%; }
-.destra{ width:25%; }
+.sinistra{ width:25%; } .centro{ width:50%; } .destra{ width:25%; }
 h2{ margin:0; padding:12px; background:#111; color:white; text-align:center; font-size:18px; }
-.box{ padding:15px; }
-.box p{ font-weight:bold; }
+.box{ padding:15px; } .box p{ font-weight:bold; }
 select,button,input{ width:100%; padding:10px; margin-bottom:10px; border-radius:5px; border:1px solid #ccc; font-size:15px; }
 button{ cursor:pointer; background:#333; color:white; font-weight:bold; }
 button:hover{ opacity:0.8; }
@@ -29,10 +26,8 @@ button:hover{ opacity:0.8; }
 #messaggio+button{ width:23%; display:inline-block; }
 #top{ padding:10px; }
 #online{ color:#00a000; font-size:25px; font-weight:bold; }
-@media(max-width:900px){
-  .contenitore{ flex-direction:column; }
-  .sinistra,.centro,.destra{ width:100%; }
-}
+#areaUtente{ padding:10px; font-size:13px; border-top:1px solid #eee; }
+@media(max-width:900px){ .contenitore{ flex-direction:column; } .sinistra,.centro,.destra{ width:100%; } }
 </style>
 </head>
 <body>
@@ -50,11 +45,7 @@ button:hover{ opacity:0.8; }
       </select>
 
       <p>Punti partita</p>
-      <select id="punti">
-        <option>100</option>
-        <option>150</option>
-        <option>200</option>
-      </select>
+      <select id="punti"><option>100</option><option>150</option><option>200</option></select>
 
       <p>Tipo partita</p>
       <select id="tipoPartita">
@@ -82,6 +73,7 @@ button:hover{ opacity:0.8; }
     <hr>
     <h2 id="nomeStanza">STANZA</h2>
     <h3>👤 <span id="online">0</span> online</h3>
+    <div id="areaUtente"></div>
   </div>
 
 </div>
@@ -93,51 +85,45 @@ const parametri = new URLSearchParams(window.location.search);
 const stanza = parametri.get("stanza") || "BAR";
 document.getElementById("nomeStanza").innerHTML = stanza;
 
-let nomeGiocatore = localStorage.getItem("nickname");
-if (!nomeGiocatore) {
-  nomeGiocatore = prompt("Come vuoi essere chiamato?", "Giocatore") || "Giocatore";
-  localStorage.setItem("nickname", nomeGiocatore);
+const authToken = localStorage.getItem("authToken");
+const mioNickname = localStorage.getItem("nickname");
+
+if (!authToken) {
+  window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href);
 }
 
-// ID persistente, separato dal nickname: identifica il giocatore in modo affidabile
-let giocatoreId = localStorage.getItem("giocatoreId");
-if (!giocatoreId) {
-  giocatoreId = "g" + Date.now() + Math.random().toString(36).slice(2, 10);
-  localStorage.setItem("giocatoreId", giocatoreId);
+document.getElementById("areaUtente").innerHTML = `
+  Ciao, <b>${mioNickname}</b> —
+  <a href="#" onclick="esci(); return false;" style="color:#ff6600;">Esci</a>
+`;
+
+function esci() {
+  localStorage.removeItem("authToken");
+  localStorage.removeItem("nickname");
+  localStorage.removeItem("ruolo");
+  window.location.href = "login.html";
 }
 
 socket = new WebSocket("wss://gioco-oca-server.onrender.com");
 
 socket.onopen = () => {
-  console.log("Connesso");
-  socket.send(JSON.stringify({
-    tipo: "entraLobby",
-    stanza: stanza,
-    nome: nomeGiocatore,
-    giocatoreId: giocatoreId
-  }));
+  socket.send(JSON.stringify({ tipo: "entraLobby", stanza: stanza, token: authToken }));
 };
 
-socket.onclose = () => {
-  console.log("Disconnesso, riprovo tra 3 secondi...");
-  setTimeout(() => location.reload(), 3000);
-};
+socket.onclose = () => { setTimeout(() => location.reload(), 3000); };
 
 socket.onmessage = (msg) => {
   let dati = JSON.parse(msg.data);
 
-  if (dati.tipo === "online") {
-    document.getElementById("online").innerHTML = dati.numero;
+  if (dati.tipo === "sessioneScaduta") {
+    localStorage.removeItem("authToken");
+    window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href);
+    return;
   }
-  if (dati.tipo === "chat") {
-    aggiungiMessaggio(dati.nome, dati.testo);
-  }
-  if (dati.tipo === "listaPartite") {
-    mostraPartite(dati.partite);
-  }
-  if (dati.tipo === "errore") {
-    alert(dati.messaggio);
-  }
+  if (dati.tipo === "online") document.getElementById("online").innerHTML = dati.numero;
+  if (dati.tipo === "chat") aggiungiMessaggio(dati.nome, dati.testo);
+  if (dati.tipo === "listaPartite") mostraPartite(dati.partite);
+  if (dati.tipo === "errore") alert(dati.messaggio);
   if (dati.tipo === "partitaAvviata") {
     localStorage.setItem("partitaId", dati.partitaId);
     window.location.href = `gioco.html?partita=${dati.partitaId}&stanza=${stanza}`;
@@ -149,25 +135,20 @@ function creaPartita() {
   let codicePrivato = "";
   if (tipo === "privata") {
     codicePrivato = prompt("Inserisci il codice della partita privata:");
-    if (!codicePrivato || codicePrivato.trim() === "") {
-      alert("Devi inserire un codice");
-      return;
-    }
+    if (!codicePrivato || codicePrivato.trim() === "") { alert("Devi inserire un codice"); return; }
   }
   socket.send(JSON.stringify({
     tipo: "creaPartita",
     tempo: document.getElementById("tempo").value,
     punti: document.getElementById("punti").value,
     modalita: tipo,
-    codicePrivato: codicePrivato,
-    giocatoreId: giocatoreId
+    codicePrivato: codicePrivato
   }));
 }
 
 function eliminaPartita() {
-  const conferma = confirm("Vuoi eliminare la partita creata?");
-  if (!conferma) return;
-  socket.send(JSON.stringify({ tipo: "eliminaPartita", giocatoreId: giocatoreId }));
+  if (!confirm("Vuoi eliminare la partita creata?")) return;
+  socket.send(JSON.stringify({ tipo: "eliminaPartita" }));
 }
 
 function mostraPartite(lista) {
@@ -182,9 +163,7 @@ function mostraPartite(lista) {
       ⏱ ${partita.tempo} secondi<br>
       🏆 ${partita.punti} punti<br>
       👥 ${partita.numGiocatoriAttuali} su ${partita.maxGiocatori}
-      <button onclick="entraPartita('${partita.id}', '${partita.modalita}')" ${piena ? 'disabled' : ''}>
-        ${piena ? 'Piena' : 'Entra'}
-      </button>
+      <button onclick="entraPartita('${partita.id}', '${partita.modalita}')" ${piena ? 'disabled' : ''}>${piena ? 'Piena' : 'Entra'}</button>
     </div>`;
   });
   document.getElementById("partite").innerHTML = html;
@@ -196,12 +175,7 @@ function entraPartita(id, modalita) {
     codicePrivato = prompt("Inserisci il codice della partita:");
     if (!codicePrivato) return;
   }
-  socket.send(JSON.stringify({
-    tipo: "entraPartita",
-    id: id,
-    codicePrivato: codicePrivato,
-    giocatoreId: giocatoreId
-  }));
+  socket.send(JSON.stringify({ tipo: "entraPartita", id: id, codicePrivato: codicePrivato }));
 }
 
 function inviaChat() {
@@ -217,10 +191,6 @@ function aggiungiMessaggio(nome, testo) {
   chat.scrollTop = chat.scrollHeight;
 }
 </script>
-
-</body>
-</html>
-<script src="lobby.js"></script>
 
 </body>
 </html>
