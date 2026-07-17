@@ -19,6 +19,31 @@ const JWT_SECRET = process.env.JWT_SECRET || "cambia-questo-secret";
 
 // ===== FIREBASE ADMIN (account utenti) =====
 let db = null;
+async function salvaPartitaFirebase(id, partita, stanza) {
+  if (!db) return;
+
+  await db.ref("partite/" + id).set({
+    id: partita.id,
+    stanza: stanza,
+    creatore: partita.creatore,
+    creatoDa: partita.creatoDa,
+    tempo: partita.tempo,
+    punti: partita.punti,
+    modalita: partita.modalita,
+    iniziata: partita.iniziata,
+    turnoAttuale: partita.turnoAttuale,
+    giocatori: Object.fromEntries(
+      Object.entries(partita.giocatori).map(([uid, g]) => [
+        uid,
+        {
+          nome: g.nome,
+          posizione: g.posizione,
+          turniSaltati: g.turniSaltati
+        }
+      ])
+    )
+  });
+}
 try {
   const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
   admin.initializeApp({
@@ -411,6 +436,11 @@ wss.on("connection", (socket) => {
           giocatori: { [uid]: { nome: nickname, posizione: 0, socket, turniSaltati: 0 } },
           ordineGiocatori: [uid], turnoAttuale: 0, iniziata: false
         };
+await salvaPartitaFirebase(
+  partitaId,
+  stanze[stanzaAttuale].partite[partitaId],
+  stanzaAttuale
+);
         inviaListaPartite(stanzaAttuale);
         return;
       }
