@@ -17,235 +17,138 @@ const wss = new WebSocket.Server({ server });
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || "cambia-questo-secret";
 
-// ===== FIREBASE ADMIN (account utenti) =====
+// ===== FIREBASE ADMIN (account utenti + partite) =====
 let db = null;
-async function salvaPartitaFirebase(id, partita, stanza) {
-  if (!db) return;
-
-  await db.ref("partite/" + id).set({
-    id: partita.id,
-    stanza: stanza,
-    creatore: partita.creatore,
-    creatoDa: partita.creatoDa,
-    tempo: partita.tempo,
-    punti: partita.punti,
-    modalita: partita.modalita,
-    iniziata: partita.iniziata,
-    turnoAttuale: partita.turnoAttuale,
-    giocatori: Object.fromEntries(
-      Object.entries(partita.giocatori).map(([uid, g]) => [
-        uid,
-        {
-          nome: g.nome,
-          posizione: g.posizione,
-          turniSaltati: g.turniSaltati
-        }
-      ])
-    )
-  });
-}
 try {
   const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
     databaseURL: "https://giochi-societa-e8add-default-rtdb.europe-west1.firebasedatabase.app"
   });
-db = admin.database();
-
-console.log("Firebase Admin inizializzato correttamente.");
-
+  db = admin.database();
+  console.log("Firebase Admin inizializzato correttamente.");
 } catch (e) {
   console.error("ATTENZIONE: Firebase Admin NON inizializzato:", e.message);
 }
 
-
 // ===== SALVATAGGIO PARTITE SU FIREBASE =====
-
 function preparaGiocatoriPerFirebase(giocatori) {
-
   const risultato = {};
-
   for (const uid in giocatori) {
-
     risultato[uid] = {
       nome: giocatori[uid].nome,
       posizione: giocatori[uid].posizione,
       turniSaltati: giocatori[uid].turniSaltati
     };
-
   }
-
   return risultato;
 }
 
-
-
 async function salvaPartita(partita) {
   if (!db) return;
-
   await db.ref("partite/" + partita.id).set({
-
     id: partita.id,
     stanza: partita.stanza,
     creatore: partita.creatore,
     creatoDa: partita.creatoDa,
-
     tempo: partita.tempo,
     punti: partita.punti,
     modalita: partita.modalita,
-
+    codicePrivato: partita.codicePrivato || null,
+    maxGiocatori: partita.maxGiocatori,
     giocatori: preparaGiocatoriPerFirebase(partita.giocatori),
-
     ordineGiocatori: partita.ordineGiocatori,
-
     turnoAttuale: partita.turnoAttuale,
     iniziata: partita.iniziata,
-
     aggiornataIl: Date.now()
-
   });
 }
-
-
 
 async function caricaPartite() {
-
-  if (!db) return {};
-
-  const snap = await db.ref("partite").once("value");
-
-  return snap.val() || {};
-
-}
-
-
-
-async function aggiornaStatoPartita(partitaId, dati) {
-
+async function pulisciPartiteVecchie() {
   if (!db) return;
 
-  await db.ref("partite/" + partitaId).update({
+  const snap = await db.ref("partite").once("value");
+  const partite = snap.val() || {};
 
-    ...dati,
+  const limite = Date.now() - (24 * 60 * 60 * 1000);
 
-    aggiornataIl: Date.now()
-
-  });
-
+  for (const id in partite) {
+    if ((partite[id].aggiornataIl || 0) < limite) {
+      await db.ref("partite/" + id).remove();
+      console.log("Partita eliminata:", id);
+    }
+  }
+}
+  if (!db) return {};
+  const snap = await db.ref("partite").once("value");
+  return snap.val() || {};
 }
 
-
-
-// ===== TOKEN =====
-
-function creaToken(uid, nickname, ruolo) {
-  return jwt.sign(
-    { uid, nickname, ruolo },
-    JWT_SECRET,
-    { expiresIn: "30d" }
-  );
+async function aggiornaStatoPartita(partitaId, dati) {
+  if (!db) return;
+  await db.ref("partite/" + partitaId).update({ ...dati, aggiornataIl: Date.now() });
 }
 
-
-function verificaToken(token) {
-  if (!token) return null;
-
-  try {
-    return jwt.verify(token, JWT_SECRET);
-  } catch (e) {
-    return null;
+// Rimuove una partita conclusa/eliminata da memoria E da Firebase (fix bug 1 e 2)
+async function rimuoviPartita(nomeStanza, partitaId) {
+  if (stanze[nomeStanza]) delete stanze[nomeStanza].partite[partitaId];
+  if (db) {
+    try { await db.ref("partite/" + partitaId).remove(); }
+    catch (e) { console.error("Errore rimozione partita da Firebase:", e.message); }
   }
 }
 
+// Aggiorna le statistiche dei giocatori a fine partita (fix bug 4)
+async function aggiornaStatistichePartitaConclusa(partita, vincitoreUid) {
+  if (!db) return;
+  try {
+    const aggiornamenti = {};
+    partita.ordineGiocatori.forEach(idGiocatore => {
+      aggiornamenti["utenti/" + idGiocatore + "/partiteGiocate"] = admin.database.ServerValue.increment(1);
+    });
+    if (vincitoreUid) {
+      aggiornamenti["utenti/" + vincitoreUid + "/partiteVinte"] = admin.database.ServerValue.increment(1);
+    }
+    await db.ref().update(aggiornamenti);
+  } catch (e) {
+    console.error("Errore aggiornamento statistiche:", e.message);
+  }
+}
 
+// ===== TOKEN =====
+function creaToken(uid, nickname, ruolo) {
+  return jwt.sign({ uid, nickname, ruolo }, JWT_SECRET, { expiresIn: "30d" });
+}
+function verificaToken(token) {
+  if (!token) return null;
+  try { return jwt.verify(token, JWT_SECRET); } catch (e) { return null; }
+}
 function estraiTokenHeader(req) {
-
   const header = req.headers.authorization || "";
-
   const parti = header.split(" ");
-
   return parti.length === 2 ? parti[1] : null;
-
 }
-
-
-
 async function richiediAdmin(req, res, next) {
-
-  const dati = verificaToken(
-    estraiTokenHeader(req)
-  );
-
-  if (!dati)
-    return res.status(401).json({
-      errore:"Devi effettuare il login."
-    });
-
-
-  if (dati.ruolo !== "admin")
-    return res.status(403).json({
-      errore:"Accesso riservato agli amministratori."
-    });
-
-
+  const dati = verificaToken(estraiTokenHeader(req));
+  if (!dati) return res.status(401).json({ errore: "Devi effettuare il login." });
+  if (dati.ruolo !== "admin") return res.status(403).json({ errore: "Accesso riservato agli amministratori." });
   req.utenteAdmin = dati;
-
   next();
-
 }
-
-
-
 async function trovaUtentePerEmail(emailLower) {
-
-  const snap = await db
-    .ref("utenti")
-    .orderByChild("emailLower")
-    .equalTo(emailLower)
-    .once("value");
-
-
-  if (!snap.exists())
-    return null;
-
-
+  const snap = await db.ref("utenti").orderByChild("emailLower").equalTo(emailLower).once("value");
+  if (!snap.exists()) return null;
   const val = snap.val();
-
   const uid = Object.keys(val)[0];
-
-
-  return {
-    uid,
-    ...val[uid]
-  };
-
+  return { uid, ...val[uid] };
 }
-
-
-
 async function trovaUtentePerNickname(nicknameLower) {
-
-  const snap = await db
-    .ref("utenti")
-    .orderByChild("nicknameLower")
-    .equalTo(nicknameLower)
-    .once("value");
-
-
-  if (!snap.exists())
-    return null;
-
-
+  const snap = await db.ref("utenti").orderByChild("nicknameLower").equalTo(nicknameLower).once("value");
+  if (!snap.exists()) return null;
   const val = snap.val();
-
   const uid = Object.keys(val)[0];
-
-
-  return {
-    uid,
-    ...val[uid]
-  };
-
+  return { uid, ...val[uid] };
 }
 
 // ===== API REGISTRAZIONE / LOGIN =====
@@ -267,6 +170,9 @@ app.post("/api/registrati", async (req, res) => {
     const uid = nuovoRef.key;
 
     await nuovoRef.set({
+      partiteVinte: 0,
+      partiteGiocate: 0,
+      puntiTotali: 0,
       email: email.trim(), emailLower,
       nickname: nickname.trim(), nicknameLower,
       passwordHash,
@@ -317,16 +223,57 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
+// ===== CLASSIFICA TOP GIOCATORI =====
+app.get("/api/top-giocatori", async (req, res) => {
+  try {
+    if (!db) return res.json({ giocatori: [] });
+    const snap = await db.ref("utenti").once("value");
+    const utenti = snap.val() || {};
+    const top = Object.values(utenti)
+      .map(u => ({ nickname: u.nickname || "Sconosciuto", vinte: u.partiteVinte || 0, giocate: u.partiteGiocate || 0 }))
+      .sort((a, b) => (b.vinte !== a.vinte ? b.vinte - a.vinte : b.giocate - a.giocate))
+      .slice(0, 10);
+    res.json({ giocatori: top });
+  } catch (e) {
+    console.error("Errore classifica:", e);
+    res.status(500).json({ giocatori: [] });
+  }
+});
+
 // ===== API ADMIN =====
 app.get("/api/admin/utenti", richiediAdmin, async (req, res) => {
   if (!db) return res.status(500).json({ errore: "Database non disponibile." });
   const snap = await db.ref("utenti").once("value");
   const val = snap.val() || {};
   const lista = Object.keys(val).map(uid => ({
-    uid, email: val[uid].email, nickname: val[uid].nickname,
-    stato: val[uid].stato, sospesoFino: val[uid].sospesoFino,
-    avvisi: val[uid].avvisi || [], ruolo: val[uid].ruolo || "utente"
-  }));
+
+  uid,
+
+  email: val[uid].email,
+
+  nickname: val[uid].nickname,
+
+  ruolo: val[uid].ruolo || "utente",
+
+  stato: val[uid].stato || "attivo",
+
+  sospesoFino: val[uid].sospesoFino || null,
+
+  motivoSospensione: val[uid].motivoSospensione || "",
+
+  motivoBan: val[uid].motivoBan || "",
+
+  avvisi: val[uid].avvisi || [],
+
+  partiteGiocate: val[uid].partiteGiocate || 0,
+
+  partiteVinte: val[uid].partiteVinte || 0,
+
+  puntiTotali: val[uid].puntiTotali || 0,
+
+  creatoIl: val[uid].creatoIl || null
+
+}));
   res.json({ utenti: lista });
 });
 
@@ -370,7 +317,7 @@ app.post("/api/admin/riattiva", richiediAdmin, async (req, res) => {
   res.json({ ok: true });
 });
 
-// ===== LOGICA DI GIOCO (invariata) =====
+// ===== LOGICA DI GIOCO =====
 const CASELLE_AVANZA_ANCORA = [9, 18, 27, 36, 45, 54];
 const CASELLE_SALTA_TRE_TURNI = [19, 31];
 const CASELLE_SALTA_UN_TURNO = [52];
@@ -384,6 +331,24 @@ let stanze = {
   DISCOPUB: { giocatoriOnline: {}, partite: {} },
   SERATE: { giocatoriOnline: {}, partite: {} }
 };
+
+async function ripristinaPartiteDaFirebase() {
+  const partiteFirebase = await caricaPartite();
+  for (const id in partiteFirebase) {
+    const p = partiteFirebase[id];
+    if (!stanze[p.stanza]) continue;
+    stanze[p.stanza].partite[id] = {
+      ...p,
+      codicePrivato: p.codicePrivato || null,
+      maxGiocatori: p.maxGiocatori || (Object.keys(p.giocatori || {}).length || 2),
+      giocatori: p.giocatori || {},
+      ordineGiocatori: p.ordineGiocatori || [],
+      turnoAttuale: p.turnoAttuale || 0,
+      iniziata: p.iniziata || false
+    };
+  }
+  console.log("Partite ripristinate da Firebase:", Object.keys(partiteFirebase).length);
+}
 
 let contatoreId = 0;
 const socketsPerId = {};
@@ -454,6 +419,8 @@ function avviaPartitaAutomaticamente(partita) {
       g.socket.send(JSON.stringify({ tipo: "partitaAvviata", partitaId: partita.id, ordineGiocatori: nomiInOrdine, turnoDiId: partita.ordineGiocatori[0] }));
     }
   });
+  const trovato = trovaPartita(partita.id);
+  salvaPartita({ ...partita, stanza: trovato ? trovato.nomeStanza : partita.stanza });
 }
 
 function passaAlProssimoTurno(partita) {
@@ -594,15 +561,7 @@ wss.on("connection", (socket) => {
           giocatori: { [uid]: { nome: nickname, posizione: 0, socket, turniSaltati: 0 } },
           ordineGiocatori: [uid], turnoAttuale: 0, iniziata: false
         };
-await salvaPartita({
-  ...stanze[stanzaAttuale].partite[partitaId],
-  stanza: stanzaAttuale
-});
-await salvaPartitaFirebase(
-  partitaId,
-  stanze[stanzaAttuale].partite[partitaId],
-  stanzaAttuale
-);
+        await salvaPartita({ ...stanze[stanzaAttuale].partite[partitaId], stanza: stanzaAttuale });
         inviaListaPartite(stanzaAttuale);
         return;
       }
@@ -619,27 +578,15 @@ await salvaPartitaFirebase(
           return;
         }
 
-        partita.giocatori[uid] = { 
-  nome: nickname, 
-  posizione: 0, 
-  socket, 
-  turniSaltati: 0 
-};
+        partita.giocatori[uid] = { nome: nickname, posizione: 0, socket, turniSaltati: 0 };
+        partita.ordineGiocatori.push(uid);
 
-partita.ordineGiocatori.push(uid);
+        await aggiornaStatoPartita(partita.id, {
+          giocatori: preparaGiocatoriPerFirebase(partita.giocatori),
+          ordineGiocatori: partita.ordineGiocatori
+        });
 
-
-// Aggiorna Firebase
-await aggiornaStatoPartita(partita.id, {
-
-  giocatori: preparaGiocatoriPerFirebase(partita.giocatori),
-
-  ordineGiocatori: partita.ordineGiocatori
-
-});
-
-
-inviaListaPartite(stanzaAttuale);
+        inviaListaPartite(stanzaAttuale);
 
         if (Object.keys(partita.giocatori).length === partita.maxGiocatori) avviaPartitaAutomaticamente(partita);
         return;
@@ -650,7 +597,7 @@ inviaListaPartite(stanzaAttuale);
         const partite = stanze[stanzaAttuale].partite;
         const idDaEliminare = Object.keys(partite).find(pid => partite[pid].creatoDa === uid);
         if (!idDaEliminare) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Non hai nessuna partita da eliminare." })); return; }
-        delete partite[idDaEliminare];
+        await rimuoviPartita(stanzaAttuale, idDaEliminare);
         inviaListaPartite(stanzaAttuale);
         return;
       }
@@ -681,6 +628,7 @@ inviaListaPartite(stanzaAttuale);
         const trovato = trovaPartita(dati.partitaId);
         if (!trovato) return;
         const partita = trovato.partita;
+        const nomeStanzaPartita = trovato.nomeStanza;
 
         const idDiTurno = partita.ordineGiocatori[partita.turnoAttuale];
         if (idDiTurno !== uid) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Non è il tuo turno!" })); return; }
@@ -707,6 +655,20 @@ inviaListaPartite(stanzaAttuale);
             }));
           }
         });
+
+        if (risultato.vittoria) {
+          // Fix: ora la partita viene davvero chiusa e le statistiche aggiornate
+          await aggiornaStatistichePartitaConclusa(partita, uid);
+          await rimuoviPartita(nomeStanzaPartita, partita.id);
+          inviaListaPartite(nomeStanzaPartita);
+        } else {
+          await aggiornaStatoPartita(partita.id, {
+            giocatori: preparaGiocatoriPerFirebase(partita.giocatori),
+            ordineGiocatori: partita.ordineGiocatori,
+            turnoAttuale: partita.turnoAttuale,
+            iniziata: partita.iniziata
+          });
+        }
         return;
       }
 
@@ -722,7 +684,11 @@ inviaListaPartite(stanzaAttuale);
         partita.ordineGiocatori = partita.ordineGiocatori.filter(id => id !== uid);
         const restanti = Object.keys(partita.giocatori);
 
-        if (restanti.length === 0) { delete stanze[nomeStanza].partite[partita.id]; inviaListaPartite(nomeStanza); return; }
+        if (restanti.length === 0) {
+          await rimuoviPartita(nomeStanza, partita.id);
+          inviaListaPartite(nomeStanza);
+          return;
+        }
         if (partita.turnoAttuale >= partita.ordineGiocatori.length) partita.turnoAttuale = 0;
 
         if (restanti.length === 1 && partita.iniziata) {
@@ -734,7 +700,8 @@ inviaListaPartite(stanzaAttuale);
               g.socket.send(JSON.stringify({ tipo: "statoPartita", giocatori: statoGiocatori, turnoDiId: vincitoreId, vittoria: true, vincitore: vincitoreNome, messaggi: [nomeUscente + " ha abbandonato la partita."] }));
             }
           });
-          delete stanze[nomeStanza].partite[partita.id];
+          await aggiornaStatistichePartitaConclusa(partita, vincitoreId);
+          await rimuoviPartita(nomeStanza, partita.id);
         } else {
           const idAttuale = partita.ordineGiocatori[partita.turnoAttuale];
           const statoGiocatori = partita.ordineGiocatori.map(id => ({ id, nome: partita.giocatori[id].nome, posizione: partita.giocatori[id].posizione }));
@@ -742,6 +709,11 @@ inviaListaPartite(stanzaAttuale);
             if (g.socket && g.socket.readyState === WebSocket.OPEN) {
               g.socket.send(JSON.stringify({ tipo: "statoPartita", giocatori: statoGiocatori, turnoDiId: idAttuale, messaggi: [nomeUscente + " ha abbandonato la partita."] }));
             }
+          });
+          await aggiornaStatoPartita(partita.id, {
+            giocatori: preparaGiocatoriPerFirebase(partita.giocatori),
+            ordineGiocatori: partita.ordineGiocatori,
+            turnoAttuale: partita.turnoAttuale
           });
         }
         inviaListaPartite(nomeStanza);
@@ -765,13 +737,24 @@ inviaListaPartite(stanzaAttuale);
       const partite = stanze[stanzaAttuale].partite;
       for (const pid in partite) {
         const partita = partite[pid];
-        if (uid && partita.giocatori[uid] && !partita.iniziata) {
-          delete partita.giocatori[uid];
-          partita.ordineGiocatori = partita.ordineGiocatori.filter(id => id !== uid);
-          if (Object.keys(partita.giocatori).length === 0) delete partite[pid];
-        }
-      }
-      inviaListaPartite(stanzaAttuale);
+if (uid && partita.giocatori[uid] && !partita.iniziata) {
+  delete partita.giocatori[uid];
+  partita.ordineGiocatori = partita.ordineGiocatori.filter(id => id !== uid);
+
+  if (Object.keys(partita.giocatori).length === 0) {
+    await rimuoviPartita(stanzaAttuale, pid);
+  } else {
+    await aggiornaStatoPartita(pid, {
+      giocatori: preparaGiocatoriPerFirebase(partita.giocatori),
+      ordineGiocatori: partita.ordineGiocatori
+    });
+  }
+}
+if (uid && partita.giocatori[uid] && partita.iniziata) {
+  partita.giocatori[uid].socket = null;
+}
+   } 
+  inviaListaPartite(stanzaAttuale);
     } catch (erroreInterno) {
       console.error("Errore nella chiusura di una connessione:", erroreInterno);
     }
@@ -779,9 +762,9 @@ inviaListaPartite(stanzaAttuale);
 });
 
 server.listen(PORT, async () => {
-    console.log("Server avviato sulla porta " + PORT);
+  console.log("Server avviato sulla porta " + PORT);
 
-    const partiteFirebase = await caricaPartite();
+  await pulisciPartiteVecchie();
 
-    console.log("Partite recuperate:", partiteFirebase);
+  await ripristinaPartiteDaFirebase();
 });
