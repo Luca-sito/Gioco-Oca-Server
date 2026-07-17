@@ -61,47 +61,77 @@ console.log("Firebase Admin inizializzato correttamente.");
 
 // ===== SALVATAGGIO PARTITE SU FIREBASE =====
 
+function preparaGiocatoriPerFirebase(giocatori) {
+
+  const risultato = {};
+
+  for (const uid in giocatori) {
+
+    risultato[uid] = {
+      nome: giocatori[uid].nome,
+      posizione: giocatori[uid].posizione,
+      turniSaltati: giocatori[uid].turniSaltati
+    };
+
+  }
+
+  return risultato;
+}
+
+
+
 async function salvaPartita(partita) {
   if (!db) return;
 
   await db.ref("partite/" + partita.id).set({
+
     id: partita.id,
     stanza: partita.stanza,
     creatore: partita.creatore,
     creatoDa: partita.creatoDa,
+
     tempo: partita.tempo,
     punti: partita.punti,
     modalita: partita.modalita,
 
-    giocatori: partita.giocatori,
+    giocatori: preparaGiocatoriPerFirebase(partita.giocatori),
+
     ordineGiocatori: partita.ordineGiocatori,
 
     turnoAttuale: partita.turnoAttuale,
     iniziata: partita.iniziata,
 
     aggiornataIl: Date.now()
+
   });
 }
 
 
 
 async function caricaPartite() {
+
   if (!db) return {};
 
   const snap = await db.ref("partite").once("value");
 
   return snap.val() || {};
+
 }
 
 
 
 async function aggiornaStatoPartita(partitaId, dati) {
+
   if (!db) return;
 
   await db.ref("partite/" + partitaId).update({
+
     ...dati,
+
     aggiornataIl: Date.now()
+
   });
+
 }
 
 
@@ -589,9 +619,27 @@ await salvaPartitaFirebase(
           return;
         }
 
-        partita.giocatori[uid] = { nome: nickname, posizione: 0, socket, turniSaltati: 0 };
-        partita.ordineGiocatori.push(uid);
-        inviaListaPartite(stanzaAttuale);
+        partita.giocatori[uid] = { 
+  nome: nickname, 
+  posizione: 0, 
+  socket, 
+  turniSaltati: 0 
+};
+
+partita.ordineGiocatori.push(uid);
+
+
+// Aggiorna Firebase
+await aggiornaStatoPartita(partita.id, {
+
+  giocatori: preparaGiocatoriPerFirebase(partita.giocatori),
+
+  ordineGiocatori: partita.ordineGiocatori
+
+});
+
+
+inviaListaPartite(stanzaAttuale);
 
         if (Object.keys(partita.giocatori).length === partita.maxGiocatori) avviaPartitaAutomaticamente(partita);
         return;
@@ -730,4 +778,10 @@ await salvaPartitaFirebase(
   });
 });
 
-server.listen(PORT, () => console.log("Server avviato sulla porta " + PORT));
+server.listen(PORT, async () => {
+    console.log("Server avviato sulla porta " + PORT);
+
+    const partiteFirebase = await caricaPartite();
+
+    console.log("Partite recuperate:", partiteFirebase);
+});
