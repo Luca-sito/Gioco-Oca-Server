@@ -190,6 +190,57 @@ function aggiungiMessaggio(nome, testo) {
   chat.innerHTML += `<div class="messaggio"><b>${nome}</b>: ${testo}</div>`;
   chat.scrollTop = chat.scrollHeight;
 }
+async function caricaTopGiocatori(){
+
+  try {
+
+    const risposta = await fetch("/api/top-giocatori");
+    const dati = await risposta.json();
+
+    const contenitore = document.getElementById("top");
+
+    if(!dati.giocatori || dati.giocatori.length === 0){
+      contenitore.innerHTML = "Nessun giocatore ancora.";
+      return;
+    }
+
+
+    contenitore.innerHTML = dati.giocatori.map((g,index)=>{
+
+      let medaglia = "";
+
+      if(index === 0) medaglia="🥇";
+      else if(index === 1) medaglia="🥈";
+      else if(index === 2) medaglia="🥉";
+      else medaglia="🏅";
+
+
+      return `
+        <div class="top-player">
+          ${medaglia}
+          <b>${g.nickname}</b><br>
+          🎯 Vittorie: ${g.vinte}<br>
+          🎮 Partite: ${g.giocate}
+        </div>
+        <br>
+      `;
+
+    }).join("");
+
+
+  } catch(e){
+
+    document.getElementById("top").innerHTML =
+      "Errore caricamento classifica";
+
+    console.error(e);
+
+  }
+
+}
+
+
+caricaTopGiocatori();
 </script>
 
 </body>
