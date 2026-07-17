@@ -1,29 +1,143 @@
-<div id="lobby">
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>GIOCHI SOCIETA</title>
 
-<h1>
-Giochi Societa - Gioco dell'Oca
-</h1>
+<style>
+*{
+  box-sizing:border-box;
+  font-family:Arial,sans-serif;
+}
 
-<input id="nome" placeholder="Inserisci nome giocatore">
+body{
+  margin:0;
+  min-height:100vh;
+  background:#101820;
+  color:white;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+}
+
+.contenitore{
+  width:90%;
+  max-width:900px;
+  text-align:center;
+}
+
+h1{
+  color:#ffd700;
+  font-size:42px;
+}
+
+.sottotitolo{
+  color:#ccc;
+  margin-bottom:30px;
+}
+
+.box{
+  background:#1e2a38;
+  border:2px solid #ffd700;
+  border-radius:15px;
+  padding:25px;
+  margin:20px 0;
+}
+
+button{
+  width:280px;
+  max-width:90%;
+  padding:15px;
+  margin:10px;
+  border:none;
+  border-radius:10px;
+  cursor:pointer;
+  font-size:17px;
+  font-weight:bold;
+}
+
+.gioca{
+  background:#ffd700;
+  color:#111;
+}
+
+.secondario{
+  background:#333;
+  color:white;
+}
+
+button:hover{
+  opacity:0.8;
+}
+
+#utente{
+  color:#00ff88;
+  font-size:18px;
+}
+
+.disabilitato{
+  opacity:0.5;
+  cursor:not-allowed;
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="contenitore">
+
+<h1>🎮 GIOCHI SOCIETA</h1>
+
+<div class="sottotitolo">
+La piattaforma dei giochi online
+</div>
 
 
-<h2>Scegli la stanza</h2>
+<div class="box">
+
+<div id="utente">
+Caricamento...
+</div>
 
 
-<button onclick="entraStanza('BAR')">
-🍺 Bar
+<div id="accesso"></div>
+
+</div>
+
+
+
+<div class="box">
+
+<h2>🎲 Giochi disponibili</h2>
+
+
+<button class="gioca" onclick="apriOca()">
+🎲 Gioco dell'Oca
 </button>
 
-<button onclick="entraStanza('PUB')">
-🍻 Pub
+
+<br>
+
+
+<button class="secondario" disabled>
+🃏 Scala 40 - Prossimamente
 </button>
 
-<button onclick="entraStanza('DISCOPUB')">
-🎧 Discopub
+
+<br>
+
+
+<button class="secondario" disabled>
+♟ Dama - Prossimamente
 </button>
 
-<button onclick="entraStanza('SERATE')">
-🎉 Serate
+
+<br>
+
+
+<button class="secondario" disabled>
+🎯 Quiz - Prossimamente
 </button>
 
 
@@ -31,38 +145,119 @@ Giochi Societa - Gioco dell'Oca
 
 
 
-<div id="gioco" style="display:none">
+<div class="box">
 
-<h2 id="nomeStanza"></h2>
+<h2>🏆 Area giocatore</h2>
 
-
-<h3>Giocatori presenti:</h3>
-
-<div id="lista"></div>
-
-
-<div id="tabellone">
-
-</div>
-
-
-<button onclick="dado()">
-🎲 Tira dado
+<button class="secondario" disabled>
+Classifica
 </button>
 
+<button class="secondario" disabled>
+Profilo
+</button>
 
 </div>
 
 
-<script src="gioco.js"></script>
+</div>
+
+
 
 <script>
 
-function entraStanza(nome){
+const token = localStorage.getItem("authToken");
+const nickname = localStorage.getItem("nickname");
 
-    window.location.href =
-    "lobby.html?stanza=" + encodeURIComponent(nome);
+
+const utente = document.getElementById("utente");
+const accesso = document.getElementById("accesso");
+
+
+
+if(token){
+
+    utente.innerHTML =
+    "👤 Ciao <b>" + nickname + "</b>!";
+
+    accesso.innerHTML = `
+    <button class="secondario" onclick="esci()">
+    Esci
+    </button>
+    `;
+
+}else{
+
+    utente.innerHTML =
+    "Benvenuto giocatore!";
+
+    accesso.innerHTML = `
+    <button class="gioca" onclick="vaiLogin()">
+    🔑 Accedi
+    </button>
+
+    <br>
+
+    <button class="secondario" onclick="registrati()">
+    Registrati
+    </button>
+    `;
 
 }
 
+
+
+function apriOca(){
+
+    if(!token){
+
+        window.location.href =
+        "login.html?redirect=" +
+        encodeURIComponent("lobby.html?stanza=BAR");
+
+        return;
+    }
+
+
+    window.location.href =
+    "lobby.html?stanza=BAR";
+
+}
+
+
+
+function vaiLogin(){
+
+    window.location.href =
+    "login.html?redirect=" +
+    encodeURIComponent("index.html");
+
+}
+
+
+
+function registrati(){
+
+    window.location.href =
+    "registrati.html";
+
+}
+
+
+
+function esci(){
+
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("nickname");
+    localStorage.removeItem("ruolo");
+
+    location.reload();
+
+}
+
+
 </script>
+
+
+</body>
+</html>
