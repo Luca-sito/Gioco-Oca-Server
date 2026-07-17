@@ -64,7 +64,6 @@ async function salvaPartita(partita) {
   });
 }
 
-async function caricaPartite() {
 async function pulisciPartiteVecchie() {
   if (!db) return;
 
@@ -80,7 +79,11 @@ async function pulisciPartiteVecchie() {
     }
   }
 }
+
+
+async function caricaPartite() {
   if (!db) return {};
+
   const snap = await db.ref("partite").once("value");
   return snap.val() || {};
 }
@@ -725,7 +728,7 @@ wss.on("connection", (socket) => {
     }
   });
 
-  socket.on("close", () => {
+  socket.on("close", async () => {
     try {
       delete socketsPerId[socketId];
       if (!stanzaAttuale || !stanze[stanzaAttuale]) return;
@@ -735,26 +738,39 @@ wss.on("connection", (socket) => {
       inviaAllaStanza(stanzaAttuale, { tipo: "online", numero: Object.keys(stanze[stanzaAttuale].giocatoriOnline).length });
 
       const partite = stanze[stanzaAttuale].partite;
-      for (const pid in partite) {
-        const partita = partite[pid];
-if (uid && partita.giocatori[uid] && !partita.iniziata) {
-  delete partita.giocatori[uid];
-  partita.ordineGiocatori = partita.ordineGiocatori.filter(id => id !== uid);
+for (const pid in partite) {
+  const partita = partite[pid];
 
-  if (Object.keys(partita.giocatori).length === 0) {
-    await rimuoviPartita(stanzaAttuale, pid);
-  } else {
-    await aggiornaStatoPartita(pid, {
-      giocatori: preparaGiocatoriPerFirebase(partita.giocatori),
-      ordineGiocatori: partita.ordineGiocatori
-    });
+  if (uid && partita.giocatori[uid] && !partita.iniziata) {
+
+    delete partita.giocatori[uid];
+
+    partita.ordineGiocatori =
+      partita.ordineGiocatori.filter(id => id !== uid);
+
+
+    if (Object.keys(partita.giocatori).length === 0) {
+
+      await rimuoviPartita(stanzaAttuale, pid);
+
+    } else {
+
+      await aggiornaStatoPartita(pid, {
+        giocatori: preparaGiocatoriPerFirebase(partita.giocatori),
+        ordineGiocatori: partita.ordineGiocatori
+      });
+
+    }
   }
+
+
+  if (uid && partita.giocatori[uid] && partita.iniziata) {
+    partita.giocatori[uid].socket = null;
+  }
+
 }
-if (uid && partita.giocatori[uid] && partita.iniziata) {
-  partita.giocatori[uid].socket = null;
-}
-   } 
-  inviaListaPartite(stanzaAttuale);
+
+inviaListaPartite(stanzaAttuale);
     } catch (erroreInterno) {
       console.error("Errore nella chiusura di una connessione:", erroreInterno);
     }
