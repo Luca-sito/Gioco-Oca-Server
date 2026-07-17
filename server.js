@@ -52,6 +52,41 @@ try {
   });
   db = admin.database();
   console.log("Firebase Admin inizializzato correttamente.");
+// ===== SALVATAGGIO PARTITE SU FIREBASE =====
+
+async function salvaPartita(partita) {
+  if (!db) return;
+
+  await db.ref("partite/" + partita.id).set({
+    id: partita.id,
+    stanza: partita.stanza,
+    creatore: partita.creatore,
+    creatoDa: partita.creatoDa,
+    tempo: partita.tempo,
+    punti: partita.punti,
+    modalita: partita.modalita,
+    giocatori: partita.giocatori,
+    ordineGiocatori: partita.ordineGiocatori,
+    turnoAttuale: partita.turnoAttuale,
+    iniziata: partita.iniziata
+  });
+}
+
+
+async function caricaPartite() {
+  if (!db) return {};
+
+  const snap = await db.ref("partite").once("value");
+
+  return snap.val() || {};
+}
+
+
+async function aggiornaStatoPartita(partitaId, dati) {
+  if (!db) return;
+
+  await db.ref("partite/" + partitaId).update(dati);
+}
 } catch (e) {
   console.error("ATTENZIONE: Firebase Admin NON inizializzato:", e.message);
 }
