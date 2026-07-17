@@ -50,8 +50,15 @@ try {
     credential: admin.credential.cert(serviceAccount),
     databaseURL: "https://giochi-societa-e8add-default-rtdb.europe-west1.firebasedatabase.app"
   });
-  db = admin.database();
-  console.log("Firebase Admin inizializzato correttamente.");
+db = admin.database();
+
+console.log("Firebase Admin inizializzato correttamente.");
+
+} catch (e) {
+  console.error("ATTENZIONE: Firebase Admin NON inizializzato:", e.message);
+}
+
+
 // ===== SALVATAGGIO PARTITE SU FIREBASE =====
 
 async function salvaPartita(partita) {
@@ -65,12 +72,17 @@ async function salvaPartita(partita) {
     tempo: partita.tempo,
     punti: partita.punti,
     modalita: partita.modalita,
+
     giocatori: partita.giocatori,
     ordineGiocatori: partita.ordineGiocatori,
+
     turnoAttuale: partita.turnoAttuale,
-    iniziata: partita.iniziata
+    iniziata: partita.iniziata,
+
+    aggiornataIl: Date.now()
   });
 }
+
 
 
 async function caricaPartite() {
@@ -82,47 +94,128 @@ async function caricaPartite() {
 }
 
 
+
 async function aggiornaStatoPartita(partitaId, dati) {
   if (!db) return;
 
-  await db.ref("partite/" + partitaId).update(dati);
-}
-} catch (e) {
-  console.error("ATTENZIONE: Firebase Admin NON inizializzato:", e.message);
+  await db.ref("partite/" + partitaId).update({
+    ...dati,
+    aggiornataIl: Date.now()
+  });
 }
 
+
+
+// ===== TOKEN =====
+
 function creaToken(uid, nickname, ruolo) {
-  return jwt.sign({ uid, nickname, ruolo }, JWT_SECRET, { expiresIn: "30d" });
+  return jwt.sign(
+    { uid, nickname, ruolo },
+    JWT_SECRET,
+    { expiresIn: "30d" }
+  );
 }
+
+
 function verificaToken(token) {
   if (!token) return null;
-  try { return jwt.verify(token, JWT_SECRET); } catch (e) { return null; }
+
+  try {
+    return jwt.verify(token, JWT_SECRET);
+  } catch (e) {
+    return null;
+  }
 }
+
+
 function estraiTokenHeader(req) {
+
   const header = req.headers.authorization || "";
+
   const parti = header.split(" ");
+
   return parti.length === 2 ? parti[1] : null;
+
 }
+
+
+
 async function richiediAdmin(req, res, next) {
-  const dati = verificaToken(estraiTokenHeader(req));
-  if (!dati) return res.status(401).json({ errore: "Devi effettuare il login." });
-  if (dati.ruolo !== "admin") return res.status(403).json({ errore: "Accesso riservato agli amministratori." });
+
+  const dati = verificaToken(
+    estraiTokenHeader(req)
+  );
+
+  if (!dati)
+    return res.status(401).json({
+      errore:"Devi effettuare il login."
+    });
+
+
+  if (dati.ruolo !== "admin")
+    return res.status(403).json({
+      errore:"Accesso riservato agli amministratori."
+    });
+
+
   req.utenteAdmin = dati;
+
   next();
+
 }
+
+
+
 async function trovaUtentePerEmail(emailLower) {
-  const snap = await db.ref("utenti").orderByChild("emailLower").equalTo(emailLower).once("value");
-  if (!snap.exists()) return null;
+
+  const snap = await db
+    .ref("utenti")
+    .orderByChild("emailLower")
+    .equalTo(emailLower)
+    .once("value");
+
+
+  if (!snap.exists())
+    return null;
+
+
   const val = snap.val();
+
   const uid = Object.keys(val)[0];
-  return { uid, ...val[uid] };
+
+
+  return {
+    uid,
+    ...val[uid]
+  };
+
 }
+
+
+
 async function trovaUtentePerNickname(nicknameLower) {
-  const snap = await db.ref("utenti").orderByChild("nicknameLower").equalTo(nicknameLower).once("value");
-  if (!snap.exists()) return null;
+
+  const snap = await db
+    .ref("utenti")
+    .orderByChild("nicknameLower")
+    .equalTo(nicknameLower)
+    .once("value");
+
+
+  if (!snap.exists())
+    return null;
+
+
   const val = snap.val();
+
   const uid = Object.keys(val)[0];
-  return { uid, ...val[uid] };
+
+
+  return {
+    uid,
+    ...val[uid]
+  };
+
 }
 
 // ===== API REGISTRAZIONE / LOGIN =====
@@ -471,6 +564,10 @@ wss.on("connection", (socket) => {
           giocatori: { [uid]: { nome: nickname, posizione: 0, socket, turniSaltati: 0 } },
           ordineGiocatori: [uid], turnoAttuale: 0, iniziata: false
         };
+await salvaPartita({
+  ...stanze[stanzaAttuale].partite[partitaId],
+  stanza: stanzaAttuale
+});
 await salvaPartitaFirebase(
   partitaId,
   stanze[stanzaAttuale].partite[partitaId],
