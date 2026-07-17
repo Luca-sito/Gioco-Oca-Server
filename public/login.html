@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Accedi - Giochi Società</title>
+<style>
+* { box-sizing: border-box; font-family: Arial, sans-serif; }
+body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #101820; }
+.scatola { background: #1e2a38; border: 2px solid #ffd700; border-radius: 14px; padding: 36px; width: 340px; max-width: 90%; }
+h1 { color: #ffd700; text-align: center; font-size: 22px; margin-top: 0; }
+label { display: block; color: #ccc; font-size: 13px; font-weight: bold; margin: 14px 0 6px; }
+input { width: 100%; padding: 11px; border-radius: 8px; border: none; background: #101820; color: #fff; font-size: 14px; }
+button { width: 100%; margin-top: 22px; padding: 13px; border: none; border-radius: 8px; background: #ffd700; color: #111; font-weight: bold; font-size: 15px; cursor: pointer; }
+button:hover { background: #ffaa00; }
+.errore { color: #ff6b6b; font-size: 13px; margin-top: 12px; text-align: center; min-height: 16px; }
+.link-sotto { text-align: center; margin-top: 16px; font-size: 13px; color: #aaa; }
+.link-sotto a { color: #ffd700; text-decoration: none; }
+</style>
+</head>
+<body>
+
+<div class="scatola">
+  <h1>🪿 Accedi</h1>
+
+  <label>Email</label>
+  <input type="email" id="email" placeholder="tuaemail@esempio.com">
+
+  <label>Password</label>
+  <input type="password" id="password" placeholder="••••••••">
+
+  <button onclick="accedi()">Accedi</button>
+  <div class="errore" id="errore"></div>
+
+  <div class="link-sotto">
+    Non hai un account? <a id="linkRegistrati" href="registrati.html">Registrati</a>
+  </div>
+</div>
+
+<script>
+const parametri = new URLSearchParams(window.location.search);
+const redirect = parametri.get("redirect");
+if (redirect) document.getElementById("linkRegistrati").href = "registrati.html?redirect=" + encodeURIComponent(redirect);
+
+async function accedi() {
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+  const erroreEl = document.getElementById("errore");
+  erroreEl.textContent = "";
+
+  if (!email || !password) { erroreEl.textContent = "Inserisci email e password."; return; }
+
+  try {
+    const risposta = await fetch("/api/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password })
+    });
+    const dati = await risposta.json();
+    if (!risposta.ok) { erroreEl.textContent = dati.errore || "Errore durante il login."; return; }
+
+    localStorage.setItem("authToken", dati.token);
+    localStorage.setItem("nickname", dati.nickname);
+    localStorage.setItem("ruolo", dati.ruolo);
+
+    window.location.href = redirect || "https://solfriniluca1.wixstudio.com/giochidisocieta";
+  } catch (e) {
+    erroreEl.textContent = "Errore di connessione al server.";
+  }
+}
+</script>
+
+</body>
+</html>

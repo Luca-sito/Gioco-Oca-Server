@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Pannello Admin - Giochi Società</title>
+<style>
+* { box-sizing: border-box; font-family: Arial, sans-serif; }
+body { margin: 0; background: #101820; color: #eee; padding: 30px; }
+h1 { color: #ffd700; }
+#accessoNegato { color: #ff6b6b; font-size: 16px; }
+table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #333; font-size: 13px; }
+th { color: #ffd700; }
+.badge { padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: bold; }
+.badge-attivo { background: #1b5e20; color: #a5d6a7; }
+.badge-sospeso { background: #7a5c00; color: #ffe082; }
+.badge-bannato { background: #7a1b1b; color: #ffab91; }
+.azioni button { margin: 2px; padding: 6px 10px; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; }
+.btn-avviso { background: #ffb300; color: #111; }
+.btn-sospendi { background: #ff7043; color: #111; }
+.btn-rimuovi { background: #42a5f5; color: #111; }
+.btn-banna { background: #e53935; color: #fff; }
+.btn-riattiva { background: #43a047; color: #fff; }
+.avvisi-lista { font-size: 11px; color: #999; margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<h1>🛡️ Pannello di amministrazione</h1>
+<div id="accessoNegato" style="display:none;">
+  Accesso riservato agli amministratori. <a href="login.html?redirect=admin.html" style="color:#ffd700;">Accedi con un account admin</a>.
+</div>
+
+<div id="contenutoAdmin" style="display:none;">
+  <table>
+    <thead>
+      <tr><th>Nickname</th><th>Email</th><th>Stato</th><th>Avvisi</th><th>Azioni</th></tr>
+    </thead>
+    <tbody id="corpoTabella"></tbody>
+  </table>
+</div>
+
+<script>
+const token = localStorage.getItem("authToken");
+
+async function carica() {
+  if (!token) { document.getElementById("accessoNegato").style.display = "block"; return; }
+  try {
+    const risposta = await fetch("/api/admin/utenti", { headers: { "Authorization": "Bearer " + token } });
+    if (!risposta.ok) { document.getElementById("accessoNegato").style.display = "block"; return; }
+    const dati = await risposta.json();
+    document.getElementById("contenutoAdmin").style.display = "block";
+    disegnaTabella(dati.utenti);
+  } catch (e) {
+    document.getElementById("accessoNegato").style.display = "block";
+  }
+}
+
+function badgeStato(stato) {
+  if (stato === "attivo") return `<span class="badge badge-attivo">Attivo</span>`;
+  if (stato === "sospeso") return `<span class="badge badge-sospeso">Sospeso</span>`;
+  if (stato === "bannato") return `<span class="badge badge-bannato">Bannato</span>`;
+  return stato;
+}
+
+function disegnaTabella(utenti) {
+  document.getElementById("corpoTabella").innerHTML = utenti.map(u => `
+    <tr>
+      <td>${u.nickname}</td>
+      <td>${u.email}</td>
+      <td>${badgeStato(u.stato)} ${u.stato === "sospeso" && u.sospesoFino ? `<div class="avvisi-lista">fino al ${new Date(u.sospesoFino).toLocaleString("it-IT")}</div>` : ""}</td>
+      <td>${u.avvisi.length} avviso/i ${u.avvisi.length ? `<div class="avvisi-lista">${u.avvisi.map(a => a.motivo).join(" · ")}</div>` : ""}</td>
+      <td class="azioni">
+        <button class="btn-avviso" onclick="daiAvviso('${u.uid}')">Avviso</button>
+        <button class="btn-sospendi" onclick="sospendi('${u.uid}')">Sospendi</button>
+        <button class="btn-rimuovi" onclick="rimuoviSospensione('${u.uid}')">Fine sospensione</button>
+        <button class="btn-banna" onclick="banna('${u.uid}')">Banna</button>
+        <button class="btn-riattiva" onclick="riattiva('${u.uid}')">Riattiva</button>
+      </td>
+    </tr>
+  `).join("");
+}
+
+async function chiamataAdmin(percorso, corpo) {
+  const risposta = await fetch(percorso, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+    body: JSON.stringify(corpo)
+  });
+  const dati = await risposta.json();
+  if (!risposta.ok) { alert(dati.errore || "Errore."); return false; }
+  return true;
+}
+
+async function daiAvviso(uid) {
+  const motivo = prompt("Motivo dell'avviso:");
+  if (!motivo) return;
+  if (await chiamataAdmin("/api/admin/avviso", { uid, motivo })) carica();
+}
+async function sospendi(uid) {
+  const giorni = prompt("Per quanti giorni vuoi sospendere l'account?", "3");
+  if (!giorni) return;
+  const motivo = prompt("Motivo della sospensione (facoltativo):") || "";
+  if (await chiamataAdmin("/api/admin/sospendi", { uid, giorni, motivo })) carica();
+}
+async function rimuoviSospensione(uid) {
+  if (await chiamataAdmin("/api/admin/rimuovi-sospensione", { uid })) carica();
+}
+async function banna(uid) {
+  if (!confirm("Sei sicuro di voler bannare definitivamente questo utente?")) return;
+  const motivo = prompt("Motivo del ban (facoltativo):") || "";
+  if (await chiamataAdmin("/api/admin/banna", { uid, motivo })) carica();
+}
+async function riattiva(uid) {
+  if (await chiamataAdmin("/api/admin/riattiva", { uid })) carica();
+}
+
+carica();
+</script>
+
+</body>
+</html>
