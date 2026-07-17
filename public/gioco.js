@@ -27,50 +27,49 @@ const coloriGiocatori = ["#6a2c70", "#dddddd", "#1e40af", "#43a047", "#f57c00", 
 const params = new URLSearchParams(window.location.search);
 const partitaId = params.get("partita");
 const stanza = params.get("stanza");
-const mioNome = localStorage.getItem("nickname") || "Giocatore";
 
-let giocatoreId = localStorage.getItem("giocatoreId");
-if (!giocatoreId) {
-  giocatoreId = "g" + Date.now() + Math.random().toString(36).slice(2, 10);
-  localStorage.setItem("giocatoreId", giocatoreId);
+const authToken = localStorage.getItem("authToken");
+if (!authToken) {
+  window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href);
 }
+
+function decodificaPayloadToken(token) {
+  try {
+    const payloadBase64 = token.split(".")[1];
+    const json = atob(payloadBase64.replace(/-/g, "+").replace(/_/g, "/"));
+    return JSON.parse(json);
+  } catch (e) { return null; }
+}
+const payloadToken = decodificaPayloadToken(authToken);
+const mioUid = payloadToken ? payloadToken.uid : null;
 
 let socket;
 let ultimoStatoGiocatori = [];
 let mioTurno = false;
 let turnoAttualeId = null;
 
-// ---- Dadi ----
 function creaFacciaDado(valore) {
   const posizioniPip = {
-    1: [[50, 50]],
-    2: [[25, 25], [75, 75]],
-    3: [[25, 25], [50, 50], [75, 75]],
+    1: [[50, 50]], 2: [[25, 25], [75, 75]], 3: [[25, 25], [50, 50], [75, 75]],
     4: [[25, 25], [75, 25], [25, 75], [75, 75]],
     5: [[25, 25], [75, 25], [50, 50], [25, 75], [75, 75]],
     6: [[25, 25], [75, 25], [25, 50], [75, 50], [25, 75], [75, 75]]
   };
   const colorePip = (valore === 1 || valore === 4) ? "#e53935" : "#222";
   const pips = posizioniPip[valore].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="8" fill="${colorePip}"/>`).join("");
-  return `
-    <svg width="55" height="55" viewBox="0 0 100 100">
-      <rect x="4" y="4" width="92" height="92" rx="14" fill="#fff" stroke="#ccc" stroke-width="3"/>
-      ${pips}
-    </svg>
-  `;
+  return `<svg width="55" height="55" viewBox="0 0 100 100"><rect x="4" y="4" width="92" height="92" rx="14" fill="#fff" stroke="#ccc" stroke-width="3"/>${pips}</svg>`;
 }
 
-function mostraDadi(valore1, valore2) {
-  document.getElementById("dado1").innerHTML = creaFacciaDado(valore1);
-  document.getElementById("dado2").innerHTML = creaFacciaDado(valore2);
+function mostraDadi(v1, v2) {
+  document.getElementById("dado1").innerHTML = creaFacciaDado(v1);
+  document.getElementById("dado2").innerHTML = creaFacciaDado(v2);
 }
 
-function animaLancioDadi(valoreFinale1, valoreFinale2, callback) {
+function animaLancioDadi(vf1, vf2, callback) {
   const dado1El = document.getElementById("dado1");
   const dado2El = document.getElementById("dado2");
   dado1El.classList.add("dado-rotola");
   dado2El.classList.add("dado-rotola");
-
   let cicli = 0;
   const intervallo = setInterval(() => {
     dado1El.innerHTML = creaFacciaDado(Math.floor(Math.random() * 6) + 1);
@@ -80,13 +79,12 @@ function animaLancioDadi(valoreFinale1, valoreFinale2, callback) {
       clearInterval(intervallo);
       dado1El.classList.remove("dado-rotola");
       dado2El.classList.remove("dado-rotola");
-      mostraDadi(valoreFinale1, valoreFinale2);
+      mostraDadi(vf1, vf2);
       if (callback) callback();
     }
   }, 80);
 }
 
-// ---- Colori/avatar ----
 function schiarisciColore(hex, p) { return mescolaColore(hex, 255, p); }
 function scuriscColore(hex, p) { return mescolaColore(hex, 0, p); }
 function mescolaColore(hex, target, p) {
@@ -99,12 +97,11 @@ function mescolaColore(hex, target, p) {
 }
 function iniziale(nome) { return (nome || "?").trim().charAt(0).toUpperCase(); }
 
-// ---- Connessione ----
 function connetti() {
   socket = new WebSocket("wss://gioco-oca-server.onrender.com");
 
   socket.onopen = () => {
-    socket.send(JSON.stringify({ tipo: "riprendiPartita", partitaId, nome: mioNome, giocatoreId }));
+    socket.send(JSON.stringify({ tipo: "riprendiPartita", partitaId, token: authToken }));
   };
 
   socket.onclose = () => {
@@ -114,6 +111,12 @@ function connetti() {
 
   socket.onmessage = (msg) => {
     const dati = JSON.parse(msg.data);
+
+    if (dati.tipo === "sessioneScaduta") {
+      localStorage.removeItem("authToken");
+      window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href);
+      return;
+    }
 
     if (dati.tipo === "statoPartita") {
       ultimoStatoGiocatori = dati.giocatori;
@@ -126,9 +129,7 @@ function connetti() {
         aggiornaTurno(dati.turnoDiId);
         disegnaGiocatori();
       }
-      if (dati.messaggi && dati.messaggi.length) {
-        document.getElementById("messaggi-gioco").textContent = dati.messaggi.join(" ");
-      }
+      if (dati.messaggi && dati.messaggi.length) document.getElementById("messaggi-gioco").textContent = dati.messaggi.join(" ");
       mostraDadi(1, 1);
     }
 
@@ -136,8 +137,7 @@ function connetti() {
       animaLancioDadi(dati.dado1, dati.dado2, () => {
         ultimoStatoGiocatori = dati.giocatori;
         document.getElementById("messaggi-gioco").textContent =
-          "🎲 " + dati.dado1 + " + " + dati.dado2 + " = " + dati.valoreDado +
-          (dati.messaggi.length ? " — " + dati.messaggi.join(" ") : "");
+          "🎲 " + dati.dado1 + " + " + dati.dado2 + " = " + dati.valoreDado + (dati.messaggi.length ? " — " + dati.messaggi.join(" ") : "");
 
         if (dati.vittoria) {
           turnoAttualeId = null;
@@ -151,19 +151,14 @@ function connetti() {
       });
     }
 
-    if (dati.tipo === "chatPartita") {
-      aggiungiMessaggioChatPartita(dati.nome, dati.testo);
-    }
-
-    if (dati.tipo === "errore") {
-      alert(dati.messaggio);
-    }
+    if (dati.tipo === "chatPartita") aggiungiMessaggioChatPartita(dati.nome, dati.testo);
+    if (dati.tipo === "errore") alert(dati.messaggio);
   };
 }
 
 function aggiornaTurno(turnoDiId) {
   turnoAttualeId = turnoDiId;
-  mioTurno = (turnoDiId === giocatoreId);
+  mioTurno = (turnoDiId === mioUid);
   document.getElementById("riga-turno").textContent = mioTurno ? "🎲 È il tuo turno!" : "⏳ In attesa...";
   document.getElementById("area-dadi").classList.toggle("disabilitato", !mioTurno);
 }
@@ -172,10 +167,8 @@ function disegnaGiocatori() {
   const container = document.getElementById("contenitore-pedine");
   const immagine = document.getElementById("immagine-tabellone");
   container.innerHTML = "";
-
   const scaleX = immagine.clientWidth / immagine.naturalWidth;
   const scaleY = immagine.clientHeight / immagine.naturalHeight;
-
   const listaPannello = document.getElementById("lista-giocatori");
   listaPannello.innerHTML = "";
 
@@ -191,31 +184,23 @@ function disegnaGiocatori() {
       pedina.style.top = (casella.y * scaleY) + "px";
       pedina.innerHTML = `
         <svg width="26" height="38" viewBox="0 0 34 48">
-          <defs>
-            <radialGradient id="${idGradiente}" cx="35%" cy="25%" r="75%">
-              <stop offset="0%" stop-color="${schiarisciColore(colore, 55)}"/>
-              <stop offset="55%" stop-color="${colore}"/>
-              <stop offset="100%" stop-color="${scuriscColore(colore, 35)}"/>
-            </radialGradient>
-          </defs>
+          <defs><radialGradient id="${idGradiente}" cx="35%" cy="25%" r="75%">
+            <stop offset="0%" stop-color="${schiarisciColore(colore, 55)}"/>
+            <stop offset="55%" stop-color="${colore}"/>
+            <stop offset="100%" stop-color="${scuriscColore(colore, 35)}"/>
+          </radialGradient></defs>
           <ellipse cx="17" cy="44" rx="12" ry="3.5" fill="rgba(0,0,0,0.3)"/>
           <ellipse cx="17" cy="42" rx="11" ry="4" fill="${scuriscColore(colore, 25)}"/>
-          <path d="M17 42 C10 42 4 40 4 37 L10 15 C10 15 12 12 17 12 C22 12 24 15 24 15 L30 37 C30 40 24 42 17 42 Z"
-                fill="url(#${idGradiente})" stroke="${scuriscColore(colore, 45)}" stroke-width="0.8"/>
+          <path d="M17 42 C10 42 4 40 4 37 L10 15 C10 15 12 12 17 12 C22 12 24 15 24 15 L30 37 C30 40 24 42 17 42 Z" fill="url(#${idGradiente})" stroke="${scuriscColore(colore, 45)}" stroke-width="0.8"/>
           <circle cx="17" cy="9" r="7.5" fill="url(#${idGradiente})" stroke="${scuriscColore(colore, 45)}" stroke-width="0.8"/>
           <ellipse cx="14" cy="6" rx="2.5" ry="1.8" fill="rgba(255,255,255,0.55)"/>
-        </svg>
-      `;
+        </svg>`;
       container.appendChild(pedina);
     }
 
     const card = document.createElement("div");
     card.className = "giocatore-card" + (giocatore.id === turnoAttualeId ? " attivo" : "");
-    card.innerHTML = `
-      <div class="avatar-mini" style="background:${colore};">${iniziale(giocatore.nome)}</div>
-      <span>${giocatore.nome}</span>
-      <span class="casella-mini">${giocatore.posizione}</span>
-    `;
+    card.innerHTML = `<div class="avatar-mini" style="background:${colore};">${iniziale(giocatore.nome)}</div><span>${giocatore.nome}</span><span class="casella-mini">${giocatore.posizione}</span>`;
     listaPannello.appendChild(card);
   });
 }
@@ -225,36 +210,21 @@ function mostraVittoria(nomeVincitore) {
   document.getElementById("overlay-vittoria").classList.add("aperto");
 }
 
-function tornaAllaLobby() {
-  window.location.href = `lobby.html?stanza=${stanza}`;
-}
+function tornaAllaLobby() { window.location.href = `lobby.html?stanza=${stanza}`; }
 
 function abbandonaPartita() {
-  const conferma = confirm("Sei sicuro di voler abbandonare la partita?");
-  if (!conferma) return;
-  socket.send(JSON.stringify({ tipo: "abbandonaPartita", partitaId, giocatoreId }));
+  if (!confirm("Sei sicuro di voler abbandonare la partita?")) return;
+  socket.send(JSON.stringify({ tipo: "abbandonaPartita", partitaId }));
   tornaAllaLobby();
 }
 
-function apriProfilo() {
-  chiudiMenu();
-  alert("Sezione Profilo in arrivo prossimamente!");
-}
-function apriImpostazioni() {
-  chiudiMenu();
-  alert("Sezione Impostazioni in arrivo prossimamente!");
-}
-function chiudiMenu() {
-  document.getElementById("pannello-menu").classList.add("nascosto");
-}
+function apriProfilo() { chiudiMenu(); alert("Sezione Profilo in arrivo prossimamente!"); }
+function apriImpostazioni() { chiudiMenu(); alert("Sezione Impostazioni in arrivo prossimamente!"); }
+function chiudiMenu() { document.getElementById("pannello-menu").classList.add("nascosto"); }
 
-document.getElementById("btn-menu").onclick = (e) => {
-  e.stopPropagation();
-  document.getElementById("pannello-menu").classList.toggle("nascosto");
-};
+document.getElementById("btn-menu").onclick = (e) => { e.stopPropagation(); document.getElementById("pannello-menu").classList.toggle("nascosto"); };
 document.addEventListener("click", () => chiudiMenu());
 
-// ---- Chat in partita ----
 function aggiungiMessaggioChatPartita(nome, testo) {
   const box = document.getElementById("chat-messaggi");
   const riga = document.createElement("div");
@@ -268,21 +238,15 @@ function inviaChatPartita() {
   const input = document.getElementById("chat-input");
   const testo = input.value.trim();
   if (!testo) return;
-  socket.send(JSON.stringify({ tipo: "chatPartita", partitaId, giocatoreId, testo }));
+  socket.send(JSON.stringify({ tipo: "chatPartita", partitaId, testo }));
   input.value = "";
 }
-document.getElementById("chat-input").addEventListener("keypress", (e) => {
-  if (e.key === "Enter") inviaChatPartita();
-});
-document.getElementById("btn-chat").onclick = (e) => {
-  e.stopPropagation();
-  document.getElementById("pannello-chat").classList.toggle("nascosto");
-};
+document.getElementById("chat-input").addEventListener("keypress", (e) => { if (e.key === "Enter") inviaChatPartita(); });
+document.getElementById("btn-chat").onclick = (e) => { e.stopPropagation(); document.getElementById("pannello-chat").classList.toggle("nascosto"); };
 
-// ---- Dadi ----
 document.getElementById("area-dadi").onclick = () => {
   if (!mioTurno) return;
-  socket.send(JSON.stringify({ tipo: "tiraDadi", partitaId, giocatoreId }));
+  socket.send(JSON.stringify({ tipo: "tiraDadi", partitaId }));
 };
 
 mostraDadi(1, 1);
