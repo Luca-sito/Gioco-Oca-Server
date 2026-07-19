@@ -23,6 +23,7 @@ const posizioniCaselle = {
 };
 
 const coloriGiocatori = ["#6a2c70", "#dddddd", "#1e40af", "#43a047", "#f57c00", "#c0ca33", "#e53935", "#2b2b2b"];
+const DURATA_SALTO_MS = 380;
 
 const params = new URLSearchParams(window.location.search);
 const partitaId = params.get("partita");
@@ -47,6 +48,7 @@ let socket;
 let ultimoStatoGiocatori = [];
 let mioTurno = false;
 let turnoAttualeId = null;
+let timerRiconnessione = null; // fix: dichiarata FUORI da connetti(), altrimenti si azzera ad ogni chiamata
 
 function creaFacciaDado(valore) {
   const posizioniPip = {
@@ -97,16 +99,92 @@ function mescolaColore(hex, target, p) {
 }
 function iniziale(nome) { return (nome || "?").trim().charAt(0).toUpperCase(); }
 
+function coordinatePerCasella(casellaNumero) {
+  const immagine = document.getElementById("immagine-tabellone");
+  const scaleX = immagine.clientWidth / immagine.naturalWidth;
+  const scaleY = immagine.clientHeight / immagine.naturalHeight;
+  const casella = casellaNumero === 0 ? { x: 100, y: 1900 } : posizioniCaselle[casellaNumero];
+  if (!casella) return null;
+  return { left: casella.x * scaleX, top: casella.y * scaleY };
+}
+
+function posizionaPedina(pedina, casellaNumero) {
+  const coord = coordinatePerCasella(casellaNumero);
+  if (!coord) return;
+  pedina.style.left = coord.left + "px";
+  pedina.style.top = coord.top + "px";
+}
+
+function ottieniOCreaPedina(idGiocatore, colore, indice) {
+  let pedina = document.getElementById("pedina-" + idGiocatore);
+  if (!pedina) {
+    pedina = document.createElement("div");
+    pedina.id = "pedina-" + idGiocatore;
+    pedina.className = "pedina";
+    const idGradiente = "gradPedina" + indice;
+    pedina.innerHTML = `
+      <svg width="26" height="38" viewBox="0 0 34 48">
+        <defs><radialGradient id="${idGradiente}" cx="35%" cy="25%" r="75%">
+          <stop offset="0%" stop-color="${schiarisciColore(colore, 55)}"/>
+          <stop offset="55%" stop-color="${colore}"/>
+          <stop offset="100%" stop-color="${scuriscColore(colore, 35)}"/>
+        </radialGradient></defs>
+        <ellipse cx="17" cy="44" rx="12" ry="3.5" fill="rgba(0,0,0,0.3)"/>
+        <ellipse cx="17" cy="42" rx="11" ry="4" fill="${scuriscColore(colore, 25)}"/>
+        <path d="M17 42 C10 42 4 40 4 37 L10 15 C10 15 12 12 17 12 C22 12 24 15 24 15 L30 37 C30 40 24 42 17 42 Z" fill="url(#${idGradiente})" stroke="${scuriscColore(colore, 45)}" stroke-width="0.8"/>
+        <circle cx="17" cy="9" r="7.5" fill="url(#${idGradiente})" stroke="${scuriscColore(colore, 45)}" stroke-width="0.8"/>
+        <ellipse cx="14" cy="6" rx="2.5" ry="1.8" fill="rgba(255,255,255,0.55)"/>
+      </svg>`;
+    document.getElementById("contenitore-pedine").appendChild(pedina);
+  }
+  return pedina;
+}
+
+function animaSaltoPedina(idGiocatore, percorso, callback) {
+  if (!percorso || percorso.length === 0) { if (callback) callback(); return; }
+
+  const indice = ultimoStatoGiocatori.findIndex(g => g.id === idGiocatore);
+  const colore = coloriGiocatori[(indice >= 0 ? indice : 0) % coloriGiocatori.length];
+  const pedina = ottieniOCreaPedina(idGiocatore, colore, indice >= 0 ? indice : 0);
+
+  let passo = 0;
+  function saltaProssimo() {
+    if (passo >= percorso.length) { if (callback) callback(); return; }
+    const casella = percorso[passo];
+
+    pedina.classList.add("pedina-salta");
+    posizionaPedina(pedina, casella);
+
+    const etichettaCasella = document.getElementById("casella-" + idGiocatore);
+    if (etichettaCasella) etichettaCasella.textContent = casella;
+
+    setTimeout(() => pedina.classList.remove("pedina-salta"), DURATA_SALTO_MS * 0.6);
+
+    passo++;
+    setTimeout(saltaProssimo, DURATA_SALTO_MS);
+  }
+  saltaProssimo();
+}
+
 function connetti() {
   socket = new WebSocket("wss://gioco-oca-server.onrender.com");
 
   socket.onopen = () => {
+  if (timerRiconnessione) {
+    clearTimeout(timerRiconnessione);
+    timerRiconnessione = null;
+}
     socket.send(JSON.stringify({ tipo: "riprendiPartita", partitaId, token: authToken }));
   };
 
   socket.onclose = () => {
     document.getElementById("riga-turno").textContent = "🔴 Disconnesso, riconnessione...";
-    setTimeout(connetti, 3000);
+    if (!timerRiconnessione) {
+      timerRiconnessione = setTimeout(() => {
+        timerRiconnessione = null;
+        connetti();
+      }, 3000);
+    }
   };
 
   socket.onmessage = (msg) => {
@@ -134,25 +212,72 @@ function connetti() {
     }
 
     if (dati.tipo === "aggiornamentoPartita") {
-      animaLancioDadi(dati.dado1, dati.dado2, () => {
-        ultimoStatoGiocatori = dati.giocatori;
-        document.getElementById("messaggi-gioco").textContent =
-          "🎲 " + dati.dado1 + " + " + dati.dado2 + " = " + dati.valoreDado + (dati.messaggi.length ? " — " + dati.messaggi.join(" ") : "");
 
-        if (dati.vittoria) {
-          turnoAttualeId = null;
-          document.getElementById("area-dadi").classList.add("disabilitato");
-          disegnaGiocatori();
-          mostraVittoria(dati.vincitore);
+    animaLancioDadi(dati.dado1, dati.dado2, () => {
+
+        if (dati.percorso && dati.idGiocatoreCheHaTirato) {
+
+            animaSaltoPedina(
+                dati.idGiocatoreCheHaTirato,
+                dati.percorso,
+                () => {
+
+                    ultimoStatoGiocatori = dati.giocatori;
+
+document.getElementById("messaggi-gioco").textContent =
+"🎲 " + dati.dado1 + " + " + dati.dado2 +
+" = " + dati.valoreDado +
+(dati.messaggi && dati.messaggi.length
+    ? " — " + dati.messaggi.join(" ")
+    : "");
+
+if (dati.vittoria) {
+    turnoAttualeId = null;
+    document.getElementById("area-dadi").classList.add("disabilitato");
+    disegnaGiocatori();
+    mostraVittoria(dati.vincitore);
+} else {
+    aggiornaTurno(dati.turnoDiId);
+    disegnaGiocatori();
+}
+
+                }
+            );
+
         } else {
-          aggiornaTurno(dati.turnoDiId);
-          disegnaGiocatori();
+
+            // stesso codice che hai nella callback
+            ultimoStatoGiocatori = dati.giocatori;
+
+            document.getElementById("messaggi-gioco").textContent =
+                "🎲 " + dati.dado1 + " + " + dati.dado2 +
+                " = " + dati.valoreDado +
+                (dati.messaggi && dati.messaggi.length
+                    ? " — " + dati.messaggi.join(" ")
+                    : "");
+
+
+            if (dati.vittoria) {
+                turnoAttualeId = null;
+                document.getElementById("area-dadi").classList.add("disabilitato");
+                disegnaGiocatori();
+                mostraVittoria(dati.vincitore);
+            } else {
+                aggiornaTurno(dati.turnoDiId);
+                disegnaGiocatori();
+            }
         }
-      });
-    }
+
+    });
+
+}
 
     if (dati.tipo === "chatPartita") aggiungiMessaggioChatPartita(dati.nome, dati.testo);
-    if (dati.tipo === "errore") alert(dati.messaggio);
+    if (dati.tipo === "errore") {
+      alert(dati.messaggio);
+      // Se l'errore riguarda il turno, riabilito i dadi (altrimenti restano bloccati)
+      if (mioTurno) document.getElementById("area-dadi").classList.remove("disabilitato");
+    }
   };
 }
 
@@ -164,43 +289,24 @@ function aggiornaTurno(turnoDiId) {
 }
 
 function disegnaGiocatori() {
-  const container = document.getElementById("contenitore-pedine");
-  const immagine = document.getElementById("immagine-tabellone");
-  container.innerHTML = "";
-  const scaleX = immagine.clientWidth / immagine.naturalWidth;
-  const scaleY = immagine.clientHeight / immagine.naturalHeight;
+const contenitore = document.getElementById("contenitore-pedine");
+
+Array.from(contenitore.children).forEach(p => {
+  if (!ultimoStatoGiocatori.some(g => "pedina-" + g.id === p.id)) {
+    p.remove();
+  }
+});
   const listaPannello = document.getElementById("lista-giocatori");
   listaPannello.innerHTML = "";
 
   ultimoStatoGiocatori.forEach((giocatore, indice) => {
     const colore = coloriGiocatori[indice % coloriGiocatori.length];
-    const idGradiente = "gradPedina" + indice;
-    const casella = giocatore.posizione === 0 ? { x: 100, y: 1900 } : posizioniCaselle[giocatore.posizione];
-
-    if (casella) {
-      const pedina = document.createElement("div");
-      pedina.className = "pedina";
-      pedina.style.left = (casella.x * scaleX) + "px";
-      pedina.style.top = (casella.y * scaleY) + "px";
-      pedina.innerHTML = `
-        <svg width="26" height="38" viewBox="0 0 34 48">
-          <defs><radialGradient id="${idGradiente}" cx="35%" cy="25%" r="75%">
-            <stop offset="0%" stop-color="${schiarisciColore(colore, 55)}"/>
-            <stop offset="55%" stop-color="${colore}"/>
-            <stop offset="100%" stop-color="${scuriscColore(colore, 35)}"/>
-          </radialGradient></defs>
-          <ellipse cx="17" cy="44" rx="12" ry="3.5" fill="rgba(0,0,0,0.3)"/>
-          <ellipse cx="17" cy="42" rx="11" ry="4" fill="${scuriscColore(colore, 25)}"/>
-          <path d="M17 42 C10 42 4 40 4 37 L10 15 C10 15 12 12 17 12 C22 12 24 15 24 15 L30 37 C30 40 24 42 17 42 Z" fill="url(#${idGradiente})" stroke="${scuriscColore(colore, 45)}" stroke-width="0.8"/>
-          <circle cx="17" cy="9" r="7.5" fill="url(#${idGradiente})" stroke="${scuriscColore(colore, 45)}" stroke-width="0.8"/>
-          <ellipse cx="14" cy="6" rx="2.5" ry="1.8" fill="rgba(255,255,255,0.55)"/>
-        </svg>`;
-      container.appendChild(pedina);
-    }
+    const pedina = ottieniOCreaPedina(giocatore.id, colore, indice);
+    posizionaPedina(pedina, giocatore.posizione);
 
     const card = document.createElement("div");
     card.className = "giocatore-card" + (giocatore.id === turnoAttualeId ? " attivo" : "");
-    card.innerHTML = `<div class="avatar-mini" style="background:${colore};">${iniziale(giocatore.nome)}</div><span>${giocatore.nome}</span><span class="casella-mini">${giocatore.posizione}</span>`;
+    card.innerHTML = `<div class="avatar-mini" style="background:${colore};">${iniziale(giocatore.nome)}</div><span>${giocatore.nome}</span><span class="casella-mini" id="casella-${giocatore.id}">${giocatore.posizione}</span>`;
     listaPannello.appendChild(card);
   });
 }
@@ -214,7 +320,14 @@ function tornaAllaLobby() { window.location.href = `lobby.html?stanza=${stanza}`
 
 function abbandonaPartita() {
   if (!confirm("Sei sicuro di voler abbandonare la partita?")) return;
-  socket.send(JSON.stringify({ tipo: "abbandonaPartita", partitaId }));
+
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    socket.send(JSON.stringify({
+      tipo: "abbandonaPartita",
+      partitaId
+    }));
+  }
+
   tornaAllaLobby();
 }
 
@@ -238,7 +351,13 @@ function inviaChatPartita() {
   const input = document.getElementById("chat-input");
   const testo = input.value.trim();
   if (!testo) return;
-  socket.send(JSON.stringify({ tipo: "chatPartita", partitaId, testo }));
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    socket.send(JSON.stringify({
+        tipo:"chatPartita",
+        partitaId,
+        testo
+    }));
+}
   input.value = "";
 }
 document.getElementById("chat-input").addEventListener("keypress", (e) => { if (e.key === "Enter") inviaChatPartita(); });
@@ -246,7 +365,15 @@ document.getElementById("btn-chat").onclick = (e) => { e.stopPropagation(); docu
 
 document.getElementById("area-dadi").onclick = () => {
   if (!mioTurno) return;
-  socket.send(JSON.stringify({ tipo: "tiraDadi", partitaId }));
+
+  if (!socket || socket.readyState !== WebSocket.OPEN) return;
+
+  document.getElementById("area-dadi").classList.add("disabilitato");
+
+  socket.send(JSON.stringify({
+    tipo: "tiraDadi",
+    partitaId
+  }));
 };
 
 mostraDadi(1, 1);
