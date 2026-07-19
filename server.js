@@ -18,7 +18,6 @@ const wss = new WebSocket.Server({ server });
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || "cambia-questo-secret";
 
-// ===== FIREBASE ADMIN (account utenti + partite) =====
 let db = null;
 try {
   const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
@@ -32,7 +31,6 @@ try {
   console.error("ATTENZIONE: Firebase Admin NON inizializzato:", e.message);
 }
 
-// ===== SALVATAGGIO PARTITE SU FIREBASE =====
 function preparaGiocatoriPerFirebase(giocatori) {
   const risultato = {};
   for (const uid in giocatori) {
@@ -100,7 +98,6 @@ async function aggiornaStatistichePartitaConclusa(partita, vincitoreUid) {
   }
 }
 
-// ===== TOKEN =====
 function creaToken(uid, nickname, ruolo) {
   return jwt.sign({ uid, nickname, ruolo }, JWT_SECRET, { expiresIn: "30d" });
 }
@@ -135,7 +132,6 @@ async function trovaUtentePerNickname(nicknameLower) {
   return { uid, ...val[uid] };
 }
 
-// ===== API REGISTRAZIONE / LOGIN =====
 app.post("/api/registrati", async (req, res) => {
   if (!db) return res.status(500).json({ errore: "Servizio account non disponibile al momento." });
   try {
@@ -207,7 +203,6 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
-// ===== CLASSIFICA TOP GIOCATORI =====
 app.get("/api/top-giocatori", async (req, res) => {
   try {
     if (!db) return res.json({ giocatori: [] });
@@ -224,7 +219,6 @@ app.get("/api/top-giocatori", async (req, res) => {
   }
 });
 
-// ===== API ADMIN =====
 app.get("/api/admin/utenti", richiediAdmin, async (req, res) => {
   if (!db) return res.status(500).json({ errore: "Database non disponibile." });
   const snap = await db.ref("utenti").once("value");
@@ -277,7 +271,6 @@ app.post("/api/admin/riattiva", richiediAdmin, async (req, res) => {
   res.json({ ok: true });
 });
 
-// ===== DADO VERO DA RANDOM.ORG (con fallback automatico) =====
 function tiraDadoRandomOrg() {
   return new Promise((resolve) => {
     const url = "https://www.random.org/integers/?num=2&min=1&max=6&col=1&base=10&format=plain&rnd=new";
@@ -300,11 +293,9 @@ function tiraDadoRandomOrg() {
 async function lanciaDueDadiSicuri() {
   const risultato = await tiraDadoRandomOrg();
   if (risultato) return risultato;
-  // Fallback locale se random.org non risponde (rete assente, quota esaurita, ecc.)
   return { dado1: Math.floor(Math.random() * 6) + 1, dado2: Math.floor(Math.random() * 6) + 1 };
 }
 
-// ===== LOGICA DI GIOCO =====
 const CASELLE_AVANZA_ANCORA = [9, 18, 27, 36, 45, 54];
 const CASELLE_SALTA_TRE_TURNI = [19, 31];
 const CASELLE_SALTA_UN_TURNO = [52];
@@ -331,7 +322,8 @@ async function ripristinaPartiteDaFirebase() {
       giocatori: p.giocatori || {},
       ordineGiocatori: p.ordineGiocatori || [],
       turnoAttuale: p.turnoAttuale || 0,
-      iniziata: p.iniziata || false
+      iniziata: p.iniziata || false,
+      elaborandoTiro: false
     };
   }
   console.log("Partite ripristinate da Firebase:", Object.keys(partiteFirebase).length);
@@ -340,9 +332,6 @@ async function ripristinaPartiteDaFirebase() {
 let contatoreId = 0;
 const socketsPerId = {};
 
-// Calcola il movimento E il percorso completo (ogni casella attraversata), rispettando
-// rimbalzo al traguardo, "avanza ancora" e "torna a" — usato per far saltellare la pedina
-// casella per casella invece di scivolare in linea retta.
 function calcolaMovimento(posizioneAttuale, valoreDado) {
   let percorso = [];
   let nuovaPosizione = posizioneAttuale + valoreDado;
@@ -415,12 +404,13 @@ function determinaOrdineIniziale(idsGiocatori) {
   return ordineFinale;
 }
 
-function avviaPartitaAutomaticamente(partita) {
+async function avviaPartitaAutomaticamente(partita) {
   const idsGiocatori = Object.keys(partita.giocatori);
   const ordineDeterminato = determinaOrdineIniziale(idsGiocatori);
   partita.ordineGiocatori = ordineDeterminato;
   partita.turnoAttuale = 0;
   partita.iniziata = true;
+  partita.elaborandoTiro = false;
   const nomiInOrdine = ordineDeterminato.map(id => partita.giocatori[id].nome);
   Object.values(partita.giocatori).forEach(g => {
     if (g.socket && g.socket.readyState === WebSocket.OPEN) {
@@ -428,7 +418,7 @@ function avviaPartitaAutomaticamente(partita) {
     }
   });
   const trovato = trovaPartita(partita.id);
-  salvaPartita({ ...partita, stanza: trovato ? trovato.nomeStanza : partita.stanza });
+  await salvaPartita({ ...partita, stanza: trovato ? trovato.nomeStanza : partita.stanza });
 }
 
 function passaAlProssimoTurno(partita) {
@@ -487,7 +477,6 @@ const heartbeatInterval = setInterval(() => {
 }, HEARTBEAT_MS);
 wss.on("close", () => clearInterval(heartbeatInterval));
 
-// ===== CONNESSIONI WEBSOCKET =====
 wss.on("connection", (socket) => {
   socket.isAlive = true;
   socket.on("pong", () => { socket.isAlive = true; });
@@ -567,7 +556,7 @@ wss.on("connection", (socket) => {
           codicePrivato: dati.modalita === "privata" ? dati.codicePrivato : null,
           maxGiocatori: parseInt(dati.maxGiocatori) || 2,
           giocatori: { [uid]: { nome: nickname, posizione: 0, socket, turniSaltati: 0 } },
-          ordineGiocatori: [uid], turnoAttuale: 0, iniziata: false
+          ordineGiocatori: [uid], turnoAttuale: 0, iniziata: false, elaborandoTiro: false
         };
         await salvaPartita({ ...stanze[stanzaAttuale].partite[partitaId], stanza: stanzaAttuale });
         inviaListaPartite(stanzaAttuale);
@@ -596,7 +585,7 @@ wss.on("connection", (socket) => {
 
         inviaListaPartite(stanzaAttuale);
 
-        if (Object.keys(partita.giocatori).length === partita.maxGiocatori) avviaPartitaAutomaticamente(partita);
+        if (Object.keys(partita.giocatori).length === partita.maxGiocatori) await avviaPartitaAutomaticamente(partita);
         return;
       }
 
@@ -641,7 +630,7 @@ wss.on("connection", (socket) => {
         const idDiTurno = partita.ordineGiocatori[partita.turnoAttuale];
         if (idDiTurno !== uid) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Non è il tuo turno!" })); return; }
 
-        // Evita che due click ravvicinati (durante l'attesa di random.org) facciano tirare due volte
+        // Fix: lucchetto anti doppio-tiro durante l'attesa di random.org (mancava)
         if (partita.elaborandoTiro) return;
         partita.elaborandoTiro = true;
 
