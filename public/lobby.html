@@ -48,7 +48,7 @@ button:hover{ opacity:0.8; }
       <option value="7">7 giocatori</option>
       <option value="8">8 giocatori</option>
       </select>
-      
+
       <p>Tempo di mossa</p>
       <select id="tempo">
         <option value="15">15 secondi</option>
@@ -154,8 +154,9 @@ function creaPartita() {
     tempo: document.getElementById("tempo").value,
     punti: document.getElementById("punti").value,
     modalita: tipo,
-    codicePrivato: codicePrivato
-  }));
+    codicePrivato: codicePrivato,
+    maxGiocatori: document.getElementById("numeroGiocatori").value
+}));
 }
 
 function eliminaPartita() {
