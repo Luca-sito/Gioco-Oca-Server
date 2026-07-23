@@ -117,6 +117,14 @@ async function richiediAdmin(req, res, next) {
   req.utenteAdmin = dati;
   next();
 }
+
+async function richiediAuth(req, res, next) {
+  const dati = verificaToken(estraiTokenHeader(req));
+  if (!dati) return res.status(401).json({ errore: "Devi effettuare il login." });
+  req.utente = dati;
+  next();
+}
+
 async function trovaUtentePerEmail(emailLower) {
   const snap = await db.ref("utenti").orderByChild("emailLower").equalTo(emailLower).once("value");
   if (!snap.exists()) return null;
@@ -216,6 +224,64 @@ app.get("/api/top-giocatori", async (req, res) => {
   } catch (e) {
     console.error("Errore classifica:", e);
     res.status(500).json({ giocatori: [] });
+  }
+});
+
+app.get("/api/me", richiediAuth, async (req, res) => {
+  if (!db) return res.status(500).json({ errore: "Servizio account non disponibile." });
+  try {
+    const snap = await db.ref("utenti/" + req.utente.uid).once("value");
+    const utente = snap.val();
+    if (!utente) return res.status(404).json({ errore: "Utente non trovato." });
+    res.json({ nickname: utente.nickname, email: utente.email });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ errore: "Errore del server." });
+  }
+});
+
+app.post("/api/contatti", async (req, res) => {
+  if (!db) return res.status(500).json({ errore: "Servizio non disponibile al momento." });
+  try {
+    const { categoria, messaggio } = req.body;
+    let { nickname, email } = req.body;
+
+    if (!messaggio || !messaggio.trim()) {
+      return res.status(400).json({ errore: "Scrivi un messaggio prima di inviare." });
+    }
+
+    // Se sei loggato, usa i dati verificati dal token — non ci si può fingere qualcun altro
+    const datiToken = verificaToken(estraiTokenHeader(req));
+    let uidMittente = null;
+    if (datiToken) {
+      uidMittente = datiToken.uid;
+      const snap = await db.ref("utenti/" + datiToken.uid).once("value");
+      const utenteDb = snap.val();
+      if (utenteDb) {
+        nickname = utenteDb.nickname;
+        email = utenteDb.email;
+      }
+    }
+
+    if (!nickname || !nickname.trim() || !email || !email.trim()) {
+      return res.status(400).json({ errore: "Nickname ed email sono obbligatori." });
+    }
+
+    const nuovoRef = db.ref("contatti").push();
+    await nuovoRef.set({
+      nickname: nickname.trim(),
+      email: email.trim(),
+      categoria: categoria || "Altro",
+      messaggio: messaggio.trim(),
+      uidMittente: uidMittente,
+      letto: false,
+      data: Date.now()
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ errore: "Errore durante l'invio, riprova." });
   }
 });
 
