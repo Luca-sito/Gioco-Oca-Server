@@ -241,49 +241,113 @@ app.get("/api/me", richiediAuth, async (req, res) => {
 });
 
 app.post("/api/contatti", async (req, res) => {
-  if (!db) return res.status(500).json({ errore: "Servizio non disponibile al momento." });
+  if (!db) {
+    return res.status(500).json({
+      errore: "Firebase non disponibile."
+    });
+  }
+
   try {
-    const { categoria, messaggio } = req.body;
-    let { nickname, email } = req.body;
+
+    const {
+      categoria,
+      messaggio
+    } = req.body;
+
+    let {
+      nickname,
+      email
+    } = req.body;
+
 
     if (!messaggio || !messaggio.trim()) {
-      return res.status(400).json({ errore: "Scrivi un messaggio prima di inviare." });
+      return res.status(400).json({
+        errore: "Scrivi un messaggio prima di inviare."
+      });
     }
 
-    // Se sei loggato, usa i dati verificati dal token — non ci si può fingere qualcun altro
-    const datiToken = verificaToken(estraiTokenHeader(req));
+
+    const datiToken = verificaToken(
+      estraiTokenHeader(req)
+    );
+
+
     let uidMittente = null;
+
+
+    // Se l'utente è loggato recuperiamo i dati reali
     if (datiToken) {
+
       uidMittente = datiToken.uid;
-      const snap = await db.ref("utenti/" + datiToken.uid).once("value");
-      const utenteDb = snap.val();
-      if (utenteDb) {
-        nickname = utenteDb.nickname;
-        email = utenteDb.email;
+
+
+      const snap = await db
+        .ref("utenti/" + datiToken.uid)
+        .once("value");
+
+
+      const utente = snap.val();
+
+
+      if (utente) {
+        nickname = utente.nickname;
+        email = utente.email;
       }
+
     }
 
-    if (!nickname || !nickname.trim() || !email || !email.trim()) {
-      return res.status(400).json({ errore: "Nickname ed email sono obbligatori." });
+
+    if (!nickname || !email) {
+      return res.status(400).json({
+        errore: "Nickname ed email obbligatori."
+      });
     }
 
-    const nuovoRef = db.ref("contatti").push();
-    await nuovoRef.set({
+
+    const nuovoContatto = db.ref("contatti").push();
+
+
+    await nuovoContatto.set({
+
       nickname: nickname.trim(),
+
       email: email.trim(),
+
       categoria: categoria || "Altro",
+
       messaggio: messaggio.trim(),
+
       uidMittente: uidMittente,
+
       letto: false,
+
       data: Date.now()
+
     });
 
-    res.json({ ok: true });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ errore: "Errore durante l'invio, riprova." });
+
+    res.json({
+      ok: true,
+      messaggio: "Richiesta inviata correttamente."
+    });
+
+
+  } catch (errore) {
+
+    console.error(
+      "Errore salvataggio contatto:",
+      errore
+    );
+
+
+    res.status(500).json({
+      errore: "Errore durante il salvataggio."
+    });
+
   }
+
 });
+
 
 app.get("/api/admin/utenti", richiediAdmin, async (req, res) => {
   if (!db) return res.status(500).json({ errore: "Database non disponibile." });
