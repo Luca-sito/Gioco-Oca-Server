@@ -240,6 +240,17 @@ app.get("/api/me", richiediAuth, async (req, res) => {
   }
 });
 
+// Controlla se l'utente è già loggato
+app.get("/api/verifica-sessione", richiediAuth, async (req, res) => {
+
+  res.json({
+    loggato: true,
+    nickname: req.utente.nickname,
+    ruolo: req.utente.ruolo
+  });
+
+});
+
 
 // 👇 INCOLLA QUI LA NUOVA API MODIFICA NICKNAME
 
