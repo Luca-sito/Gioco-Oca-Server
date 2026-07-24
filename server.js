@@ -233,7 +233,16 @@ app.get("/api/me", richiediAuth, async (req, res) => {
     const snap = await db.ref("utenti/" + req.utente.uid).once("value");
     const utente = snap.val();
     if (!utente) return res.status(404).json({ errore: "Utente non trovato." });
-    res.json({ nickname: utente.nickname, email: utente.email });
+    res.json({
+      nickname: utente.nickname,
+      email: utente.email,
+      ruolo: utente.ruolo || "utente",
+      stato: utente.stato || "attivo",
+      sospesoFino: utente.sospesoFino || null,
+      avvisi: utente.avvisi || [],
+      partiteVinte: utente.partiteVinte || 0,
+      partiteGiocate: utente.partiteGiocate || 0
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ errore: "Errore del server." });
@@ -250,6 +259,7 @@ app.get("/api/verifica-sessione", richiediAuth, async (req, res) => {
   });
 
 });
+
 
 
 // 👇 INCOLLA QUI LA NUOVA API MODIFICA NICKNAME
