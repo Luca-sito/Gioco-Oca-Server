@@ -62,7 +62,8 @@ async function accedi() {
     localStorage.setItem("nickname", dati.nickname);
     localStorage.setItem("ruolo", dati.ruolo);
 
-    window.location.href = redirect || "index.html";
+    window.location.href = redirect || "account.html";
+
   } catch (e) {
     erroreEl.textContent = "Errore di connessione al server.";
   }
