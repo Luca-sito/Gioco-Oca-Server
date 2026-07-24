@@ -17,12 +17,13 @@ function pulisciLocalStorage() {
   localStorage.removeItem("nickname");
   localStorage.removeItem("ruolo");
 }
-function invia(messaggio) {
-  window.parent.postMessage(
-    messaggio,
-    "https://solfriniluca1.wixstudio.com"
-);
 
+// Fallback "*" finché non riceviamo una vera richiesta con un'origine nota;
+// dopo la prima richiediStato, rispondiamo sempre a quella origine precisa.
+let origineRichiedente = "*";
+
+function invia(messaggio) {
+  window.parent.postMessage(messaggio, origineRichiedente);
 }
 
 async function controllaStato() {
@@ -52,35 +53,27 @@ async function controllaStato() {
     localStorage.setItem("ruolo", dati.ruolo || "utente");
     invia({ tipo: "statoAuth", loggato: true, nickname: dati.nickname, ruolo: dati.ruolo || "utente" });
   } catch (e) {
-    // Server irraggiungibile (es. in fase di risveglio su Render): non forziamo il logout,
-    // riproverà al prossimo caricamento
+    // Server irraggiungibile (es. Render in fase di risveglio): non forziamo il logout
     invia({ tipo: "statoAuth", loggato: false, temporaneo: true });
   }
 }
 
 window.addEventListener("message", (evento) => {
+  if (!evento.data || typeof evento.data !== "object") return;
 
-    if (!evento.data || typeof evento.data !== "object") return;
-
-
-    if (evento.data.tipo === "richiediStato") {
-        controllaStato();
-    }
-
-
-    if (evento.data.tipo === "logout") {
-
-        pulisciLocalStorage();
-
-        invia({
-            tipo:"statoAuth",
-            loggato:false
-        });
-
-    }
-
+  if (evento.data.tipo === "richiediStato") {
+    origineRichiedente = evento.origin; // rispondiamo esattamente a chi ci ha chiesto
+    controllaStato();
+  }
+  if (evento.data.tipo === "logout") {
+    origineRichiedente = evento.origin;
+    pulisciLocalStorage();
+    invia({ tipo: "statoAuth", loggato: false });
+  }
 });
 
+// Controllo anche subito al caricamento, senza aspettare messaggi in arrivo
+controllaStato();
 </script>
 </body>
 </html>
