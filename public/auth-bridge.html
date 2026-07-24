@@ -18,7 +18,11 @@ function pulisciLocalStorage() {
   localStorage.removeItem("ruolo");
 }
 function invia(messaggio) {
-  if (window.parent) window.parent.postMessage(messaggio, "*");
+  window.parent.postMessage(
+    messaggio,
+    "https://solfriniluca1.wixstudio.com"
+);
+
 }
 
 async function controllaStato() {
@@ -56,41 +60,27 @@ async function controllaStato() {
 
 window.addEventListener("message", (evento) => {
 
-  if (!evento.data || typeof evento.data !== "object") return;
+    if (!evento.data || typeof evento.data !== "object") return;
 
 
-  if(evento.data.tipo==="salvaLogin"){
-
-    localStorage.setItem("authToken", evento.data.token);
-    localStorage.setItem("nickname", evento.data.nickname);
-    localStorage.setItem("ruolo", evento.data.ruolo);
+    if (evento.data.tipo === "richiediStato") {
+        controllaStato();
+    }
 
 
-    invia({
-        tipo:"statoAuth",
-        loggato:true,
-        nickname:evento.data.nickname,
-        ruolo:evento.data.ruolo
-    });
+    if (evento.data.tipo === "logout") {
 
-    return;
-  }
+        pulisciLocalStorage();
 
+        invia({
+            tipo:"statoAuth",
+            loggato:false
+        });
 
-  if (evento.data.tipo === "richiediStato") controllaStato();
-
-
-  if (evento.data.tipo === "logout") {
-    pulisciLocalStorage();
-    invia({ tipo: "statoAuth", loggato: false });
-  }
+    }
 
 });
 
-window.addEventListener("load", function(){
-    controllaStato();
-});
-  
 </script>
 </body>
 </html>
