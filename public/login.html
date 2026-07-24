@@ -63,8 +63,12 @@ async function accedi() {
     localStorage.setItem("ruolo", dati.ruolo);
 
     window.location.href =
-(redirect || "https://solfriniluca1.wixstudio.com/giochisocieta")
-+ "?login=success";
+    "https://solfriniluca1.wixstudio.com/giochisocieta?token="
+    + encodeURIComponent(dati.token)
+    + "&nickname="
+    + encodeURIComponent(dati.nickname)
+    + "&ruolo="
+    + encodeURIComponent(dati.ruolo || "utente");
 
 
   } catch (e) {
