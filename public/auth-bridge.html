@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Auth Bridge</title>
+</head>
+<body style="margin:0;">
+<script>
+function leggiLocalStorage() {
+  return {
+    token: localStorage.getItem("authToken"),
+    nickname: localStorage.getItem("nickname")
+  };
+}
+function pulisciLocalStorage() {
+  localStorage.removeItem("authToken");
+  localStorage.removeItem("nickname");
+  localStorage.removeItem("ruolo");
+}
+function invia(messaggio) {
+  if (window.parent) window.parent.postMessage(messaggio, "*");
+}
+
+async function controllaStato() {
+  const { token } = leggiLocalStorage();
+  if (!token) { invia({ tipo: "statoAuth", loggato: false }); return; }
+
+  try {
+    const risposta = await fetch("https://gioco-oca-server.onrender.com/api/me", {
+      headers: { "Authorization": "Bearer " + token }
+    });
+
+    if (!risposta.ok) {
+      pulisciLocalStorage();
+      invia({ tipo: "statoAuth", loggato: false });
+      return;
+    }
+
+    const dati = await risposta.json();
+
+    if (dati.stato === "bannato" || dati.stato === "sospeso") {
+      pulisciLocalStorage();
+      invia({ tipo: "statoAuth", loggato: false });
+      return;
+    }
+
+    localStorage.setItem("nickname", dati.nickname);
+    localStorage.setItem("ruolo", dati.ruolo || "utente");
+    invia({ tipo: "statoAuth", loggato: true, nickname: dati.nickname, ruolo: dati.ruolo || "utente" });
+  } catch (e) {
+    // Server irraggiungibile (es. in fase di risveglio su Render): non forziamo il logout,
+    // riproverà al prossimo caricamento
+    invia({ tipo: "statoAuth", loggato: false, temporaneo: true });
+  }
+}
+
+window.addEventListener("message", (evento) => {
+  if (!evento.data || typeof evento.data !== "object") return;
+  if (evento.data.tipo === "richiediStato") controllaStato();
+  if (evento.data.tipo === "logout") {
+    pulisciLocalStorage();
+    invia({ tipo: "statoAuth", loggato: false });
+  }
+});
+
+controllaStato();
+</script>
+</body>
+</html>
