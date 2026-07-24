@@ -7,14 +7,18 @@ const cors = require("cors");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const admin = require("firebase-admin");
+const cookieParser = require("cookie-parser");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
 
 const server = http.createServer(app);
-const wss = new WebSocket.Server({ server });
+const wss = new WebSocket.Server({
+  server
+});
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || "cambia-questo-secret";
 
@@ -106,10 +110,18 @@ function verificaToken(token) {
   try { return jwt.verify(token, JWT_SECRET); } catch (e) { return null; }
 }
 function estraiTokenHeader(req) {
+
+  if (req.cookies && req.cookies.token) {
+    return req.cookies.token;
+  }
+
   const header = req.headers.authorization || "";
   const parti = header.split(" ");
+
   return parti.length === 2 ? parti[1] : null;
+
 }
+
 async function richiediAdmin(req, res, next) {
   const dati = verificaToken(estraiTokenHeader(req));
   if (!dati) return res.status(401).json({ errore: "Devi effettuare il login." });
@@ -171,8 +183,26 @@ app.post("/api/registrati", async (req, res) => {
       creatoIl: Date.now()
     });
 
-    const token = creaToken(uid, nickname.trim(), "utente");
-    res.json({ token, nickname: nickname.trim(), ruolo: "utente" });
+    const token = creaToken(
+  utente.uid,
+  utente.nickname,
+  utente.ruolo || "utente"
+);
+
+
+res.cookie("token", token, {
+  httpOnly: true,
+  secure: true,
+  sameSite: "none",
+  maxAge: 30 * 24 * 60 * 60 * 1000
+});
+
+
+res.json({
+  nickname: utente.nickname,
+  ruolo: utente.ruolo || "utente"
+});
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ errore: "Errore del server, riprova." });
@@ -203,8 +233,26 @@ app.post("/api/login", async (req, res) => {
       }
     }
 
-    const token = creaToken(utente.uid, utente.nickname, utente.ruolo || "utente");
-    res.json({ token, nickname: utente.nickname, ruolo: utente.ruolo || "utente" });
+    const token = creaToken(
+  utente.uid,
+  utente.nickname,
+  utente.ruolo || "utente"
+);
+
+
+res.cookie("token", token, {
+  httpOnly: true,
+  secure: true,
+  sameSite: "none",
+  maxAge: 30 * 24 * 60 * 60 * 1000
+});
+
+
+res.json({
+  nickname: utente.nickname,
+  ruolo: utente.ruolo || "utente"
+});
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ errore: "Errore del server, riprova." });
