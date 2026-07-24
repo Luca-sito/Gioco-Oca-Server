@@ -747,6 +747,10 @@ const heartbeatInterval = setInterval(() => {
 wss.on("close", () => clearInterval(heartbeatInterval));
 
 wss.on("connection", (socket) => {
+const cookieToken = estraiCookieToken(
+  socket._socket.headers.cookie
+);
+
   socket.isAlive = true;
   socket.on("pong", () => { socket.isAlive = true; });
 
@@ -766,7 +770,7 @@ wss.on("connection", (socket) => {
 
       if (dati.tipo === "entraLobby") {
         if (!db) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Servizio account non disponibile." })); return; }
-        const datiToken = verificaToken(dati.token);
+        const datiToken = verificaToken(cookieToken);
         if (!datiToken) { socket.send(JSON.stringify({ tipo: "sessioneScaduta" })); return; }
 
         const snap = await db.ref("utenti/" + datiToken.uid).once("value");
