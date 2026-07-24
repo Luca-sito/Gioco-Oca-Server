@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+
+<meta charset="UTF-8">
+
+<title>Il mio account</title>
+
+<style>
+
+body{
+margin:0;
+background:#101820;
+font-family:Arial;
+color:white;
+display:flex;
+justify-content:center;
+align-items:center;
+height:100vh;
+}
+
+
+.box{
+
+background:#1e2a38;
+border:2px solid #ffd700;
+border-radius:15px;
+padding:30px;
+width:350px;
+text-align:center;
+
+}
+
+
+h1{
+color:#ffd700;
+}
+
+
+input{
+
+width:100%;
+padding:12px;
+margin-top:10px;
+border-radius:8px;
+border:none;
+box-sizing:border-box;
+
+}
+
+
+button{
+
+margin-top:15px;
+width:100%;
+padding:12px;
+background:#ffd700;
+border:none;
+border-radius:8px;
+font-weight:bold;
+cursor:pointer;
+
+}
+
+
+button:hover{
+
+background:#ffaa00;
+
+}
+
+
+#errore{
+
+color:#ff6b6b;
+margin-top:10px;
+
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+
+<div class="box">
+
+
+<h1>👤 Il mio account</h1>
+
+
+<p id="email"></p>
+
+
+<p>Nickname:</p>
+
+
+<input id="nickname">
+
+
+<button onclick="salvaNickname()">
+Salva nickname
+</button>
+
+
+<button onclick="logout()">
+Logout
+</button>
+
+
+<div id="errore"></div>
+
+
+</div>
+
+
+
+<script>
+
+
+const token = localStorage.getItem("authToken");
+
+
+if(!token){
+
+window.location.href="login.html";
+
+}
+
+
+
+async function caricaAccount(){
+
+
+const risposta = await fetch("/api/me",{
+
+headers:{
+
+Authorization:"Bearer "+token
+
+}
+
+});
+
+
+const dati = await risposta.json();
+
+
+document.getElementById("email").innerHTML =
+dati.email;
+
+
+document.getElementById("nickname").value =
+dati.nickname;
+
+
+}
+
+
+
+async function salvaNickname(){
+
+
+const nickname =
+document.getElementById("nickname").value;
+
+
+const risposta = await fetch("/api/modifica-nickname",{
+
+method:"POST",
+
+headers:{
+
+"Content-Type":"application/json",
+
+Authorization:"Bearer "+localStorage.getItem("authToken")
+
+},
+
+body:JSON.stringify({
+
+nickname:nickname
+
+})
+
+});
+
+
+const dati = await risposta.json();
+
+
+if(!risposta.ok){
+
+document.getElementById("errore").innerHTML =
+dati.errore;
+
+return;
+
+}
+
+
+
+localStorage.setItem(
+"authToken",
+dati.token
+);
+
+
+localStorage.setItem(
+"nickname",
+dati.nickname
+);
+
+
+
+document.getElementById("errore").style.color="#00ff00";
+
+document.getElementById("errore").innerHTML =
+"Nickname aggiornato!";
+
+
+}
+
+
+
+function logout(){
+
+localStorage.clear();
+
+window.location.href="login.html";
+
+}
+
+
+caricaAccount();
+
+
+</script>
+
+
+</body>
+
+</html>
