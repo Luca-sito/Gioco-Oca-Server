@@ -111,6 +111,27 @@ function verificaToken(token) {
   try { return jwt.verify(token, JWT_SECRET); } catch (e) { return null; }
 }
 function estraiTokenHeader(req) {
+  const header = req.headers.authorization || "";
+  const parti = header.split(" ");
+  return parti.length === 2 ? parti[1] : null;
+}
+
+
+function estraiCookieToken(cookieHeader){
+
+  if(!cookieHeader) return null;
+
+  const trovato = cookieHeader
+    .split(";")
+    .find(c => c.trim().startsWith("token="));
+
+  if(!trovato) return null;
+
+  return trovato.split("=")[1];
+
+}
+
+
 
   if (req.cookies && req.cookies.token) {
     return req.cookies.token;
