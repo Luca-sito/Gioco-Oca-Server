@@ -58,7 +58,6 @@ async function accedi() {
     const dati = await risposta.json();
     if (!risposta.ok) { erroreEl.textContent = dati.errore || "Errore durante il login."; return; }
 
-    localStorage.setItem("authToken", dati.token);
     localStorage.setItem("nickname", dati.nickname);
     localStorage.setItem("ruolo", dati.ruolo);
 
