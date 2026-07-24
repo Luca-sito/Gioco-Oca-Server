@@ -97,8 +97,17 @@ const parametri = new URLSearchParams(window.location.search);
 const stanza = parametri.get("stanza") || "BAR";
 document.getElementById("nomeStanza").innerHTML = stanza;
 
-const authToken = localStorage.getItem("authToken");
+let authToken = localStorage.getItem("authToken");
+
+const tokenURL = parametri.get("token");
+
+if (tokenURL) {
+  authToken = tokenURL;
+  localStorage.setItem("authToken", tokenURL);
+}
+
 const mioNickname = localStorage.getItem("nickname");
+
 
 if (!authToken) {
   window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href);
