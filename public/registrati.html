@@ -71,14 +71,8 @@ async function registrati() {
     localStorage.setItem("nickname", dati.nickname);
     localStorage.setItem("ruolo", dati.ruolo);
 
-    window.location.href =
-    "https://solfriniluca1.wixstudio.com/giochisocieta?token="
-    + encodeURIComponent(dati.token)
-    + "&nickname="
-    + encodeURIComponent(dati.nickname)
-    + "&ruolo="
-    + encodeURIComponent(dati.ruolo || "utente");
-    
+    window.location.href = redirect || "https://solfriniluca1.wixstudio.com/giochisocieta";
+
   } catch (e) {
     erroreEl.textContent = "Errore di connessione al server.";
   }
