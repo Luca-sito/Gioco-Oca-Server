@@ -240,12 +240,84 @@ app.get("/api/me", richiediAuth, async (req, res) => {
   }
 });
 
+
+// 👇 INCOLLA QUI LA NUOVA API MODIFICA NICKNAME
+
+
+app.post("/api/modifica-nickname", richiediAuth, async (req, res) => {
+
+  if (!db) {
+    return res.status(500).json({
+      errore: "Database non disponibile."
+    });
+  }
+
+  try {
+
+    const nuovoNickname = req.body.nickname?.trim();
+
+    if (!nuovoNickname) {
+      return res.status(400).json({
+        errore: "Inserisci un nickname."
+      });
+    }
+
+    if (nuovoNickname.length < 3) {
+      return res.status(400).json({
+        errore: "Il nickname deve avere almeno 3 caratteri."
+      });
+    }
+
+    const nicknameLower = nuovoNickname.toLowerCase();
+
+    const giaEsistente = await trovaUtentePerNickname(nicknameLower);
+
+    if (giaEsistente && giaEsistente.uid !== req.utente.uid) {
+      return res.status(400).json({
+        errore: "Questo nickname è già utilizzato."
+      });
+    }
+
+    await db.ref("utenti/" + req.utente.uid).update({
+      nickname: nuovoNickname,
+      nicknameLower: nicknameLower
+    });
+
+    const nuovoToken = creaToken(
+      req.utente.uid,
+      nuovoNickname,
+      req.utente.ruolo
+    );
+
+    res.json({
+      ok: true,
+      token: nuovoToken,
+      nickname: nuovoNickname
+    });
+
+  } catch (e) {
+
+    console.error(e);
+
+    res.status(500).json({
+      errore: "Errore durante la modifica."
+    });
+
+  }
+
+});
+
+
+// 👇 POI CONTINUA IL TUO CODICE DI PRIMA
+
+
 app.post("/api/contatti", async (req, res) => {
   if (!db) {
     return res.status(500).json({
       errore: "Firebase non disponibile."
     });
   }
+
 
   try {
 
