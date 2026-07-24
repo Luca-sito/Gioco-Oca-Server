@@ -50,7 +50,7 @@ async function accedi() {
   if (!email || !password) { erroreEl.textContent = "Inserisci email e password."; return; }
 
   try {
-    const risposta = await fetch("/api/login", {
+    const risposta = await fetch("https://gioco-oca-server.onrender.com/api/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password })
@@ -62,7 +62,10 @@ async function accedi() {
     localStorage.setItem("nickname", dati.nickname);
     localStorage.setItem("ruolo", dati.ruolo);
 
-    window.location.href = redirect || "https://solfriniluca1.wixstudio.com/giochisocieta";
+    window.location.href =
+(redirect || "https://solfriniluca1.wixstudio.com/giochisocieta")
++ "?login=success";
+
 
   } catch (e) {
     erroreEl.textContent = "Errore di connessione al server.";
