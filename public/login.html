@@ -69,8 +69,7 @@ async function accedi() {
     + encodeURIComponent(dati.nickname)
     + "&ruolo="
     + encodeURIComponent(dati.ruolo || "utente");
-
-
+    
   } catch (e) {
     erroreEl.textContent = "Errore di connessione al server.";
   }
