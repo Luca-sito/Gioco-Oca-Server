@@ -105,9 +105,17 @@ if (!authToken) {
 }
 
 document.getElementById("areaUtente").innerHTML = `
-  <b>${mioNickname}</b> —
-  <a href="#" onclick="esci(); return false;" style="color:#ff6600;">Logout</a>
+  <b>${mioNickname}</b><br><br>
+
+  <button onclick="vaiAccount()">👤 Il mio account</button>
+
+  <button onclick="esci()">🚪 Logout</button>
 `;
+
+function vaiAccount() {
+    window.location.href = "account.html";
+}
+
 
 function esci() {
   localStorage.removeItem("authToken");
