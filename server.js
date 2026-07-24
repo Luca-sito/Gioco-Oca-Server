@@ -111,11 +111,17 @@ function verificaToken(token) {
   try { return jwt.verify(token, JWT_SECRET); } catch (e) { return null; }
 }
 function estraiTokenHeader(req) {
+
+  if (req.cookies && req.cookies.token) {
+    return req.cookies.token;
+  }
+
   const header = req.headers.authorization || "";
   const parti = header.split(" ");
-  return parti.length === 2 ? parti[1] : null;
-}
 
+  return parti.length === 2 ? parti[1] : null;
+
+}
 
 function estraiCookieToken(cookieHeader){
 
@@ -131,18 +137,6 @@ function estraiCookieToken(cookieHeader){
 
 }
 
-
-
-  if (req.cookies && req.cookies.token) {
-    return req.cookies.token;
-  }
-
-  const header = req.headers.authorization || "";
-  const parti = header.split(" ");
-
-  return parti.length === 2 ? parti[1] : null;
-
-}
 
 async function richiediAdmin(req, res, next) {
   const dati = verificaToken(estraiTokenHeader(req));
