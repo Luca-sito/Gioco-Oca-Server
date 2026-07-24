@@ -59,7 +59,7 @@ async function registrati() {
   if (password !== passwordConferma) { erroreEl.textContent = "Le due password non coincidono."; return; }
 
   try {
-    const risposta = await fetch("/api/registrati", {
+    const risposta = await fetch("https://gioco-oca-server.onrender.com/api/registrati", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, nickname, password })
@@ -71,7 +71,10 @@ async function registrati() {
     localStorage.setItem("nickname", dati.nickname);
     localStorage.setItem("ruolo", dati.ruolo);
 
-    window.location.href = redirect || "https://solfriniluca1.wixstudio.com/giochisocieta";
+    window.location.href =
+(redirect || "https://solfriniluca1.wixstudio.com/giochisocieta")
++ "?login=success";
+
 
   } catch (e) {
     erroreEl.textContent = "Errore di connessione al server.";
