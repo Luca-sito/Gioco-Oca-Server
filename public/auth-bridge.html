@@ -55,16 +55,39 @@ async function controllaStato() {
 }
 
 window.addEventListener("message", (evento) => {
+
   if (!evento.data || typeof evento.data !== "object") return;
+
+
+  if(evento.data.tipo==="salvaLogin"){
+
+    localStorage.setItem("authToken", evento.data.token);
+    localStorage.setItem("nickname", evento.data.nickname);
+    localStorage.setItem("ruolo", evento.data.ruolo);
+
+
+    invia({
+        tipo:"statoAuth",
+        loggato:true,
+        nickname:evento.data.nickname,
+        ruolo:evento.data.ruolo
+    });
+
+    return;
+  }
+
+
   if (evento.data.tipo === "richiediStato") controllaStato();
+
+
   if (evento.data.tipo === "logout") {
     pulisciLocalStorage();
     invia({ tipo: "statoAuth", loggato: false });
   }
+
 });
 
-controllaStato();
-console.log("Bridge controllo login");
+
 </script>
 </body>
 </html>
