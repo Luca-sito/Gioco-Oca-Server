@@ -21,16 +21,12 @@ button:hover { background: #ffaa00; }
 
 <div class="scatola">
   <h1>Accedi</h1>
-
   <label>Email</label>
   <input type="email" id="email" placeholder="tuaemail@esempio.com">
-
   <label>Password</label>
   <input type="password" id="password" placeholder="••••••••">
-
   <button onclick="accedi()">Accedi</button>
   <div class="errore" id="errore"></div>
-
   <div class="link-sotto">
     Non hai un account? <a id="linkRegistrati" href="registrati.html">Registrati</a>
   </div>
@@ -52,23 +48,14 @@ async function accedi() {
   try {
     const risposta = await fetch("https://gioco-oca-server.onrender.com/api/login", {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password })
     });
     const dati = await risposta.json();
     if (!risposta.ok) { erroreEl.textContent = dati.errore || "Errore durante il login."; return; }
 
-    localStorage.setItem("nickname", dati.nickname);
-    localStorage.setItem("ruolo", dati.ruolo);
-
-    const ritorno =
-    redirect ||
-    "https://solfriniluca1.wixstudio.com/giochisocieta";
-
-    window.location.href =
-    ritorno + "?token=" + encodeURIComponent(dati.token);
-
-
+    window.location.href = redirect || "https://solfriniluca1.wixstudio.com/giochidisocieta";
   } catch (e) {
     erroreEl.textContent = "Errore di connessione al server.";
   }
