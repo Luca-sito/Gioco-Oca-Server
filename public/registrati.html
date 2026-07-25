@@ -21,22 +21,16 @@ button:hover { background: #ffaa00; }
 
 <div class="scatola">
   <h1>Crea il tuo account</h1>
-
   <label>Email</label>
   <input type="email" id="email" placeholder="tuaemail@esempio.com">
-
   <label>Nickname (sarà fisso, visibile agli altri giocatori)</label>
   <input type="text" id="nickname" placeholder="Es. LucaSolfrini">
-
   <label>Password (almeno 6 caratteri)</label>
   <input type="password" id="password" placeholder="••••••••">
-
   <label>Conferma password</label>
   <input type="password" id="passwordConferma" placeholder="••••••••">
-
   <button onclick="registrati()">Registrati</button>
   <div class="errore" id="errore"></div>
-
   <div class="link-sotto">
     Hai già un account? <a id="linkLogin" href="login.html">Accedi</a>
   </div>
@@ -61,18 +55,14 @@ async function registrati() {
   try {
     const risposta = await fetch("https://gioco-oca-server.onrender.com/api/registrati", {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, nickname, password })
     });
     const dati = await risposta.json();
     if (!risposta.ok) { erroreEl.textContent = dati.errore || "Errore durante la registrazione."; return; }
 
-    localStorage.setItem("authToken", dati.token);
-    localStorage.setItem("nickname", dati.nickname);
-    localStorage.setItem("ruolo", dati.ruolo);
-
-    window.location.href = redirect || "https://solfriniluca1.wixstudio.com/giochisocieta";
-
+    window.location.href = redirect || "https://solfriniluca1.wixstudio.com/giochidisocieta";
   } catch (e) {
     erroreEl.textContent = "Errore di connessione al server.";
   }
