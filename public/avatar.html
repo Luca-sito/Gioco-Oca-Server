@@ -458,17 +458,17 @@ async function salvaAvatar(){
 if(!immagineNuova){
 
 alert("Prima scegli un'immagine.");
-
 return;
 
 }
 
 
 const dati = new FormData();
+
 dati.append("avatar", immagineNuova);
 
 
-try {
+try{
 
 
 const risposta = await fetch(
@@ -486,23 +486,21 @@ const risultato = await risposta.json();
 
 if(!risposta.ok){
 
-alert(risultato.errore || "Errore caricamento avatar.");
+alert(risultato.errore || "Errore caricamento avatar");
 return;
 
 }
 
 
-alert("Avatar aggiornato correttamente!");
-
+alert("Avatar salvato correttamente!");
 
 window.location.href="profilo.html";
 
 
-} catch(e){
+}catch(e){
 
 console.error(e);
-
-alert("Errore di connessione al server.");
+alert("Errore di connessione al server");
 
 }
 
