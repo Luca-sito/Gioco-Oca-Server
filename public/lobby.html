@@ -99,11 +99,54 @@ async function verificaSessione() {
     if (!risposta.ok) { window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href); return; }
     const dati = await risposta.json();
 
-    document.getElementById("areaUtente").innerHTML = `
-      <b>${dati.nickname}</b><br><br>
-      <button onclick="vaiAccount()">👤 Il mio account</button>
-      <button onclick="esci()">🚪 Logout</button>
-    `;
+    let immagineAvatar = "";
+
+if (dati.avatar) {
+  immagineAvatar = `
+    <img 
+      src="https://gioco-oca-server.onrender.com${dati.avatar}"
+      style="
+        width:45px;
+        height:45px;
+        border-radius:50%;
+        object-fit:cover;
+        vertical-align:middle;
+        margin-right:8px;
+      ">
+  `;
+} else {
+  immagineAvatar = `
+    <div style="
+      width:45px;
+      height:45px;
+      border-radius:50%;
+      background:#43a047;
+      color:white;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      font-weight:bold;
+      margin-right:8px;
+      vertical-align:middle;
+    ">
+      ${dati.nickname.charAt(0).toUpperCase()}
+    </div>
+  `;
+}
+
+
+document.getElementById("areaUtente").innerHTML = `
+  <div style="display:flex;align-items:center;">
+    ${immagineAvatar}
+    <b>${dati.nickname}</b>
+  </div>
+
+  <br>
+
+  <button onclick="vaiAccount()">👤 Il mio account</button>
+  <button onclick="esci()">🚪 Logout</button>
+`;
+
 
     connetti();
   } catch (e) {
