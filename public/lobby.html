@@ -33,20 +33,18 @@ button:hover{ opacity:0.8; }
 <body>
 
 <div class="contenitore">
-
   <div class="sinistra">
     <h2>Opzioni di gioco</h2>
     <div class="box">
-
       <p>Numero giocatori</p>
       <select id="numeroGiocatori">
-      <option value="2">2 giocatori</option>
-      <option value="3">3 giocatori</option>
-      <option value="4">4 giocatori</option>
-      <option value="5">5 giocatori</option>
-      <option value="6">6 giocatori</option>
-      <option value="7">7 giocatori</option>
-      <option value="8">8 giocatori</option>
+        <option value="2">2 giocatori</option>
+        <option value="3">3 giocatori</option>
+        <option value="4">4 giocatori</option>
+        <option value="5">5 giocatori</option>
+        <option value="6">6 giocatori</option>
+        <option value="7">7 giocatori</option>
+        <option value="8">8 giocatori</option>
       </select>
 
       <p>Tempo di mossa</p>
@@ -87,77 +85,63 @@ button:hover{ opacity:0.8; }
     <h3>👤 <span id="online">0</span> online</h3>
     <div id="areaUtente"></div>
   </div>
-
 </div>
 
 <script>
 let socket;
-
 const parametri = new URLSearchParams(window.location.search);
 const stanza = parametri.get("stanza") || "BAR";
 document.getElementById("nomeStanza").innerHTML = stanza;
 
-let authToken = localStorage.getItem("authToken");
+async function verificaSessione() {
+  try {
+    const risposta = await fetch("https://gioco-oca-server.onrender.com/api/me", { credentials: "include" });
+    if (!risposta.ok) { window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href); return; }
+    const dati = await risposta.json();
 
-const tokenURL = parametri.get("token");
+    document.getElementById("areaUtente").innerHTML = `
+      <b>${dati.nickname}</b><br><br>
+      <button onclick="vaiAccount()">👤 Il mio account</button>
+      <button onclick="esci()">🚪 Logout</button>
+    `;
 
-if (tokenURL) {
-  authToken = tokenURL;
-  localStorage.setItem("authToken", tokenURL);
+    connetti();
+  } catch (e) {
+    window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href);
+  }
 }
 
-const mioNickname = localStorage.getItem("nickname");
+function vaiAccount() { window.location.href = "account.html"; }
 
-
-if (!authToken) {
-  window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href);
-}
-
-document.getElementById("areaUtente").innerHTML = `
-  <b>${mioNickname}</b><br><br>
-
-  <button onclick="vaiAccount()">👤 Il mio account</button>
-
-  <button onclick="esci()">🚪 Logout</button>
-`;
-
-function vaiAccount() {
-    window.location.href = "account.html";
-}
-
-
-function esci() {
-  localStorage.removeItem("authToken");
-  localStorage.removeItem("nickname");
-  localStorage.removeItem("ruolo");
+async function esci() {
+  try { await fetch("https://gioco-oca-server.onrender.com/api/logout", { method: "POST", credentials: "include" }); } catch (e) {}
   window.location.href = "login.html";
 }
 
-socket = new WebSocket("wss://gioco-oca-server.onrender.com");
+function connetti() {
+  socket = new WebSocket("wss://gioco-oca-server.onrender.com");
 
-socket.onopen = () => {
-  socket.send(JSON.stringify({ tipo: "entraLobby", stanza: stanza, token: authToken }));
-};
+  socket.onopen = () => {
+    socket.send(JSON.stringify({ tipo: "entraLobby", stanza: stanza }));
+  };
 
-socket.onclose = () => { setTimeout(() => location.reload(), 3000); };
+  socket.onclose = () => { setTimeout(() => location.reload(), 3000); };
 
-socket.onmessage = (msg) => {
-  let dati = JSON.parse(msg.data);
-
-  if (dati.tipo === "sessioneScaduta") {
-    localStorage.removeItem("authToken");
-    window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href);
-    return;
-  }
-  if (dati.tipo === "online") document.getElementById("online").innerHTML = dati.numero;
-  if (dati.tipo === "chat") aggiungiMessaggio(dati.nome, dati.testo);
-  if (dati.tipo === "listaPartite") mostraPartite(dati.partite);
-  if (dati.tipo === "errore") alert(dati.messaggio);
-  if (dati.tipo === "partitaAvviata") {
-    localStorage.setItem("partitaId", dati.partitaId);
-    window.location.href = `gioco.html?partita=${dati.partitaId}&stanza=${stanza}`;
-  }
-};
+  socket.onmessage = (msg) => {
+    let dati = JSON.parse(msg.data);
+    if (dati.tipo === "sessioneScaduta") {
+      window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href);
+      return;
+    }
+    if (dati.tipo === "online") document.getElementById("online").innerHTML = dati.numero;
+    if (dati.tipo === "chat") aggiungiMessaggio(dati.nome, dati.testo);
+    if (dati.tipo === "listaPartite") mostraPartite(dati.partite);
+    if (dati.tipo === "errore") alert(dati.messaggio);
+    if (dati.tipo === "partitaAvviata") {
+      window.location.href = `gioco.html?partita=${dati.partitaId}&stanza=${stanza}`;
+    }
+  };
+}
 
 function creaPartita() {
   const tipo = document.getElementById("tipoPartita").value;
@@ -173,7 +157,7 @@ function creaPartita() {
     modalita: tipo,
     codicePrivato: codicePrivato,
     maxGiocatori: document.getElementById("numeroGiocatori").value
-}));
+  }));
 }
 
 function eliminaPartita() {
@@ -220,57 +204,24 @@ function aggiungiMessaggio(nome, testo) {
   chat.innerHTML += `<div class="messaggio"><b>${nome}</b>: ${testo}</div>`;
   chat.scrollTop = chat.scrollHeight;
 }
-async function caricaTopGiocatori(){
 
+async function caricaTopGiocatori() {
   try {
-
     const risposta = await fetch("/api/top-giocatori");
     const dati = await risposta.json();
-
     const contenitore = document.getElementById("top");
-
-    if(!dati.giocatori || dati.giocatori.length === 0){
-      contenitore.innerHTML = "Nessun giocatore ancora.";
-      return;
-    }
-
-
-    contenitore.innerHTML = dati.giocatori.map((g,index)=>{
-
-      let medaglia = "";
-
-      if(index === 0) medaglia="🥇";
-      else if(index === 1) medaglia="🥈";
-      else if(index === 2) medaglia="🥉";
-      else medaglia="🏅";
-
-
-      return `
-        <div class="top-player">
-          ${medaglia}
-          <b>${g.nickname}</b><br>
-          🎯 Vittorie: ${g.vinte}<br>
-          🎮 Partite: ${g.giocate}
-        </div>
-        <br>
-      `;
-
+    if (!dati.giocatori || dati.giocatori.length === 0) { contenitore.innerHTML = "Nessun giocatore ancora."; return; }
+    contenitore.innerHTML = dati.giocatori.map((g, index) => {
+      let medaglia = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : "🏅";
+      return `<div class="top-player">${medaglia} <b>${g.nickname}</b><br>🎯 Vittorie: ${g.vinte}<br>🎮 Partite: ${g.giocate}</div><br>`;
     }).join("");
-
-
-  } catch(e){
-
-    document.getElementById("top").innerHTML =
-      "Errore caricamento classifica";
-
-    console.error(e);
-
+  } catch (e) {
+    document.getElementById("top").innerHTML = "Errore caricamento classifica";
   }
-
 }
 
-
 caricaTopGiocatori();
+verificaSessione();
 </script>
 
 </body>
