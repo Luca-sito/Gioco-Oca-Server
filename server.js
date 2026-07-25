@@ -312,30 +312,50 @@ app.get("/api/me", richiediAuth, async (req, res) => {
   }
 });
 
-app.post("/api/carica-avatar", richiediAuth, upload.single("avatar"), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ errore: "Nessuna immagine caricata." });
+app.post(
+  "/api/carica-avatar",
+  richiediAuth,
+  upload.single("avatar"),
+  async (req,res)=>{
+
+    try {
+
+      if(!req.file){
+        return res.status(400).json({
+          errore:"Nessuna immagine ricevuta."
+        });
+      }
+
+
+      const urlAvatar =
+      "/avatar/" + req.file.filename;
+
+
+      await db.ref(
+        "utenti/" + req.utente.uid
+      ).update({
+        avatar:urlAvatar
+      });
+
+
+      res.json({
+        ok:true,
+        avatar:urlAvatar
+      });
+
+
+    } catch(e){
+
+      console.error("Errore avatar:",e);
+
+      res.status(500).json({
+        errore:"Errore caricamento avatar."
+      });
+
     }
 
-    const nomeImmagine = req.file.filename;
-
-    await db.ref("utenti/" + req.utente.uid).update({
-      avatar: "/avatar/" + nomeImmagine
-    });
-
-    res.json({
-      ok: true,
-      avatar: "/avatar/" + nomeImmagine
-    });
-
-  } catch (e) {
-    console.error("Errore caricamento avatar:", e);
-    res.status(500).json({
-      errore: "Errore durante il caricamento."
-    });
-  }
 });
+
 
 
 app.post("/api/modifica-nickname", richiediAuth, async (req, res) => {
