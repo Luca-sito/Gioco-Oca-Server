@@ -4976,15 +4976,6 @@ function trovaPartita(
 }
 
 // ===============================
-// GESTIONE SOCKET
-// ===============================
-
-let contatoreId = 0;
-
-const socketsPerId = {};
-
-
-// ===============================
 // CALCOLO MOVIMENTO PEDINA
 // ===============================
 
