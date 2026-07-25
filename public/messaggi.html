@@ -18,45 +18,98 @@ body { margin: 0; background: #101820; color: #e8e8e8; font-family: Arial, sans-
 .link-home:hover { background: #ffaa00; }
 </style>
 </head>
+
 <body>
+
 <div class="contenitore">
+
   <div class="intestazione">
     <h1>💬 I tuoi messaggi</h1>
     <p>Avvisi e comunicazioni ufficiali ricevute dallo staff</p>
   </div>
+
   <div id="listaMessaggi">Caricamento...</div>
+
   <a href="lobby.html" class="link-home">← Torna al gioco</a>
+
 </div>
 
+
 <script>
-const authToken = localStorage.getItem("authToken");
-if (!authToken) window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href);
 
 async function carica() {
+
   try {
-    const risposta = await fetch("/api/me", { headers: { "Authorization": "Bearer " + authToken } });
-    if (!risposta.ok) { window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href); return; }
+
+    const risposta = await fetch(
+      "https://gioco-oca-server.onrender.com/api/me",
+      {
+        credentials: "include"
+      }
+    );
+
+
+    if (!risposta.ok) {
+      window.location.href =
+      "login.html?redirect=" + encodeURIComponent(window.location.href);
+      return;
+    }
+
+
     const dati = await risposta.json();
+
     mostraMessaggi(dati.avvisi || []);
+
+
   } catch (e) {
-    document.getElementById("listaMessaggi").innerHTML = "<p>Errore nel caricamento dei messaggi.</p>";
+
+    document.getElementById("listaMessaggi").innerHTML =
+    "<p>Errore nel caricamento dei messaggi.</p>";
+
   }
+
 }
 
+
+
 function mostraMessaggi(avvisi) {
+
   const container = document.getElementById("listaMessaggi");
+
+
   if (avvisi.length === 0) {
-    container.innerHTML = '<div class="nessun-messaggio">Nessun messaggio al momento. Tutto in regola! ✅</div>';
+
+    container.innerHTML =
+    '<div class="nessun-messaggio">Nessun messaggio al momento. Tutto in regola! ✅</div>';
+
     return;
+
   }
+
+
   container.innerHTML = avvisi.slice().reverse().map(a => `
+
     <div class="avviso-card">
-      <div class="data">${new Date(a.data).toLocaleString("it-IT")}</div>
-      <div class="testo">⚠️ ${a.motivo}</div>
+
+      <div class="data">
+        ${new Date(a.data).toLocaleString("it-IT")}
+      </div>
+
+      <div class="testo">
+        ⚠️ ${a.motivo}
+      </div>
+
     </div>
+
   `).join("");
+
 }
+
+
+
 carica();
+
 </script>
+
 </body>
 </html>
