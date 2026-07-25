@@ -326,23 +326,16 @@ app.post(
         });
       }
 
+      const urlAvatar = "/avatar/" + req.file.filename;
 
-      const urlAvatar =
-      "/avatar/" + req.file.filename;
-
-
-      await db.ref(
-        "utenti/" + req.utente.uid
-      ).update({
+      await db.ref("utenti/" + req.utente.uid).update({
         avatar:urlAvatar
       });
-
 
       res.json({
         ok:true,
         avatar:urlAvatar
       });
-
 
     } catch(e){
 
@@ -733,7 +726,11 @@ wss.on("connection", (socket, request) => {
         nickname = utenteDb.nickname;
 
         if (!stanze[stanzaAttuale]) stanze[stanzaAttuale] = { giocatoriOnline: {}, partite: {} };
-        stanze[stanzaAttuale].giocatoriOnline[socketId] = nickname;
+        stanze[stanzaAttuale].giocatoriOnline[socketId] = {
+        nickname : nickname
+        avatar: utenteDb.avatar || null
+        };
+
 
         inviaConteggioStanze();
         inviaAllaStanza(stanzaAttuale, { tipo: "online", numero: Object.keys(stanze[stanzaAttuale].giocatoriOnline).length });
