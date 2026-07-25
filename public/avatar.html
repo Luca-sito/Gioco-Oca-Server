@@ -320,25 +320,39 @@ const avatar =
 document.getElementById("avatarAttuale");
 
 
+if(dati.avatar){
+
+avatar.innerHTML =
+"<img src='https://gioco-oca-server.onrender.com" + dati.avatar + "'>";
+
+}else{
+
 avatar.textContent =
 iniziale(dati.nickname);
-
 
 avatar.style.background =
 coloreDaNome(dati.nickname);
 
-
+}
 
 const anteprima =
 document.getElementById("anteprimaAvatar");
 
 
+if(dati.avatar){
+
+anteprima.innerHTML =
+"<img src='https://gioco-oca-server.onrender.com" + dati.avatar + "'>";
+
+}else{
+
 anteprima.textContent =
 iniziale(dati.nickname);
 
-
 anteprima.style.background =
 coloreDaNome(dati.nickname);
+
+}
 
 
 
@@ -439,7 +453,7 @@ lettore.readAsDataURL(file);
 
 
 
-function salvaAvatar(){
+async function salvaAvatar(){
 
 if(!immagineNuova){
 
@@ -450,9 +464,51 @@ return;
 }
 
 
-alert("Avatar pronto. Ora collegheremo il salvataggio al server.");
+const dati = new FormData();
+dati.append("avatar", immagineNuova);
+
+
+try {
+
+
+const risposta = await fetch(
+"https://gioco-oca-server.onrender.com/api/carica-avatar",
+{
+method:"POST",
+credentials:"include",
+body:dati
+}
+);
+
+
+const risultato = await risposta.json();
+
+
+if(!risposta.ok){
+
+alert(risultato.errore || "Errore caricamento avatar.");
+return;
 
 }
+
+
+alert("Avatar aggiornato correttamente!");
+
+
+window.location.href="profilo.html";
+
+
+} catch(e){
+
+console.error(e);
+
+alert("Errore di connessione al server.");
+
+}
+
+
+}
+
 
 
 
