@@ -20,49 +20,119 @@ h1 { color: #ffd700; font-size: 24px; margin: 0 0 4px; }
 </style>
 </head>
 <body>
+
 <div class="contenitore">
   <div class="scatola">
+
     <div id="avatarGrande"></div>
+
     <h1 id="nomeProfilo">Caricamento...</h1>
+
     <div class="email" id="emailProfilo"></div>
+
     <div class="statistiche">
-      <div class="stat"><div class="numero" id="numVinte">-</div><div class="etichetta">Vittorie</div></div>
-      <div class="stat"><div class="numero" id="numGiocate">-</div><div class="etichetta">Partite giocate</div></div>
+      <div class="stat">
+        <div class="numero" id="numVinte">-</div>
+        <div class="etichetta">Vittorie</div>
+      </div>
+
+      <div class="stat">
+        <div class="numero" id="numGiocate">-</div>
+        <div class="etichetta">Partite giocate</div>
+      </div>
     </div>
+
     <a href="lobby.html" class="link-home">← Torna al gioco</a>
+
   </div>
 </div>
 
+
 <script>
-const PALETTE = ["#6a2c70", "#1e40af", "#43a047", "#f57c00", "#c0ca33", "#e53935", "#00838f", "#8d6e63"];
+
+const PALETTE = [
+"#6a2c70",
+"#1e40af",
+"#43a047",
+"#f57c00",
+"#c0ca33",
+"#e53935",
+"#00838f",
+"#8d6e63"
+];
+
+
 function coloreDaNome(nome) {
   let somma = 0;
-  for (let i = 0; i < nome.length; i++) somma += nome.charCodeAt(i);
+
+  for (let i = 0; i < nome.length; i++) {
+    somma += nome.charCodeAt(i);
+  }
+
   return PALETTE[somma % PALETTE.length];
 }
 
-const authToken = localStorage.getItem("authToken");
-if (!authToken) window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href);
 
 async function carica() {
+
   try {
-    const risposta = await fetch("/api/me", { headers: { "Authorization": "Bearer " + authToken } });
-    if (!risposta.ok) { window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href); return; }
+
+    const risposta = await fetch(
+      "https://gioco-oca-server.onrender.com/api/me",
+      {
+        credentials: "include"
+      }
+    );
+
+
+    if (!risposta.ok) {
+      window.location.href =
+      "login.html?redirect=" + encodeURIComponent(window.location.href);
+      return;
+    }
+
+
     const dati = await risposta.json();
 
-    document.getElementById("nomeProfilo").textContent = dati.nickname;
-    document.getElementById("emailProfilo").textContent = dati.email;
-    document.getElementById("numVinte").textContent = dati.partiteVinte || 0;
-    document.getElementById("numGiocate").textContent = dati.partiteGiocate || 0;
 
-    const avatar = document.getElementById("avatarGrande");
-    avatar.textContent = dati.nickname.charAt(0).toUpperCase();
-    avatar.style.background = coloreDaNome(dati.nickname);
+    document.getElementById("nomeProfilo").textContent =
+    dati.nickname;
+
+    document.getElementById("emailProfilo").textContent =
+    dati.email;
+
+    document.getElementById("numVinte").textContent =
+    dati.partiteVinte || 0;
+
+    document.getElementById("numGiocate").textContent =
+    dati.partiteGiocate || 0;
+
+
+    const avatar =
+    document.getElementById("avatarGrande");
+
+
+    avatar.textContent =
+    dati.nickname.charAt(0).toUpperCase();
+
+
+    avatar.style.background =
+    coloreDaNome(dati.nickname);
+
+
   } catch (e) {
-    document.getElementById("nomeProfilo").textContent = "Errore nel caricamento";
+
+    document.getElementById("nomeProfilo").textContent =
+    "Errore nel caricamento";
+
   }
+
 }
+
+
 carica();
+
 </script>
+
 </body>
 </html>
