@@ -727,7 +727,7 @@ wss.on("connection", (socket, request) => {
 
         if (!stanze[stanzaAttuale]) stanze[stanzaAttuale] = { giocatoriOnline: {}, partite: {} };
         stanze[stanzaAttuale].giocatoriOnline[socketId] = {
-        nickname : nickname
+        nickname : nickname,
         avatar: utenteDb.avatar || null
         };
 
