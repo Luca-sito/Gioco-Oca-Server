@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+
+<meta charset="UTF-8">
+<title>Avatar - Giochi Società</title>
+
+<style>
+
+* {
+box-sizing:border-box;
+}
+
+body {
+margin:0;
+background:#101820;
+color:#e8e8e8;
+font-family:Arial,sans-serif;
+}
+
+
+.contenitore {
+max-width:600px;
+margin:auto;
+padding:40px 24px 80px;
+}
+
+
+.scatola {
+
+background:#1e2a38;
+border:1px solid #333;
+border-radius:14px;
+padding:30px;
+text-align:center;
+
+}
+
+
+h1 {
+
+color:#ffd700;
+margin-top:0;
+
+}
+
+
+#avatarAttuale,
+#anteprimaAvatar {
+
+width:100px;
+height:100px;
+border-radius:50%;
+margin:15px auto;
+display:flex;
+align-items:center;
+justify-content:center;
+font-size:40px;
+font-weight:bold;
+color:white;
+overflow:hidden;
+
+}
+
+
+#anteprimaAvatar img,
+#avatarAttuale img {
+
+width:100%;
+height:100%;
+object-fit:cover;
+
+}
+
+
+.zonaUpload {
+
+border:2px dashed #ffd700;
+border-radius:12px;
+padding:30px;
+margin:25px 0;
+color:#ccc;
+cursor:pointer;
+
+}
+
+
+.zonaUpload:hover {
+
+background:rgba(255,215,0,0.08);
+
+}
+
+
+input[type=file] {
+
+display:none;
+
+}
+
+
+button {
+
+width:100%;
+padding:12px;
+margin-top:12px;
+border:none;
+border-radius:8px;
+font-weight:bold;
+cursor:pointer;
+font-size:15px;
+
+}
+
+
+.salva {
+
+background:#ffd700;
+color:#111;
+
+}
+
+
+.salva:hover {
+
+background:#ffaa00;
+
+}
+
+
+.normale {
+
+background:#34495e;
+color:white;
+
+}
+
+
+.link {
+
+display:inline-block;
+margin-top:25px;
+padding:10px 20px;
+background:#ffd700;
+color:#111;
+text-decoration:none;
+border-radius:8px;
+font-weight:bold;
+
+}
+
+
+</style>
+
+</head>
+
+
+<body>
+
+
+<div class="contenitore">
+
+
+<div class="scatola">
+
+
+<h1>🖼️ Cambia Avatar</h1>
+
+
+<p id="nomeUtente">
+Caricamento...
+</p>
+
+
+
+<h3>Avatar attuale</h3>
+
+<div id="avatarAttuale">
+?
+</div>
+
+
+
+<h3>Nuovo avatar</h3>
+
+
+<div 
+class="zonaUpload"
+id="zonaUpload">
+
+Trascina qui un'immagine<br>
+oppure clicca per scegliere
+
+<input 
+type="file"
+id="fileAvatar"
+accept="image/*">
+
+</div>
+
+
+
+<div id="anteprimaAvatar">
+?
+</div>
+
+
+
+<button 
+class="salva"
+onclick="salvaAvatar()">
+
+💾 Salva nuovo avatar
+
+</button>
+
+
+
+<button
+class="normale"
+onclick="mantieniAvatar()">
+
+↩ Mantieni avatar attuale
+
+</button>
+
+
+
+
+<a 
+class="link"
+href="opzioni-account.html">
+
+← Torna alle opzioni
+
+</a>
+
+
+</div>
+
+</div>
+
+
+
+
+<script>
+
+
+let immagineNuova = null;
+
+
+const colori = [
+"#6a2c70",
+"#1e40af",
+"#43a047",
+"#f57c00",
+"#c0ca33",
+"#e53935",
+"#00838f",
+"#8d6e63"
+];
+
+
+function coloreDaNome(nome){
+
+let somma=0;
+
+for(let i=0;i<nome.length;i++){
+somma += nome.charCodeAt(i);
+}
+
+return colori[somma % colori.length];
+
+}
+
+
+
+function iniziale(nome){
+
+return nome.charAt(0).toUpperCase();
+
+}
+
+
+
+
+async function caricaAccount(){
+
+
+try{
+
+
+const risposta = await fetch(
+"https://gioco-oca-server.onrender.com/api/me",
+{
+credentials:"include"
+}
+);
+
+
+if(!risposta.ok){
+
+window.location.href="login.html";
+return;
+
+}
+
+
+const dati = await risposta.json();
+
+
+
+document.getElementById("nomeUtente").textContent =
+"Account: " + dati.nickname;
+
+
+
+const avatar =
+document.getElementById("avatarAttuale");
+
+
+avatar.textContent =
+iniziale(dati.nickname);
+
+
+avatar.style.background =
+coloreDaNome(dati.nickname);
+
+
+
+const anteprima =
+document.getElementById("anteprimaAvatar");
+
+
+anteprima.textContent =
+iniziale(dati.nickname);
+
+
+anteprima.style.background =
+coloreDaNome(dati.nickname);
+
+
+
+}catch(e){
+
+alert("Errore caricamento account");
+
+}
+
+
+}
+
+
+
+
+const zona =
+document.getElementById("zonaUpload");
+
+const input =
+document.getElementById("fileAvatar");
+
+
+
+zona.onclick=function(){
+
+input.click();
+
+};
+
+
+
+input.onchange=function(e){
+
+caricaImmagine(e.target.files[0]);
+
+};
+
+
+
+zona.ondragover=function(e){
+
+e.preventDefault();
+
+};
+
+
+
+zona.ondrop=function(e){
+
+e.preventDefault();
+
+caricaImmagine(
+e.dataTransfer.files[0]
+);
+
+};
+
+
+
+
+
+function caricaImmagine(file){
+
+
+if(!file) return;
+
+
+if(!file.type.startsWith("image/")){
+
+alert("Devi scegliere un'immagine.");
+
+return;
+
+}
+
+
+immagineNuova=file;
+
+
+const lettore=new FileReader();
+
+
+lettore.onload=function(e){
+
+
+document.getElementById("anteprimaAvatar").innerHTML =
+"<img src='"+e.target.result+"'>";
+
+
+};
+
+
+lettore.readAsDataURL(file);
+
+
+}
+
+
+
+
+function salvaAvatar(){
+
+if(!immagineNuova){
+
+alert("Prima scegli un'immagine.");
+
+return;
+
+}
+
+
+alert("Avatar pronto. Ora collegheremo il salvataggio al server.");
+
+}
+
+
+
+
+function mantieniAvatar(){
+
+window.location.href="profilo.html";
+
+}
+
+
+
+caricaAccount();
+
+
+</script>
+
+
+</body>
+
+</html>
