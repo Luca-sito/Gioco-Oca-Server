@@ -134,18 +134,11 @@ if (dati.avatar) {
   `;
 }
 
-
 document.getElementById("areaUtente").innerHTML = `
   <div style="display:flex;align-items:center;">
     ${immagineAvatar}
     <b>${dati.nickname}</b>
   </div>
-
-  <br>
-
-  <button onclick="vaiAccount()">👤 Il mio account</button>
-  <button onclick="esci()">🚪 Logout</button>
-`;
 
 
     connetti();
