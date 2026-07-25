@@ -8,6 +8,37 @@ const cookieParser = require("cookie-parser");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const admin = require("firebase-admin");
+const multer = require("multer");
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, path.join(__dirname, "public", "avatar"));
+  },
+  filename: function (req, file, cb) {
+    const estensione = path.extname(file.originalname);
+    const nomeFile = Date.now() + "-" + Math.round(Math.random() * 100000) + estensione;
+    cb(null, nomeFile);
+  }
+});
+
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 2 * 1024 * 1024
+  },
+  fileFilter: function (req, file, cb) {
+    if (
+      file.mimetype === "image/jpeg" ||
+      file.mimetype === "image/png" ||
+      file.mimetype === "image/webp"
+    ) {
+      cb(null, true);
+    } else {
+      cb(new Error("Sono consentite solo immagini JPG, PNG o WEBP."));
+    }
+  }
+});
+
 
 const app = express();
 
@@ -269,15 +300,43 @@ app.get("/api/me", richiediAuth, async (req, res) => {
       ruolo: utente.ruolo || "utente",
       stato: utente.stato || "attivo",
       sospesoFino: utente.sospesoFino || null,
+      avatar: utente.avatar || null,
       avvisi: utente.avvisi || [],
       partiteVinte: utente.partiteVinte || 0,
       partiteGiocate: utente.partiteGiocate || 0
+
     });
   } catch (err) {
     console.error(err);
     res.status(500).json({ errore: "Errore del server." });
   }
 });
+
+app.post("/api/carica-avatar", richiediAuth, upload.single("avatar"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ errore: "Nessuna immagine caricata." });
+    }
+
+    const nomeImmagine = req.file.filename;
+
+    await db.ref("utenti/" + req.utente.uid).update({
+      avatar: "/avatar/" + nomeImmagine
+    });
+
+    res.json({
+      ok: true,
+      avatar: "/avatar/" + nomeImmagine
+    });
+
+  } catch (e) {
+    console.error("Errore caricamento avatar:", e);
+    res.status(500).json({
+      errore: "Errore durante il caricamento."
+    });
+  }
+});
+
 
 app.post("/api/modifica-nickname", richiediAuth, async (req, res) => {
   if (!db) return res.status(500).json({ errore: "Servizio non disponibile." });
