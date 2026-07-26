@@ -350,8 +350,10 @@ html, body {
 }
 
 @media (max-width: 700px) {
-  #pannello-giocatori { max-width: 150px; font-size: 12px; }
-  #pannello-chat { width: 240px; }
+  #pannello-giocatori { max-width: 150px; font-size: 12px; padding: 8px 10px; }
+  #pannello-chat { width: 220px; }
+  #messaggi-gioco { font-size: 11px; padding: 6px 14px; max-width: 65vw; }
+  #btn-menu, #btn-chat { width: 38px; height: 38px; font-size: 16px; }
 }
 
 .avatar-mini {
