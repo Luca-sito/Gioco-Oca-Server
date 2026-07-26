@@ -840,32 +840,53 @@ wss.on("connection", (socket, request) => {
         return;
       }
 
-      if (dati.tipo === "creaPartita") {
-        if (!stanzaAttuale || !uid) return;
-        const haGiaCreato = Object.values(stanze[stanzaAttuale].partite).some(p => p.creatoDa === uid);
-        if (haGiaCreato) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Hai già una partita attiva." })); return; }
+       if (dati.tipo === "creaPartita") {
+  if (!stanzaAttuale || !uid) return;
+  const haGiaCreato = Object.values(stanze[stanzaAttuale].partite).some(p => p.creatoDa === uid);
+  if (haGiaCreato) {
+    socket.send(JSON.stringify({ tipo: "errore", messaggio: "Hai già una partita attiva." }));
+    return;
+  }
 
-        const partitaId = "p" + Date.now() + Math.floor(Math.random() * 1000);
-        stanze[stanzaAttuale].partite[partitaId] = {
-          id: partitaId, creatore: nickname, creatoDa: uid,
-          tempo: dati.tempo, punti: dati.punti, modalita: dati.modalita,
-          codicePrivato: dati.modalita === "privata" ? dati.codicePrivato : null,
-          const max = parseInt(dati.maxGiocatori);
+  const partitaId = "p" + Date.now() + Math.floor(Math.random() * 1000);
 
-maxGiocatori:
-(
- !max || max < 2 || max > 8
- ? 2
- : max
-)
+  const max = parseInt(dati.maxGiocatori);
 
-          giocatori: { [uid]: { nome: nickname, avatar: mioAvatar, posizione: 0, socket, turniSaltati: 0 } },
-          ordineGiocatori: [uid], turnoAttuale: 0, iniziata: false, elaborandoTiro: false
-        };
-        await salvaPartita({ ...stanze[stanzaAttuale].partite[partitaId], stanza: stanzaAttuale });
-        inviaListaPartite(stanzaAttuale);
-        return;
+  stanze[stanzaAttuale].partite[partitaId] = {
+    id: partitaId,
+    creatore: nickname,
+    creatoDa: uid,
+    tempo: dati.tempo,
+    punti: dati.punti,
+    modalita: dati.modalita,
+    codicePrivato: dati.modalita === "privata" ? dati.codicePrivato : null,
+
+    maxGiocatori: (
+      !max || max < 2 || max > 8
+        ? 2
+        : max
+    ),
+
+    giocatori: {
+      [uid]: {
+        nome: nickname,
+        avatar: mioAvatar,
+        posizione: 0,
+        socket,
+        turniSaltati: 0
       }
+    },
+
+    ordineGiocatori: [uid],
+    turnoAttuale: 0,
+    iniziata: false,
+    elaborandoTiro: false
+  };
+
+  await salvaPartita({ ...stanze[stanzaAttuale].partite[partitaId], stanza: stanzaAttuale });
+  inviaListaPartite(stanzaAttuale);
+  return;
+}
 
       if (dati.tipo === "entraPartita") {
         if (!stanzaAttuale || !uid) return;
