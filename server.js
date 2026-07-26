@@ -11,6 +11,7 @@ const admin = require("firebase-admin");
 const multer = require("multer");
 const rateLimit = require("express-rate-limit");
 const helmet = require("helmet");
+const { v4: uuidv4 } = require("uuid");
 
 
 const app = express();
@@ -298,6 +299,7 @@ const nicknameLower = nicknamePulito.toLowerCase();
     const passwordHash = await bcrypt.hash(password, 10);
     const nuovoRef = db.ref("utenti").push();
     const uid = nuovoRef.key;
+    const tokenVerifica = uuidv4();
 
     await nuovoRef.set({
     partiteVinte: 0,
@@ -306,6 +308,7 @@ const nicknameLower = nicknamePulito.toLowerCase();
     email: emailPulita,
     emailLower,
     emailVerificata: false,
+    tokenVerificaEmail: tokenVerifica,
     nickname: nicknamePulito,
     nicknameLower,
     passwordHash,
