@@ -2,6 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Registrati - Giochi Società</title>
 <style>
 * { box-sizing: border-box; font-family: Arial, sans-serif; }
@@ -12,28 +13,40 @@ label { display: block; color: #ccc; font-size: 13px; font-weight: bold; margin:
 input { width: 100%; padding: 11px; border-radius: 8px; border: none; background: #101820; color: #fff; font-size: 14px; }
 button { width: 100%; margin-top: 22px; padding: 13px; border: none; border-radius: 8px; background: #ffd700; color: #111; font-weight: bold; font-size: 15px; cursor: pointer; }
 button:hover { background: #ffaa00; }
+button:disabled { background: #666; cursor: not-allowed; }
 .errore { color: #ff6b6b; font-size: 13px; margin-top: 12px; text-align: center; min-height: 16px; }
 .link-sotto { text-align: center; margin-top: 16px; font-size: 13px; color: #aaa; }
 .link-sotto a { color: #ffd700; text-decoration: none; }
+#schermataSuccesso { display: none; text-align: center; }
+#schermataSuccesso h1 { color: #ffd700; }
+#schermataSuccesso p { color: #ccc; font-size: 14px; }
+#linkRinvia { color: #ffd700; cursor: pointer; text-decoration: underline; font-size: 13px; }
 </style>
 </head>
 <body>
 
-<div class="scatola">
+<div class="scatola" id="formRegistrazione">
   <h1>Crea il tuo account</h1>
   <label>Email</label>
   <input type="email" id="email" placeholder="tuaemail@esempio.com">
-  <label>Nickname (sarà fisso, visibile agli altri giocatori)</label>
+  <label>Nickname (5-15 caratteri, sarà fisso)</label>
   <input type="text" id="nickname" placeholder="Es. LucaSolfrini">
   <label>Password (almeno 6 caratteri)</label>
   <input type="password" id="password" placeholder="••••••••">
   <label>Conferma password</label>
   <input type="password" id="passwordConferma" placeholder="••••••••">
-  <button onclick="registrati()">Registrati</button>
+  <button id="btnRegistrati" onclick="registrati()">Registrati</button>
   <div class="errore" id="errore"></div>
   <div class="link-sotto">
     Hai già un account? <a id="linkLogin" href="login.html">Accedi</a>
   </div>
+</div>
+
+<div class="scatola" id="schermataSuccesso">
+  <h1>📩 Controlla la tua email</h1>
+  <p>Ti abbiamo inviato un link per attivare il tuo account. Aprilo dalla tua casella di posta per poter accedere.</p>
+  <p>Non l'hai ricevuta? <span id="linkRinvia" onclick="rinviaEmail()">Invia di nuovo</span></p>
+  <div class="link-sotto"><a href="login.html">Vai al login</a></div>
 </div>
 
 <script>
@@ -41,16 +54,22 @@ const parametri = new URLSearchParams(window.location.search);
 const redirect = parametri.get("redirect");
 if (redirect) document.getElementById("linkLogin").href = "login.html?redirect=" + encodeURIComponent(redirect);
 
+let ultimaEmailRegistrata = "";
+
 async function registrati() {
   const email = document.getElementById("email").value.trim();
   const nickname = document.getElementById("nickname").value.trim();
   const password = document.getElementById("password").value;
   const passwordConferma = document.getElementById("passwordConferma").value;
   const erroreEl = document.getElementById("errore");
+  const bottone = document.getElementById("btnRegistrati");
   erroreEl.textContent = "";
 
   if (!email || !nickname || !password) { erroreEl.textContent = "Compila tutti i campi."; return; }
   if (password !== passwordConferma) { erroreEl.textContent = "Le due password non coincidono."; return; }
+
+  bottone.disabled = true;
+  bottone.textContent = "Registrazione in corso...";
 
   try {
     const risposta = await fetch("https://gioco-oca-server.onrender.com/api/registrati", {
@@ -60,11 +79,37 @@ async function registrati() {
       body: JSON.stringify({ email, nickname, password })
     });
     const dati = await risposta.json();
-    if (!risposta.ok) { erroreEl.textContent = dati.errore || "Errore durante la registrazione."; return; }
 
-    window.location.href = redirect || "https://solfriniluca1.wixstudio.com/giochidisocieta";
+    if (!risposta.ok) {
+      erroreEl.textContent = dati.errore || "Errore durante la registrazione.";
+      bottone.disabled = false;
+      bottone.textContent = "Registrati";
+      return;
+    }
+
+    ultimaEmailRegistrata = dati.email || email;
+    document.getElementById("formRegistrazione").style.display = "none";
+    document.getElementById("schermataSuccesso").style.display = "block";
   } catch (e) {
     erroreEl.textContent = "Errore di connessione al server.";
+    bottone.disabled = false;
+    bottone.textContent = "Registrati";
+  }
+}
+
+async function rinviaEmail() {
+  const link = document.getElementById("linkRinvia");
+  link.textContent = "Invio in corso...";
+  try {
+    const risposta = await fetch("https://gioco-oca-server.onrender.com/api/rinvia-verifica", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: ultimaEmailRegistrata })
+    });
+    const dati = await risposta.json();
+    link.textContent = dati.messaggio || "Email inviata di nuovo.";
+  } catch (e) {
+    link.textContent = "Errore, riprova più tardi.";
   }
 }
 </script>
