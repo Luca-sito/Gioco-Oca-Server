@@ -31,19 +31,32 @@ app.set("trust proxy", 1);
 // fare richieste con i cookie. Se in futuro colleghi un dominio personalizzato, aggiungilo qui.
 const ORIGINI_CONSENTITE = [
   "https://solfriniluca1.wixstudio.com",
+  "https://solfriniluca1-wixstudio-com.filesusr.com",
   "https://gioco-oca-server.onrender.com"
 ];
+
 app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin) return callback(null, true); // richieste senza origine (es. server-to-server)
-    if (ORIGINI_CONSENTITE.includes(origin)) return callback(null, true);
-    callback(new Error("Origine non autorizzata: " + origin));
+  origin: function(origin, callback){
+
+    if(!origin){
+      return callback(null,true);
+    }
+
+    if(ORIGINI_CONSENTITE.includes(origin)){
+      return callback(null,true);
+    }
+
+    console.log("CORS bloccato:", origin);
+    callback(null,false);
+
   },
-  credentials: true
+  credentials:true
 }));
 
 app.use(helmet({
-  crossOriginResourcePolicy: false
+  crossOriginResourcePolicy:false,
+  contentSecurityPolicy:false,
+  frameguard:false
 }));
 
 app.use(express.json());
