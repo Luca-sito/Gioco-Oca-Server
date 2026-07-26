@@ -12,24 +12,19 @@ const multer = require("multer");
 const rateLimit = require("express-rate-limit");
 const helmet = require("helmet");
 const { v4: uuidv4 } = require("uuid");
+const { Resend } = require("resend");
 
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 const app = express();
 
 function pulisciTesto(testo, massimo = 500) {
   if (typeof testo !== "string") return "";
-
-  return testo
-    .trim()
-    .replace(/[<>]/g, "")
-    .substring(0, massimo);
+  return testo.trim().replace(/[<>]/g, "").substring(0, massimo);
 }
 
-// Necessario su Render (dietro proxy) perché il rate limiting veda il vero IP del client
 app.set("trust proxy", 1);
 
-// Whitelist esplicita: solo il tuo sito Wix e il dominio del server stesso possono
-// fare richieste con i cookie. Se in futuro colleghi un dominio personalizzato, aggiungilo qui.
 const ORIGINI_CONSENTITE = [
   "https://solfriniluca1.wixstudio.com",
   "https://solfriniluca1-wixstudio-com.filesusr.com",
@@ -37,27 +32,19 @@ const ORIGINI_CONSENTITE = [
 ];
 
 app.use(cors({
-  origin: function(origin, callback){
-
-    if(!origin){
-      return callback(null,true);
-    }
-
-    if(ORIGINI_CONSENTITE.includes(origin)){
-      return callback(null,true);
-    }
-
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+    if (ORIGINI_CONSENTITE.includes(origin)) return callback(null, true);
     console.log("CORS bloccato:", origin);
-    callback(null,false);
-
+    callback(null, false);
   },
-  credentials:true
+  credentials: true
 }));
 
 app.use(helmet({
-  crossOriginResourcePolicy:false,
-  contentSecurityPolicy:false,
-  frameguard:false
+  crossOriginResourcePolicy: false,
+  contentSecurityPolicy: false,
+  frameguard: false
 }));
 
 app.use(express.json());
@@ -67,6 +54,7 @@ app.use(express.static(path.join(__dirname, "public")));
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 const PORT = process.env.PORT || 3000;
+const DOMINIO_SERVER = "https://gioco-oca-server.onrender.com";
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
@@ -99,7 +87,7 @@ const limiteLogin = rateLimit({
 const limiteContatti = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 5,
-  message: { errore: "Hai inviato troppi messaggi, riprova più tardi." }
+  message: { errore: "Hai inviato troppe richieste, riprova più tardi." }
 });
 
 // ===== FIREBASE ADMIN =====
@@ -116,9 +104,6 @@ try {
   console.error("ATTENZIONE: Firebase Admin NON inizializzato:", e.message);
 }
 
-// Nota: l'avatar NON viene salvato nelle partite su Firebase di proposito — evita
-// di riscrivere decine di KB ad ogni singolo lancio di dadi. Vive solo in memoria
-// mentre il server è attivo (torna a comparire da solo al prossimo giro in lobby).
 function preparaGiocatoriPerFirebase(giocatori) {
   const risultato = {};
   for (const uid in giocatori) {
@@ -163,16 +148,10 @@ async function aggiornaStatoPartita(partitaId, dati) {
 }
 
 async function rimuoviPartita(nomeStanza, partitaId) {
-  if (stanze[nomeStanza]) {
-    delete stanze[nomeStanza].partite[partitaId];
-  }
-
+  if (stanze[nomeStanza]) delete stanze[nomeStanza].partite[partitaId];
   if (db) {
-    try {
-      await db.ref("partite/" + partitaId).remove();
-    } catch (e) {
-      console.error("Errore rimozione partita da Firebase:", e.message);
-    }
+    try { await db.ref("partite/" + partitaId).remove(); }
+    catch (e) { console.error("Errore rimozione partita da Firebase:", e.message); }
   }
 }
 
@@ -240,6 +219,13 @@ async function trovaUtentePerEmail(emailLower) {
   const uid = Object.keys(val)[0];
   return { uid, ...val[uid] };
 }
+async function trovaUtentePerTokenVerifica(token) {
+  const snap = await db.ref("utenti").orderByChild("tokenVerificaEmail").equalTo(token).once("value");
+  if (!snap.exists()) return null;
+  const dati = snap.val();
+  const uid = Object.keys(dati)[0];
+  return { uid, ...dati[uid] };
+}
 async function trovaUtentePerNickname(nicknameLower) {
   const snap = await db.ref("utenti").orderByChild("nicknameLower").equalTo(nicknameLower).once("value");
   if (!snap.exists()) return null;
@@ -248,52 +234,57 @@ async function trovaUtentePerNickname(nicknameLower) {
   return { uid, ...val[uid] };
 }
 
+async function inviaEmailVerifica(emailDestinatario, nickname, token) {
+  if (!resend) return;
+  const linkVerifica = DOMINIO_SERVER + "/api/verifica-email/" + token;
+  try {
+    await resend.emails.send({
+      from: "onboarding@resend.dev",
+      to: emailDestinatario,
+      subject: "Verifica il tuo account - Giochi Società",
+      html: `
+        <h2>Ciao ${nickname}</h2>
+        <p>Per attivare il tuo account su Giochi Società clicca qui:</p>
+        <a href="${linkVerifica}">Verifica la mia email</a>
+        <p>Se non hai richiesto tu questa registrazione, ignora pure questa email.</p>
+      `
+    });
+  } catch (erroreEmail) {
+    console.error("Errore invio email verifica:", erroreEmail);
+  }
+}
+
 // ===== API REGISTRAZIONE / LOGIN =====
 app.post("/api/registrati", limiteLogin, async (req, res) => {
   if (!db) return res.status(500).json({ errore: "Servizio account non disponibile al momento." });
   try {
     const { email, nickname, password } = req.body;
 
-if (!email || !nickname || !password) {
-  return res.status(400).json({ errore: "Compila tutti i campi." });
-}
+    if (!email || !nickname || !password) {
+      return res.status(400).json({ errore: "Compila tutti i campi." });
+    }
 
-const nicknamePulito = pulisciTesto(nickname, 20);
+    const nicknamePulito = pulisciTesto(nickname, 20);
 
-if (nicknamePulito.length < 5|| nicknamePulito.length > 15) {
-  return res.status(400).json({
-    errore: "Il nickname deve contenere da 5 a 15 caratteri."
-  });
-}
+    if (nicknamePulito.length < 5 || nicknamePulito.length > 15) {
+      return res.status(400).json({ errore: "Il nickname deve contenere da 5 a 15 caratteri." });
+    }
+    if (!/^[a-zA-Z0-9_ ]+$/.test(nicknamePulito)) {
+      return res.status(400).json({ errore: "Il nickname contiene caratteri non consentiti." });
+    }
+    if (password.length < 6 || password.length > 100) {
+      return res.status(400).json({ errore: "La password deve avere tra 6 e 100 caratteri." });
+    }
 
-if (!/^[a-zA-Z0-9_ ]+$/.test(nicknamePulito)) {
-  return res.status(400).json({
-    errore: "Il nickname contiene caratteri non consentiti."
-  });
-}
+    const emailPulita = pulisciTesto(email, 100).toLowerCase();
+    const formatoEmailValido = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(emailPulita);
+    if (!formatoEmailValido) {
+      return res.status(400).json({ errore: "Inserisci un indirizzo email valido." });
+    }
 
-if (password.length < 6 || password.length > 100) {
-  return res.status(400).json({
-    errore: "La password deve avere tra 6 e 100 caratteri."
-  });
-}
+    const nicknameLower = nicknamePulito.toLowerCase();
 
-const emailPulita = pulisciTesto(email, 100).toLowerCase();
-
-const formatoEmailValido =
-/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(emailPulita);
-
-if (!formatoEmailValido) {
-  return res.status(400).json({
-    errore: "Inserisci un indirizzo email valido."
-  });
-}
-
-const emailLower = emailPulita;
-const nicknameLower = nicknamePulito.toLowerCase();
-
-
-    if (await trovaUtentePerEmail(emailLower)) return res.status(400).json({ errore: "Questa email è già registrata." });
+    if (await trovaUtentePerEmail(emailPulita)) return res.status(400).json({ errore: "Questa email è già registrata." });
     if (await trovaUtentePerNickname(nicknameLower)) return res.status(400).json({ errore: "Questo nickname è già in uso." });
 
     const passwordHash = await bcrypt.hash(password, 10);
@@ -302,28 +293,80 @@ const nicknameLower = nicknamePulito.toLowerCase();
     const tokenVerifica = uuidv4();
 
     await nuovoRef.set({
-    partiteVinte: 0,
-    partiteGiocate: 0,
-    puntiTotali: 0,
-    email: emailPulita,
-    emailLower,
-    emailVerificata: false,
-    tokenVerificaEmail: tokenVerifica,
-    nickname: nicknamePulito,
-    nicknameLower,
-    passwordHash,
-    avatar: null,
-    ruolo: "utente",
-    stato: "attivo",
-    sospesoFino: null,
-    avvisi: [],
-    creatoIl: Date.now()
+      partiteVinte: 0,
+      partiteGiocate: 0,
+      puntiTotali: 0,
+      email: emailPulita,
+      emailLower: emailPulita,
+      emailVerificata: false,
+      tokenVerificaEmail: tokenVerifica,
+      nickname: nicknamePulito,
+      nicknameLower,
+      passwordHash,
+      avatar: null,
+      ruolo: "utente",
+      stato: "attivo",
+      sospesoFino: null,
+      avvisi: [],
+      creatoIl: Date.now()
     });
 
-const token = creaToken(uid, nicknamePulito, "utente");
-res.cookie("token", token, OPZIONI_COOKIE);
-res.json({ nickname: nicknamePulito, ruolo: "utente" });
+    await inviaEmailVerifica(emailPulita, nicknamePulito, tokenVerifica);
 
+    res.json({ messaggio: "Registrazione completata! Controlla la tua email per attivare l'account.", email: emailPulita });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ errore: "Errore del server, riprova." });
+  }
+});
+
+app.get("/api/verifica-email/:token", async (req, res) => {
+  if (!db) return res.send("Servizio non disponibile.");
+  try {
+    const utente = await trovaUtentePerTokenVerifica(req.params.token);
+
+    const paginaBase = (titolo, testo) => `
+      <!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><title>${titolo}</title>
+      <style>
+        body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#101820;font-family:Arial,sans-serif;color:#e8e8e8;}
+        .box{background:#1e2a38;border:2px solid #ffd700;border-radius:14px;padding:36px;max-width:400px;text-align:center;}
+        h2{color:#ffd700;margin-top:0;}
+        a{display:inline-block;margin-top:18px;padding:10px 20px;background:#ffd700;color:#111;text-decoration:none;border-radius:8px;font-weight:bold;}
+      </style></head><body><div class="box"><h2>${titolo}</h2><p>${testo}</p>
+      <a href="login.html">Vai al login</a></div></body></html>`;
+
+    if (!utente) {
+      return res.send(paginaBase("Link non valido", "Questo link di verifica non è valido o è già stato utilizzato."));
+    }
+
+    await db.ref("utenti/" + utente.uid).update({ emailVerificata: true, tokenVerificaEmail: null });
+
+    res.send(paginaBase("Email verificata! 🎉", "Il tuo account è ora attivo. Puoi accedere quando vuoi."));
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Errore durante la verifica.");
+  }
+});
+
+app.post("/api/rinvia-verifica", limiteContatti, async (req, res) => {
+  if (!db) return res.status(500).json({ errore: "Servizio non disponibile." });
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ errore: "Inserisci la tua email." });
+
+    const emailPulita = pulisciTesto(email, 100).toLowerCase();
+    const utente = await trovaUtentePerEmail(emailPulita);
+
+    const rispostaGenerica = { messaggio: "Se l'indirizzo è registrato e non ancora verificato, ti abbiamo inviato una nuova email." };
+
+    // Stessa risposta sia che l'account esista o meno: evita di rivelare quali email sono registrate
+    if (!utente || utente.emailVerificata) return res.json(rispostaGenerica);
+
+    const nuovoToken = uuidv4();
+    await db.ref("utenti/" + utente.uid).update({ tokenVerificaEmail: nuovoToken });
+    await inviaEmailVerifica(utente.email, utente.nickname, nuovoToken);
+
+    res.json(rispostaGenerica);
   } catch (err) {
     console.error(err);
     res.status(500).json({ errore: "Errore del server, riprova." });
@@ -337,15 +380,15 @@ app.post("/api/login", limiteLogin, async (req, res) => {
     if (!email || !password) return res.status(400).json({ errore: "Inserisci email e password." });
 
     const emailLogin = pulisciTesto(email, 100).toLowerCase();
-
     const utente = await trovaUtentePerEmail(emailLogin);
-
     if (!utente) return res.status(400).json({ errore: "Email o password errati." });
 
     const passwordOk = await bcrypt.compare(password, utente.passwordHash);
     if (!passwordOk) return res.status(400).json({ errore: "Email o password errati." });
 
-    if (utente.stato === "bannato") return res.status(403).json({ errore: "Il tuo account è stato bannato." });
+    if (utente.stato === "bannato") {
+      return res.status(403).json({ errore: "Il tuo account è stato bannato." });
+    }
 
     if (utente.stato === "sospeso") {
       if (utente.sospesoFino && utente.sospesoFino > Date.now()) {
@@ -355,6 +398,13 @@ app.post("/api/login", limiteLogin, async (req, res) => {
         await db.ref("utenti/" + utente.uid).update({ stato: "attivo", sospesoFino: null });
         utente.stato = "attivo";
       }
+    }
+
+    // === false (non solo falsy): gli account creati PRIMA di questo sistema non hanno
+    // questo campo affatto (undefined) e restano validi — solo chi si registra da ora
+    // in poi e non ha ancora cliccato il link viene davvero bloccato qui.
+    if (utente.emailVerificata === false) {
+      return res.status(403).json({ errore: "Devi verificare la tua email prima di accedere.", nonVerificata: true });
     }
 
     const token = creaToken(utente.uid, utente.nickname, utente.ruolo || "utente");
@@ -401,19 +451,14 @@ app.post("/api/modifica-nickname", richiediAuth, async (req, res) => {
     const { nickname } = req.body;
     if (!nickname || !nickname.trim()) return res.status(400).json({ errore: "Inserisci un nickname." });
 
-    const nuovoNickname = pulisciTesto(nickname,20);
+    const nuovoNickname = pulisciTesto(nickname, 20);
 
-if (nuovoNickname.length < 5 || nuovoNickname.length > 15) {
- return res.status(400).json({
-  errore:"Il nickname deve contenere da 5 a 15 caratteri."
- });
-}
-
-if (!/^[a-zA-Z0-9_ ]+$/.test(nuovoNickname)) {
- return res.status(400).json({
-  errore:"Nickname non valido."
- });
-}
+    if (nuovoNickname.length < 5 || nuovoNickname.length > 15) {
+      return res.status(400).json({ errore: "Il nickname deve contenere da 5 a 15 caratteri." });
+    }
+    if (!/^[a-zA-Z0-9_ ]+$/.test(nuovoNickname)) {
+      return res.status(400).json({ errore: "Nickname non valido." });
+    }
 
     const nicknameLower = nuovoNickname.toLowerCase();
 
@@ -474,18 +519,10 @@ app.post("/api/contatti", limiteContatti, async (req, res) => {
     let { nickname, email } = req.body;
 
     if (!messaggio || !messaggio.trim()) {
-  return res.status(400).json({
-    errore: "Scrivi un messaggio prima di inviare."
-  });
-}
+      return res.status(400).json({ errore: "Scrivi un messaggio prima di inviare." });
+    }
 
-const messaggioPulito = pulisciTesto(messaggio, 1000);
-
-if (messaggioPulito.length > 1000) {
-  return res.status(400).json({
-    errore: "Il messaggio è troppo lungo (massimo 1000 caratteri)."
-  });
-}
+    const messaggioPulito = pulisciTesto(messaggio, 1000);
 
     const datiToken = verificaToken(estraiTokenHeader(req));
     let uidMittente = null;
@@ -709,12 +746,7 @@ async function avviaPartitaAutomaticamente(partita) {
     }
   });
   const trovato = trovaPartita(partita.id);
-
-await salvaPartita({
-  ...partita,
-  stanza: trovato ? trovato.nomeStanza : partita.stanza
-});
-
+  await salvaPartita({ ...partita, stanza: trovato ? trovato.nomeStanza : partita.stanza });
 }
 
 function passaAlProssimoTurno(partita) {
@@ -723,8 +755,7 @@ function passaAlProssimoTurno(partita) {
     partita.turnoAttuale = (partita.turnoAttuale + 1) % partita.ordineGiocatori.length;
     const idProssimo = partita.ordineGiocatori[partita.turnoAttuale];
     const giocatoreProssimo = partita.giocatori[idProssimo];
-    if ((giocatoreProssimo.turniSaltati || 0) > 0)
- { giocatoreProssimo.turniSaltati--; tentativi++; } else break;
+    if ((giocatoreProssimo.turniSaltati || 0) > 0) { giocatoreProssimo.turniSaltati--; tentativi++; } else break;
   } while (tentativi < partita.ordineGiocatori.length);
 }
 
@@ -844,7 +875,6 @@ wss.on("connection", (socket, request) => {
         const mioGiocatore = partita.giocatori[uid];
         if (!mioGiocatore) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Non fai parte di questa partita." })); return; }
 
-        // Rilegge l'avatar aggiornato da Firebase (non viene persistito nelle partite per risparmiare scritture)
         if (db) {
           try {
             const snapUtente = await db.ref("utenti/" + uid).once("value");
@@ -873,17 +903,15 @@ wss.on("connection", (socket, request) => {
         const partitaId = "p" + Date.now() + Math.floor(Math.random() * 1000);
         const max = parseInt(dati.maxGiocatori);
 
-stanze[stanzaAttuale].partite[partitaId] = {
-  id: partitaId,
-  creatore: nickname,
-  creatoDa: uid,
-  tempo: dati.tempo,
-  punti: dati.punti,
-  modalita: dati.modalita,
-  codicePrivato: dati.modalita === "privata" ? dati.codicePrivato : null,
-  maxGiocatori: (!max || max < 2 || max > 8 ? 2 : max),
-
-
+        stanze[stanzaAttuale].partite[partitaId] = {
+          id: partitaId,
+          creatore: nickname,
+          creatoDa: uid,
+          tempo: dati.tempo,
+          punti: dati.punti,
+          modalita: dati.modalita,
+          codicePrivato: dati.modalita === "privata" ? dati.codicePrivato : null,
+          maxGiocatori: (!max || max < 2 || max > 8 ? 2 : max),
           giocatori: { [uid]: { nome: nickname, avatar: mioAvatar, posizione: 0, socket, turniSaltati: 0 } },
           ordineGiocatori: [uid], turnoAttuale: 0, iniziata: false, elaborandoTiro: false
         };
@@ -930,54 +958,32 @@ stanze[stanzaAttuale].partite[partitaId] = {
 
       if (dati.tipo === "chat") {
         if (!stanzaAttuale) return;
-
         if (typeof dati.testo !== "string") return;
-
         const testo = pulisciTesto(dati.testo, 300);
-
         if (testo.length === 0) return;
-        if (testo.length > 300) return;
-
-        inviaAllaStanza(stanzaAttuale, {
-          tipo: "chat",
-          nome: nickname,
-          testo
-        });
-
+        inviaAllaStanza(stanzaAttuale, { tipo: "chat", nome: nickname, testo });
         return;
       }
 
-
       if (dati.tipo === "chatPartita") {
-  if (!uid) return;
+        if (!uid) return;
+        if (typeof dati.testo !== "string") return;
+        const testo = pulisciTesto(dati.testo, 300);
+        if (!testo) return;
 
-  if (typeof dati.testo !== "string") return;
+        const trovato = trovaPartita(dati.partitaId);
+        if (!trovato) return;
+        const partita = trovato.partita;
+        const mittente = partita.giocatori[uid];
+        if (!mittente) return;
 
-  const testo = pulisciTesto(dati.testo, 300);
-
-  if (!testo) return;
-
-  const trovato = trovaPartita(dati.partitaId);
-  if (!trovato) return;
-
-  const partita = trovato.partita;
-  const mittente = partita.giocatori[uid];
-
-  if (!mittente) return;
-
-  Object.values(partita.giocatori).forEach(g => {
-    if (g.socket && g.socket.readyState === WebSocket.OPEN) {
-      g.socket.send(JSON.stringify({
-        tipo: "chatPartita",
-        nome: mittente.nome,
-        testo: testo
-      }));
-    }
-  });
-
-  return;
-}
-
+        Object.values(partita.giocatori).forEach(g => {
+          if (g.socket && g.socket.readyState === WebSocket.OPEN) {
+            g.socket.send(JSON.stringify({ tipo: "chatPartita", nome: mittente.nome, testo }));
+          }
+        });
+        return;
+      }
 
       if (dati.tipo === "tiraDadi") {
         if (!uid) return;
