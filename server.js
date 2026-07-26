@@ -279,7 +279,8 @@ if (password.length < 6 || password.length > 100) {
 
 const emailPulita = pulisciTesto(email, 100).toLowerCase();
 
-const formatoEmailValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailPulita);
+const formatoEmailValido =
+/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(emailPulita);
 
 if (!formatoEmailValido) {
   return res.status(400).json({
