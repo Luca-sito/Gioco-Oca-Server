@@ -10,19 +10,8 @@ const jwt = require("jsonwebtoken");
 const admin = require("firebase-admin");
 const multer = require("multer");
 const rateLimit = require("express-rate-limit");
-const helmet = require("helmet");
-
 
 const app = express();
-
-function pulisciTesto(testo, massimo = 500) {
-  if (typeof testo !== "string") return "";
-
-  return testo
-    .trim()
-    .replace(/[<>]/g, "")
-    .substring(0, massimo);
-}
 
 // Necessario su Render (dietro proxy) perché il rate limiting veda il vero IP del client
 app.set("trust proxy", 1);
@@ -42,10 +31,6 @@ app.use(cors({
   credentials: true
 }));
 
-app.use(helmet({
-  crossOriginResourcePolicy: false
-}));
-
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
@@ -61,7 +46,7 @@ if (!JWT_SECRET) {
 
 const OPZIONI_COOKIE = {
   httpOnly: true,
-  secure: true,
+  secure: process.env.NODE_ENV === "production",
   sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
   maxAge: 30 * 24 * 60 * 60 * 1000
 };
@@ -149,16 +134,10 @@ async function aggiornaStatoPartita(partitaId, dati) {
 }
 
 async function rimuoviPartita(nomeStanza, partitaId) {
-  if (stanze[nomeStanza]) {
-    delete stanze[nomeStanza].partite[partitaId];
-  }
-
+  if (stanze[nomeStanza]) delete stanze[nomeStanza].partite[partitaId];
   if (db) {
-    try {
-      await db.ref("partite/" + partitaId).remove();
-    } catch (e) {
-      console.error("Errore rimozione partita da Firebase:", e.message);
-    }
+    try { await db.ref("partite/" + partitaId).remove(); }
+    catch (e) { console.error("Errore rimozione partita da Firebase:", e.message); }
   }
 }
 
@@ -239,44 +218,11 @@ app.post("/api/registrati", limiteLogin, async (req, res) => {
   if (!db) return res.status(500).json({ errore: "Servizio account non disponibile al momento." });
   try {
     const { email, nickname, password } = req.body;
+    if (!email || !nickname || !password) return res.status(400).json({ errore: "Compila tutti i campi." });
+    if (password.length < 6 || password.length > 100) return res.status(400).json({ errore: "La password deve avere tra 6 e 100 caratteri." });
 
-if (!email || !nickname || !password) {
-  return res.status(400).json({ errore: "Compila tutti i campi." });
-}
-
-const nicknamePulito = pulisciTesto(nickname, 20);
-
-if (nicknamePulito.length < 5|| nicknamePulito.length > 15) {
-  return res.status(400).json({
-    errore: "Il nickname deve contenere da 5 a 15 caratteri."
-  });
-}
-
-if (!/^[a-zA-Z0-9_ ]+$/.test(nicknamePulito)) {
-  return res.status(400).json({
-    errore: "Il nickname contiene caratteri non consentiti."
-  });
-}
-
-if (password.length < 6 || password.length > 100) {
-  return res.status(400).json({
-    errore: "La password deve avere tra 6 e 100 caratteri."
-  });
-}
-
-const emailPulita = pulisciTesto(email, 100).toLowerCase();
-
-const formatoEmailValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailPulita);
-
-if (!formatoEmailValido) {
-  return res.status(400).json({
-    errore: "Inserisci un indirizzo email valido."
-  });
-}
-
-const emailLower = emailPulita;
-const nicknameLower = nicknamePulito.toLowerCase();
-
+    const emailLower = email.trim().toLowerCase();
+    const nicknameLower = nickname.trim().toLowerCase();
 
     if (await trovaUtentePerEmail(emailLower)) return res.status(400).json({ errore: "Questa email è già registrata." });
     if (await trovaUtentePerNickname(nicknameLower)) return res.status(400).json({ errore: "Questo nickname è già in uso." });
@@ -286,26 +232,23 @@ const nicknameLower = nicknamePulito.toLowerCase();
     const uid = nuovoRef.key;
 
     await nuovoRef.set({
-    partiteVinte: 0,
-    partiteGiocate: 0,
-    puntiTotali: 0,
-    email: emailPulita,
-    emailLower,
-    nickname: nicknamePulito,
-    nicknameLower,
-    passwordHash,
-    avatar: null,
-    ruolo: "utente",
-    stato: "attivo",
-    sospesoFino: null,
-    avvisi: [],
-    creatoIl: Date.now()
+      partiteVinte: 0,
+      partiteGiocate: 0,
+      puntiTotali: 0,
+      email: email.trim(), emailLower,
+      nickname: nickname.trim(), nicknameLower,
+      passwordHash,
+      avatar: null,
+      ruolo: "utente",
+      stato: "attivo",
+      sospesoFino: null,
+      avvisi: [],
+      creatoIl: Date.now()
     });
 
-const token = creaToken(uid, nicknamePulito, "utente");
-res.cookie("token", token, OPZIONI_COOKIE);
-res.json({ nickname: nicknamePulito, ruolo: "utente" });
-
+    const token = creaToken(uid, nickname.trim(), "utente");
+    res.cookie("token", token, OPZIONI_COOKIE);
+    res.json({ nickname: nickname.trim(), ruolo: "utente" });
   } catch (err) {
     console.error(err);
     res.status(500).json({ errore: "Errore del server, riprova." });
@@ -318,10 +261,7 @@ app.post("/api/login", limiteLogin, async (req, res) => {
     const { email, password } = req.body;
     if (!email || !password) return res.status(400).json({ errore: "Inserisci email e password." });
 
-    const emailLogin = pulisciTesto(email, 100).toLowerCase();
-
-    const utente = await trovaUtentePerEmail(emailLogin);
-
+    const utente = await trovaUtentePerEmail(email.trim().toLowerCase());
     if (!utente) return res.status(400).json({ errore: "Email o password errati." });
 
     const passwordOk = await bcrypt.compare(password, utente.passwordHash);
@@ -383,20 +323,7 @@ app.post("/api/modifica-nickname", richiediAuth, async (req, res) => {
     const { nickname } = req.body;
     if (!nickname || !nickname.trim()) return res.status(400).json({ errore: "Inserisci un nickname." });
 
-    const nuovoNickname = pulisciTesto(nickname,20);
-
-if (nuovoNickname.length < 5 || nuovoNickname.length > 15) {
- return res.status(400).json({
-  errore:"Il nickname deve contenere da 5 a 15 caratteri."
- });
-}
-
-if (!/^[a-zA-Z0-9_ ]+$/.test(nuovoNickname)) {
- return res.status(400).json({
-  errore:"Nickname non valido."
- });
-}
-
+    const nuovoNickname = nickname.trim();
     const nicknameLower = nuovoNickname.toLowerCase();
 
     const esistente = await trovaUtentePerNickname(nicknameLower);
@@ -455,19 +382,7 @@ app.post("/api/contatti", limiteContatti, async (req, res) => {
     const { categoria, messaggio } = req.body;
     let { nickname, email } = req.body;
 
-    if (!messaggio || !messaggio.trim()) {
-  return res.status(400).json({
-    errore: "Scrivi un messaggio prima di inviare."
-  });
-}
-
-const messaggioPulito = pulisciTesto(messaggio, 1000);
-
-if (messaggioPulito.length > 1000) {
-  return res.status(400).json({
-    errore: "Il messaggio è troppo lungo (massimo 1000 caratteri)."
-  });
-}
+    if (!messaggio || !messaggio.trim()) return res.status(400).json({ errore: "Scrivi un messaggio prima di inviare." });
 
     const datiToken = verificaToken(estraiTokenHeader(req));
     let uidMittente = null;
@@ -485,7 +400,7 @@ if (messaggioPulito.length > 1000) {
     const nuovoRef = db.ref("contatti").push();
     await nuovoRef.set({
       nickname: nickname.trim(), email: email.trim(), categoria: categoria || "Altro",
-      messaggio: messaggioPulito, uidMittente, letto: false, data: Date.now()
+      messaggio: messaggio.trim(), uidMittente, letto: false, data: Date.now()
     });
 
     res.json({ ok: true });
@@ -691,12 +606,7 @@ async function avviaPartitaAutomaticamente(partita) {
     }
   });
   const trovato = trovaPartita(partita.id);
-
-await salvaPartita({
-  ...partita,
-  stanza: trovato ? trovato.nomeStanza : partita.stanza
-});
-
+  await salvaPartita({ ...partita, stanza: trovato ? trovato.nomeStanza : partita.stanza });
 }
 
 function passaAlProssimoTurno(partita) {
@@ -705,8 +615,7 @@ function passaAlProssimoTurno(partita) {
     partita.turnoAttuale = (partita.turnoAttuale + 1) % partita.ordineGiocatori.length;
     const idProssimo = partita.ordineGiocatori[partita.turnoAttuale];
     const giocatoreProssimo = partita.giocatori[idProssimo];
-    if ((giocatoreProssimo.turniSaltati || 0) > 0)
- { giocatoreProssimo.turniSaltati--; tentativi++; } else break;
+    if (giocatoreProssimo.turniSaltati > 0) { giocatoreProssimo.turniSaltati--; tentativi++; } else break;
   } while (tentativi < partita.ordineGiocatori.length);
 }
 
@@ -853,19 +762,11 @@ wss.on("connection", (socket, request) => {
         if (haGiaCreato) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Hai già una partita attiva." })); return; }
 
         const partitaId = "p" + Date.now() + Math.floor(Math.random() * 1000);
-        const max = parseInt(dati.maxGiocatori);
-
-stanze[stanzaAttuale].partite[partitaId] = {
-  id: partitaId,
-  creatore: nickname,
-  creatoDa: uid,
-  tempo: dati.tempo,
-  punti: dati.punti,
-  modalita: dati.modalita,
-  codicePrivato: dati.modalita === "privata" ? dati.codicePrivato : null,
-  maxGiocatori: (!max || max < 2 || max > 8 ? 2 : max),
-
-
+        stanze[stanzaAttuale].partite[partitaId] = {
+          id: partitaId, creatore: nickname, creatoDa: uid,
+          tempo: dati.tempo, punti: dati.punti, modalita: dati.modalita,
+          codicePrivato: dati.modalita === "privata" ? dati.codicePrivato : null,
+          maxGiocatori: parseInt(dati.maxGiocatori) || 2,
           giocatori: { [uid]: { nome: nickname, avatar: mioAvatar, posizione: 0, socket, turniSaltati: 0 } },
           ordineGiocatori: [uid], turnoAttuale: 0, iniziata: false, elaborandoTiro: false
         };
@@ -912,54 +813,24 @@ stanze[stanzaAttuale].partite[partitaId] = {
 
       if (dati.tipo === "chat") {
         if (!stanzaAttuale) return;
-
-        if (typeof dati.testo !== "string") return;
-
-        const testo = pulisciTesto(dati.testo, 300);
-
-        if (testo.length === 0) return;
-        if (testo.length > 300) return;
-
-        inviaAllaStanza(stanzaAttuale, {
-          tipo: "chat",
-          nome: nickname,
-          testo
-        });
-
+        inviaAllaStanza(stanzaAttuale, { tipo: "chat", nome: nickname, testo: dati.testo });
         return;
       }
 
-
       if (dati.tipo === "chatPartita") {
-  if (!uid) return;
-
-  if (typeof dati.testo !== "string") return;
-
-  const testo = pulisciTesto(dati.testo, 300);
-
-  if (!testo) return;
-
-  const trovato = trovaPartita(dati.partitaId);
-  if (!trovato) return;
-
-  const partita = trovato.partita;
-  const mittente = partita.giocatori[uid];
-
-  if (!mittente) return;
-
-  Object.values(partita.giocatori).forEach(g => {
-    if (g.socket && g.socket.readyState === WebSocket.OPEN) {
-      g.socket.send(JSON.stringify({
-        tipo: "chatPartita",
-        nome: mittente.nome,
-        testo: testo
-      }));
-    }
-  });
-
-  return;
-}
-
+        if (!uid) return;
+        const trovato = trovaPartita(dati.partitaId);
+        if (!trovato) return;
+        const partita = trovato.partita;
+        const mittente = partita.giocatori[uid];
+        if (!mittente) return;
+        Object.values(partita.giocatori).forEach(g => {
+          if (g.socket && g.socket.readyState === WebSocket.OPEN) {
+            g.socket.send(JSON.stringify({ tipo: "chatPartita", nome: mittente.nome, testo: dati.testo }));
+          }
+        });
+        return;
+      }
 
       if (dati.tipo === "tiraDadi") {
         if (!uid) return;
