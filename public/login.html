@@ -2,6 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Accedi - Giochi Società</title>
 <style>
 * { box-sizing: border-box; font-family: Arial, sans-serif; }
@@ -15,6 +16,8 @@ button:hover { background: #ffaa00; }
 .errore { color: #ff6b6b; font-size: 13px; margin-top: 12px; text-align: center; min-height: 16px; }
 .link-sotto { text-align: center; margin-top: 16px; font-size: 13px; color: #aaa; }
 .link-sotto a { color: #ffd700; text-decoration: none; }
+#rinviaWrapper { display: none; text-align: center; margin-top: 10px; font-size: 13px; }
+#linkRinvia { color: #ffd700; cursor: pointer; text-decoration: underline; }
 </style>
 </head>
 <body>
@@ -27,6 +30,7 @@ button:hover { background: #ffaa00; }
   <input type="password" id="password" placeholder="••••••••">
   <button onclick="accedi()">Accedi</button>
   <div class="errore" id="errore"></div>
+  <div id="rinviaWrapper">Non hai ricevuto l'email di verifica? <span id="linkRinvia" onclick="rinviaEmail()">Invia di nuovo</span></div>
   <div class="link-sotto">
     Non hai un account? <a id="linkRegistrati" href="registrati.html">Registrati</a>
   </div>
@@ -41,7 +45,9 @@ async function accedi() {
   const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value;
   const erroreEl = document.getElementById("errore");
+  const rinviaWrapper = document.getElementById("rinviaWrapper");
   erroreEl.textContent = "";
+  rinviaWrapper.style.display = "none";
 
   if (!email || !password) { erroreEl.textContent = "Inserisci email e password."; return; }
 
@@ -53,11 +59,34 @@ async function accedi() {
       body: JSON.stringify({ email, password })
     });
     const dati = await risposta.json();
-    if (!risposta.ok) { erroreEl.textContent = dati.errore || "Errore durante il login."; return; }
+
+    if (!risposta.ok) {
+      erroreEl.textContent = dati.errore || "Errore durante il login.";
+      if (dati.nonVerificata) rinviaWrapper.style.display = "block";
+      return;
+    }
 
     window.location.href = redirect || "https://solfriniluca1.wixstudio.com/giochidisocieta";
   } catch (e) {
     erroreEl.textContent = "Errore di connessione al server.";
+  }
+}
+
+async function rinviaEmail() {
+  const email = document.getElementById("email").value.trim();
+  const link = document.getElementById("linkRinvia");
+  if (!email) { alert("Inserisci prima la tua email nel campo sopra."); return; }
+  link.textContent = "Invio in corso...";
+  try {
+    const risposta = await fetch("https://gioco-oca-server.onrender.com/api/rinvia-verifica", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email })
+    });
+    const dati = await risposta.json();
+    link.textContent = dati.messaggio || "Email inviata di nuovo.";
+  } catch (e) {
+    link.textContent = "Errore, riprova più tardi.";
   }
 }
 </script>
