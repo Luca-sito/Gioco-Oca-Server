@@ -305,6 +305,7 @@ const nicknameLower = nicknamePulito.toLowerCase();
     puntiTotali: 0,
     email: emailPulita,
     emailLower,
+    emailVerificata: false,
     nickname: nicknamePulito,
     nicknameLower,
     passwordHash,
