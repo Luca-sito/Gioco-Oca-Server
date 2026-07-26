@@ -9,45 +9,43 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const admin = require("firebase-admin");
 const multer = require("multer");
-
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, path.join(__dirname, "public", "avatar"));
-  },
-  filename: function (req, file, cb) {
-    const estensione = path.extname(file.originalname);
-    const nomeFile = Date.now() + "-" + Math.round(Math.random() * 100000) + estensione;
-    cb(null, nomeFile);
-  }
-});
-
-const upload = multer({
-  storage: storage,
-  limits: {
-    fileSize: 2 * 1024 * 1024
-  },
-  fileFilter: function (req, file, cb) {
-    if (
-      file.mimetype === "image/jpeg" ||
-      file.mimetype === "image/png" ||
-      file.mimetype === "image/webp"
-    ) {
-      cb(null, true);
-    } else {
-      cb(new Error("Sono consentite solo immagini JPG, PNG o WEBP."));
-    }
-  }
-});
+const rateLimit = require("express-rate-limit");
+const helmet = require("helmet");
 
 
 const app = express();
 
-// credentials:true + riflessione dell'origine: necessario perché i cookie
-// httpOnly cross-site richiedono che il browser veda un'origine esplicita, mai "*"
+function pulisciTesto(testo, massimo = 500) {
+  if (typeof testo !== "string") return "";
+
+  return testo
+    .trim()
+    .replace(/[<>]/g, "")
+    .substring(0, massimo);
+}
+
+// Necessario su Render (dietro proxy) perché il rate limiting veda il vero IP del client
+app.set("trust proxy", 1);
+
+// Whitelist esplicita: solo il tuo sito Wix e il dominio del server stesso possono
+// fare richieste con i cookie. Se in futuro colleghi un dominio personalizzato, aggiungilo qui.
+const ORIGINI_CONSENTITE = [
+  "https://solfriniluca1.wixstudio.com",
+  "https://gioco-oca-server.onrender.com"
+];
 app.use(cors({
-  origin: function (origin, callback) { callback(null, true); },
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true); // richieste senza origine (es. server-to-server)
+    if (ORIGINI_CONSENTITE.includes(origin)) return callback(null, true);
+    callback(new Error("Origine non autorizzata: " + origin));
+  },
   credentials: true
 }));
+
+app.use(helmet({
+  crossOriginResourcePolicy: false
+}));
+
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
@@ -55,14 +53,40 @@ app.use(express.static(path.join(__dirname, "public")));
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 const PORT = process.env.PORT || 3000;
-const JWT_SECRET = process.env.JWT_SECRET || "cambia-questo-secret";
+
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error("JWT_SECRET mancante: impostala nelle variabili d'ambiente su Render prima di avviare il server.");
+}
 
 const OPZIONI_COOKIE = {
   httpOnly: true,
   secure: true,
-  sameSite: "none",
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
   maxAge: 30 * 24 * 60 * 60 * 1000
 };
+
+const uploadAvatar = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 3 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (!file.mimetype.startsWith("image/")) return cb(new Error("Il file deve essere un'immagine."));
+    cb(null, true);
+  }
+});
+
+const limiteLogin = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { errore: "Troppi tentativi, riprova tra qualche minuto." },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+const limiteContatti = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  message: { errore: "Hai inviato troppi messaggi, riprova più tardi." }
+});
 
 // ===== FIREBASE ADMIN =====
 let db = null;
@@ -78,6 +102,9 @@ try {
   console.error("ATTENZIONE: Firebase Admin NON inizializzato:", e.message);
 }
 
+// Nota: l'avatar NON viene salvato nelle partite su Firebase di proposito — evita
+// di riscrivere decine di KB ad ogni singolo lancio di dadi. Vive solo in memoria
+// mentre il server è attivo (torna a comparire da solo al prossimo giro in lobby).
 function preparaGiocatoriPerFirebase(giocatori) {
   const risultato = {};
   for (const uid in giocatori) {
@@ -123,6 +150,7 @@ async function aggiornaStatoPartita(partitaId, dati) {
 
 async function rimuoviPartita(nomeStanza, partitaId) {
   if (stanze[nomeStanza]) delete stanze[nomeStanza].partite[partitaId];
+  partita.finita=true;
   if (db) {
     try { await db.ref("partite/" + partitaId).remove(); }
     catch (e) { console.error("Errore rimozione partita da Firebase:", e.message); }
@@ -153,18 +181,12 @@ function verificaToken(token) {
   if (!token) return null;
   try { return jwt.verify(token, JWT_SECRET); } catch (e) { return null; }
 }
-
-// Ordine: prima il cookie httpOnly (nuovo standard), poi l'header Authorization
-// come fallback (utile per test manuali/strumenti esterni, non rompe nulla)
 function estraiTokenHeader(req) {
   if (req.cookies && req.cookies.token) return req.cookies.token;
   const header = req.headers.authorization || "";
   const parti = header.split(" ");
   return parti.length === 2 ? parti[1] : null;
 }
-
-// Parser manuale per l'header Cookie grezzo: necessario perché l'handshake
-// WebSocket bypassa completamente il middleware Express (cookie-parser non lo tocca)
 function estraiTokenDaCookieHeader(cookieHeaderGrezzo) {
   if (!cookieHeaderGrezzo) return null;
   const parti = cookieHeaderGrezzo.split(";").map(p => p.trim());
@@ -208,15 +230,48 @@ async function trovaUtentePerNickname(nicknameLower) {
 }
 
 // ===== API REGISTRAZIONE / LOGIN =====
-app.post("/api/registrati", async (req, res) => {
+app.post("/api/registrati", limiteLogin, async (req, res) => {
   if (!db) return res.status(500).json({ errore: "Servizio account non disponibile al momento." });
   try {
     const { email, nickname, password } = req.body;
-    if (!email || !nickname || !password) return res.status(400).json({ errore: "Compila tutti i campi." });
-    if (password.length < 6) return res.status(400).json({ errore: "La password deve avere almeno 6 caratteri." });
 
-    const emailLower = email.trim().toLowerCase();
-    const nicknameLower = nickname.trim().toLowerCase();
+if (!email || !nickname || !password) {
+  return res.status(400).json({ errore: "Compila tutti i campi." });
+}
+
+const nicknamePulito = pulisciTesto(nickname, 20);
+
+if (nicknamePulito.length < 5|| nicknamePulito.length > 15) {
+  return res.status(400).json({
+    errore: "Il nickname deve contenere da 5 a 15 caratteri."
+  });
+}
+
+if (!/^[a-zA-Z0-9_ ]+$/.test(nicknamePulito)) {
+  return res.status(400).json({
+    errore: "Il nickname contiene caratteri non consentiti."
+  });
+}
+
+if (password.length < 6 || password.length > 100) {
+  return res.status(400).json({
+    errore: "La password deve avere tra 6 e 100 caratteri."
+  });
+}
+
+const emailPulita = pulisciTesto(email, 100).toLowerCase();
+
+const formatoEmailValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailPulita);
+
+if (!formatoEmailValido) {
+  return res.status(400).json({
+    errore: "Inserisci un indirizzo email valido."
+  });
+}
+
+const emailLower = emailPulita;
+const nicknameLower = nicknamePulito.toLowerCase();
+
 
     if (await trovaUtentePerEmail(emailLower)) return res.status(400).json({ errore: "Questa email è già registrata." });
     if (await trovaUtentePerNickname(nicknameLower)) return res.status(400).json({ errore: "Questo nickname è già in uso." });
@@ -226,35 +281,42 @@ app.post("/api/registrati", async (req, res) => {
     const uid = nuovoRef.key;
 
     await nuovoRef.set({
-      partiteVinte: 0,
-      partiteGiocate: 0,
-      puntiTotali: 0,
-      email: email.trim(), emailLower,
-      nickname: nickname.trim(), nicknameLower,
-      passwordHash,
-      ruolo: "utente",
-      stato: "attivo",
-      sospesoFino: null,
-      avvisi: [],
-      creatoIl: Date.now()
+    partiteVinte: 0,
+    partiteGiocate: 0,
+    puntiTotali: 0,
+    email: emailPulita,
+    emailLower,
+    nickname: nicknamePulito,
+    nicknameLower,
+    passwordHash,
+    avatar: null,
+    ruolo: "utente",
+    stato: "attivo",
+    sospesoFino: null,
+    avvisi: [],
+    creatoIl: Date.now()
     });
 
-    const token = creaToken(uid, nickname.trim(), "utente");
-    res.cookie("token", token, OPZIONI_COOKIE);
-    res.json({ nickname: nickname.trim(), ruolo: "utente" });
+const token = creaToken(uid, nicknamePulito, "utente");
+res.cookie("token", token, OPZIONI_COOKIE);
+res.json({ nickname: nicknamePulito, ruolo: "utente" });
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ errore: "Errore del server, riprova." });
   }
 });
 
-app.post("/api/login", async (req, res) => {
+app.post("/api/login", limiteLogin, async (req, res) => {
   if (!db) return res.status(500).json({ errore: "Servizio account non disponibile al momento." });
   try {
     const { email, password } = req.body;
     if (!email || !password) return res.status(400).json({ errore: "Inserisci email e password." });
 
-    const utente = await trovaUtentePerEmail(email.trim().toLowerCase());
+    const emailLogin = pulisciTesto(email, 100).toLowerCase();
+
+    const utente = await trovaUtentePerEmail(emailLogin);
+
     if (!utente) return res.status(400).json({ errore: "Email o password errati." });
 
     const passwordOk = await bcrypt.compare(password, utente.passwordHash);
@@ -281,7 +343,6 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
-// Necessario: con httpOnly, JS non può più cancellare il cookie da solo — serve il server
 app.post("/api/logout", (req, res) => {
   res.clearCookie("token", OPZIONI_COOKIE);
   res.json({ ok: true });
@@ -297,14 +358,13 @@ app.get("/api/me", richiediAuth, async (req, res) => {
       uid: req.utente.uid,
       nickname: utente.nickname,
       email: utente.email,
+      avatar: utente.avatar || null,
       ruolo: utente.ruolo || "utente",
       stato: utente.stato || "attivo",
       sospesoFino: utente.sospesoFino || null,
-      avatar: utente.avatar || null,
       avvisi: utente.avvisi || [],
       partiteVinte: utente.partiteVinte || 0,
       partiteGiocate: utente.partiteGiocate || 0
-
     });
   } catch (err) {
     console.error(err);
@@ -312,52 +372,26 @@ app.get("/api/me", richiediAuth, async (req, res) => {
   }
 });
 
-app.post(
-  "/api/carica-avatar",
-  richiediAuth,
-  upload.single("avatar"),
-  async (req,res)=>{
-
-    try {
-
-      if(!req.file){
-        return res.status(400).json({
-          errore:"Nessuna immagine ricevuta."
-        });
-      }
-
-      const urlAvatar = "/avatar/" + req.file.filename;
-
-      await db.ref("utenti/" + req.utente.uid).update({
-        avatar:urlAvatar
-      });
-
-      res.json({
-        ok:true,
-        avatar:urlAvatar
-      });
-
-    } catch(e){
-
-      console.error("Errore avatar:",e);
-
-      res.status(500).json({
-        errore:"Errore caricamento avatar."
-      });
-
-    }
-
-});
-
-
-
 app.post("/api/modifica-nickname", richiediAuth, async (req, res) => {
   if (!db) return res.status(500).json({ errore: "Servizio non disponibile." });
   try {
     const { nickname } = req.body;
     if (!nickname || !nickname.trim()) return res.status(400).json({ errore: "Inserisci un nickname." });
 
-    const nuovoNickname = nickname.trim();
+    const nuovoNickname = pulisciTesto(nickname,20);
+
+if (nuovoNickname.length < 5 || nuovoNickname.length > 15) {
+ return res.status(400).json({
+  errore:"Il nickname deve contenere da 5 a 15 caratteri."
+ });
+}
+
+if (!/^[a-zA-Z0-9_ ]+$/.test(nuovoNickname)) {
+ return res.status(400).json({
+  errore:"Nickname non valido."
+ });
+}
+
     const nicknameLower = nuovoNickname.toLowerCase();
 
     const esistente = await trovaUtentePerNickname(nicknameLower);
@@ -367,7 +401,6 @@ app.post("/api/modifica-nickname", richiediAuth, async (req, res) => {
 
     await db.ref("utenti/" + req.utente.uid).update({ nickname: nuovoNickname, nicknameLower });
 
-    // Il nickname è dentro il JWT: aggiornandolo, va rigenerato anche il cookie
     const nuovoToken = creaToken(req.utente.uid, nuovoNickname, req.utente.ruolo);
     res.cookie("token", nuovoToken, OPZIONI_COOKIE);
 
@@ -375,6 +408,23 @@ app.post("/api/modifica-nickname", richiediAuth, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ errore: "Errore del server, riprova." });
+  }
+});
+
+app.post("/api/carica-avatar", richiediAuth, uploadAvatar.single("avatar"), async (req, res) => {
+  if (!db) return res.status(500).json({ errore: "Servizio non disponibile." });
+  try {
+    if (!req.file) return res.status(400).json({ errore: "Nessuna immagine ricevuta." });
+
+    const base64 = req.file.buffer.toString("base64");
+    const dataUri = `data:${req.file.mimetype};base64,${base64}`;
+
+    await db.ref("utenti/" + req.utente.uid).update({ avatar: dataUri });
+
+    res.json({ avatar: dataUri });
+  } catch (err) {
+    console.error(err);
+    res.status(400).json({ errore: err.message || "Errore durante il caricamento." });
   }
 });
 
@@ -394,13 +444,25 @@ app.get("/api/top-giocatori", async (req, res) => {
   }
 });
 
-app.post("/api/contatti", async (req, res) => {
+app.post("/api/contatti", limiteContatti, async (req, res) => {
   if (!db) return res.status(500).json({ errore: "Servizio non disponibile al momento." });
   try {
     const { categoria, messaggio } = req.body;
     let { nickname, email } = req.body;
 
-    if (!messaggio || !messaggio.trim()) return res.status(400).json({ errore: "Scrivi un messaggio prima di inviare." });
+    if (!messaggio || !messaggio.trim()) {
+  return res.status(400).json({
+    errore: "Scrivi un messaggio prima di inviare."
+  });
+}
+
+const messaggioPulito = pulisciTesto(messaggio, 1000);
+
+if (messaggioPulito.length > 1000) {
+  return res.status(400).json({
+    errore: "Il messaggio è troppo lungo (massimo 1000 caratteri)."
+  });
+}
 
     const datiToken = verificaToken(estraiTokenHeader(req));
     let uidMittente = null;
@@ -418,7 +480,7 @@ app.post("/api/contatti", async (req, res) => {
     const nuovoRef = db.ref("contatti").push();
     await nuovoRef.set({
       nickname: nickname.trim(), email: email.trim(), categoria: categoria || "Altro",
-      messaggio: messaggio.trim(), uidMittente, letto: false, data: Date.now()
+      messaggio: messaggioPulito, uidMittente, letto: false, data: Date.now()
     });
 
     res.json({ ok: true });
@@ -455,6 +517,7 @@ app.post("/api/admin/avviso", richiediAdmin, async (req, res) => {
 app.post("/api/admin/sospendi", richiediAdmin, async (req, res) => {
   const { uid, giorni, motivo } = req.body;
   if (!uid || !giorni) return res.status(400).json({ errore: "Dati mancanti." });
+  if (uid === req.utenteAdmin.uid) return res.status(400).json({ errore: "Non puoi sospendere il tuo stesso account." });
   const sospesoFino = Date.now() + (parseInt(giorni) * 24 * 60 * 60 * 1000);
   await db.ref("utenti/" + uid).update({ stato: "sospeso", sospesoFino, motivoSospensione: motivo || "" });
   res.json({ ok: true });
@@ -470,6 +533,7 @@ app.post("/api/admin/rimuovi-sospensione", richiediAdmin, async (req, res) => {
 app.post("/api/admin/banna", richiediAdmin, async (req, res) => {
   const { uid, motivo } = req.body;
   if (!uid) return res.status(400).json({ errore: "Dati mancanti." });
+  if (uid === req.utenteAdmin.uid) return res.status(400).json({ errore: "Non puoi bannare il tuo stesso account." });
   await db.ref("utenti/" + uid).update({ stato: "bannato", motivoBan: motivo || "" });
   res.json({ ok: true });
 });
@@ -622,6 +686,10 @@ async function avviaPartitaAutomaticamente(partita) {
     }
   });
   const trovato = trovaPartita(partita.id);
+  const testo = pulisciTesto(dati.testo,300);
+
+if (!testo) return;
+
   await salvaPartita({ ...partita, stanza: trovato ? trovato.nomeStanza : partita.stanza });
 }
 
@@ -640,6 +708,15 @@ function trovaPartita(partitaId) {
     if (stanze[nomeStanza].partite[partitaId]) return { partita: stanze[nomeStanza].partite[partitaId], nomeStanza };
   }
   return null;
+}
+
+function costruisciStatoGiocatori(partita) {
+  return partita.ordineGiocatori.map(id => ({
+    id,
+    nome: partita.giocatori[id].nome,
+    avatar: partita.giocatori[id].avatar || null,
+    posizione: partita.giocatori[id].posizione
+  }));
 }
 
 function inviaAllaStanza(nomeStanza, messaggio) {
@@ -663,9 +740,9 @@ function inviaConteggioStanze() {
   const conteggi = {};
   const giocatoriPerStanza = {};
   for (const nome in stanze) {
-    const nomiGiocatori = Object.values(stanze[nome].giocatoriOnline);
-    conteggi[nome] = nomiGiocatori.length;
-    giocatoriPerStanza[nome] = nomiGiocatori;
+    const valori = Object.values(stanze[nome].giocatoriOnline);
+    conteggi[nome] = valori.length;
+    giocatoriPerStanza[nome] = valori.map(g => ({ nickname: g.nickname, avatar: g.avatar || null }));
   }
   const messaggio = JSON.stringify({ tipo: "conteggioStanze", stanze: conteggi, giocatori: giocatoriPerStanza });
   wss.clients.forEach(client => { if (client.readyState === WebSocket.OPEN) client.send(messaggio); });
@@ -682,8 +759,6 @@ const heartbeatInterval = setInterval(() => {
 wss.on("close", () => clearInterval(heartbeatInterval));
 
 // ===== CONNESSIONI WEBSOCKET =====
-// Con ws + {server}, "request" (l'HTTP di handshake) è già disponibile qui:
-// nessun bisogno di server.on("upgrade") manuale, funziona out-of-the-box con ws ^8.21.0
 wss.on("connection", (socket, request) => {
   socket.isAlive = true;
   socket.on("pong", () => { socket.isAlive = true; });
@@ -693,9 +768,8 @@ wss.on("connection", (socket, request) => {
 
   let stanzaAttuale = null;
   let nickname = null;
+  let mioAvatar = null;
 
-  // Autenticazione al momento della connessione, leggendo il cookie httpOnly
-  // dalla richiesta HTTP di handshake — il client non manda più alcun token
   const tokenDalCookie = estraiTokenDaCookieHeader(request.headers.cookie);
   const datiTokenIniziali = verificaToken(tokenDalCookie);
   let uid = datiTokenIniziali ? datiTokenIniziali.uid : null;
@@ -724,13 +798,10 @@ wss.on("connection", (socket, request) => {
 
         stanzaAttuale = dati.stanza;
         nickname = utenteDb.nickname;
+        mioAvatar = utenteDb.avatar || null;
 
         if (!stanze[stanzaAttuale]) stanze[stanzaAttuale] = { giocatoriOnline: {}, partite: {} };
-        stanze[stanzaAttuale].giocatoriOnline[socketId] = {
-        nickname : nickname,
-        avatar: utenteDb.avatar || null
-        };
-
+        stanze[stanzaAttuale].giocatoriOnline[socketId] = { nickname, avatar: mioAvatar };
 
         inviaConteggioStanze();
         inviaAllaStanza(stanzaAttuale, { tipo: "online", numero: Object.keys(stanze[stanzaAttuale].giocatoriOnline).length });
@@ -747,11 +818,25 @@ wss.on("connection", (socket, request) => {
 
         const mioGiocatore = partita.giocatori[uid];
         if (!mioGiocatore) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Non fai parte di questa partita." })); return; }
+
+        // Rilegge l'avatar aggiornato da Firebase (non viene persistito nelle partite per risparmiare scritture)
+        if (db) {
+          try {
+            const snapUtente = await db.ref("utenti/" + uid).once("value");
+            const utenteDb = snapUtente.val();
+            if (utenteDb) mioGiocatore.avatar = utenteDb.avatar || null;
+          } catch (e) { /* se fallisce, tiene quello che c'era già in memoria */ }
+        }
+
         mioGiocatore.socket = socket;
         nickname = mioGiocatore.nome;
+        mioAvatar = mioGiocatore.avatar || null;
 
-        const statoGiocatori = partita.ordineGiocatori.map(id => ({ id, nome: partita.giocatori[id].nome, posizione: partita.giocatori[id].posizione }));
-        socket.send(JSON.stringify({ tipo: "statoPartita", giocatori: statoGiocatori, turnoDiId: partita.ordineGiocatori[partita.turnoAttuale] }));
+        socket.send(JSON.stringify({
+          tipo: "statoPartita",
+          giocatori: costruisciStatoGiocatori(partita),
+          turnoDiId: partita.ordineGiocatori[partita.turnoAttuale]
+        }));
         return;
       }
 
@@ -765,8 +850,16 @@ wss.on("connection", (socket, request) => {
           id: partitaId, creatore: nickname, creatoDa: uid,
           tempo: dati.tempo, punti: dati.punti, modalita: dati.modalita,
           codicePrivato: dati.modalita === "privata" ? dati.codicePrivato : null,
-          maxGiocatori: parseInt(dati.maxGiocatori) || 2,
-          giocatori: { [uid]: { nome: nickname, posizione: 0, socket, turniSaltati: 0 } },
+          const max = parseInt(dati.maxGiocatori);
+
+maxGiocatori:
+(
+ !max || max < 2 || max > 8
+ ? 2
+ : max
+)
+
+          giocatori: { [uid]: { nome: nickname, avatar: mioAvatar, posizione: 0, socket, turniSaltati: 0 } },
           ordineGiocatori: [uid], turnoAttuale: 0, iniziata: false, elaborandoTiro: false
         };
         await salvaPartita({ ...stanze[stanzaAttuale].partite[partitaId], stanza: stanzaAttuale });
@@ -786,7 +879,7 @@ wss.on("connection", (socket, request) => {
           return;
         }
 
-        partita.giocatori[uid] = { nome: nickname, posizione: 0, socket, turniSaltati: 0 };
+        partita.giocatori[uid] = { nome: nickname, avatar: mioAvatar, posizione: 0, socket, turniSaltati: 0 };
         partita.ordineGiocatori.push(uid);
 
         await aggiornaStatoPartita(partita.id, {
@@ -812,9 +905,23 @@ wss.on("connection", (socket, request) => {
 
       if (dati.tipo === "chat") {
         if (!stanzaAttuale) return;
-        inviaAllaStanza(stanzaAttuale, { tipo: "chat", nome: nickname, testo: dati.testo });
+
+        if (typeof dati.testo !== "string") return;
+
+        const testo = pulisciTesto(dati.testo, 300);
+
+        if (testo.length === 0) return;
+        if (testo.length > 300) return;
+
+        inviaAllaStanza(stanzaAttuale, {
+          tipo: "chat",
+          nome: nickname,
+          testo
+        });
+
         return;
       }
+
 
       if (dati.tipo === "chatPartita") {
         if (!uid) return;
@@ -826,6 +933,12 @@ wss.on("connection", (socket, request) => {
         Object.values(partita.giocatori).forEach(g => {
           if (g.socket && g.socket.readyState === WebSocket.OPEN) {
             g.socket.send(JSON.stringify({ tipo: "chatPartita", nome: mittente.nome, testo: dati.testo }));
+        if(typeof dati.testo !== "string") return;
+
+const testo = pulisciTesto(dati.testo,300);
+
+if(!testo) return;
+
           }
         });
         return;
@@ -854,7 +967,7 @@ wss.on("connection", (socket, request) => {
           if (risultato.turniDaSaltare > 0) giocatore.turniSaltati = risultato.turniDaSaltare;
           if (!risultato.tiraAncora && !risultato.vittoria) passaAlProssimoTurno(partita);
 
-          const statoGiocatori = partita.ordineGiocatori.map(id => ({ id, nome: partita.giocatori[id].nome, posizione: partita.giocatori[id].posizione }));
+          const statoGiocatori = costruisciStatoGiocatori(partita);
           const idProssimo = partita.ordineGiocatori[partita.turnoAttuale];
 
           Object.values(partita.giocatori).forEach(g => {
@@ -908,7 +1021,7 @@ wss.on("connection", (socket, request) => {
         if (restanti.length === 1 && partita.iniziata) {
           const vincitoreId = restanti[0];
           const vincitoreNome = partita.giocatori[vincitoreId].nome;
-          const statoGiocatori = partita.ordineGiocatori.map(id => ({ id, nome: partita.giocatori[id].nome, posizione: partita.giocatori[id].posizione }));
+          const statoGiocatori = costruisciStatoGiocatori(partita);
           Object.values(partita.giocatori).forEach(g => {
             if (g.socket && g.socket.readyState === WebSocket.OPEN) {
               g.socket.send(JSON.stringify({ tipo: "statoPartita", giocatori: statoGiocatori, turnoDiId: vincitoreId, vittoria: true, vincitore: vincitoreNome, messaggi: [nomeUscente + " ha abbandonato la partita."] }));
@@ -918,7 +1031,7 @@ wss.on("connection", (socket, request) => {
           await rimuoviPartita(nomeStanza, partita.id);
         } else {
           const idAttuale = partita.ordineGiocatori[partita.turnoAttuale];
-          const statoGiocatori = partita.ordineGiocatori.map(id => ({ id, nome: partita.giocatori[id].nome, posizione: partita.giocatori[id].posizione }));
+          const statoGiocatori = costruisciStatoGiocatori(partita);
           Object.values(partita.giocatori).forEach(g => {
             if (g.socket && g.socket.readyState === WebSocket.OPEN) {
               g.socket.send(JSON.stringify({ tipo: "statoPartita", giocatori: statoGiocatori, turnoDiId: idAttuale, messaggi: [nomeUscente + " ha abbandonato la partita."] }));
