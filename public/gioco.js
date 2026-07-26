@@ -28,27 +28,13 @@ const DURATA_SALTO_MS = 380;
 const params = new URLSearchParams(window.location.search);
 const partitaId = params.get("partita");
 const stanza = params.get("stanza");
-
-const authToken = localStorage.getItem("authToken");
-if (!authToken) {
-  window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href);
-}
-
-function decodificaPayloadToken(token) {
-  try {
-    const payloadBase64 = token.split(".")[1];
-    const json = atob(payloadBase64.replace(/-/g, "+").replace(/_/g, "/"));
-    return JSON.parse(json);
-  } catch (e) { return null; }
-}
-const payloadToken = decodificaPayloadToken(authToken);
-const mioUid = payloadToken ? payloadToken.uid : null;
+let mioUid = null;
 
 let socket;
 let ultimoStatoGiocatori = [];
 let mioTurno = false;
 let turnoAttualeId = null;
-let timerRiconnessione = null; // fix: dichiarata FUORI da connetti(), altrimenti si azzera ad ogni chiamata
+let timerRiconnessione = null;
 
 function creaFacciaDado(valore) {
   const posizioniPip = {
@@ -166,24 +152,30 @@ function animaSaltoPedina(idGiocatore, percorso, callback) {
   saltaProssimo();
 }
 
+async function avvia() {
+  try {
+    const risposta = await fetch("https://gioco-oca-server.onrender.com/api/me", { credentials: "include" });
+    if (!risposta.ok) { window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href); return; }
+    const dati = await risposta.json();
+    mioUid = dati.uid;
+    connetti();
+  } catch (e) {
+    window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href);
+  }
+}
+
 function connetti() {
   socket = new WebSocket("wss://gioco-oca-server.onrender.com");
 
   socket.onopen = () => {
-  if (timerRiconnessione) {
-    clearTimeout(timerRiconnessione);
-    timerRiconnessione = null;
-}
-    socket.send(JSON.stringify({ tipo: "riprendiPartita", partitaId, token: authToken }));
+    if (timerRiconnessione) { clearTimeout(timerRiconnessione); timerRiconnessione = null; }
+    socket.send(JSON.stringify({ tipo: "riprendiPartita", partitaId }));
   };
 
   socket.onclose = () => {
     document.getElementById("riga-turno").textContent = "🔴 Disconnesso, riconnessione...";
     if (!timerRiconnessione) {
-      timerRiconnessione = setTimeout(() => {
-        timerRiconnessione = null;
-        connetti();
-      }, 3000);
+      timerRiconnessione = setTimeout(() => { timerRiconnessione = null; connetti(); }, 3000);
     }
   };
 
@@ -191,7 +183,6 @@ function connetti() {
     const dati = JSON.parse(msg.data);
 
     if (dati.tipo === "sessioneScaduta") {
-      localStorage.removeItem("authToken");
       window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href);
       return;
     }
@@ -212,70 +203,46 @@ function connetti() {
     }
 
     if (dati.tipo === "aggiornamentoPartita") {
-
-    animaLancioDadi(dati.dado1, dati.dado2, () => {
-
+      animaLancioDadi(dati.dado1, dati.dado2, () => {
         if (dati.percorso && dati.idGiocatoreCheHaTirato) {
-
-            animaSaltoPedina(
-                dati.idGiocatoreCheHaTirato,
-                dati.percorso,
-                () => {
-
-                    ultimoStatoGiocatori = dati.giocatori;
-
-document.getElementById("messaggi-gioco").textContent =
-"🎲 " + dati.dado1 + " + " + dati.dado2 +
-" = " + dati.valoreDado +
-(dati.messaggi && dati.messaggi.length
-    ? " — " + dati.messaggi.join(" ")
-    : "");
-
-if (dati.vittoria) {
-    turnoAttualeId = null;
-    document.getElementById("area-dadi").classList.add("disabilitato");
-    disegnaGiocatori();
-    mostraVittoria(dati.vincitore);
-} else {
-    aggiornaTurno(dati.turnoDiId);
-    disegnaGiocatori();
-}
-
-                }
-            );
-
-        } else {
-
-            // stesso codice che hai nella callback
+          animaSaltoPedina(dati.idGiocatoreCheHaTirato, dati.percorso, () => {
             ultimoStatoGiocatori = dati.giocatori;
-
             document.getElementById("messaggi-gioco").textContent =
-                "🎲 " + dati.dado1 + " + " + dati.dado2 +
-                " = " + dati.valoreDado +
-                (dati.messaggi && dati.messaggi.length
-                    ? " — " + dati.messaggi.join(" ")
-                    : "");
-
+              "🎲 " + dati.dado1 + " + " + dati.dado2 + " = " + dati.valoreDado +
+              (dati.messaggi && dati.messaggi.length ? " — " + dati.messaggi.join(" ") : "");
 
             if (dati.vittoria) {
-                turnoAttualeId = null;
-                document.getElementById("area-dadi").classList.add("disabilitato");
-                disegnaGiocatori();
-                mostraVittoria(dati.vincitore);
+              turnoAttualeId = null;
+              document.getElementById("area-dadi").classList.add("disabilitato");
+              disegnaGiocatori();
+              mostraVittoria(dati.vincitore);
             } else {
-                aggiornaTurno(dati.turnoDiId);
-                disegnaGiocatori();
+              aggiornaTurno(dati.turnoDiId);
+              disegnaGiocatori();
             }
+          });
+        } else {
+          ultimoStatoGiocatori = dati.giocatori;
+          document.getElementById("messaggi-gioco").textContent =
+            "🎲 " + dati.dado1 + " + " + dati.dado2 + " = " + dati.valoreDado +
+            (dati.messaggi && dati.messaggi.length ? " — " + dati.messaggi.join(" ") : "");
+
+          if (dati.vittoria) {
+            turnoAttualeId = null;
+            document.getElementById("area-dadi").classList.add("disabilitato");
+            disegnaGiocatori();
+            mostraVittoria(dati.vincitore);
+          } else {
+            aggiornaTurno(dati.turnoDiId);
+            disegnaGiocatori();
+          }
         }
-
-    });
-
-}
+      });
+    }
 
     if (dati.tipo === "chatPartita") aggiungiMessaggioChatPartita(dati.nome, dati.testo);
     if (dati.tipo === "errore") {
       alert(dati.messaggio);
-      // Se l'errore riguarda il turno, riabilito i dadi (altrimenti restano bloccati)
       if (mioTurno) document.getElementById("area-dadi").classList.remove("disabilitato");
     }
   };
@@ -288,25 +255,33 @@ function aggiornaTurno(turnoDiId) {
   document.getElementById("area-dadi").classList.toggle("disabilitato", !mioTurno);
 }
 
+// Unica funzione modificata: ora mostra la vera foto avatar (se presente) invece
+// del solo cerchio colorato con l'iniziale, sia nella card del pannello giocatori
 function disegnaGiocatori() {
-const contenitore = document.getElementById("contenitore-pedine");
+  const contenitore = document.getElementById("contenitore-pedine");
 
-Array.from(contenitore.children).forEach(p => {
-  if (!ultimoStatoGiocatori.some(g => "pedina-" + g.id === p.id)) {
-    p.remove();
-  }
-});
+  Array.from(contenitore.children).forEach(p => {
+    if (!ultimoStatoGiocatori.some(g => "pedina-" + g.id === p.id)) p.remove();
+  });
+
   const listaPannello = document.getElementById("lista-giocatori");
   listaPannello.innerHTML = "";
 
   ultimoStatoGiocatori.forEach((giocatore, indice) => {
     const colore = coloriGiocatori[indice % coloriGiocatori.length];
+
+    // Il gettone sul tabellone resta il cono colorato (è un pezzo di gioco, non una foto)
     const pedina = ottieniOCreaPedina(giocatore.id, colore, indice);
     posizionaPedina(pedina, giocatore.posizione);
 
+    // Nel pannello giocatori invece mostriamo la vera foto avatar, se l'utente ne ha caricata una
+    const avatarHtml = giocatore.avatar
+      ? `<img class="avatar-mini" src="${giocatore.avatar}">`
+      : `<div class="avatar-mini" style="background:${colore};">${iniziale(giocatore.nome)}</div>`;
+
     const card = document.createElement("div");
     card.className = "giocatore-card" + (giocatore.id === turnoAttualeId ? " attivo" : "");
-    card.innerHTML = `<div class="avatar-mini" style="background:${colore};">${iniziale(giocatore.nome)}</div><span>${giocatore.nome}</span><span class="casella-mini" id="casella-${giocatore.id}">${giocatore.posizione}</span>`;
+    card.innerHTML = `${avatarHtml}<span>${giocatore.nome}</span><span class="casella-mini" id="casella-${giocatore.id}">${giocatore.posizione}</span>`;
     listaPannello.appendChild(card);
   });
 }
@@ -320,19 +295,14 @@ function tornaAllaLobby() { window.location.href = `lobby.html?stanza=${stanza}`
 
 function abbandonaPartita() {
   if (!confirm("Sei sicuro di voler abbandonare la partita?")) return;
-
   if (socket && socket.readyState === WebSocket.OPEN) {
-    socket.send(JSON.stringify({
-      tipo: "abbandonaPartita",
-      partitaId
-    }));
+    socket.send(JSON.stringify({ tipo: "abbandonaPartita", partitaId }));
   }
-
   tornaAllaLobby();
 }
 
-function apriProfilo() { chiudiMenu(); alert("Sezione Profilo in arrivo prossimamente!"); }
-function apriImpostazioni() { chiudiMenu(); alert("Sezione Impostazioni in arrivo prossimamente!"); }
+function apriProfilo() { chiudiMenu(); window.location.href = "profilo.html"; }
+function apriImpostazioni() { chiudiMenu(); window.location.href = "opzioni-account.html"; }
 function chiudiMenu() { document.getElementById("pannello-menu").classList.add("nascosto"); }
 
 document.getElementById("btn-menu").onclick = (e) => { e.stopPropagation(); document.getElementById("pannello-menu").classList.toggle("nascosto"); };
@@ -352,12 +322,8 @@ function inviaChatPartita() {
   const testo = input.value.trim();
   if (!testo) return;
   if (socket && socket.readyState === WebSocket.OPEN) {
-    socket.send(JSON.stringify({
-        tipo:"chatPartita",
-        partitaId,
-        testo
-    }));
-}
+    socket.send(JSON.stringify({ tipo: "chatPartita", partitaId, testo }));
+  }
   input.value = "";
 }
 document.getElementById("chat-input").addEventListener("keypress", (e) => { if (e.key === "Enter") inviaChatPartita(); });
@@ -365,16 +331,10 @@ document.getElementById("btn-chat").onclick = (e) => { e.stopPropagation(); docu
 
 document.getElementById("area-dadi").onclick = () => {
   if (!mioTurno) return;
-
   if (!socket || socket.readyState !== WebSocket.OPEN) return;
-
   document.getElementById("area-dadi").classList.add("disabilitato");
-
-  socket.send(JSON.stringify({
-    tipo: "tiraDadi",
-    partitaId
-  }));
+  socket.send(JSON.stringify({ tipo: "tiraDadi", partitaId }));
 };
 
 mostraDadi(1, 1);
-connetti();
+avvia();
