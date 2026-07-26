@@ -333,7 +333,7 @@ app.get("/api/verifica-email/:token", async (req, res) => {
         h2{color:#ffd700;margin-top:0;}
         a{display:inline-block;margin-top:18px;padding:10px 20px;background:#ffd700;color:#111;text-decoration:none;border-radius:8px;font-weight:bold;}
       </style></head><body><div class="box"><h2>${titolo}</h2><p>${testo}</p>
-      <a href="login.html">Vai al login</a></div></body></html>`;
+      <a href="https://solfriniluca1.wixstudio.com/giochisocieta/login.html">Vai al login</a></div></body></html>`;
 
     if (!utente) {
       return res.send(paginaBase("Link non valido", "Questo link di verifica non è valido o è già stato utilizzato."));
