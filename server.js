@@ -340,7 +340,7 @@ app.get("/api/verifica-email/:token", async (req, res) => {
 
     await db.ref("utenti/" + utente.uid).update({ emailVerificata: true, tokenVerificaEmail: null });
 
-    res.send(paginaBase("Email verificata! 🎉", "Il tuo account è ora attivo. Puoi accedere ritornando nella pagina precedente e cliccando su Accedi, dopodichè ricarica la pagina una volta premuto il tasto per accedere"));
+    res.send(paginaBase("Email verificata! 🎉", "Il tuo account è ora attivo. Puoi accedere ritornando nella pagina precedente e cliccando su Accedi, dopodichè ricarica la pagina una volta premuto il tasto per accedere per applicare le modifiche"));
   } catch (err) {
     console.error(err);
     res.status(500).send("Errore durante la verifica.");
