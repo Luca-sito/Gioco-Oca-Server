@@ -52,7 +52,9 @@ button:hover{ opacity:0.8; }
 #listaOnline{
  max-height:500px;
  overflow-y:auto;
+ overflow-x:hidden;
  padding:10px;
+ scrollbar-width:thin;
 }
 
 
@@ -71,6 +73,13 @@ button:hover{ opacity:0.8; }
  border-radius:50%;
  object-fit:cover;
  cursor:pointer;
+ flex-shrink:0;
+ display:flex;
+ align-items:center;
+ justify-content:center;
+ color:white;
+ font-weight:bold;
+ font-size:16px;
 }
 
 
@@ -89,6 +98,113 @@ button:hover{ opacity:0.8; }
  color:white;
  font-weight:bold;
  font-size:25px;
+}
+
+
+/* ===========================
+   VERSIONE CELLULARE
+   =========================== */
+
+@media (max-width: 900px) {
+
+  body {
+    overflow-x: hidden;
+  }
+
+  .contenitore {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+    gap: 10px;
+    padding: 10px;
+  }
+
+
+  .sinistra,
+  .centro,
+  .destra {
+    width: 100%;
+    height: auto;
+    border-radius: 10px;
+  }
+
+
+  /* Opzioni gioco */
+  .sinistra {
+    order: 1;
+  }
+
+
+  /* Area centrale */
+  .centro {
+    order: 2;
+  }
+
+
+  #partite {
+    height: 350px;
+    overflow-y: auto;
+  }
+
+
+  #chat {
+    height: 250px;
+    overflow-y: auto;
+  }
+
+
+  /* Colonna destra */
+  .destra {
+    order: 3;
+    max-height: none;
+  }
+
+
+  #top {
+    max-height: 250px;
+    overflow-y: auto;
+  }
+
+
+  /* Lista giocatori online */
+  #listaOnline {
+    max-height: 350px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+
+  .giocatore-online {
+    width:100%;
+    padding:12px;
+  }
+
+
+  .avatar-mini {
+    width:45px;
+    height:45px;
+  }
+
+
+  .avatar {
+    width:80px;
+    height:80px;
+  }
+
+
+  button,
+  select,
+  input {
+    font-size:16px;
+    padding:12px;
+  }
+
+
+  h2 {
+    font-size:20px;
+  }
+
 }
 
 </style>
@@ -347,6 +463,27 @@ function aggiungiMessaggio(nome, testo) {
   chat.scrollTop = chat.scrollHeight;
 }
 
+function coloreDaNome(nome) {
+  const colori = [
+    "#6a2c70",
+    "#1e40af",
+    "#43a047",
+    "#f57c00",
+    "#c0ca33",
+    "#e53935",
+    "#00838f",
+    "#8d6e63"
+  ];
+
+  let somma = 0;
+
+  for (let i = 0; i < nome.length; i++) {
+    somma += nome.charCodeAt(i);
+  }
+
+  return colori[somma % colori.length];
+}
+
 async function caricaTopGiocatori() {
   try {
     const risposta = await fetch("/api/top-giocatori");
@@ -364,9 +501,7 @@ async function caricaTopGiocatori() {
 
 function mostraGiocatori(lista){
 
-
   const contenitore = document.getElementById("listaOnline");
-
 
   if(!lista || lista.length === 0){
 
@@ -377,28 +512,46 @@ function mostraGiocatori(lista){
   }
 
 
+  contenitore.innerHTML = lista.map(g => {
 
-  contenitore.innerHTML = lista.map(g => `
+    let avatar;
 
+    if(g.avatar){
+
+      avatar = `
+      <img 
+      class="avatar-mini"
+      src="https://gioco-oca-server.onrender.com${g.avatar}">
+      `;
+
+    } else {
+
+      avatar = `
+      <div 
+      class="avatar-mini"
+      style="background:${coloreDaNome(g.nickname)}">
+      ${g.nickname.charAt(0).toUpperCase()}
+      </div>
+      `;
+
+    }
+
+
+    return `
 
     <div class="giocatore-online">
 
-
-      <img
-      class="avatar-mini"
-      src="${g.avatar ? 'https://gioco-oca-server.onrender.com'+g.avatar : '/avatar/default.png'}">
-
+      ${avatar}
 
       <div class="nickname">
         ${g.nickname}
       </div>
 
-
     </div>
 
+    `;
 
-  `).join("");
-
+  }).join("");
 
 }
 
