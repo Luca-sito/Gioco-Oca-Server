@@ -796,13 +796,30 @@ function inviaListaPartite(nomeStanza) {
 function inviaConteggioStanze() {
   const conteggi = {};
   const giocatoriPerStanza = {};
+
   for (const nome in stanze) {
     const valori = Object.values(stanze[nome].giocatoriOnline);
+
     conteggi[nome] = valori.length;
-    giocatoriPerStanza[nome] = valori.map(g => ({ nickname: g.nickname, avatar: g.avatar || null }));
+
+    giocatoriPerStanza[nome] = valori.map(g => ({
+      nickname: g.nickname,
+      avatar: g.avatar || null,
+      dispositivo: g.dispositivo || "Sconosciuto"
+    }));
   }
-  const messaggio = JSON.stringify({ tipo: "conteggioStanze", stanze: conteggi, giocatori: giocatoriPerStanza });
-  wss.clients.forEach(client => { if (client.readyState === WebSocket.OPEN) client.send(messaggio); });
+
+  const messaggio = JSON.stringify({
+    tipo: "conteggioStanze",
+    stanze: conteggi,
+    giocatori: giocatoriPerStanza
+  });
+
+  wss.clients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(messaggio);
+    }
+  });
 }
 
 const HEARTBEAT_MS = 1000;
