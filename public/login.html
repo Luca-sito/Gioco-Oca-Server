@@ -18,6 +18,69 @@ button:hover { background: #ffaa00; }
 .link-sotto a { color: #ffd700; text-decoration: none; }
 #rinviaWrapper { display: none; text-align: center; margin-top: 10px; font-size: 13px; }
 #linkRinvia { color: #ffd700; cursor: pointer; text-decoration: underline; }
+
+/* Smartphone piccoli */
+@media (max-width: 480px) {
+
+  body{
+    padding:15px;
+  }
+
+  .scatola{
+    width:100%;
+    max-width:100%;
+    padding:25px 18px;
+    border-radius:12px;
+  }
+
+  h1{
+    font-size:20px;
+  }
+
+  label{
+    font-size:12px;
+  }
+
+  input{
+    font-size:16px; /* evita lo zoom automatico su iPhone */
+    padding:12px;
+  }
+
+  button{
+    font-size:16px;
+    padding:14px;
+  }
+
+  .errore{
+    font-size:12px;
+  }
+
+  .link-sotto,
+  #rinviaWrapper{
+    font-size:12px;
+    line-height:1.5;
+  }
+
+}
+
+/* Smartphone molto piccoli (es. iPhone SE) */
+@media (max-width: 340px){
+
+  .scatola{
+    padding:18px 14px;
+  }
+
+  h1{
+    font-size:18px;
+  }
+
+  input,
+  button{
+    font-size:15px;
+  }
+
+}
+  
 </style>
 </head>
 <body>
