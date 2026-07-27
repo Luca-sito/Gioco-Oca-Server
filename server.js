@@ -332,9 +332,11 @@ app.get("/api/verifica-email/:token", async (req, res) => {
         .box{background:#1e2a38;border:2px solid #ffd700;border-radius:14px;padding:36px;max-width:400px;text-align:center;}
         h2{color:#ffd700;margin-top:0;}
         a{display:inline-block;margin-top:18px;padding:10px 20px;background:#ffd700;color:#111;text-decoration:none;border-radius:8px;font-weight:bold;}
-      </style></head><body><div class="box"><h2>${titolo}</h2><p>${testo}</p>
+      </style></head><body><div class="box"><h2>${titolo}</h2><p>${testo}</p></div></body></html>
+`;
 
-    if (!utente) {
+if (!utente) {
+
       return res.send(paginaBase("Link non valido", "Questo link di verifica non è valido o è già stato utilizzato."));
     }
 
