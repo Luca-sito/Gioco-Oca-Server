@@ -360,7 +360,6 @@ app.post("/api/rinvia-verifica", limiteContatti, async (req, res) => {
 
     const rispostaGenerica = { messaggio: "Se l'indirizzo è registrato e non ancora verificato, ti abbiamo inviato una nuova email." };
 
-    // Stessa risposta sia che l'account esista o meno: evita di rivelare quali email sono registrate
     if (!utente || utente.emailVerificata) return res.json(rispostaGenerica);
 
     const nuovoToken = uuidv4();
@@ -401,9 +400,6 @@ app.post("/api/login", limiteLogin, async (req, res) => {
       }
     }
 
-    // === false (non solo falsy): gli account creati PRIMA di questo sistema non hanno
-    // questo campo affatto (undefined) e restano validi — solo chi si registra da ora
-    // in poi e non ha ancora cliccato il link viene davvero bloccato qui.
     if (utente.emailVerificata === false) {
       return res.status(403).json({ errore: "Devi verificare la tua email prima di accedere.", nonVerificata: true });
     }
@@ -805,7 +801,7 @@ function inviaConteggioStanze() {
     giocatoriPerStanza[nome] = valori.map(g => ({
       nickname: g.nickname,
       avatar: g.avatar || null,
-      dispositivo: g.dispositivo || "Sconosciuto"
+      tipoDispositivo: g.tipoDispositivo || "computer"
     }));
   }
 
@@ -822,7 +818,7 @@ function inviaConteggioStanze() {
   });
 }
 
-const HEARTBEAT_MS = 1000;
+const HEARTBEAT_MS = 15000;
 const heartbeatInterval = setInterval(() => {
   wss.clients.forEach(socket => {
     if (socket.isAlive === false) return socket.terminate();
@@ -832,28 +828,24 @@ const heartbeatInterval = setInterval(() => {
 }, HEARTBEAT_MS);
 wss.on("close", () => clearInterval(heartbeatInterval));
 
+// Categorizza il dispositivo SOLO dal vero header User-Agent della richiesta di
+// handshake WebSocket — il client non lo manda mai come dato nel messaggio
+// entraLobby, quindi non è modificabile dall'interfaccia del gioco. Resta comunque
+// un'euristica sullo user-agent del browser (es. un iPad con Safari in modalità
+// "richiedi sito desktop" può risultare rilevato come computer).
+function rilevaTipoDispositivo(userAgent) {
+  const ua = userAgent || "";
+  if (/iPad/i.test(ua) || (/Android/i.test(ua) && !/Mobile/i.test(ua))) return "tablet";
+  if (/iPhone|iPod/i.test(ua) || (/Android/i.test(ua) && /Mobile/i.test(ua))) return "cellulare";
+  return "computer";
+}
+
 // ===== CONNESSIONI WEBSOCKET =====
 wss.on("connection", (socket, request) => {
   socket.isAlive = true;
   socket.on("pong", () => { socket.isAlive = true; });
 
-  const userAgent = request.headers["user-agent"] || "";
-
-let dispositivo = "Sconosciuto";
-
-if (/Android/i.test(userAgent)) {
-  dispositivo = "Android";
-} else if (/iPhone|iPad/i.test(userAgent)) {
-  dispositivo = "iOS";
-} else if (/Windows/i.test(userAgent)) {
-  dispositivo = "Windows";
-} else if (/Macintosh/i.test(userAgent)) {
-  dispositivo = "Mac";
-} else if (/Linux/i.test(userAgent)) {
-  dispositivo = "Linux";
-} else if (/PlayStation/i.test(userAgent)) {
-  dispositivo = "PlayStation";
-}
+  const tipoDispositivo = rilevaTipoDispositivo(request.headers["user-agent"]);
 
   const socketId = "s" + (contatoreId++);
   socketsPerId[socketId] = socket;
@@ -893,12 +885,11 @@ if (/Android/i.test(userAgent)) {
         mioAvatar = utenteDb.avatar || null;
 
         if (!stanze[stanzaAttuale]) stanze[stanzaAttuale] = { giocatoriOnline: {}, partite: {} };
-        stanze[stanzaAttuale].giocatoriOnline[socketId] = { 
+        stanze[stanzaAttuale].giocatoriOnline[socketId] = {
           nickname,
           avatar: mioAvatar,
-          dispositivo
+          tipoDispositivo
         };
-
 
         inviaConteggioStanze();
         inviaAllaStanza(stanzaAttuale, { tipo: "online", numero: Object.keys(stanze[stanzaAttuale].giocatoriOnline).length });
