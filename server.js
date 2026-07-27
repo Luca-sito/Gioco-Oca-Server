@@ -844,7 +844,6 @@ if (/Android/i.test(userAgent)) {
   let stanzaAttuale = null;
   let nickname = null;
   let mioAvatar = null;
-  let dispositivo = "Sconosciuto";
 
   const tokenDalCookie = estraiTokenDaCookieHeader(request.headers.cookie);
   const datiTokenIniziali = verificaToken(tokenDalCookie);
