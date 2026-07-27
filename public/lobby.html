@@ -286,7 +286,33 @@ function aggiungiMessaggio(nome, testo) {
 }
 
 function mostraGiocatori(lista) {
-  const contenitore = document.getElementById("listaOnline");
+  const contenitore = document.getElementById("userslist__container");
+
+  if (!contenitore) return;
+
+  if (!lista || lista.length === 0) {
+    contenitore.innerHTML = "<p style='color:#999; font-style:italic;'>Nessun giocatore online</p>";
+    return;
+  }
+
+  contenitore.innerHTML = lista.map(g => {
+    const immagine = g.avatar
+      ? `<img class="avatar-mini" src="${g.avatar}">`
+      : `<div class="avatar-mini" style="background:${coloreDaNome(g.nickname)};">${iniziale(g.nickname)}</div>`;
+
+    return `
+    <div class="giocatore-online">
+      ${immagine}
+      <div>
+        <div class="nickname">${g.nickname}</div>
+        <div style="font-size:13px;color:#777;">
+          📱 ${g.dispositivo || "Sconosciuto"}
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
   if (!lista || lista.length === 0) {
     contenitore.innerHTML = "<p style='color:#999; font-style:italic;'>Nessun giocatore online</p>";
     return;
