@@ -21,6 +21,52 @@ button:disabled { background: #666; cursor: not-allowed; }
 #schermataSuccesso h1 { color: #ffd700; }
 #schermataSuccesso p { color: #ccc; font-size: 14px; }
 #linkRinvia { color: #ffd700; cursor: pointer; text-decoration: underline; font-size: 13px; }
+
+/* Cellulari molto piccoli */
+@media (max-width:480px){
+
+body{
+    padding:15px;
+    align-items:flex-start;
+}
+
+.scatola{
+    width:100%;
+    max-width:100%;
+    padding:22px 18px;
+    margin:20px 0;
+    border-radius:12px;
+}
+
+h1{
+    font-size:20px;
+}
+
+label{
+    font-size:12px;
+}
+
+input{
+    font-size:16px; /* evita lo zoom automatico su iPhone */
+    padding:13px;
+}
+
+button{
+    padding:14px;
+    font-size:16px;
+}
+
+.errore,
+.link-sotto,
+#schermataSuccesso p,
+#linkRinvia{
+    font-size:14px;
+    line-height:1.5;
+    word-break:break-word;
+}
+
+}
+  
 </style>
 </head>
 <body>
