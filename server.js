@@ -332,7 +332,7 @@ app.get("/api/verifica-email/:token", async (req, res) => {
         .box{background:#1e2a38;border:2px solid #ffd700;border-radius:14px;padding:36px;max-width:400px;text-align:center;}
         h2{color:#ffd700;margin-top:0;}
         a{display:inline-block;margin-top:18px;padding:10px 20px;background:#ffd700;color:#111;text-decoration:none;border-radius:8px;font-weight:bold;}
-      </style></head><body><div class="box"><h2>${titolo}</h2><p>${testo}</p></div></body></html>`;
+      </style></head><body><div class="box"><h2>${titolo}</h2><p>${testo}</p>
 
     if (!utente) {
       return res.send(paginaBase("Link non valido", "Questo link di verifica non è valido o è già stato utilizzato."));
@@ -340,7 +340,7 @@ app.get("/api/verifica-email/:token", async (req, res) => {
 
     await db.ref("utenti/" + utente.uid).update({ emailVerificata: true, tokenVerificaEmail: null });
 
-    res.send(paginaBase("Email verificata! 🎉", "Il tuo account è ora attivo. Puoi accedere ritornando nella pagina precedente e cliccando su Vai al login, dopodichè ricarica la pagina per applicare le modifiche"));
+    res.send(paginaBase("Email verificata! 🎉", "Il tuo account è ora attivo. Puoi accedere ritornando nella pagina precedente e cliccando su Accedi"));
   } catch (err) {
     console.error(err);
     res.status(500).send("Errore durante la verifica.");
@@ -803,7 +803,7 @@ function inviaConteggioStanze() {
   wss.clients.forEach(client => { if (client.readyState === WebSocket.OPEN) client.send(messaggio); });
 }
 
-const HEARTBEAT_MS = 15000;
+const HEARTBEAT_MS = 1000;
 const heartbeatInterval = setInterval(() => {
   wss.clients.forEach(socket => {
     if (socket.isAlive === false) return socket.terminate();
@@ -818,12 +818,31 @@ wss.on("connection", (socket, request) => {
   socket.isAlive = true;
   socket.on("pong", () => { socket.isAlive = true; });
 
+  const userAgent = request.headers["user-agent"] || "";
+
+let dispositivo = "Sconosciuto";
+
+if (/Android/i.test(userAgent)) {
+  dispositivo = "Android";
+} else if (/iPhone|iPad/i.test(userAgent)) {
+  dispositivo = "iOS";
+} else if (/Windows/i.test(userAgent)) {
+  dispositivo = "Windows";
+} else if (/Macintosh/i.test(userAgent)) {
+  dispositivo = "Mac";
+} else if (/Linux/i.test(userAgent)) {
+  dispositivo = "Linux";
+} else if (/PlayStation/i.test(userAgent)) {
+  dispositivo = "PlayStation";
+}
+
   const socketId = "s" + (contatoreId++);
   socketsPerId[socketId] = socket;
 
   let stanzaAttuale = null;
   let nickname = null;
   let mioAvatar = null;
+  let dispositivo = "Sconosciuto";
 
   const tokenDalCookie = estraiTokenDaCookieHeader(request.headers.cookie);
   const datiTokenIniziali = verificaToken(tokenDalCookie);
@@ -856,7 +875,12 @@ wss.on("connection", (socket, request) => {
         mioAvatar = utenteDb.avatar || null;
 
         if (!stanze[stanzaAttuale]) stanze[stanzaAttuale] = { giocatoriOnline: {}, partite: {} };
-        stanze[stanzaAttuale].giocatoriOnline[socketId] = { nickname, avatar: mioAvatar };
+        stanze[stanzaAttuale].giocatoriOnline[socketId] = { 
+          nickname,
+          avatar: mioAvatar,
+          dispositivo
+        };
+
 
         inviaConteggioStanze();
         inviaAllaStanza(stanzaAttuale, { tipo: "online", numero: Object.keys(stanze[stanzaAttuale].giocatoriOnline).length });
