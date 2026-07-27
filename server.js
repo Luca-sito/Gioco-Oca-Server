@@ -239,16 +239,16 @@ async function inviaEmailVerifica(emailDestinatario, nickname, token) {
   const linkVerifica = DOMINIO_SERVER + "/api/verifica-email/" + token;
   try {
     await resend.emails.send({
-      from: "onboarding@resend.dev",
-      to: emailDestinatario,
-      subject: "Verifica il tuo account - Giochi Società",
-      html: `
-        <h2>Ciao ${nickname}</h2>
-        <p>Per attivare il tuo account su Giochi Società clicca qui:</p>
-        <a href="${linkVerifica}">Verifica la mia email</a>
-        <p>Se non hai richiesto tu questa registrazione, ignora pure questa email.</p>
-      `
-    });
+  from: "Giochi Società <onboarding@resend.dev>",
+  to: emailDestinatario,
+  subject: "Verifica il tuo account - Giochi Società",
+  html: `
+    <h2>Ciao ${nickname}</h2>
+    <p>Per attivare il tuo account su Giochi Società clicca qui:</p>
+    <a href="${linkVerifica}">Verifica la mia email</a>
+    <p>Se non hai richiesto tu questa registrazione, ignora pure questa email.</p>
+  `
+});
   } catch (erroreEmail) {
     console.error("Errore invio email verifica:", erroreEmail);
   }
