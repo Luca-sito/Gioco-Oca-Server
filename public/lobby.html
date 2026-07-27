@@ -31,6 +31,7 @@ button:hover{ opacity:0.8; }
 .utente-box{ padding:15px; text-align:center; }
 .avatar-container{ display:flex; justify-content:center; }
 .nickname{ font-weight:bold; margin-top:10px; }
+a.nickname { color:#222; text-decoration:none; }
 .dispositivo{ margin-top:8px; font-size:14px; color:#555; font-weight:bold; }
 #listaOnline{ max-height:500px; overflow-y:auto; padding:10px; }
 .giocatore-online{ display:flex; align-items:center; gap:10px; padding:10px; border-bottom:1px solid #ddd; }
@@ -118,17 +119,12 @@ function coloreDaNome(nome) {
   return colori[somma % colori.length];
 }
 
-// Un'unica funzione, usata sia per la propria etichetta sia per la lista online:
-// "computer" | "cellulare" | "tablet" → icona + testo
 function iconaDispositivo(tipo) {
   if (tipo === "cellulare") return "📱 Cellulare";
   if (tipo === "tablet") return "📲 Tablet";
   return "🖥️ Computer";
 }
 
-// Solo per mostrare A TE STESSO il tuo dispositivo nel riquadro account — la lista
-// online condivisa con gli altri usa invece il valore calcolato dal server, non
-// modificabile da qui.
 function rilevaTipoDispositivoClient() {
   const ua = navigator.userAgent;
   if (/iPad/i.test(ua) || (/Android/i.test(ua) && !/Mobile/i.test(ua))) return "tablet";
@@ -151,6 +147,8 @@ async function verificaSessione() {
         <div class="avatar-container">${immagineAvatar}</div>
         <div class="nickname">${dati.nickname}</div>
         <div class="dispositivo">${iconaDispositivo(rilevaTipoDispositivoClient())}</div>
+        <button onclick="window.location.href='profilo.html'">👤 Il mio profilo</button>
+        <button onclick="window.location.href='messaggi-privati.html'">💬 Messaggi</button>
         <button onclick="vaiAccount()">⚙️ Il mio account</button>
         <button onclick="esci()">🚪 Logout</button>
       </div>
@@ -252,7 +250,7 @@ function inviaChat() {
 
 function aggiungiMessaggio(nome, testo) {
   let chat = document.getElementById("chat");
-  chat.innerHTML += `<div class="messaggio"><b>${nome}</b>: ${testo}</div>`;
+  chat.innerHTML += `<div class="messaggio"><b><a href="profilo-pubblico.html?nickname=${encodeURIComponent(nome)}" style="color:inherit;">${nome}</a></b>: ${testo}</div>`;
   chat.scrollTop = chat.scrollHeight;
 }
 
@@ -274,7 +272,7 @@ function mostraGiocatori(lista) {
       <div class="giocatore-online">
         ${immagine}
         <div>
-          <div class="nickname">${g.nickname}</div>
+          <a class="nickname" href="profilo-pubblico.html?nickname=${encodeURIComponent(g.nickname)}">${g.nickname}</a>
           <div style="font-size:13px;color:#777;">${iconaDispositivo(g.tipoDispositivo)}</div>
         </div>
       </div>`;
@@ -289,7 +287,7 @@ async function caricaTopGiocatori() {
     if (!dati.giocatori || dati.giocatori.length === 0) { contenitore.innerHTML = "Nessun giocatore ancora."; return; }
     contenitore.innerHTML = dati.giocatori.map((g, index) => {
       let medaglia = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : "🏅";
-      return `<div class="top-player">${medaglia} <b>${g.nickname}</b><br>🎯 Vittorie: ${g.vinte}<br>🎮 Partite: ${g.giocate}</div><br>`;
+      return `<div class="top-player">${medaglia} <b><a href="profilo-pubblico.html?nickname=${encodeURIComponent(g.nickname)}" style="color:inherit;">${g.nickname}</a></b><br>🎯 Vittorie: ${g.vinte}<br>🎮 Partite: ${g.giocate}</div><br>`;
     }).join("");
   } catch (e) {
     document.getElementById("top").innerHTML = "Errore caricamento classifica";
