@@ -89,6 +89,11 @@ const limiteContatti = rateLimit({
   max: 5,
   message: { errore: "Hai inviato troppe richieste, riprova più tardi." }
 });
+const limiteMessaggiPrivati = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  message: { errore: "Stai inviando messaggi troppo velocemente, rallenta un po'." }
+});
 
 // ===== FIREBASE ADMIN =====
 let db = null;
@@ -132,6 +137,7 @@ async function salvaPartita(partita) {
     ordineGiocatori: partita.ordineGiocatori,
     turnoAttuale: partita.turnoAttuale,
     iniziata: partita.iniziata,
+    iniziataIl: partita.iniziataIl || null,
     aggiornataIl: Date.now()
   });
 }
@@ -155,19 +161,106 @@ async function rimuoviPartita(nomeStanza, partitaId) {
   }
 }
 
-async function aggiornaStatistichePartitaConclusa(partita, vincitoreUid) {
+// ===== LIVELLI, XP, BADGE =====
+// Soglia XP per raggiungere ogni livello. Livello 1 parte da 0.
+// Diffs: 300,400,500,600,700,800,900,1000,1100 — cresce di 100 ogni volta,
+// estendendo lo schema che avevi dato per i primi 3 livelli.
+const SOGLIE_LIVELLO = [0, 300, 700, 1200, 1800, 2500, 3300, 4200, 5200, 6300];
+const SOGLIA_VELOCISTA_SECONDI = 300; // 5 minuti — cambia solo questo numero per modificare il badge Velocista
+
+function calcolaLivello(xp) {
+  let livello = 1;
+  for (let i = 0; i < SOGLIE_LIVELLO.length; i++) {
+    if (xp >= SOGLIE_LIVELLO[i]) livello = i + 1;
+    else break;
+  }
+  const sogliaAttuale = SOGLIE_LIVELLO[livello - 1];
+  const sogliaProssima = SOGLIE_LIVELLO[livello] !== undefined ? SOGLIE_LIVELLO[livello] : null;
+  return { livello, sogliaAttuale, sogliaProssima };
+}
+
+function calcolaBadge(utente) {
+  const badge = [];
+  const vinte = utente.partiteVinte || 0;
+  const giocate = utente.partiteGiocate || 0;
+  const xp = utente.xp || 0;
+  const streakMax = utente.streakVittorieMassima || 0;
+  const vittoriaVeloce = utente.vittoriaPiuVeloceSecondi;
+
+  if (vinte >= 10) badge.push({ icona: "🥉", nome: "Prime 10 vittorie" });
+  if (giocate >= 100) badge.push({ icona: "🥈", nome: "100 partite giocate" });
+  if (xp >= 500) badge.push({ icona: "🥇", nome: "500 punti XP" });
+  if (streakMax >= 20) badge.push({ icona: "👑", nome: "20 vittorie consecutive" });
+  if (vittoriaVeloce != null && vittoriaVeloce < SOGLIA_VELOCISTA_SECONDI) badge.push({ icona: "🏃", nome: "Velocista" });
+
+  return badge;
+}
+
+function xpVincita() { return 50 + Math.floor(Math.random() * 151); }   // 50-200
+function xpSconfitta() { return 20 + Math.floor(Math.random() * 61); } // 20-80
+
+function idConversazione(uidA, uidB) {
+  return [uidA, uidB].sort().join("_");
+}
+
+// Chiamata a fine partita (vittoria normale O vittoria per abbandono avversario).
+// elencoPartecipanti: [{uid, nome}, ...] — passato esplicitamente da chi chiama,
+// perché nel caso di abbandono il roster va catturato PRIMA che il giocatore
+// uscente venga rimosso dalla partita, altrimenti lo storico lo perderebbe.
+// Chi abbandona viene comunque trattato come sconfitto (perde XP, streak azzerata):
+// altrimenti si potrebbe abbandonare apposta per "proteggere" una striscia di vittorie.
+async function concludiPartita(partita, vincitoreUid, nomeStanza, elencoPartecipanti) {
   if (!db) return;
   try {
-    const aggiornamenti = {};
-    partita.ordineGiocatori.forEach(idGiocatore => {
-      aggiornamenti["utenti/" + idGiocatore + "/partiteGiocate"] = admin.database.ServerValue.increment(1);
-    });
-    if (vincitoreUid) {
-      aggiornamenti["utenti/" + vincitoreUid + "/partiteVinte"] = admin.database.ServerValue.increment(1);
+    const partecipanti = elencoPartecipanti || partita.ordineGiocatori.map(id => ({
+      uid: id, nome: partita.giocatori[id] ? partita.giocatori[id].nome : "?"
+    }));
+
+    const durataSecondi = partita.iniziataIl ? Math.round((Date.now() - partita.iniziataIl) / 1000) : null;
+    const xpVinti = xpVincita();
+    const nomeVincitore = (partecipanti.find(p => p.uid === vincitoreUid) || {}).nome || null;
+
+    for (const p of partecipanti) {
+      const snap = await db.ref("utenti/" + p.uid).once("value");
+      const u = snap.val();
+      if (!u) continue;
+
+      if (p.uid === vincitoreUid) {
+        const nuovoStreak = (u.streakVittorieAttuale || 0) + 1;
+        const nuovoStreakMassimo = Math.max(u.streakVittorieMassima || 0, nuovoStreak);
+        const aggiornamenti = {
+          partiteGiocate: admin.database.ServerValue.increment(1),
+          partiteVinte: admin.database.ServerValue.increment(1),
+          streakVittorieAttuale: nuovoStreak,
+          streakVittorieMassima: nuovoStreakMassimo,
+          xp: (u.xp || 0) + xpVinti
+        };
+        if (durataSecondi !== null && (u.vittoriaPiuVeloceSecondi == null || durataSecondi < u.vittoriaPiuVeloceSecondi)) {
+          aggiornamenti.vittoriaPiuVeloceSecondi = durataSecondi;
+        }
+        await db.ref("utenti/" + p.uid).update(aggiornamenti);
+      } else {
+        const persi = xpSconfitta();
+        await db.ref("utenti/" + p.uid).update({
+          partiteGiocate: admin.database.ServerValue.increment(1),
+          streakVittorieAttuale: 0,
+          xp: Math.max(0, (u.xp || 0) - persi)
+        });
+      }
     }
-    await db.ref().update(aggiornamenti);
+
+    const refStorico = db.ref("storicoPartite").push();
+    await refStorico.set({
+      data: Date.now(),
+      stanza: nomeStanza,
+      vincitoreUid,
+      vincitoreNome: nomeVincitore,
+      durataSecondi,
+      xpVincitore: xpVinti,
+      partecipanti
+    });
   } catch (e) {
-    console.error("Errore aggiornamento statistiche:", e.message);
+    console.error("Errore conclusione partita:", e.message);
   }
 }
 
@@ -239,16 +332,16 @@ async function inviaEmailVerifica(emailDestinatario, nickname, token) {
   const linkVerifica = DOMINIO_SERVER + "/api/verifica-email/" + token;
   try {
     await resend.emails.send({
-  from: "Giochi Società <onboarding@resend.dev>",
-  to: emailDestinatario,
-  subject: "Verifica il tuo account - Giochi Società",
-  html: `
-    <h2>Ciao ${nickname}</h2>
-    <p>Per attivare il tuo account su Giochi Società clicca qui:</p>
-    <a href="${linkVerifica}">Verifica la mia email</a>
-    <p>Se non hai richiesto tu questa registrazione, ignora pure questa email.</p>
-  `
-});
+      from: "Giochi Società <onboarding@resend.dev>",
+      to: emailDestinatario,
+      subject: "Verifica il tuo account - Giochi Società",
+      html: `
+        <h2>Ciao ${nickname}</h2>
+        <p>Per attivare il tuo account su Giochi Società clicca qui:</p>
+        <a href="${linkVerifica}">Verifica la mia email</a>
+        <p>Se non hai richiesto tu questa registrazione, ignora pure questa email.</p>
+      `
+    });
   } catch (erroreEmail) {
     console.error("Errore invio email verifica:", erroreEmail);
   }
@@ -296,6 +389,10 @@ app.post("/api/registrati", limiteLogin, async (req, res) => {
       partiteVinte: 0,
       partiteGiocate: 0,
       puntiTotali: 0,
+      xp: 0,
+      streakVittorieAttuale: 0,
+      streakVittorieMassima: 0,
+      vittoriaPiuVeloceSecondi: null,
       email: emailPulita,
       emailLower: emailPulita,
       emailVerificata: false,
@@ -308,7 +405,8 @@ app.post("/api/registrati", limiteLogin, async (req, res) => {
       stato: "attivo",
       sospesoFino: null,
       avvisi: [],
-      creatoIl: Date.now()
+      creatoIl: Date.now(),
+      ultimoAccesso: null
     });
 
     await inviaEmailVerifica(emailPulita, nicknamePulito, tokenVerifica);
@@ -331,12 +429,10 @@ app.get("/api/verifica-email/:token", async (req, res) => {
         body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#101820;font-family:Arial,sans-serif;color:#e8e8e8;}
         .box{background:#1e2a38;border:2px solid #ffd700;border-radius:14px;padding:36px;max-width:400px;text-align:center;}
         h2{color:#ffd700;margin-top:0;}
-        a{display:inline-block;margin-top:18px;padding:10px 20px;background:#ffd700;color:#111;text-decoration:none;border-radius:8px;font-weight:bold;}
       </style></head><body><div class="box"><h2>${titolo}</h2><p>${testo}</p></div></body></html>
 `;
 
-if (!utente) {
-
+    if (!utente) {
       return res.send(paginaBase("Link non valido", "Questo link di verifica non è valido o è già stato utilizzato."));
     }
 
@@ -404,6 +500,8 @@ app.post("/api/login", limiteLogin, async (req, res) => {
       return res.status(403).json({ errore: "Devi verificare la tua email prima di accedere.", nonVerificata: true });
     }
 
+    await db.ref("utenti/" + utente.uid).update({ ultimoAccesso: Date.now() });
+
     const token = creaToken(utente.uid, utente.nickname, utente.ruolo || "utente");
     res.cookie("token", token, OPZIONI_COOKIE);
     res.json({ nickname: utente.nickname, ruolo: utente.ruolo || "utente" });
@@ -424,6 +522,9 @@ app.get("/api/me", richiediAuth, async (req, res) => {
     const snap = await db.ref("utenti/" + req.utente.uid).once("value");
     const utente = snap.val();
     if (!utente) return res.status(404).json({ errore: "Utente non trovato." });
+
+    const { livello, sogliaAttuale, sogliaProssima } = calcolaLivello(utente.xp || 0);
+
     res.json({
       uid: req.utente.uid,
       nickname: utente.nickname,
@@ -434,7 +535,16 @@ app.get("/api/me", richiediAuth, async (req, res) => {
       sospesoFino: utente.sospesoFino || null,
       avvisi: utente.avvisi || [],
       partiteVinte: utente.partiteVinte || 0,
-      partiteGiocate: utente.partiteGiocate || 0
+      partiteGiocate: utente.partiteGiocate || 0,
+      creatoIl: utente.creatoIl || null,
+      ultimoAccesso: utente.ultimoAccesso || null,
+      xp: utente.xp || 0,
+      livello,
+      sogliaAttuale,
+      sogliaProssima,
+      streakVittorieMassima: utente.streakVittorieMassima || 0,
+      vittoriaPiuVeloceSecondi: utente.vittoriaPiuVeloceSecondi ?? null,
+      badge: calcolaBadge(utente)
     });
   } catch (err) {
     console.error(err);
@@ -547,6 +657,164 @@ app.post("/api/contatti", limiteContatti, async (req, res) => {
   }
 });
 
+// ===== PROFILO PUBBLICO, STORICO, LIVELLI, BADGE =====
+app.get("/api/profilo-pubblico/:nickname", richiediAuth, async (req, res) => {
+  if (!db) return res.status(500).json({ errore: "Servizio non disponibile." });
+  try {
+    const nicknameLower = pulisciTesto(req.params.nickname, 20).toLowerCase();
+    const utente = await trovaUtentePerNickname(nicknameLower);
+    if (!utente) return res.status(404).json({ errore: "Utente non trovato." });
+
+    const giocate = utente.partiteGiocate || 0;
+    const vinte = utente.partiteVinte || 0;
+    const winRate = giocate > 0 ? Math.round((vinte / giocate) * 100) : 0;
+    const { livello, sogliaAttuale, sogliaProssima } = calcolaLivello(utente.xp || 0);
+
+    res.json({
+      uid: utente.uid,
+      nickname: utente.nickname,
+      avatar: utente.avatar || null,
+      creatoIl: utente.creatoIl || null,
+      ultimoAccesso: utente.ultimoAccesso || null,
+      partiteVinte: vinte,
+      partiteGiocate: giocate,
+      winRate,
+      xp: utente.xp || 0,
+      livello,
+      sogliaAttuale,
+      sogliaProssima,
+      streakVittorieMassima: utente.streakVittorieMassima || 0,
+      vittoriaPiuVeloceSecondi: utente.vittoriaPiuVeloceSecondi ?? null,
+      badge: calcolaBadge(utente)
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ errore: "Errore del server." });
+  }
+});
+
+// Nota: legge l'intera collezione storicoPartite e filtra in JS — semplice e corretto
+// alle dimensioni attuali del progetto; se in futuro crescerà molto, andrà ottimizzato
+// con un indice per utente (denormalizzazione), ma non serve ora.
+app.get("/api/storico", richiediAuth, async (req, res) => {
+  if (!db) return res.status(500).json({ errore: "Servizio non disponibile." });
+  try {
+    let uidFiltro = req.utente.uid;
+    let nicknameFiltro = req.utente.nickname;
+
+    if (req.query.nickname) {
+      const nicknameLower = pulisciTesto(req.query.nickname, 20).toLowerCase();
+      const u = await trovaUtentePerNickname(nicknameLower);
+      if (!u) return res.status(404).json({ errore: "Utente non trovato." });
+      uidFiltro = u.uid;
+      nicknameFiltro = u.nickname;
+    }
+
+    const snap = await db.ref("storicoPartite").once("value");
+    const tutte = snap.val() || {};
+
+    const partite = Object.values(tutte)
+      .filter(m => m.partecipanti && m.partecipanti.some(p => p.uid === uidFiltro))
+      .sort((a, b) => b.data - a.data)
+      .slice(0, 50);
+
+    res.json({ uid: uidFiltro, nickname: nicknameFiltro, partite });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ errore: "Errore del server." });
+  }
+});
+
+// ===== MESSAGGI PRIVATI =====
+app.get("/api/messaggi-privati/:altroUid", richiediAuth, async (req, res) => {
+  if (!db) return res.status(500).json({ errore: "Servizio non disponibile." });
+  try {
+    const altroUid = req.params.altroUid;
+    const idConv = idConversazione(req.utente.uid, altroUid);
+    const snap = await db.ref("messaggiPrivati/" + idConv).once("value");
+    const messaggi = snap.val() || {};
+    const lista = Object.entries(messaggi)
+      .map(([id, m]) => ({ id, ...m }))
+      .sort((a, b) => a.data - b.data);
+
+    const aggiornamenti = {};
+    Object.entries(messaggi).forEach(([id, m]) => {
+      if (m.aUid === req.utente.uid && !m.letto) aggiornamenti[id + "/letto"] = true;
+    });
+    if (Object.keys(aggiornamenti).length) {
+      await db.ref("messaggiPrivati/" + idConv).update(aggiornamenti);
+    }
+
+    res.json({ messaggi: lista });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ errore: "Errore del server." });
+  }
+});
+
+app.post("/api/messaggi-privati", limiteMessaggiPrivati, richiediAuth, async (req, res) => {
+  if (!db) return res.status(500).json({ errore: "Servizio non disponibile." });
+  try {
+    const { destinatarioUid, testo } = req.body;
+    if (!destinatarioUid || !testo || !testo.trim()) return res.status(400).json({ errore: "Dati mancanti." });
+    if (destinatarioUid === req.utente.uid) return res.status(400).json({ errore: "Non puoi scrivere a te stesso." });
+
+    const testoPulito = pulisciTesto(testo, 500);
+    if (!testoPulito) return res.status(400).json({ errore: "Messaggio vuoto." });
+
+    const snapMittente = await db.ref("utenti/" + req.utente.uid).once("value");
+    const mittente = snapMittente.val();
+    const snapDestinatario = await db.ref("utenti/" + destinatarioUid).once("value");
+    const destinatario = snapDestinatario.val();
+    if (!mittente || !destinatario) return res.status(404).json({ errore: "Utente non trovato." });
+
+    const idConv = idConversazione(req.utente.uid, destinatarioUid);
+    const nuovoRef = db.ref("messaggiPrivati/" + idConv).push();
+    const messaggio = {
+      daUid: req.utente.uid,
+      daNome: mittente.nickname,
+      aUid: destinatarioUid,
+      aNome: destinatario.nickname,
+      testo: testoPulito,
+      data: Date.now(),
+      letto: false
+    };
+    await nuovoRef.set(messaggio);
+
+    res.json({ ok: true, messaggio: { id: nuovoRef.key, ...messaggio } });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ errore: "Errore durante l'invio, riprova." });
+  }
+});
+
+app.get("/api/conversazioni", richiediAuth, async (req, res) => {
+  if (!db) return res.status(500).json({ errore: "Servizio non disponibile." });
+  try {
+    const snap = await db.ref("messaggiPrivati").once("value");
+    const tutte = snap.val() || {};
+    const mieUid = req.utente.uid;
+    const conversazioni = {};
+
+    Object.entries(tutte).forEach(([idConv, messaggi]) => {
+      if (!idConv.split("_").includes(mieUid)) return;
+      const lista = Object.values(messaggi);
+      if (!lista.length) return;
+      const ultimo = lista.sort((a, b) => b.data - a.data)[0];
+      const altroUid = ultimo.daUid === mieUid ? ultimo.aUid : ultimo.daUid;
+      const altroNome = ultimo.daUid === mieUid ? ultimo.aNome : ultimo.daNome;
+      const nonLetti = lista.filter(m => m.aUid === mieUid && !m.letto).length;
+      conversazioni[altroUid] = { altroUid, altroNome, ultimoTesto: ultimo.testo, ultimaData: ultimo.data, nonLetti };
+    });
+
+    const lista = Object.values(conversazioni).sort((a, b) => b.ultimaData - a.ultimaData);
+    res.json({ conversazioni: lista });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ errore: "Errore del server." });
+  }
+});
+
 // ===== API ADMIN =====
 app.get("/api/admin/utenti", richiediAdmin, async (req, res) => {
   if (!db) return res.status(500).json({ errore: "Database non disponibile." });
@@ -655,6 +923,7 @@ async function ripristinaPartiteDaFirebase() {
       ordineGiocatori: p.ordineGiocatori || [],
       turnoAttuale: p.turnoAttuale || 0,
       iniziata: p.iniziata || false,
+      iniziataIl: p.iniziataIl || null,
       elaborandoTiro: false
     };
   }
@@ -735,6 +1004,7 @@ async function avviaPartitaAutomaticamente(partita) {
   partita.ordineGiocatori = ordineDeterminato;
   partita.turnoAttuale = 0;
   partita.iniziata = true;
+  partita.iniziataIl = Date.now();
   partita.elaborandoTiro = false;
   const nomiInOrdine = ordineDeterminato.map(id => partita.giocatori[id].nome);
   Object.values(partita.giocatori).forEach(g => {
@@ -818,7 +1088,7 @@ function inviaConteggioStanze() {
   });
 }
 
-const HEARTBEAT_MS = 3000;
+const HEARTBEAT_MS = 15000;
 const heartbeatInterval = setInterval(() => {
   wss.clients.forEach(socket => {
     if (socket.isAlive === false) return socket.terminate();
@@ -828,11 +1098,6 @@ const heartbeatInterval = setInterval(() => {
 }, HEARTBEAT_MS);
 wss.on("close", () => clearInterval(heartbeatInterval));
 
-// Categorizza il dispositivo SOLO dal vero header User-Agent della richiesta di
-// handshake WebSocket — il client non lo manda mai come dato nel messaggio
-// entraLobby, quindi non è modificabile dall'interfaccia del gioco. Resta comunque
-// un'euristica sullo user-agent del browser (es. un iPad con Safari in modalità
-// "richiedi sito desktop" può risultare rilevato come computer).
 function rilevaTipoDispositivo(userAgent) {
   const ua = userAgent || "";
   if (/iPad/i.test(ua) || (/Android/i.test(ua) && !/Mobile/i.test(ua))) return "tablet";
@@ -1055,7 +1320,7 @@ wss.on("connection", (socket, request) => {
           });
 
           if (risultato.vittoria) {
-            await aggiornaStatistichePartitaConclusa(partita, uid);
+            await concludiPartita(partita, uid, nomeStanzaPartita, null);
             await rimuoviPartita(nomeStanzaPartita, partita.id);
             inviaListaPartite(nomeStanzaPartita);
           } else {
@@ -1079,6 +1344,12 @@ wss.on("connection", (socket, request) => {
         const { partita, nomeStanza } = trovato;
         if (!partita.giocatori[uid]) return;
 
+        // Cattura il roster completo PRIMA di rimuovere chi abbandona, altrimenti
+        // lo storico/le statistiche perderebbero questo giocatore
+        const elencoPartecipantiOriginali = partita.ordineGiocatori.map(id => ({
+          uid: id, nome: partita.giocatori[id] ? partita.giocatori[id].nome : "?"
+        }));
+
         const nomeUscente = partita.giocatori[uid].nome;
         delete partita.giocatori[uid];
         partita.ordineGiocatori = partita.ordineGiocatori.filter(id => id !== uid);
@@ -1100,7 +1371,7 @@ wss.on("connection", (socket, request) => {
               g.socket.send(JSON.stringify({ tipo: "statoPartita", giocatori: statoGiocatori, turnoDiId: vincitoreId, vittoria: true, vincitore: vincitoreNome, messaggi: [nomeUscente + " ha abbandonato la partita."] }));
             }
           });
-          await aggiornaStatistichePartitaConclusa(partita, vincitoreId);
+          await concludiPartita(partita, vincitoreId, nomeStanza, elencoPartecipantiOriginali);
           await rimuoviPartita(nomeStanza, partita.id);
         } else {
           const idAttuale = partita.ordineGiocatori[partita.turnoAttuale];
