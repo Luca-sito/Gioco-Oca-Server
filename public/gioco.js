@@ -255,8 +255,6 @@ function aggiornaTurno(turnoDiId) {
   document.getElementById("area-dadi").classList.toggle("disabilitato", !mioTurno);
 }
 
-// Unica funzione modificata: ora mostra la vera foto avatar (se presente) invece
-// del solo cerchio colorato con l'iniziale, sia nella card del pannello giocatori
 function disegnaGiocatori() {
   const contenitore = document.getElementById("contenitore-pedine");
 
@@ -270,18 +268,18 @@ function disegnaGiocatori() {
   ultimoStatoGiocatori.forEach((giocatore, indice) => {
     const colore = coloriGiocatori[indice % coloriGiocatori.length];
 
-    // Il gettone sul tabellone resta il cono colorato (è un pezzo di gioco, non una foto)
     const pedina = ottieniOCreaPedina(giocatore.id, colore, indice);
     posizionaPedina(pedina, giocatore.posizione);
 
-    // Nel pannello giocatori invece mostriamo la vera foto avatar, se l'utente ne ha caricata una
     const avatarHtml = giocatore.avatar
       ? `<img class="avatar-mini" src="${giocatore.avatar}">`
       : `<div class="avatar-mini" style="background:${colore};">${iniziale(giocatore.nome)}</div>`;
 
+    // Nickname cliccabile → profilo pubblico, apre in una nuova scheda per non
+    // abbandonare la partita in corso
     const card = document.createElement("div");
     card.className = "giocatore-card" + (giocatore.id === turnoAttualeId ? " attivo" : "");
-    card.innerHTML = `${avatarHtml}<span>${giocatore.nome}</span><span class="casella-mini" id="casella-${giocatore.id}">${giocatore.posizione}</span>`;
+    card.innerHTML = `${avatarHtml}<a href="profilo-pubblico.html?nickname=${encodeURIComponent(giocatore.nome)}" target="_blank" style="color:inherit;text-decoration:none;flex-grow:1;">${giocatore.nome}</a><span class="casella-mini" id="casella-${giocatore.id}">${giocatore.posizione}</span>`;
     listaPannello.appendChild(card);
   });
 }
