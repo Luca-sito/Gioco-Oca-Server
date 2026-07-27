@@ -818,7 +818,7 @@ function inviaConteggioStanze() {
   });
 }
 
-const HEARTBEAT_MS = 15000;
+const HEARTBEAT_MS = 3000;
 const heartbeatInterval = setInterval(() => {
   wss.clients.forEach(socket => {
     if (socket.isAlive === false) return socket.terminate();
