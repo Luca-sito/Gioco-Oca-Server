@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Profilo - Giochi Società</title>
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; background: #101820; color: #e8e8e8; font-family: Arial, sans-serif; line-height: 1.6; }
+.contenitore { max-width: 640px; margin: 0 auto; padding: 40px 24px 80px; }
+.scatola { background: #1e2a38; border: 1px solid #333; border-radius: 14px; padding: 30px; text-align: center; }
+#avatarGrande { width: 90px; height: 90px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 36px; font-weight: bold; margin: 0 auto 16px; overflow: hidden; }
+#avatarGrande img { width: 100%; height: 100%; object-fit: cover; }
+h1 { color: #ffd700; font-size: 24px; margin: 0 0 4px; }
+.sottinfo { color: #999; font-size: 13px; margin-bottom: 6px; }
+.livello-badge { display: inline-block; background: #ffd700; color: #111; font-weight: bold; padding: 4px 14px; border-radius: 20px; font-size: 13px; margin: 10px 0; }
+.barra-xp { background: #101820; border-radius: 20px; height: 10px; overflow: hidden; margin: 6px 0 4px; }
+.barra-xp-riempimento { background: #ffd700; height: 100%; transition: width 0.3s; }
+.testo-xp { font-size: 12px; color: #999; }
+.statistiche { display: flex; justify-content: center; gap: 26px; margin: 22px 0; flex-wrap: wrap; }
+.stat { text-align: center; }
+.stat .numero { font-size: 24px; font-weight: bold; color: #ffd700; }
+.stat .etichetta { font-size: 11px; color: #999; }
+.badge-lista { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 20px 0; }
+.badge-item { background: #263746; border-radius: 10px; padding: 10px 14px; font-size: 13px; text-align: center; min-width: 90px; }
+.badge-item .icona { font-size: 26px; display: block; margin-bottom: 4px; }
+.nessun-badge { color: #777; font-style: italic; font-size: 13px; }
+.azioni { display: flex; gap: 10px; margin-top: 24px; flex-wrap: wrap; justify-content: center; }
+.azioni a { flex: 1; min-width: 160px; padding: 11px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; text-decoration: none; text-align: center; font-size: 14px; }
+.btn-messaggio { background: #ffd700; color: #111; }
+.btn-messaggio:hover { background: #ffaa00; }
+.btn-storico { background: #34495e; color: white; }
+.btn-storico:hover { background: #3d5872; }
+.link-home { display: inline-block; margin-top: 24px; padding: 10px 20px; background: #263746; color: #ffd700; text-decoration: none; border-radius: 8px; font-weight: bold; }
+</style>
+</head>
+<body>
+
+<div class="contenitore">
+  <div class="scatola">
+    <div id="avatarGrande">?</div>
+    <h1 id="nomeProfilo">Caricamento...</h1>
+    <div class="sottinfo" id="iscrittoDal"></div>
+    <div class="sottinfo" id="ultimoAccessoTesto"></div>
+
+    <div class="livello-badge" id="etichettaLivello">Livello -</div>
+    <div class="barra-xp"><div class="barra-xp-riempimento" id="barraXp" style="width:0%;"></div></div>
+    <div class="testo-xp" id="testoXp"></div>
+
+    <div class="statistiche">
+      <div class="stat"><div class="numero" id="numVinte">-</div><div class="etichetta">Vittorie</div></div>
+      <div class="stat"><div class="numero" id="numGiocate">-</div><div class="etichetta">Partite</div></div>
+      <div class="stat"><div class="numero" id="numWinrate">-</div><div class="etichetta">Win rate</div></div>
+      <div class="stat"><div class="numero" id="numStreak">-</div><div class="etichetta">Miglior striscia</div></div>
+    </div>
+
+    <h3 style="color:#ffd700; font-size:15px; margin-bottom:10px;">🎖️ Obiettivi ottenuti</h3>
+    <div class="badge-lista" id="listaBadge"></div>
+
+    <div class="azioni" id="areaAzioni"></div>
+
+    <a href="javascript:history.back()" class="link-home">← Indietro</a>
+  </div>
+</div>
+
+<script>
+const parametri = new URLSearchParams(window.location.search);
+const nicknameRichiesto = parametri.get("nickname");
+
+const PALETTE = ["#6a2c70", "#1e40af", "#43a047", "#f57c00", "#c0ca33", "#e53935", "#00838f", "#8d6e63"];
+function coloreDaNome(nome) {
+  let somma = 0;
+  for (let i = 0; i < nome.length; i++) somma += nome.charCodeAt(i);
+  return PALETTE[somma % PALETTE.length];
+}
+
+async function carica() {
+  if (!nicknameRichiesto) {
+    document.getElementById("nomeProfilo").textContent = "Nessun utente specificato";
+    return;
+  }
+  try {
+    const [rispostaProfilo, rispostaMe] = await Promise.all([
+      fetch("https://gioco-oca-server.onrender.com/api/profilo-pubblico/" + encodeURIComponent(nicknameRichiesto), { credentials: "include" }),
+      fetch("https://gioco-oca-server.onrender.com/api/me", { credentials: "include" })
+    ]);
+
+    if (rispostaProfilo.status === 401) { window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href); return; }
+    if (!rispostaProfilo.ok) { document.getElementById("nomeProfilo").textContent = "Utente non trovato"; return; }
+
+    const dati = await rispostaProfilo.json();
+    const me = rispostaMe.ok ? await rispostaMe.json() : null;
+
+    document.getElementById("nomeProfilo").textContent = dati.nickname;
+
+    const avatarEl = document.getElementById("avatarGrande");
+    if (dati.avatar) {
+      avatarEl.innerHTML = `<img src="${dati.avatar}">`;
+    } else {
+      avatarEl.textContent = dati.nickname.charAt(0).toUpperCase();
+      avatarEl.style.background = coloreDaNome(dati.nickname);
+    }
+
+    document.getElementById("iscrittoDal").textContent = dati.creatoIl
+      ? "Iscritto dal " + new Date(dati.creatoIl).toLocaleDateString("it-IT")
+      : "";
+    document.getElementById("ultimoAccessoTesto").textContent = dati.ultimoAccesso
+      ? "Ultimo accesso: " + new Date(dati.ultimoAccesso).toLocaleString("it-IT")
+      : "Ultimo accesso non disponibile";
+
+    document.getElementById("etichettaLivello").textContent = "⭐ Livello " + dati.livello;
+    if (dati.sogliaProssima != null) {
+      const intervallo = dati.sogliaProssima - dati.sogliaAttuale;
+      const progresso = intervallo > 0 ? Math.round(((dati.xp - dati.sogliaAttuale) / intervallo) * 100) : 100;
+      document.getElementById("barraXp").style.width = Math.max(0, Math.min(100, progresso)) + "%";
+      document.getElementById("testoXp").textContent = dati.xp + " XP — " + (dati.sogliaProssima - dati.xp) + " XP al livello successivo";
+    } else {
+      document.getElementById("barraXp").style.width = "100%";
+      document.getElementById("testoXp").textContent = dati.xp + " XP — livello massimo raggiunto!";
+    }
+
+    document.getElementById("numVinte").textContent = dati.partiteVinte;
+    document.getElementById("numGiocate").textContent = dati.partiteGiocate;
+    document.getElementById("numWinrate").textContent = dati.winRate + "%";
+    document.getElementById("numStreak").textContent = dati.streakVittorieMassima;
+
+    const listaBadge = document.getElementById("listaBadge");
+    if (!dati.badge || dati.badge.length === 0) {
+      listaBadge.innerHTML = '<div class="nessun-badge">Nessun obiettivo ancora sbloccato</div>';
+    } else {
+      listaBadge.innerHTML = dati.badge.map(b => `
+        <div class="badge-item"><span class="icona">${b.icona}</span>${b.nome}</div>
+      `).join("");
+    }
+
+    const areaAzioni = document.getElementById("areaAzioni");
+    const eIlMioProfilo = me && me.uid === dati.uid;
+    let html = `<a href="storico.html?nickname=${encodeURIComponent(dati.nickname)}" class="btn-storico">📜 Storico partite</a>`;
+    if (!eIlMioProfilo) {
+      html += `<a href="messaggi-privati.html?con=${encodeURIComponent(dati.uid)}&nome=${encodeURIComponent(dati.nickname)}" class="btn-messaggio">💬 Scrivi un messaggio</a>`;
+    }
+    areaAzioni.innerHTML = html;
+
+  } catch (e) {
+    document.getElementById("nomeProfilo").textContent = "Errore nel caricamento";
+  }
+}
+
+carica();
+</script>
+
+</body>
+</html>

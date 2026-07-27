@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Storico partite - Giochi Società</title>
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; background: #101820; color: #e8e8e8; font-family: Arial, sans-serif; line-height: 1.6; }
+.contenitore { max-width: 700px; margin: 0 auto; padding: 40px 24px 80px; }
+.intestazione { text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #ffd700; }
+.intestazione h1 { color: #ffd700; font-size: 26px; margin: 0 0 6px; }
+.intestazione p { color: #999; font-size: 14px; margin: 0; }
+.partita-storico { background: #1e2a38; border: 1px solid #333; border-radius: 10px; padding: 16px 18px; margin-bottom: 12px; }
+.partita-storico.vinta { border-left: 4px solid #43a047; }
+.partita-storico.persa { border-left: 4px solid #e53935; }
+.riga-top { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #999; margin-bottom: 8px; }
+.esito { font-weight: bold; font-size: 15px; }
+.esito.vinta { color: #43a047; }
+.esito.persa { color: #e53935; }
+.dettagli { font-size: 13px; color: #ccc; }
+.partecipanti { margin-top: 6px; font-size: 12px; color: #888; }
+.nessuna { text-align: center; color: #888; font-style: italic; padding: 40px 20px; background: #1e2a38; border-radius: 10px; }
+.link-home { display: inline-block; margin-top: 20px; padding: 10px 20px; background: #ffd700; color: #111; text-decoration: none; border-radius: 8px; font-weight: bold; }
+</style>
+</head>
+<body>
+
+<div class="contenitore">
+  <div class="intestazione">
+    <h1>📜 Storico partite</h1>
+    <p id="sottotitolo">Caricamento...</p>
+  </div>
+  <div id="listaStorico"></div>
+  <a href="javascript:history.back()" class="link-home">← Indietro</a>
+</div>
+
+<script>
+const parametri = new URLSearchParams(window.location.search);
+const nicknameRichiesto = parametri.get("nickname");
+
+function formattaDurata(secondi) {
+  if (secondi == null) return "durata non disponibile";
+  const m = Math.floor(secondi / 60);
+  const s = secondi % 60;
+  return m + " min " + s + " sec";
+}
+
+async function carica() {
+  try {
+    const risposta = await fetch(
+      "https://gioco-oca-server.onrender.com/api/storico" + (nicknameRichiesto ? "?nickname=" + encodeURIComponent(nicknameRichiesto) : ""),
+      { credentials: "include" }
+    );
+
+    if (risposta.status === 401) { window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href); return; }
+    if (!risposta.ok) { document.getElementById("sottotitolo").textContent = "Errore nel caricamento."; return; }
+
+    const dati = await risposta.json();
+    document.getElementById("sottotitolo").textContent = "Partite di " + dati.nickname + " (ultime " + dati.partite.length + ")";
+    mostraStorico(dati.partite, dati.uid);
+  } catch (e) {
+    document.getElementById("sottotitolo").textContent = "Errore nel caricamento.";
+  }
+}
+
+function mostraStorico(partite, uidRiferimento) {
+  const contenitore = document.getElementById("listaStorico");
+  if (!partite || partite.length === 0) {
+    contenitore.innerHTML = '<div class="nessuna">Nessuna partita giocata ancora.</div>';
+    return;
+  }
+
+  contenitore.innerHTML = partite.map(p => {
+    const vinta = p.vincitoreUid === uidRiferimento;
+    const nomiPartecipanti = (p.partecipanti || []).map(x => x.nome).join(", ");
+    return `
+      <div class="partita-storico ${vinta ? 'vinta' : 'persa'}">
+        <div class="riga-top">
+          <span>${new Date(p.data).toLocaleString("it-IT")}</span>
+          <span>🏠 ${p.stanza || "-"}</span>
+        </div>
+        <div class="esito ${vinta ? 'vinta' : 'persa'}">${vinta ? "🏆 Vittoria" : "Sconfitta"} — vincitore: ${p.vincitoreNome || "-"}</div>
+        <div class="dettagli">⏱ ${formattaDurata(p.durataSecondi)} · +${p.xpVincitore || 0} XP al vincitore</div>
+        <div class="partecipanti">👥 ${nomiPartecipanti}</div>
+      </div>
+    `;
+  }).join("");
+}
+
+carica();
+</script>
+
+</body>
+</html>
