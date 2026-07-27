@@ -1,294 +1,79 @@
 <!DOCTYPE html>
 <html lang="it">
-
 <head>
 <meta charset="UTF-8">
 <title>Opzioni Account - Giochi Società</title>
-
 <style>
-
-* {
-    box-sizing:border-box;
-}
-
-body {
-    margin:0;
-    background:#101820;
-    color:#e8e8e8;
-    font-family:Arial,sans-serif;
-}
-
-
-.contenitore {
-    max-width:600px;
-    margin:auto;
-    padding:40px 24px 80px;
-}
-
-
-.scatola {
-    background:#1e2a38;
-    border:1px solid #333;
-    border-radius:14px;
-    padding:30px;
-}
-
-
-h1 {
-    color:#ffd700;
-    text-align:center;
-    margin-top:0;
-}
-
-
-.sottotitolo {
-    text-align:center;
-    color:#999;
-    margin-bottom:30px;
-}
-
-
-.opzione {
-
-    background:#263746;
-    border-radius:12px;
-    padding:18px;
-    margin-bottom:15px;
-    cursor:pointer;
-    transition:0.2s;
-
-}
-
-
-.opzione:hover {
-
-    background:#34495e;
-    transform:scale(1.02);
-
-}
-
-
-.numero {
-
-    color:#ffd700;
-    font-weight:bold;
-    font-size:20px;
-
-}
-
-
-.titolo {
-
-    font-size:18px;
-    font-weight:bold;
-
-}
-
-
-.descrizione {
-
-    color:#aaa;
-    font-size:14px;
-    margin-top:5px;
-
-}
-
-
-.link-home {
-
-    display:inline-block;
-    margin-top:25px;
-    padding:10px 20px;
-    background:#ffd700;
-    color:#111;
-    text-decoration:none;
-    border-radius:8px;
-    font-weight:bold;
-
-}
-
-
-.link-home:hover {
-
-    background:#ffaa00;
-
-}
-
-
-.errore {
-
-    text-align:center;
-    color:#ff6b6b;
-
-}
-
+* { box-sizing:border-box; }
+body { margin:0; background:#101820; color:#e8e8e8; font-family:Arial,sans-serif; }
+.contenitore { max-width:600px; margin:auto; padding:40px 24px 80px; }
+.scatola { background:#1e2a38; border:1px solid #333; border-radius:14px; padding:30px; }
+h1 { color:#ffd700; text-align:center; margin-top:0; }
+.sottotitolo { text-align:center; color:#999; margin-bottom:30px; }
+.opzione { background:#263746; border-radius:12px; padding:18px; margin-bottom:15px; cursor:pointer; transition:0.2s; }
+.opzione:hover { background:#34495e; transform:scale(1.02); }
+.numero { color:#ffd700; font-weight:bold; font-size:20px; }
+.titolo { font-size:18px; font-weight:bold; }
+.descrizione { color:#aaa; font-size:14px; margin-top:5px; }
+.link-home { display:inline-block; margin-top:25px; padding:10px 20px; background:#ffd700; color:#111; text-decoration:none; border-radius:8px; font-weight:bold; }
+.link-home:hover { background:#ffaa00; }
+.errore { text-align:center; color:#ff6b6b; }
 </style>
-
 </head>
-
-
 <body>
 
-
 <div class="contenitore">
+  <div class="scatola">
 
+    <h1>⚙️ Opzioni Account</h1>
+    <div class="sottotitolo" id="benvenuto">Caricamento account...</div>
 
-<div class="scatola">
+    <div class="opzione" onclick="apriAvatar()">
+      <div><span class="numero">1.</span><span class="titolo">🖼️ Avatar</span></div>
+      <div class="descrizione">Cambia immagine profilo e scegli il tuo avatar</div>
+    </div>
 
+    <div class="opzione" onclick="apriProfilo()">
+      <div><span class="numero">2.</span><span class="titolo">👤 Modifica profilo</span></div>
+      <div class="descrizione">Modifica nickname e informazioni account</div>
+    </div>
 
-<h1>⚙️ Opzioni Account</h1>
+    <div class="opzione" onclick="apriMessaggi()">
+      <div><span class="numero">3.</span><span class="titolo">💬 Messaggi privati</span></div>
+      <div class="descrizione">Scrivi e leggi i messaggi privati con altri giocatori</div>
+    </div>
 
-<div class="sottotitolo" id="benvenuto">
-Caricamento account...
+    <div class="opzione" onclick="apriSicurezza()">
+      <div><span class="numero">4.</span><span class="titolo">🔒 Sicurezza</span></div>
+      <div class="descrizione">Gestisci password e sicurezza account</div>
+    </div>
+
+    <div class="errore" id="errore"></div>
+
+    <a href="https://gioco-oca-server.onrender.com/profilo.html" class="link-home">← Torna al profilo</a>
+
+  </div>
 </div>
-
-
-
-<div class="opzione" onclick="apriAvatar()">
-
-<div>
-<span class="numero">1.</span>
-<span class="titolo">🖼️ Avatar</span>
-</div>
-
-<div class="descrizione">
-Cambia immagine profilo e scegli il tuo avatar
-</div>
-
-</div>
-
-
-
-
-<div class="opzione" onclick="apriProfilo()">
-
-<div>
-<span class="numero">2.</span>
-<span class="titolo">👤 Modifica profilo</span>
-</div>
-
-<div class="descrizione">
-Modifica nickname e informazioni account
-</div>
-
-</div>
-
-
-
-
-
-<div class="opzione" onclick="apriSicurezza()">
-
-<div>
-<span class="numero">3.</span>
-<span class="titolo">🔒 Sicurezza</span>
-</div>
-
-<div class="descrizione">
-Gestisci password e sicurezza account
-</div>
-
-</div>
-
-
-
-<div class="errore" id="errore"></div>
-
-
-
-<a href="https://gioco-oca-server.onrender.com/profilo.html" class="link-home">
-← Torna al profilo
-</a>
-
-
-
-</div>
-
-
-</div>
-
-
-
 
 <script>
-
-
 async function controllaAccount(){
-
-try{
-
-
-const risposta = await fetch(
-"https://gioco-oca-server.onrender.com/api/me",
-{
-credentials:"include"
-}
-);
-
-
-if(!risposta.ok){
-
-window.location.href =
-"https://gioco-oca-server.onrender.com/login.html";
-
-return;
-
+  try{
+    const risposta = await fetch("https://gioco-oca-server.onrender.com/api/me", { credentials:"include" });
+    if(!risposta.ok){ window.location.href = "https://gioco-oca-server.onrender.com/login.html"; return; }
+    const dati = await risposta.json();
+    document.getElementById("benvenuto").textContent = "Account di: " + dati.nickname;
+  }catch(e){
+    document.getElementById("errore").textContent = "Errore caricamento account";
+  }
 }
 
-
-const dati = await risposta.json();
-
-
-document.getElementById("benvenuto").textContent =
-"Account di: " + dati.nickname;
-
-
-
-}catch(e){
-
-document.getElementById("errore").textContent =
-"Errore caricamento account";
-
-}
-
-
-}
-
-
-
-
-function apriAvatar(){
-
-window.location.href =
-"https://gioco-oca-server.onrender.com/avatar.html";
-
-}
-
-
-
-function apriProfilo(){
-
-window.location.href =
-"https://gioco-oca-server.onrender.com/profilo.html";
-
-}
-
-
-
-function apriSicurezza(){
-
-alert("Sezione sicurezza in sviluppo.");
-
-}
-
-
+function apriAvatar(){ window.location.href = "https://gioco-oca-server.onrender.com/avatar.html"; }
+function apriProfilo(){ window.location.href = "https://gioco-oca-server.onrender.com/profilo.html"; }
+function apriMessaggi(){ window.location.href = "https://gioco-oca-server.onrender.com/messaggi-privati.html"; }
+function apriSicurezza(){ alert("Sezione sicurezza in sviluppo."); }
 
 controllaAccount();
-
-
 </script>
 
-
 </body>
-
 </html>
