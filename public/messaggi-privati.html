@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Messaggi privati - Giochi Società</title>
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; background: #101820; color: #e8e8e8; font-family: Arial, sans-serif; line-height: 1.6; }
+.contenitore { max-width: 640px; margin: 0 auto; padding: 30px 20px 80px; }
+.intestazione { text-align: center; margin-bottom: 24px; padding-bottom: 18px; border-bottom: 2px solid #ffd700; }
+.intestazione h1 { color: #ffd700; font-size: 24px; margin: 0 0 4px; }
+
+.conversazione { display: flex; align-items: center; gap: 12px; background: #1e2a38; border: 1px solid #333; border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; cursor: pointer; transition: 0.15s; }
+.conversazione:hover { border-color: #ffd700; }
+.conversazione .avatar-mini { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: #43a047; color: white; font-weight: bold; }
+.conversazione .info { flex-grow: 1; min-width: 0; }
+.conversazione .nome { font-weight: bold; }
+.conversazione .anteprima { font-size: 13px; color: #999; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.conversazione .non-letti { background: #e53935; color: white; font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 10px; }
+.nessuna { text-align: center; color: #888; font-style: italic; padding: 40px 20px; background: #1e2a38; border-radius: 10px; }
+
+#areaThread { display: none; }
+#threadHeader { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+#threadHeader .avatar-mini { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; flex-shrink: 0; }
+#threadHeader .nomeAltro { font-weight: bold; font-size: 17px; color: #ffd700; }
+#messaggiThread { background: #16202b; border: 1px solid #333; border-radius: 10px; padding: 16px; height: 420px; overflow-y: auto; margin-bottom: 14px; display: flex; flex-direction: column; gap: 8px; }
+.msg { max-width: 75%; padding: 9px 13px; border-radius: 12px; font-size: 14px; }
+.msg.mio { align-self: flex-end; background: #ffd700; color: #111; }
+.msg.altro { align-self: flex-start; background: #263746; color: #eee; }
+.msg .ora { font-size: 10px; opacity: 0.65; margin-top: 3px; display: block; }
+.msg .segnala { font-size: 10px; opacity: 0.75; cursor: pointer; text-decoration: underline; margin-left: 8px; }
+.riga-invio { display: flex; gap: 8px; }
+.riga-invio input { flex-grow: 1; padding: 12px; border-radius: 8px; border: 1px solid #444; background: #1e2a38; color: white; font-size: 14px; }
+.riga-invio button { padding: 12px 20px; border: none; border-radius: 8px; background: #ffd700; color: #111; font-weight: bold; cursor: pointer; }
+.link-home { display: inline-block; margin-top: 24px; padding: 10px 20px; background: #263746; color: #ffd700; text-decoration: none; border-radius: 8px; font-weight: bold; }
+</style>
+</head>
+<body>
+
+<div class="contenitore">
+
+  <div class="intestazione">
+    <h1>💬 Messaggi privati</h1>
+  </div>
+
+  <div id="areaInbox">
+    <div id="listaConversazioni">Caricamento...</div>
+  </div>
+
+  <div id="areaThread">
+    <div id="threadHeader"></div>
+    <div id="messaggiThread"></div>
+    <div class="riga-invio">
+      <input id="inputMessaggio" placeholder="Scrivi un messaggio..." maxlength="500">
+      <button onclick="inviaMessaggio()">Invia</button>
+    </div>
+  </div>
+
+  <a href="javascript:history.back()" class="link-home">← Indietro</a>
+
+</div>
+
+<script>
+const parametri = new URLSearchParams(window.location.search);
+let uidConversazioneAperta = parametri.get("con");
+let nomeConversazioneAperta = parametri.get("nome");
+let timerAggiornamento = null;
+let mioUid = null;
+
+const PALETTE = ["#6a2c70", "#1e40af", "#43a047", "#f57c00", "#c0ca33", "#e53935", "#00838f", "#8d6e63"];
+function coloreDaNome(nome) {
+  let somma = 0;
+  for (let i = 0; i < (nome || "?").length; i++) somma += nome.charCodeAt(i);
+  return PALETTE[somma % PALETTE.length];
+}
+function iniziale(nome) { return (nome || "?").trim().charAt(0).toUpperCase(); }
+
+async function avvia() {
+  try {
+    const risposta = await fetch("https://gioco-oca-server.onrender.com/api/me", { credentials: "include" });
+    if (!risposta.ok) { window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href); return; }
+    const dati = await risposta.json();
+    mioUid = dati.uid;
+
+    if (uidConversazioneAperta) {
+      apriThread(uidConversazioneAperta, nomeConversazioneAperta);
+    } else {
+      caricaInbox();
+    }
+  } catch (e) {
+    window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href);
+  }
+}
+
+async function caricaInbox() {
+  if (timerAggiornamento) { clearInterval(timerAggiornamento); timerAggiornamento = null; }
+  document.getElementById("areaInbox").style.display = "block";
+  document.getElementById("areaThread").style.display = "none";
+
+  try {
+    const risposta = await fetch("https://gioco-oca-server.onrender.com/api/conversazioni", { credentials: "include" });
+    const dati = await risposta.json();
+    const contenitore = document.getElementById("listaConversazioni");
+
+    if (!dati.conversazioni || dati.conversazioni.length === 0) {
+      contenitore.innerHTML = '<div class="nessuna">Nessuna conversazione ancora. Vai sul profilo di un giocatore per scrivergli!</div>';
+      return;
+    }
+
+    contenitore.innerHTML = dati.conversazioni.map(c => `
+      <div class="conversazione" onclick="apriThread('${c.altroUid}', '${(c.altroNome || '').replace(/'/g, "\\'")}')">
+        <div class="avatar-mini" style="background:${coloreDaNome(c.altroNome)};">${iniziale(c.altroNome)}</div>
+        <div class="info">
+          <div class="nome">${c.altroNome}</div>
+          <div class="anteprima">${c.ultimoTesto}</div>
+        </div>
+        ${c.nonLetti > 0 ? `<div class="non-letti">${c.nonLetti}</div>` : ""}
+      </div>
+    `).join("");
+  } catch (e) {
+    document.getElementById("listaConversazioni").innerHTML = "Errore nel caricamento.";
+  }
+}
+
+async function apriThread(uidDestinatario, nomeDestinatario) {
+  uidConversazioneAperta = uidDestinatario;
+  nomeConversazioneAperta = nomeDestinatario;
+  window.history.replaceState({}, "", "messaggi-privati.html?con=" + encodeURIComponent(uidDestinatario) + "&nome=" + encodeURIComponent(nomeDestinatario || ""));
+
+  document.getElementById("areaInbox").style.display = "none";
+  document.getElementById("areaThread").style.display = "block";
+
+  document.getElementById("threadHeader").innerHTML = `
+    <div class="avatar-mini" style="background:${coloreDaNome(nomeDestinatario)};">${iniziale(nomeDestinatario)}</div>
+    <span class="nomeAltro">${nomeDestinatario || "Utente"}</span>
+  `;
+
+  await caricaMessaggiThread();
+
+  if (timerAggiornamento) clearInterval(timerAggiornamento);
+  timerAggiornamento = setInterval(caricaMessaggiThread, 4000);
+}
+
+async function caricaMessaggiThread() {
+  if (!uidConversazioneAperta) return;
+  try {
+    const risposta = await fetch("https://gioco-oca-server.onrender.com/api/messaggi-privati/" + encodeURIComponent(uidConversazioneAperta), { credentials: "include" });
+    const dati = await risposta.json();
+    const box = document.getElementById("messaggiThread");
+    const numeroAttuale = box.querySelectorAll(".msg").length;
+    if ((dati.messaggi || []).length !== numeroAttuale) {
+      box.innerHTML = "";
+      (dati.messaggi || []).forEach(m => aggiungiBolla(m));
+      scrollFondo();
+    }
+  } catch (e) { /* silenzioso, riprova al prossimo giro */ }
+}
+
+function aggiungiBolla(m) {
+  const box = document.getElementById("messaggiThread");
+  const mio = m.daUid === mioUid;
+  const div = document.createElement("div");
+  div.className = "msg " + (mio ? "mio" : "altro");
+  const ora = new Date(m.data).toLocaleString("it-IT");
+  const nomeSicuro = (m.daNome || "").replace(/'/g, "\\'");
+  const testoSicuro = (m.testo || "").replace(/'/g, "\\'").replace(/\n/g, " ");
+  div.innerHTML = `${m.testo}<span class="ora">${ora}${!mio ? ` · <span class="segnala" onclick="segnalaMessaggio('${nomeSicuro}', '${testoSicuro}')">Segnala</span>` : ""}</span>`;
+  box.appendChild(div);
+}
+
+function scrollFondo() {
+  const box = document.getElementById("messaggiThread");
+  box.scrollTop = box.scrollHeight;
+}
+
+async function inviaMessaggio() {
+  const input = document.getElementById("inputMessaggio");
+  const testo = input.value.trim();
+  if (!testo || !uidConversazioneAperta) return;
+
+  input.value = "";
+
+  try {
+    const risposta = await fetch("https://gioco-oca-server.onrender.com/api/messaggi-privati", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ destinatarioUid: uidConversazioneAperta, testo })
+    });
+    const dati = await risposta.json();
+    if (!risposta.ok) { alert(dati.errore || "Errore durante l'invio."); return; }
+    aggiungiBolla(dati.messaggio);
+    scrollFondo();
+  } catch (e) {
+    alert("Errore di connessione al server.");
+  }
+}
+
+document.getElementById("inputMessaggio").addEventListener("keypress", (e) => { if (e.key === "Enter") inviaMessaggio(); });
+
+async function segnalaMessaggio(mittente, testoMessaggio) {
+  if (!confirm("Vuoi segnalare questo messaggio allo staff?")) return;
+  try {
+    await fetch("https://gioco-oca-server.onrender.com/api/contatti", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        categoria: "Segnalazione",
+        messaggio: `Segnalazione messaggio privato da "${mittente}": "${testoMessaggio}"`
+      })
+    });
+    alert("Segnalazione inviata allo staff, grazie.");
+  } catch (e) {
+    alert("Errore durante l'invio della segnalazione.");
+  }
+}
+
+avvia();
+</script>
+
+</body>
+</html>
