@@ -1,180 +1,40 @@
+<!DOCTYPE html>
+<html lang="it">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-
 <title>Pannello Admin - Giochi Società</title>
-
 <style>
-
-*{
-margin:0;
-padding:0;
-box-sizing:border-box;
-font-family:Arial,sans-serif;
-}
-
-body{
-background:#111827;
-color:white;
-padding:25px;
-}
-
-h1{
-margin-bottom:20px;
-color:#ffd700;
-}
-
-.topBar{
-display:flex;
-justify-content:space-between;
-align-items:center;
-margin-bottom:25px;
-flex-wrap:wrap;
-gap:10px;
-}
-
-button{
-cursor:pointer;
-border:none;
-padding:10px 16px;
-border-radius:8px;
-font-weight:bold;
-}
-
-#logout{
-background:#d32f2f;
-color:white;
-}
-
-#aggiorna{
-background:#2196f3;
-color:white;
-}
-
-.statistiche{
-display:grid;
-grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
-gap:15px;
-margin-bottom:25px;
-}
-
-.card{
-background:#1f2937;
-padding:18px;
-border-radius:12px;
-text-align:center;
-}
-
-.card h2{
-font-size:34px;
-color:#ffd700;
-}
-
-.card p{
-margin-top:8px;
-color:#ddd;
-}
-
-.ricerca{
-margin-bottom:20px;
-}
-
-input{
-width:100%;
-padding:12px;
-border-radius:8px;
-border:none;
-font-size:15px;
-}
-
-table{
-width:100%;
-border-collapse:collapse;
-background:#1f2937;
-overflow:hidden;
-border-radius:10px;
-}
-
-th{
-background:#374151;
-padding:12px;
-}
-
-td{
-padding:10px;
-border-bottom:1px solid #333;
-font-size:14px;
-}
-
-.badge{
-padding:5px 10px;
-border-radius:12px;
-font-size:12px;
-font-weight:bold;
-}
-
-.attivo{
-background:#2e7d32;
-}
-
-.sospeso{
-background:#ff9800;
-color:black;
-}
-
-.bannato{
-background:#c62828;
-}
-
-.azioni button{
-margin:2px;
-font-size:12px;
-padding:7px 10px;
-}
-
-.avviso{
-background:#ffc107;
-}
-
-.sospendi{
-background:#fb8c00;
-}
-
-.banna{
-background:#d32f2f;
-color:white;
-}
-
-.riattiva{
-background:#4caf50;
-color:white;
-}
-
-.rimuovi{
-background:#2196f3;
-color:white;
-}
-
-.info{
-font-size:12px;
-color:#bbb;
-margin-top:4px;
-}
-
-#accessoNegato{
-
-display:none;
-
-font-size:20px;
-
-text-align:center;
-
-margin-top:80px;
-
-}
-
+*{ margin:0; padding:0; box-sizing:border-box; font-family:Arial,sans-serif; }
+body{ background:#111827; color:white; padding:25px; }
+h1{ margin-bottom:20px; color:#ffd700; }
+.topBar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:25px; flex-wrap:wrap; gap:10px; }
+button{ cursor:pointer; border:none; padding:10px 16px; border-radius:8px; font-weight:bold; }
+#logout{ background:#d32f2f; color:white; }
+#aggiorna{ background:#2196f3; color:white; }
+.statistiche{ display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:15px; margin-bottom:25px; }
+.card{ background:#1f2937; padding:18px; border-radius:12px; text-align:center; }
+.card h2{ font-size:34px; color:#ffd700; }
+.card p{ margin-top:8px; color:#ddd; }
+.ricerca{ margin-bottom:20px; }
+input{ width:100%; padding:12px; border-radius:8px; border:none; font-size:15px; }
+table{ width:100%; border-collapse:collapse; background:#1f2937; overflow:hidden; border-radius:10px; }
+th{ background:#374151; padding:12px; }
+td{ padding:10px; border-bottom:1px solid #333; font-size:14px; }
+.badge{ padding:5px 10px; border-radius:12px; font-size:12px; font-weight:bold; }
+.attivo{ background:#2e7d32; }
+.sospeso{ background:#ff9800; color:black; }
+.bannato{ background:#c62828; }
+.azioni button{ margin:2px; font-size:12px; padding:7px 10px; }
+.avviso{ background:#ffc107; }
+.sospendi{ background:#fb8c00; }
+.banna{ background:#d32f2f; color:white; }
+.riattiva{ background:#4caf50; color:white; }
+.rimuovi{ background:#2196f3; color:white; }
+.info{ font-size:12px; color:#bbb; margin-top:4px; }
+#accessoNegato{ display:none; font-size:20px; text-align:center; margin-top:80px; }
 </style>
-
+</head>
 <body>
 
 <h1>🛡️ Pannello di Amministrazione</h1>
@@ -184,7 +44,6 @@ margin-top:80px;
     <br>
     Questo pannello è riservato agli amministratori.
     <br><br>
-
     <a href="login.html?redirect=admin.html">
         <button>Vai al Login</button>
     </a>
@@ -193,456 +52,175 @@ margin-top:80px;
 <div id="contenutoAdmin" style="display:none;">
 
     <div class="topBar">
-
-        <div>
-            <button id="aggiorna" onclick="carica()">
-                🔄 Aggiorna
-            </button>
-        </div>
-
-        <div>
-            <button id="logout" onclick="logout()">
-                🚪 Logout
-            </button>
-        </div>
-
+        <div><button id="aggiorna" onclick="carica()">🔄 Aggiorna</button></div>
+        <div><button id="logout" onclick="logout()">🚪 Logout</button></div>
     </div>
-
 
     <div class="statistiche">
-
-        <div class="card">
-            <h2 id="totUtenti">0</h2>
-            <p>Utenti Registrati</p>
-        </div>
-
-        <div class="card">
-            <h2 id="totAttivi">0</h2>
-            <p>Attivi</p>
-        </div>
-
-        <div class="card">
-            <h2 id="totSospesi">0</h2>
-            <p>Sospesi</p>
-        </div>
-
-        <div class="card">
-            <h2 id="totBannati">0</h2>
-            <p>Bannati</p>
-        </div>
-
+        <div class="card"><h2 id="totUtenti">0</h2><p>Utenti Registrati</p></div>
+        <div class="card"><h2 id="totAttivi">0</h2><p>Attivi</p></div>
+        <div class="card"><h2 id="totSospesi">0</h2><p>Sospesi</p></div>
+        <div class="card"><h2 id="totBannati">0</h2><p>Bannati</p></div>
     </div>
-
 
     <div class="ricerca">
-
-        <input
-            id="ricerca"
-            type="text"
-            placeholder="🔍 Cerca per nickname o email..."
-            onkeyup="filtraUtenti()">
-
+        <input id="ricerca" type="text" placeholder="🔍 Cerca per nickname o email..." onkeyup="filtraUtenti()">
     </div>
 
-
     <table>
-
         <thead>
-
         <tr>
-
             <th>Nickname</th>
-
             <th>Email</th>
-
             <th>Statistiche</th>
-
             <th>Stato</th>
-
             <th>Avvisi</th>
-
             <th>Azioni</th>
-
         </tr>
-
         </thead>
-
         <tbody id="corpoTabella"></tbody>
-
     </table>
 
 </div>
 
-</body>
-
 <script>
-
-const token = localStorage.getItem("authToken");
-
 let tuttiUtenti = [];
 
 async function carica(){
-
-    if(!token){
-        mostraAccessoNegato();
-        return;
-    }
-
     try{
-
-        const risposta = await fetch("/api/admin/utenti",{
-
-            headers:{
-                "Authorization":"Bearer "+token
-            }
-
-        });
+        const risposta = await fetch("/api/admin/utenti", { credentials: "include" });
 
         if(risposta.status===401 || risposta.status===403){
-
             mostraAccessoNegato();
             return;
-
         }
 
         const dati = await risposta.json();
-
-        tuttiUtenti=dati.utenti;
+        tuttiUtenti = dati.utenti;
 
         aggiornaStatistiche();
-
         disegnaTabella(tuttiUtenti);
 
         document.getElementById("contenutoAdmin").style.display="block";
-
         document.getElementById("accessoNegato").style.display="none";
-
     }
-
     catch(e){
-
         console.error(e);
-
         mostraAccessoNegato();
-
     }
-
 }
 
 function mostraAccessoNegato(){
-
     document.getElementById("contenutoAdmin").style.display="none";
-
     document.getElementById("accessoNegato").style.display="block";
-
 }
 
-function logout(){
-
-    localStorage.removeItem("authToken");
-
+async function logout(){
+    try { await fetch("/api/logout", { method: "POST", credentials: "include" }); } catch (e) {}
     window.location="login.html";
-
 }
 
 function aggiornaStatistiche(){
-
-    document.getElementById("totUtenti").innerText=tuttiUtenti.length;
-
-    document.getElementById("totAttivi").innerText=
-    tuttiUtenti.filter(u=>u.stato==="attivo").length;
-
-    document.getElementById("totSospesi").innerText=
-    tuttiUtenti.filter(u=>u.stato==="sospeso").length;
-
-    document.getElementById("totBannati").innerText=
-    tuttiUtenti.filter(u=>u.stato==="bannato").length;
-
+    document.getElementById("totUtenti").innerText = tuttiUtenti.length;
+    document.getElementById("totAttivi").innerText = tuttiUtenti.filter(u=>u.stato==="attivo").length;
+    document.getElementById("totSospesi").innerText = tuttiUtenti.filter(u=>u.stato==="sospeso").length;
+    document.getElementById("totBannati").innerText = tuttiUtenti.filter(u=>u.stato==="bannato").length;
 }
 
 function badge(stato){
-
-    if(stato==="attivo")
-        return '<span class="badge attivo">ATTIVO</span>';
-
-    if(stato==="sospeso")
-        return '<span class="badge sospeso">SOSPESO</span>';
-
-    if(stato==="bannato")
-        return '<span class="badge bannato">BANNATO</span>';
-
+    if(stato==="attivo") return '<span class="badge attivo">ATTIVO</span>';
+    if(stato==="sospeso") return '<span class="badge sospeso">SOSPESO</span>';
+    if(stato==="bannato") return '<span class="badge bannato">BANNATO</span>';
     return stato;
-
 }
 
 function disegnaTabella(lista){
-
-    const corpo=document.getElementById("corpoTabella");
-
-    corpo.innerHTML="";
+    const corpo = document.getElementById("corpoTabella");
+    corpo.innerHTML = "";
 
     lista.forEach(u=>{
-
-        let avvisi="";
-
+        let avvisi = "";
         if(u.avvisi && u.avvisi.length){
-
-            avvisi=u.avvisi
-            .map(a=>"• "+a.motivo)
-            .join("<br>");
-
+            avvisi = u.avvisi.map(a=>"• "+a.motivo).join("<br>");
         }
 
-        const giocate=u.partiteGiocate || 0;
+        const giocate = u.partiteGiocate || 0;
+        const vinte = u.partiteVinte || 0;
+        const percentuale = giocate>0 ? Math.round((vinte/giocate)*100) : 0;
 
-        const vinte=u.partiteVinte || 0;
-
-        const percentuale=
-        giocate>0?
-        Math.round((vinte/giocate)*100):0;
-
-        corpo.innerHTML+=`
-
+        corpo.innerHTML += `
 <tr>
-
-<td>
-
-<b>${u.nickname}</b>
-
-</td>
-
-<td>
-
-${u.email}
-
-</td>
-
-<td>
-
-Giocate: ${giocate}<br>
-
-Vinte: ${vinte}<br>
-
-Win Rate: ${percentuale}%
-
-</td>
-
-<td>
-
-${badge(u.stato)}
-
-${u.sospesoFino?
-"<div class='info'>Fino al "+new Date(u.sospesoFino).toLocaleString("it-IT")+"</div>"
-:""}
-
-</td>
-
-<td>
-
-${avvisi || "-"}
-
-</td>
-
+<td><b>${u.nickname}</b></td>
+<td>${u.email}</td>
+<td>Giocate: ${giocate}<br>Vinte: ${vinte}<br>Win Rate: ${percentuale}%</td>
+<td>${badge(u.stato)}${u.sospesoFino ? "<div class='info'>Fino al "+new Date(u.sospesoFino).toLocaleString("it-IT")+"</div>" : ""}</td>
+<td>${avvisi || "-"}</td>
 <td class="azioni">
-
-<button class="avviso"
-
-onclick="daiAvviso('${u.uid}')">
-
-Avviso
-
-</button>
-
-<button class="sospendi"
-
-onclick="sospendi('${u.uid}')">
-
-Sospendi
-
-</button>
-
-<button class="rimuovi"
-
-onclick="rimuoviSospensione('${u.uid}')">
-
-Fine
-
-</button>
-
-<button class="banna"
-
-onclick="banna('${u.uid}')">
-
-Banna
-
-</button>
-
-<button class="riattiva"
-
-onclick="riattiva('${u.uid}')">
-
-Riattiva
-
-</button>
-
+<button class="avviso" onclick="daiAvviso('${u.uid}')">Avviso</button>
+<button class="sospendi" onclick="sospendi('${u.uid}')">Sospendi</button>
+<button class="rimuovi" onclick="rimuoviSospensione('${u.uid}')">Fine</button>
+<button class="banna" onclick="banna('${u.uid}')">Banna</button>
+<button class="riattiva" onclick="riattiva('${u.uid}')">Riattiva</button>
 </td>
-
 </tr>
-
 `;
-
     });
-
 }
 
 function filtraUtenti(){
-
-    const testo=document.getElementById("ricerca").value.toLowerCase();
-
-    const filtrati=tuttiUtenti.filter(u=>{
-
-        return(
-
-            u.nickname.toLowerCase().includes(testo)
-
-            ||
-
-            u.email.toLowerCase().includes(testo)
-
-        );
-
-    });
-
+    const testo = document.getElementById("ricerca").value.toLowerCase();
+    const filtrati = tuttiUtenti.filter(u=>
+        u.nickname.toLowerCase().includes(testo) || u.email.toLowerCase().includes(testo)
+    );
     disegnaTabella(filtrati);
-
 }
 
-async function chiamataAdmin(url,dati){
-
-    const risposta=await fetch(url,{
-
-        method:"POST",
-
-        headers:{
-
-            "Content-Type":"application/json",
-
-            "Authorization":"Bearer "+token
-
-        },
-
-        body:JSON.stringify(dati)
-
+async function chiamataAdmin(url, dati){
+    const risposta = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(dati)
     });
 
-    const json=await risposta.json();
+    const json = await risposta.json();
 
     if(!risposta.ok){
-
         alert(json.errore || "Errore");
-
         return false;
-
     }
-
     return true;
-
 }
 
 async function daiAvviso(uid){
-
-    const motivo=prompt("Motivo dell'avviso:");
-
+    const motivo = prompt("Motivo dell'avviso:");
     if(!motivo) return;
-
-    if(await chiamataAdmin("/api/admin/avviso",{
-
-        uid,
-
-        motivo
-
-    })){
-
-        carica();
-
-    }
-
+    if(await chiamataAdmin("/api/admin/avviso", { uid, motivo })) carica();
 }
 
 async function sospendi(uid){
-
-    const giorni=prompt("Numero giorni","3");
-
+    const giorni = prompt("Numero giorni", "3");
     if(!giorni) return;
-
-    const motivo=prompt("Motivo sospensione") || "";
-
-    if(await chiamataAdmin("/api/admin/sospendi",{
-
-        uid,
-
-        giorni,
-
-        motivo
-
-    })){
-
-        carica();
-
-    }
-
+    const motivo = prompt("Motivo sospensione") || "";
+    if(await chiamataAdmin("/api/admin/sospendi", { uid, giorni, motivo })) carica();
 }
 
 async function rimuoviSospensione(uid){
-
-    if(await chiamataAdmin("/api/admin/rimuovi-sospensione",{
-
-        uid
-
-    })){
-
-        carica();
-
-    }
-
+    if(await chiamataAdmin("/api/admin/rimuovi-sospensione", { uid })) carica();
 }
 
 async function banna(uid){
-
     if(!confirm("Confermi il BAN definitivo?")) return;
-
-    const motivo=prompt("Motivo del ban") || "";
-
-    if(await chiamataAdmin("/api/admin/banna",{
-
-        uid,
-
-        motivo
-
-    })){
-
-        carica();
-
-    }
-
+    const motivo = prompt("Motivo del ban") || "";
+    if(await chiamataAdmin("/api/admin/banna", { uid, motivo })) carica();
 }
 
 async function riattiva(uid){
-
-    if(await chiamataAdmin("/api/admin/riattiva",{
-
-        uid
-
-    })){
-
-        carica();
-
-    }
-
+    if(await chiamataAdmin("/api/admin/riattiva", { uid })) carica();
 }
 
 carica();
-
 </script>
 
-</head>
+</body>
+</html>
