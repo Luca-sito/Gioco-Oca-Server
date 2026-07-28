@@ -27,6 +27,7 @@ app.set("trust proxy", 1);
 
 const ORIGINI_CONSENTITE = [
   "https://solfriniluca1.wixstudio.com",
+  "https://solfriniluca1-wixstudio-com.filesusr.com",
   "https://gioco-oca-server.onrender.com"
 ];
 
@@ -1221,28 +1222,11 @@ function inviaAllaStanza(nomeStanza, messaggio) {
 
 function inviaListaPartite(nomeStanza) {
   if (!stanze[nomeStanza]) return;
-
   const lista = Object.values(stanze[nomeStanza].partite).map(p => ({
-    id: p.id,
-    creatore: p.creatore,
-    creatoDa: p.creatoDa,
-    tempo: p.tempo,
-    punti: p.punti,
-    modalita: p.modalita,
-    maxGiocatori: p.maxGiocatori,
-    numGiocatoriAttuali: Object.keys(p.giocatori).length,
-
-    // NUOVO: manda i giocatori presenti nella schedina
-    giocatori: Object.values(p.giocatori).map(g => ({
-      nome: g.nome,
-      avatar: g.avatar || null
-    }))
+    id: p.id, creatore: p.creatore, creatoDa: p.creatoDa, tempo: p.tempo, punti: p.punti,
+    modalita: p.modalita, maxGiocatori: p.maxGiocatori, numGiocatoriAttuali: Object.keys(p.giocatori).length
   }));
-
-  inviaAllaStanza(nomeStanza, { 
-    tipo: "listaPartite", 
-    partite: lista 
-  });
+  inviaAllaStanza(nomeStanza, { tipo: "listaPartite", partite: lista });
 }
 
 function inviaConteggioStanze() {
@@ -1399,29 +1383,25 @@ wss.on("connection", (socket, request) => {
           punti: dati.punti,
           modalita: dati.modalita,
           maxGiocatori: (!max || max < 2 || max > 8 ? 2 : max),
-          giocatori: {
-  [uid]: {
-    nome: nickname,
-    avatar: mioAvatar,
-    posizione: 0,
-    socket,
-    turniSaltati: 0,
-    stato: "in_partita"
-  }
-},
+          giocatori:
+           [uid]: {
+           nome: nickname,
+           avatar: mioAvatar,
+           posizione: 0,
+           socket,
+           turniSaltati: 0,
+           stato: "in_partita"
+          }
 
-ordineGiocatori: [uid],
-turnoAttuale: 0,
-iniziata: false,
-elaborandoTiro: false,
-invitati: dati.modalita === "privata" ? { [uid]: true } : null
-
+          ordineGiocatori: [uid], turnoAttuale: 0, iniziata: false, elaborandoTiro: false,
+          invitati: dati.modalita === "privata" ? { [uid]: true } : null
 };
 
 if (stanze[stanzaAttuale].giocatoriOnline[socketId]) {
   stanze[stanzaAttuale].giocatoriOnline[socketId].stato = "in_partita";
 }
 
+        };
         await salvaPartita({ ...stanze[stanzaAttuale].partite[partitaId], stanza: stanzaAttuale });
         inviaListaPartite(stanzaAttuale);
         return;
@@ -1446,6 +1426,8 @@ if (stanze[stanzaAttuale].giocatoriOnline[socketId]) {
   socket, 
   turniSaltati: 0 
 };
+
+stanze[stanzaAttuale].giocatoriOnline[socketId].stato = "in_partita";
 
         partita.ordineGiocatori.push(uid);
 
