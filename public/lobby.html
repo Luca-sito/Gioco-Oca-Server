@@ -360,7 +360,7 @@ function mostraPartite(lista) {
       ${partita.modalita === "privata" ? "🔒 Privata" : "🔓 Pubblica"}<br>
       ⏱ ${partita.tempo} secondi<br>
       🏆 ${partita.punti} punti<br>
-      👥 ${partita.numGiocatoriAttuali} su ${partita.maxGiocatori}
+      ${creaMiniGiocatoriPartita(partita)}
       ${bottoneHtml}
     </div>`;
   });
@@ -370,6 +370,78 @@ function mostraPartite(lista) {
     const mia = lista.find(p => p.creatoDa === mioUid && p.modalita === "privata");
     if (mia) { aspettaPropriaPartitaPrivata = false; apriModalInvito(mia.id); }
   }
+}
+
+function creaMiniGiocatoriPartita(partita){
+
+    if(!partita.giocatori || partita.giocatori.length===0)
+        return "";
+
+    let visibili = partita.giocatori.slice(0,3);
+
+    let html = `
+    <div style="
+      display:flex;
+      align-items:center;
+      gap:8px;
+      margin:10px 0;
+    ">
+    `;
+
+    visibili.forEach(g=>{
+
+        const img = g.avatar
+        ? `<img src="${g.avatar}" style="
+             width:35px;
+             height:35px;
+             border-radius:50%;
+             object-fit:cover;
+           ">`
+        :
+        `<div style="
+          width:35px;
+          height:35px;
+          border-radius:50%;
+          background:#43a047;
+          color:white;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          font-weight:bold;
+        ">
+        ${iniziale(g.nome)}
+        </div>`;
+
+
+        html += `
+        <div title="${g.nome}">
+          ${img}
+        </div>`;
+    });
+
+
+    const altri = partita.giocatori.length - 3;
+
+    if(altri>0){
+        html += `
+        <div style="
+          width:35px;
+          height:35px;
+          border-radius:50%;
+          background:#ddd;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          font-weight:bold;
+        ">
+        +${altri}
+        </div>`;
+    }
+
+
+    html += "</div>";
+
+    return html;
 }
 
 function entraPartita(id) {
