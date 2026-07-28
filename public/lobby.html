@@ -1,853 +1,1760 @@
-<!DOCTYPE html>
-<html lang="it">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gioco di Società - Lobby</title>
-<style>
-*{ box-sizing:border-box; font-family:Arial,sans-serif; }
-body{ margin:0; background:#f2f2f2; }
-.contenitore{ display:flex; height:100vh; gap:5px; padding:5px; }
-.sinistra,.centro,.destra{ background:white; border:2px solid #ff6600; border-radius:5px; overflow:hidden; }
-.sinistra{ width:25%; } .centro{ width:50%; }
-.destra{ width:25%; overflow-y:auto; }
-h2{ margin:0; padding:12px; background:#111; color:white; text-align:center; font-size:18px; }
-.box{ padding:15px; } .box p{ font-weight:bold; }
-select,button,input{ width:100%; padding:10px; margin-bottom:10px; border-radius:5px; border:1px solid #ccc; font-size:15px; }
-button{ cursor:pointer; background:#333; color:white; font-weight:bold; }
-button:hover{ opacity:0.8; }
-button:disabled{ background:#ccc; cursor:not-allowed; opacity:1; }
-.crea{ background:#ffc400; color:#000; }
-.elimina{ background:#dc3545; color:white; }
-#partite{ height:45%; overflow-y:auto; padding:10px; }
-.partita{ border:1px solid #ddd; padding:12px; margin-bottom:10px; border-radius:8px; background:#fafafa; }
-.partita button{ background:#ff6600; color:#fff; margin-top:8px; }
-.partita button:disabled{ background:#ccc; cursor:not-allowed; }
-#chat{ height:39%; margin-left:10px; border-top:1px solid #ddd; padding:10px; overflow-y:auto; background:#fff; }
-.messaggio{ padding:5px; border-bottom:1px dashed #ddd; }
-#messaggio{ width:75%; display:inline-block; }
-#messaggio+button{ width:23%; display:inline-block; }
-#top{ padding:10px; }
-#online{ color:#00a000; font-size:25px; font-weight:bold; }
-.utente-box{ padding:15px; text-align:center; }
-.avatar-container{ display:flex; justify-content:center; }
-.nickname{ font-weight:bold; margin-top:10px; }
-.nickname-riga{ font-weight:bold; }
-.dispositivo{ margin-top:8px; font-size:14px; color:#555; font-weight:bold; }
-#listaOnline{ max-height:500px; overflow-y:auto; padding:10px; }
-.giocatore-online{ display:flex; align-items:center; gap:10px; padding:10px; border-bottom:1px solid #ddd; }
-.avatar-mini{ width:40px; height:40px; border-radius:50%; object-fit:cover; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:#43a047; color:white; font-weight:bold; font-size:16px; }
-.avatar{ width:70px; height:70px; border-radius:50%; object-fit:cover; border:3px solid #222; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; font-size:25px; }
+const express = require("express");
+const http = require("http");
+const https = require("https");
+const path = require("path");
+const WebSocket = require("ws");
+const cors = require("cors");
+const cookieParser = require("cookie-parser");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const admin = require("firebase-admin");
+const multer = require("multer");
+const rateLimit = require("express-rate-limit");
+const helmet = require("helmet");
+const { v4: uuidv4 } = require("uuid");
+const { Resend } = require("resend");
 
-/* Campanella notifiche */
-#areaCampanella{ position:fixed; top:14px; right:14px; z-index:520; }
-#btnCampanella{ position:relative; width:44px; height:44px; border-radius:50%; background:#111; color:#ffd700; font-size:19px; border:2px solid #ffd700; cursor:pointer; padding:0; margin:0; }
-.badge-notifiche{ position:absolute; top:-4px; right:-4px; background:#e53935; color:white; font-size:10px; font-weight:bold; min-width:16px; height:16px; border-radius:8px; display:flex; align-items:center; justify-content:center; padding:0 3px; }
-.pannello-notifiche{ position:absolute; top:52px; right:0; width:300px; max-width:calc(100vw - 20px); background:white; border:1px solid #ccc; border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,0.25); max-height:400px; overflow-y:auto; }
-.pannello-notifiche.nascosto{ display:none; }
-.notifiche-titolo{ padding:12px 14px; font-weight:bold; background:#111; color:#ffd700; border-radius:10px 10px 0 0; }
-.notifica-riga{ padding:10px 14px; border-bottom:1px solid #eee; font-size:13px; }
-.notifica-testo{ margin-bottom:4px; }
-.notifica-data{ font-size:11px; color:#999; margin-bottom:6px; }
-.notifica-azioni{ display:flex; gap:6px; }
-.notifica-vuota{ padding:20px; text-align:center; color:#999; font-style:italic; font-size:13px; }
-.btn-mini{ padding:6px 10px; border:none; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; text-decoration:none; display:inline-block; }
-.btn-mini.btn-accetta{ background:#43a047; color:white; }
-.btn-mini.btn-rifiuta{ background:#e53935; color:white; }
-.btn-mini.btn-vai{ background:#ff6600; color:white; }
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
-/* Invito ricevuto (in alto a destra) */
-#cardInvitoRicevuto{ position:fixed; top:66px; right:14px; z-index:510; width:260px; max-width:calc(100vw - 28px); background:white; border:2px solid #ffd700; border-radius:10px; padding:14px; box-shadow:0 8px 24px rgba(0,0,0,0.3); font-size:14px; }
-#cardInvitoRicevuto.nascosto{ display:none; }
-.invito-bottoni{ display:flex; gap:8px; margin-top:10px; }
-.invito-bottoni button{ flex:1; padding:9px; border:none; border-radius:6px; font-weight:bold; cursor:pointer; margin:0; }
-.btn-rifiuta-invito{ background:#e53935; color:white; }
-.btn-accetta-invito{ background:#43a047; color:white; }
+const app = express();
 
-/* Popup piccolo su un giocatore */
-.overlay-popup-giocatore, .overlay-modal-invito{ display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.55); z-index:700; align-items:center; justify-content:center; }
-.overlay-popup-giocatore.aperto, .overlay-modal-invito.aperto{ display:flex; }
-.popup-giocatore-box{ position:relative; background:white; border-radius:12px; padding:22px; width:260px; max-width:calc(100vw - 32px); text-align:center; }
-.popup-giocatore-box .chiudi-popup{ position:absolute; top:8px; right:10px; background:none; border:none; font-size:16px; color:#999; width:auto; padding:4px; margin:0; }
-.popup-avatar-container{ display:flex; justify-content:center; margin-bottom:8px; }
-.popup-avatar{ width:64px; height:64px; border-radius:50%; object-fit:cover; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; font-size:24px; }
-.popup-nickname{ font-weight:bold; font-size:16px; margin-bottom:4px; }
-.popup-stato-online{ font-size:12px; color:#666; margin-bottom:14px; }
-.popup-azioni{ margin-bottom:10px; display:flex; gap:8px; }
-.btn-popup{ flex:1; padding:10px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; margin:0; }
-.btn-popup:disabled{ background:#ddd; color:#888; cursor:not-allowed; }
-.btn-invia-richiesta{ background:#ffc400; color:#111; }
-.btn-accetta{ background:#43a047; color:white; }
-.btn-rifiuta{ background:#e53935; color:white; }
-.btn-rimuovi-amico{ background:#7a1b1b; color:#ffab91; }
-.popup-link-profilo{ display:block; font-size:12px; color:#ff6600; text-decoration:none; margin-top:6px; }
-
-/* Modal invita giocatori (partita privata) */
-.modal-invito-box{ background:white; border-radius:12px; width:380px; max-width:calc(100vw - 32px); max-height:75vh; display:flex; flex-direction:column; overflow:hidden; }
-.modal-invito-titolo{ padding:14px 16px; background:#111; color:#ffd700; font-weight:bold; display:flex; justify-content:space-between; align-items:center; }
-.modal-invito-titolo button{ background:none; border:none; color:#ffd700; font-size:16px; cursor:pointer; width:auto; padding:0; margin:0; }
-#listaModalInvito{ overflow-y:auto; padding:10px; }
-.modal-invito-riga{ display:flex; align-items:center; gap:10px; padding:10px; border-radius:8px; cursor:pointer; }
-.modal-invito-riga:hover{ background:#f4f4f4; }
-.modal-invito-riga-invitato{ opacity:0.55; cursor:default; }
-.modal-invito-avatar{ width:38px; height:38px; border-radius:50%; object-fit:cover; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; flex-shrink:0; }
-.modal-invito-check{ margin-left:auto; font-size:12px; color:#43a047; font-weight:bold; }
-
-@media(max-width:900px){
-  .contenitore{ flex-direction:column; height:auto; }
-  .sinistra,.centro,.destra{ width:100%; }
-  #partite{ height:260px; }
-  #chat{ height:200px; width:90%; margin-left:30px; }
-  #listaOnline{ max-height:260px; }
-}
-@media(max-width:480px){
-  body{ font-size:15px; }
-  .contenitore{ padding:2px; gap:3px; }
-  .box{ padding:10px; }
-  h2{ font-size:15px; padding:9px; }
-  select,button,input{ padding:11px; font-size:15px; }
-  .utente-box{ padding:10px; }
-  .avatar{ width:56px; height:56px; font-size:20px; }
-  #listaOnline{ max-height:200px; }
-  #areaCampanella{ top:8px; right:8px; }
-  #cardInvitoRicevuto{ top:58px; right:8px; left:8px; width:auto; max-width:none; }
-  .pannello-notifiche{ width:calc(100vw - 16px); right:-6px; }
-  .modal-invito-box{ width:calc(100vw - 24px); }
-}
-</style>
-</head>
-<body>
-
-<div id="areaCampanella">
-  <button id="btnCampanella" onclick="toggleNotifiche()">🔔<span id="badgeNotifiche" class="badge-notifiche" style="display:none;">0</span></button>
-  <div id="pannelloNotifiche" class="pannello-notifiche nascosto">
-    <div class="notifiche-titolo">Notifiche</div>
-    <div id="listaNotifiche">Caricamento...</div>
-  </div>
-</div>
-
-<div id="cardInvitoRicevuto" class="nascosto">
-  <div id="testoInvitoRicevuto"></div>
-  <div class="invito-bottoni">
-    <button class="btn-rifiuta-invito" onclick="rispondiInvito(false)">Rifiuta</button>
-    <button class="btn-accetta-invito" onclick="rispondiInvito(true)">Accetta invito</button>
-  </div>
-</div>
-
-<div id="overlayPopupGiocatore" class="overlay-popup-giocatore">
-  <div class="popup-giocatore-box">
-    <button class="chiudi-popup" onclick="chiudiPopupGiocatore()">✕</button>
-    <div id="popupGiocatoreContenuto">Caricamento...</div>
-  </div>
-</div>
-
-<div id="overlayModalInvito" class="overlay-modal-invito">
-  <div class="modal-invito-box">
-    <div class="modal-invito-titolo">
-      Seleziona chi vuoi invitare
-      <button onclick="chiudiModalInvito()">✕</button>
-    </div>
-    <div id="listaModalInvito"></div>
-  </div>
-</div>
-
-<div class="contenitore">
-  <div class="sinistra">
-    <h2>Opzioni di gioco</h2>
-    <div class="box">
-      <p>Numero giocatori</p>
-      <select id="numeroGiocatori">
-        <option value="2">2 giocatori</option>
-        <option value="3">3 giocatori</option>
-        <option value="4">4 giocatori</option>
-        <option value="5">5 giocatori</option>
-        <option value="6">6 giocatori</option>
-        <option value="7">7 giocatori</option>
-        <option value="8">8 giocatori</option>
-      </select>
-
-      <p>Tempo di mossa</p>
-      <select id="tempo">
-        <option value="15">15 secondi</option>
-        <option value="30">30 secondi</option>
-        <option value="60">60 secondi</option>
-      </select>
-
-      <p>Punti partita</p>
-      <select id="punti"><option>100</option><option>150</option><option>200</option></select>
-
-      <p>Tipo partita</p>
-      <select id="tipoPartita">
-        <option value="pubblica">🔓 Pubblica</option>
-        <option value="privata">🔒 Privata (solo su invito)</option>
-      </select>
-
-      <button class="crea" onclick="creaPartita()">Crea partita</button>
-      <button class="elimina" onclick="eliminaPartita()">🗑 Elimina partita</button>
-    </div>
-  </div>
-
-  <div class="centro">
-    <h2>GIOCO DELL'OCA</h2>
-    <div id="partite"><p>Nessuna partita disponibile</p></div>
-    <h2>Chat</h2>
-    <div id="chat"></div>
-    <div style="display:flex; gap:5px;">
-  <button onclick="apriEmoji()" style="width:45px;">😊</button>
-  <input id="messaggio" placeholder="Scrivi un messaggio">
-  <button onclick="inviaChat()">Invia</button>
-</div>
-
-<div id="pannelloEmoji" style="
-  display:none;
-  padding:8px;
-  background:#fff;
-  border:1px solid #ccc;
-  border-radius:8px;
-  margin-top:5px;
-">
-  😀 😃 😄 😁 😂 😊 😉 😎 😍 😢 😡 😱 👍 👎 ❤️ 🔥 🎲 🏆 🎉 👋
-</div>
-
-  </div>
-
-  <div class="destra">
-    <h2>🏆 Top giocatori</h2>
-    <div id="top">Caricamento...</div>
-    <hr>
-    <h2 id="nomeStanza">STANZA</h2>
-    <h3 style="text-align:center;">👤 <span id="online">0</span> online &nbsp; 👥 <span id="amiciOnline">0</span> amici</h3>
-    <div id="areaUtente"></div>
-    <h2>🟢 Online in questa stanza</h2>
-    <div id="listaOnline"></div>
-  </div>
-</div>
-
-<script>
-let socket;
-const parametri = new URLSearchParams(window.location.search);
-const stanza = parametri.get("stanza") || "BAR";
-document.getElementById("nomeStanza").innerHTML = stanza;
-
-let mioUid = null;
-let mieiAmiciUid = new Set();
-let ultimaListaOnlineStanza = [];
-let aspettaPropriaPartitaPrivata = false;
-let partitaDaInvitareId = null;
-let invitoAttivoPartitaId = null;
-
-function iniziale(nome) { return (nome || "?").trim().charAt(0).toUpperCase(); }
-function coloreDaNome(nome) {
-  const colori = ["#6a2c70", "#1e40af", "#43a047", "#f57c00", "#c0ca33", "#e53935", "#00838f", "#8d6e63"];
-  let somma = 0;
-  for (let i = 0; i < nome.length; i++) somma += nome.charCodeAt(i);
-  return colori[somma % colori.length];
+function pulisciTesto(testo, massimo = 500) {
+  if (typeof testo !== "string") return "";
+  return testo.trim().replace(/[<>]/g, "").substring(0, massimo);
 }
 
-function iconaDispositivo(tipo) {
-  if (tipo === "cellulare") return "📱 Cellulare";
-  if (tipo === "tablet") return "📲 Tablet";
-  return "🖥️ Computer";
+app.set("trust proxy", 1);
+
+const ORIGINI_CONSENTITE = [
+  "https://solfriniluca1.wixstudio.com",
+  "https://solfriniluca1-wixstudio-com.filesusr.com",
+  "https://gioco-oca-server.onrender.com"
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+    if (ORIGINI_CONSENTITE.includes(origin)) return callback(null, true);
+    console.log("CORS bloccato:", origin);
+    callback(null, false);
+  },
+  credentials: true
+}));
+
+app.use(helmet({
+  crossOriginResourcePolicy: false,
+  contentSecurityPolicy: false,
+  frameguard: false
+}));
+
+app.use(express.json());
+app.use(cookieParser());
+app.use(express.static(path.join(__dirname, "public")));
+
+const server = http.createServer(app);
+const wss = new WebSocket.Server({ server });
+const PORT = process.env.PORT || 3000;
+const DOMINIO_SERVER = "https://gioco-oca-server.onrender.com";
+
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error("JWT_SECRET mancante: impostala nelle variabili d'ambiente su Render prima di avviare il server.");
 }
 
-function rilevaTipoDispositivoClient() {
-  const ua = navigator.userAgent;
+const OPZIONI_COOKIE = {
+  httpOnly: true,
+  secure: true,
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+  maxAge: 30 * 24 * 60 * 60 * 1000
+};
+
+const uploadAvatar = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 3 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (!file.mimetype.startsWith("image/")) return cb(new Error("Il file deve essere un'immagine."));
+    cb(null, true);
+  }
+});
+
+const limiteLogin = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { errore: "Troppi tentativi, riprova tra qualche minuto." },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+const limiteContatti = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  message: { errore: "Hai inviato troppe richieste, riprova più tardi." }
+});
+const limiteMessaggiPrivati = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  message: { errore: "Stai inviando messaggi troppo velocemente, rallenta un po'." }
+});
+const limiteAmici = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 30,
+  message: { errore: "Troppe richieste di amicizia in poco tempo, rallenta un po'." }
+});
+
+// ===== FIREBASE ADMIN =====
+let db = null;
+try {
+  const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+    databaseURL: "https://giochi-societa-e8add-default-rtdb.europe-west1.firebasedatabase.app"
+  });
+  db = admin.database();
+  console.log("Firebase Admin inizializzato correttamente.");
+} catch (e) {
+  console.error("ATTENZIONE: Firebase Admin NON inizializzato:", e.message);
+}
+
+function preparaGiocatoriPerFirebase(giocatori) {
+  const risultato = {};
+  for (const uid in giocatori) {
+    risultato[uid] = {
+      nome: giocatori[uid].nome,
+      posizione: giocatori[uid].posizione,
+      turniSaltati: giocatori[uid].turniSaltati
+    };
+  }
+  return risultato;
+}
+
+async function salvaPartita(partita) {
+  if (!db) return;
+  await db.ref("partite/" + partita.id).set({
+    id: partita.id,
+    stanza: partita.stanza,
+    creatore: partita.creatore,
+    creatoDa: partita.creatoDa,
+    tempo: partita.tempo,
+    punti: partita.punti,
+    modalita: partita.modalita,
+    maxGiocatori: partita.maxGiocatori,
+    giocatori: preparaGiocatoriPerFirebase(partita.giocatori),
+    ordineGiocatori: partita.ordineGiocatori,
+    turnoAttuale: partita.turnoAttuale,
+    iniziata: partita.iniziata,
+    iniziataIl: partita.iniziataIl || null,
+    aggiornataIl: Date.now()
+  });
+}
+
+async function caricaPartite() {
+  if (!db) return {};
+  const snap = await db.ref("partite").once("value");
+  return snap.val() || {};
+}
+
+async function aggiornaStatoPartita(partitaId, dati) {
+  if (!db) return;
+  await db.ref("partite/" + partitaId).update({ ...dati, aggiornataIl: Date.now() });
+}
+
+async function rimuoviPartita(nomeStanza, partitaId) {
+  if (stanze[nomeStanza]) delete stanze[nomeStanza].partite[partitaId];
+  if (db) {
+    try { await db.ref("partite/" + partitaId).remove(); }
+    catch (e) { console.error("Errore rimozione partita da Firebase:", e.message); }
+  }
+}
+
+// ===== LIVELLI, XP, BADGE =====
+const SOGLIE_LIVELLO = [0, 300, 700, 1200, 1800, 2500, 3300, 4200, 5200, 6300];
+const SOGLIA_VELOCISTA_SECONDI = 300;
+
+function calcolaLivello(xp) {
+  let livello = 1;
+  for (let i = 0; i < SOGLIE_LIVELLO.length; i++) {
+    if (xp >= SOGLIE_LIVELLO[i]) livello = i + 1;
+    else break;
+  }
+  const sogliaAttuale = SOGLIE_LIVELLO[livello - 1];
+  const sogliaProssima = SOGLIE_LIVELLO[livello] !== undefined ? SOGLIE_LIVELLO[livello] : null;
+  return { livello, sogliaAttuale, sogliaProssima };
+}
+
+function calcolaBadge(utente) {
+  const badge = [];
+  const vinte = utente.partiteVinte || 0;
+  const giocate = utente.partiteGiocate || 0;
+  const xp = utente.xp || 0;
+  const streakMax = utente.streakVittorieMassima || 0;
+  const vittoriaVeloce = utente.vittoriaPiuVeloceSecondi;
+
+  if (vinte >= 10) badge.push({ icona: "🥉", nome: "Prime 10 vittorie" });
+  if (giocate >= 100) badge.push({ icona: "🥈", nome: "100 partite giocate" });
+  if (xp >= 500) badge.push({ icona: "🥇", nome: "500 punti XP" });
+  if (streakMax >= 20) badge.push({ icona: "👑", nome: "20 vittorie consecutive" });
+  if (vittoriaVeloce != null && vittoriaVeloce < SOGLIA_VELOCISTA_SECONDI) badge.push({ icona: "🏃", nome: "Velocista" });
+
+  return badge;
+}
+
+function xpVincita() { return 50 + Math.floor(Math.random() * 151); }
+function xpSconfitta() { return 20 + Math.floor(Math.random() * 61); }
+
+function idConversazione(uidA, uidB) {
+  return [uidA, uidB].sort().join("_");
+}
+
+async function concludiPartita(partita, vincitoreUid, nomeStanza, elencoPartecipanti) {
+  if (!db) return;
+  try {
+    const partecipanti = elencoPartecipanti || partita.ordineGiocatori.map(id => ({
+      uid: id, nome: partita.giocatori[id] ? partita.giocatori[id].nome : "?"
+    }));
+
+    const durataSecondi = partita.iniziataIl ? Math.round((Date.now() - partita.iniziataIl) / 1000) : null;
+    const xpVinti = xpVincita();
+    const nomeVincitore = (partecipanti.find(p => p.uid === vincitoreUid) || {}).nome || null;
+
+    for (const p of partecipanti) {
+      const snap = await db.ref("utenti/" + p.uid).once("value");
+      const u = snap.val();
+      if (!u) continue;
+
+      if (p.uid === vincitoreUid) {
+        const nuovoStreak = (u.streakVittorieAttuale || 0) + 1;
+        const nuovoStreakMassimo = Math.max(u.streakVittorieMassima || 0, nuovoStreak);
+        const aggiornamenti = {
+          partiteGiocate: admin.database.ServerValue.increment(1),
+          partiteVinte: admin.database.ServerValue.increment(1),
+          streakVittorieAttuale: nuovoStreak,
+          streakVittorieMassima: nuovoStreakMassimo,
+          xp: (u.xp || 0) + xpVinti
+        };
+        if (durataSecondi !== null && (u.vittoriaPiuVeloceSecondi == null || durataSecondi < u.vittoriaPiuVeloceSecondi)) {
+          aggiornamenti.vittoriaPiuVeloceSecondi = durataSecondi;
+        }
+        await db.ref("utenti/" + p.uid).update(aggiornamenti);
+      } else {
+        const persi = xpSconfitta();
+        await db.ref("utenti/" + p.uid).update({
+          partiteGiocate: admin.database.ServerValue.increment(1),
+          streakVittorieAttuale: 0,
+          xp: Math.max(0, (u.xp || 0) - persi)
+        });
+      }
+    }
+
+    const refStorico = db.ref("storicoPartite").push();
+    await refStorico.set({
+      data: Date.now(),
+      stanza: nomeStanza,
+      vincitoreUid,
+      vincitoreNome: nomeVincitore,
+      durataSecondi,
+      xpVincitore: xpVinti,
+      partecipanti
+    });
+  } catch (e) {
+    console.error("Errore conclusione partita:", e.message);
+  }
+}
+
+// ===== TOKEN =====
+function creaToken(uid, nickname, ruolo) {
+  return jwt.sign({ uid, nickname, ruolo }, JWT_SECRET, { expiresIn: "30d" });
+}
+function verificaToken(token) {
+  if (!token) return null;
+  try { return jwt.verify(token, JWT_SECRET); } catch (e) { return null; }
+}
+function estraiTokenHeader(req) {
+  if (req.cookies && req.cookies.token) return req.cookies.token;
+  const header = req.headers.authorization || "";
+  const parti = header.split(" ");
+  return parti.length === 2 ? parti[1] : null;
+}
+function estraiTokenDaCookieHeader(cookieHeaderGrezzo) {
+  if (!cookieHeaderGrezzo) return null;
+  const parti = cookieHeaderGrezzo.split(";").map(p => p.trim());
+  for (const parte of parti) {
+    const idx = parte.indexOf("=");
+    if (idx === -1) continue;
+    const chiave = parte.substring(0, idx);
+    const valore = parte.substring(idx + 1);
+    if (chiave === "token") return decodeURIComponent(valore);
+  }
+  return null;
+}
+
+async function richiediAuth(req, res, next) {
+  const dati = verificaToken(estraiTokenHeader(req));
+  if (!dati) return res.status(401).json({ errore: "Devi effettuare il login." });
+  req.utente = dati;
+  next();
+}
+async function richiediAdmin(req, res, next) {
+  const dati = verificaToken(estraiTokenHeader(req));
+  if (!dati) return res.status(401).json({ errore: "Devi effettuare il login." });
+  if (dati.ruolo !== "admin") return res.status(403).json({ errore: "Accesso riservato agli amministratori." });
+  req.utenteAdmin = dati;
+  next();
+}
+
+async function trovaUtentePerEmail(emailLower) {
+  const snap = await db.ref("utenti").orderByChild("emailLower").equalTo(emailLower).once("value");
+  if (!snap.exists()) return null;
+  const val = snap.val();
+  const uid = Object.keys(val)[0];
+  return { uid, ...val[uid] };
+}
+async function trovaUtentePerTokenVerifica(token) {
+  const snap = await db.ref("utenti").orderByChild("tokenVerificaEmail").equalTo(token).once("value");
+  if (!snap.exists()) return null;
+  const dati = snap.val();
+  const uid = Object.keys(dati)[0];
+  return { uid, ...dati[uid] };
+}
+async function trovaUtentePerNickname(nicknameLower) {
+  const snap = await db.ref("utenti").orderByChild("nicknameLower").equalTo(nicknameLower).once("value");
+  if (!snap.exists()) return null;
+  const val = snap.val();
+  const uid = Object.keys(val)[0];
+  return { uid, ...val[uid] };
+}
+
+// Relazione di amicizia tra due utenti: "amici" | "richiesta_inviata" | "richiesta_ricevuta" | "nessuno" | "se_stesso"
+async function statoAmicizia(mioUid, altroUid) {
+  if (mioUid === altroUid) return "se_stesso";
+  const [snapAmici, snapInviata, snapRicevuta] = await Promise.all([
+    db.ref(`utenti/${mioUid}/amici/${altroUid}`).once("value"),
+    db.ref(`utenti/${mioUid}/richiesteInviate/${altroUid}`).once("value"),
+    db.ref(`utenti/${mioUid}/richiesteRicevute/${altroUid}`).once("value")
+  ]);
+  if (snapAmici.exists()) return "amici";
+  if (snapInviata.exists()) return "richiesta_inviata";
+  if (snapRicevuta.exists()) return "richiesta_ricevuta";
+  return "nessuno";
+}
+
+async function inviaEmailVerifica(emailDestinatario, nickname, token) {
+  if (!resend) return;
+  const linkVerifica = DOMINIO_SERVER + "/api/verifica-email/" + token;
+  try {
+    await resend.emails.send({
+      from: "Giochi Società <onboarding@resend.dev>",
+      to: emailDestinatario,
+      subject: "Verifica il tuo account - Giochi Società",
+      html: `
+        <h2>Ciao ${nickname}</h2>
+        <p>Per attivare il tuo account su Giochi Società clicca qui:</p>
+        <a href="${linkVerifica}">Verifica la mia email</a>
+        <p>Se non hai richiesto tu questa registrazione, ignora pure questa email.</p>
+      `
+    });
+  } catch (erroreEmail) {
+    console.error("Errore invio email verifica:", erroreEmail);
+  }
+}
+
+// ===== API REGISTRAZIONE / LOGIN =====
+app.post("/api/registrati", limiteLogin, async (req, res) => {
+  if (!db) return res.status(500).json({ errore: "Servizio account non disponibile al momento." });
+  try {
+    const { email, nickname, password } = req.body;
+
+    if (!email || !nickname || !password) {
+      return res.status(400).json({ errore: "Compila tutti i campi." });
+    }
+
+    const nicknamePulito = pulisciTesto(nickname, 20);
+
+    if (nicknamePulito.length < 5 || nicknamePulito.length > 15) {
+      return res.status(400).json({ errore: "Il nickname deve contenere da 5 a 15 caratteri." });
+    }
+    if (!/^[a-zA-Z0-9_ ]+$/.test(nicknamePulito)) {
+      return res.status(400).json({ errore: "Il nickname contiene caratteri non consentiti." });
+    }
+    if (password.length < 6 || password.length > 100) {
+      return res.status(400).json({ errore: "La password deve avere tra 6 e 100 caratteri." });
+    }
+
+    const emailPulita = pulisciTesto(email, 100).toLowerCase();
+    const formatoEmailValido = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(emailPulita);
+    if (!formatoEmailValido) {
+      return res.status(400).json({ errore: "Inserisci un indirizzo email valido." });
+    }
+
+    const nicknameLower = nicknamePulito.toLowerCase();
+
+    if (await trovaUtentePerEmail(emailPulita)) return res.status(400).json({ errore: "Questa email è già registrata." });
+    if (await trovaUtentePerNickname(nicknameLower)) return res.status(400).json({ errore: "Questo nickname è già in uso." });
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    const nuovoRef = db.ref("utenti").push();
+    const uid = nuovoRef.key;
+    const tokenVerifica = uuidv4();
+
+    await nuovoRef.set({
+      partiteVinte: 0,
+      partiteGiocate: 0,
+      puntiTotali: 0,
+      xp: 0,
+      streakVittorieAttuale: 0,
+      streakVittorieMassima: 0,
+      vittoriaPiuVeloceSecondi: null,
+      email: emailPulita,
+      emailLower: emailPulita,
+      emailVerificata: false,
+      tokenVerificaEmail: tokenVerifica,
+      nickname: nicknamePulito,
+      nicknameLower,
+      passwordHash,
+      avatar: null,
+      ruolo: "utente",
+      stato: "attivo",
+      sospesoFino: null,
+      avvisi: [],
+      creatoIl: Date.now(),
+      ultimoAccesso: null
+    });
+
+    await inviaEmailVerifica(emailPulita, nicknamePulito, tokenVerifica);
+
+    res.json({ messaggio: "Registrazione completata! Controlla la tua email per attivare l'account.", email: emailPulita });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ errore: "Errore del server, riprova." });
+  }
+});
+
+app.get("/api/verifica-email/:token", async (req, res) => {
+  if (!db) return res.send("Servizio non disponibile.");
+  try {
+    const utente = await trovaUtentePerTokenVerifica(req.params.token);
+
+    const paginaBase = (titolo, testo) => `
+      <!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><title>${titolo}</title>
+      <style>
+        body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#101820;font-family:Arial,sans-serif;color:#e8e8e8;}
+        .box{background:#1e2a38;border:2px solid #ffd700;border-radius:14px;padding:36px;max-width:400px;text-align:center;}
+        h2{color:#ffd700;margin-top:0;}
+      </style></head><body><div class="box"><h2>${titolo}</h2><p>${testo}</p></div></body></html>
+`;
+
+    if (!utente) {
+      return res.send(paginaBase("Link non valido", "Questo link di verifica non è valido o è già stato utilizzato."));
+    }
+
+    await db.ref("utenti/" + utente.uid).update({ emailVerificata: true, tokenVerificaEmail: null });
+
+    res.send(paginaBase("Email verificata! 🎉", "Il tuo account è ora attivo. Puoi accedere ritornando nella pagina precedente e cliccando su Accedi"));
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Errore durante la verifica.");
+  }
+});
+
+app.post("/api/rinvia-verifica", limiteContatti, async (req, res) => {
+  if (!db) return res.status(500).json({ errore: "Servizio non disponibile." });
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ errore: "Inserisci la tua email." });
+
+    const emailPulita = pulisciTesto(email, 100).toLowerCase();
+    const utente = await trovaUtentePerEmail(emailPulita);
+
+    const rispostaGenerica = { messaggio: "Se l'indirizzo è registrato e non ancora verificato, ti abbiamo inviato una nuova email." };
+
+    if (!utente || utente.emailVerificata) return res.json(rispostaGenerica);
+
+    const nuovoToken = uuidv4();
+    await db.ref("utenti/" + utente.uid).update({ tokenVerificaEmail: nuovoToken });
+    await inviaEmailVerifica(utente.email, utente.nickname, nuovoToken);
+
+    res.json(rispostaGenerica);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ errore: "Errore del server, riprova." });
+  }
+});
+
+app.post("/api/login", limiteLogin, async (req, res) => {
+  if (!db) return res.status(500).json({ errore: "Servizio account non disponibile al momento." });
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) return res.status(400).json({ errore: "Inserisci email e password." });
+
+    const emailLogin = pulisciTesto(email, 100).toLowerCase();
+    const utente = await trovaUtentePerEmail(emailLogin);
+    if (!utente) return res.status(400).json({ errore: "Email o password errati." });
+
+    const passwordOk = await bcrypt.compare(password, utente.passwordHash);
+    if (!passwordOk) return res.status(400).json({ errore: "Email o password errati." });
+
+    if (utente.stato === "bannato") {
+      return res.status(403).json({ errore: "Il tuo account è stato bannato." });
+    }
+
+    if (utente.stato === "sospeso") {
+      if (utente.sospesoFino && utente.sospesoFino > Date.now()) {
+        const dataFine = new Date(utente.sospesoFino).toLocaleString("it-IT");
+        return res.status(403).json({ errore: "Account sospeso fino al " + dataFine + "." });
+      } else {
+        await db.ref("utenti/" + utente.uid).update({ stato: "attivo", sospesoFino: null });
+        utente.stato = "attivo";
+      }
+    }
+
+    if (utente.emailVerificata === false) {
+      return res.status(403).json({ errore: "Devi verificare la tua email prima di accedere.", nonVerificata: true });
+    }
+
+    await db.ref("utenti/" + utente.uid).update({ ultimoAccesso: Date.now() });
+
+    const token = creaToken(utente.uid, utente.nickname, utente.ruolo || "utente");
+    res.cookie("token", token, OPZIONI_COOKIE);
+    res.json({ nickname: utente.nickname, ruolo: utente.ruolo || "utente" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ errore: "Errore del server, riprova." });
+  }
+});
+
+app.post("/api/logout", (req, res) => {
+  res.clearCookie("token", OPZIONI_COOKIE);
+  res.json({ ok: true });
+});
+
+app.get("/api/me", richiediAuth, async (req, res) => {
+  if (!db) return res.status(500).json({ errore: "Servizio account non disponibile." });
+  try {
+    const snap = await db.ref("utenti/" + req.utente.uid).once("value");
+    const utente = snap.val();
+    if (!utente) return res.status(404).json({ errore: "Utente non trovato." });
+
+    const { livello, sogliaAttuale, sogliaProssima } = calcolaLivello(utente.xp || 0);
+
+    res.json({
+      uid: req.utente.uid,
+      nickname: utente.nickname,
+      email: utente.email,
+      avatar: utente.avatar || null,
+      ruolo: utente.ruolo || "utente",
+      stato: utente.stato || "attivo",
+      sospesoFino: utente.sospesoFino || null,
+      avvisi: utente.avvisi || [],
+      partiteVinte: utente.partiteVinte || 0,
+      partiteGiocate: utente.partiteGiocate || 0,
+      creatoIl: utente.creatoIl || null,
+      ultimoAccesso: utente.ultimoAccesso || null,
+      xp: utente.xp || 0,
+      livello,
+      sogliaAttuale,
+      sogliaProssima,
+      streakVittorieMassima: utente.streakVittorieMassima || 0,
+      vittoriaPiuVeloceSecondi: utente.vittoriaPiuVeloceSecondi ?? null,
+      badge: calcolaBadge(utente)
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ errore: "Errore del server." });
+  }
+});
+
+app.post("/api/modifica-nickname", richiediAuth, async (req, res) => {
+  if (!db) return res.status(500).json({ errore: "Servizio non disponibile." });
+  try {
+    const { nickname } = req.body;
+    if (!nickname || !nickname.trim()) return res.status(400).json({ errore: "Inserisci un nickname." });
+
+    const nuovoNickname = pulisciTesto(nickname, 20);
+
+    if (nuovoNickname.length < 5 || nuovoNickname.length > 15) {
+      return res.status(400).json({ errore: "Il nickname deve contenere da 5 a 15 caratteri." });
+    }
+    if (!/^[a-zA-Z0-9_ ]+$/.test(nuovoNickname)) {
+      return res.status(400).json({ errore: "Nickname non valido." });
+    }
+
+    const nicknameLower = nuovoNickname.toLowerCase();
+
+    const esistente = await trovaUtentePerNickname(nicknameLower);
+    if (esistente && esistente.uid !== req.utente.uid) {
+      return res.status(400).json({ errore: "Questo nickname è già in uso." });
+    }
+
+    await db.ref("utenti/" + req.utente.uid).update({ nickname: nuovoNickname, nicknameLower });
+
+    const nuovoToken = creaToken(req.utente.uid, nuovoNickname, req.utente.ruolo);
+    res.cookie("token", nuovoToken, OPZIONI_COOKIE);
+
+    res.json({ nickname: nuovoNickname });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ errore: "Errore del server, riprova." });
+  }
+});
+
+app.post("/api/carica-avatar", richiediAuth, uploadAvatar.single("avatar"), async (req, res) => {
+  if (!db) return res.status(500).json({ errore: "Servizio non disponibile." });
+  try {
+    if (!req.file) return res.status(400).json({ errore: "Nessuna immagine ricevuta." });
+
+    const base64 = req.file.buffer.toString("base64");
+    const dataUri = `data:${req.file.mimetype};base64,${base64}`;
+
+    await db.ref("utenti/" + req.utente.uid).update({ avatar: dataUri });
+
+    res.json({ avatar: dataUri });
+  } catch (err) {
+    console.error(err);
+    res.status(400).json({ errore: err.message || "Errore durante il caricamento." });
+  }
+});
+
+app.get("/api/top-giocatori", async (req, res) => {
+  try {
+    if (!db) return res.json({ giocatori: [] });
+    const snap = await db.ref("utenti").once("value");
+    const utenti = snap.val() || {};
+    const top = Object.values(utenti)
+      .map(u => ({ nickname: u.nickname || "Sconosciuto", vinte: u.partiteVinte || 0, giocate: u.partiteGiocate || 0 }))
+      .sort((a, b) => (b.vinte !== a.vinte ? b.vinte - a.vinte : b.giocate - a.giocate))
+      .slice(0, 10);
+    res.json({ giocatori: top });
+  } catch (e) {
+    console.error("Errore classifica:", e);
+    res.status(500).json({ giocatori: [] });
+  }
+});
+
+app.post("/api/contatti", limiteContatti, async (req, res) => {
+  if (!db) return res.status(500).json({ errore: "Servizio non disponibile al momento." });
+  try {
+    const { categoria, messaggio } = req.body;
+    let { nickname, email } = req.body;
+
+    if (!messaggio || !messaggio.trim()) {
+      return res.status(400).json({ errore: "Scrivi un messaggio prima di inviare." });
+    }
+
+    const messaggioPulito = pulisciTesto(messaggio, 1000);
+
+    const datiToken = verificaToken(estraiTokenHeader(req));
+    let uidMittente = null;
+    if (datiToken) {
+      uidMittente = datiToken.uid;
+      const snap = await db.ref("utenti/" + datiToken.uid).once("value");
+      const utenteDb = snap.val();
+      if (utenteDb) { nickname = utenteDb.nickname; email = utenteDb.email; }
+    }
+
+    if (!nickname || !nickname.trim() || !email || !email.trim()) {
+      return res.status(400).json({ errore: "Nickname ed email sono obbligatori." });
+    }
+
+    const nuovoRef = db.ref("contatti").push();
+    await nuovoRef.set({
+      nickname: nickname.trim(), email: email.trim(), categoria: categoria || "Altro",
+      messaggio: messaggioPulito, uidMittente, letto: false, data: Date.now()
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ errore: "Errore durante l'invio, riprova." });
+  }
+});
+
+// ===== PROFILO PUBBLICO, STORICO, LIVELLI, BADGE =====
+app.get("/api/profilo-pubblico/:nickname", richiediAuth, async (req, res) => {
+  if (!db) return res.status(500).json({ errore: "Servizio non disponibile." });
+  try {
+    const nicknameLower = pulisciTesto(req.params.nickname, 20).toLowerCase();
+    const utente = await trovaUtentePerNickname(nicknameLower);
+    if (!utente) return res.status(404).json({ errore: "Utente non trovato." });
+
+    const giocate = utente.partiteGiocate || 0;
+    const vinte = utente.partiteVinte || 0;
+    const winRate = giocate > 0 ? Math.round((vinte / giocate) * 100) : 0;
+    const { livello, sogliaAttuale, sogliaProssima } = calcolaLivello(utente.xp || 0);
+    const relazioneAmicizia = await statoAmicizia(req.utente.uid, utente.uid);
+
+    res.json({
+      uid: utente.uid,
+      nickname: utente.nickname,
+      avatar: utente.avatar || null,
+      creatoIl: utente.creatoIl || null,
+      ultimoAccesso: utente.ultimoAccesso || null,
+      partiteVinte: vinte,
+      partiteGiocate: giocate,
+      winRate,
+      xp: utente.xp || 0,
+      livello,
+      sogliaAttuale,
+      sogliaProssima,
+      streakVittorieMassima: utente.streakVittorieMassima || 0,
+      vittoriaPiuVeloceSecondi: utente.vittoriaPiuVeloceSecondi ?? null,
+      badge: calcolaBadge(utente),
+      statoAmicizia: relazioneAmicizia
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ errore: "Errore del server." });
+  }
+});
+
+app.get("/api/storico", richiediAuth, async (req, res) => {
+  if (!db) return res.status(500).json({ errore: "Servizio non disponibile." });
+  try {
+    let uidFiltro = req.utente.uid;
+    let nicknameFiltro = req.utente.nickname;
+
+    if (req.query.nickname) {
+      const nicknameLower = pulisciTesto(req.query.nickname, 20).toLowerCase();
+      const u = await trovaUtentePerNickname(nicknameLower);
+      if (!u) return res.status(404).json({ errore: "Utente non trovato." });
+      uidFiltro = u.uid;
+      nicknameFiltro = u.nickname;
+    }
+
+    const snap = await db.ref("storicoPartite").once("value");
+    const tutte = snap.val() || {};
+
+    const partite = Object.values(tutte)
+      .filter(m => m.partecipanti && m.partecipanti.some(p => p.uid === uidFiltro))
+      .sort((a, b) => b.data - a.data)
+      .slice(0, 50);
+
+    res.json({ uid: uidFiltro, nickname: nicknameFiltro, partite });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ errore: "Errore del server." });
+  }
+});
+
+// ===== MESSAGGI PRIVATI =====
+app.get("/api/messaggi-privati/:altroUid", richiediAuth, async (req, res) => {
+  if (!db) return res.status(500).json({ errore: "Servizio non disponibile." });
+  try {
+    const altroUid = req.params.altroUid;
+    const idConv = idConversazione(req.utente.uid, altroUid);
+    const snap = await db.ref("messaggiPrivati/" + idConv).once("value");
+    const messaggi = snap.val() || {};
+    const lista = Object.entries(messaggi)
+      .map(([id, m]) => ({ id, ...m }))
+      .sort((a, b) => a.data - b.data);
+
+    const aggiornamenti = {};
+    Object.entries(messaggi).forEach(([id, m]) => {
+      if (m.aUid === req.utente.uid && !m.letto) aggiornamenti[id + "/letto"] = true;
+    });
+    if (Object.keys(aggiornamenti).length) {
+      await db.ref("messaggiPrivati/" + idConv).update(aggiornamenti);
+    }
+
+    res.json({ messaggi: lista });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ errore: "Errore del server." });
+  }
+});
+
+app.post("/api/messaggi-privati", limiteMessaggiPrivati, richiediAuth, async (req, res) => {
+  if (!db) return res.status(500).json({ errore: "Servizio non disponibile." });
+  try {
+    const { destinatarioUid, testo } = req.body;
+    if (!destinatarioUid || !testo || !testo.trim()) return res.status(400).json({ errore: "Dati mancanti." });
+    if (destinatarioUid === req.utente.uid) return res.status(400).json({ errore: "Non puoi scrivere a te stesso." });
+
+    const testoPulito = pulisciTesto(testo, 500);
+    if (!testoPulito) return res.status(400).json({ errore: "Messaggio vuoto." });
+
+    const snapMittente = await db.ref("utenti/" + req.utente.uid).once("value");
+    const mittente = snapMittente.val();
+    const snapDestinatario = await db.ref("utenti/" + destinatarioUid).once("value");
+    const destinatario = snapDestinatario.val();
+    if (!mittente || !destinatario) return res.status(404).json({ errore: "Utente non trovato." });
+
+    const idConv = idConversazione(req.utente.uid, destinatarioUid);
+    const nuovoRef = db.ref("messaggiPrivati/" + idConv).push();
+    const messaggio = {
+      daUid: req.utente.uid,
+      daNome: mittente.nickname,
+      aUid: destinatarioUid,
+      aNome: destinatario.nickname,
+      testo: testoPulito,
+      data: Date.now(),
+      letto: false
+    };
+    await nuovoRef.set(messaggio);
+
+    res.json({ ok: true, messaggio: { id: nuovoRef.key, ...messaggio } });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ errore: "Errore durante l'invio, riprova." });
+  }
+});
+
+app.get("/api/conversazioni", richiediAuth, async (req, res) => {
+  if (!db) return res.status(500).json({ errore: "Servizio non disponibile." });
+  try {
+    const snap = await db.ref("messaggiPrivati").once("value");
+    const tutte = snap.val() || {};
+    const mieUid = req.utente.uid;
+    const conversazioni = {};
+
+    Object.entries(tutte).forEach(([idConv, messaggi]) => {
+      if (!idConv.split("_").includes(mieUid)) return;
+      const lista = Object.values(messaggi);
+      if (!lista.length) return;
+      const ultimo = lista.sort((a, b) => b.data - a.data)[0];
+      const altroUid = ultimo.daUid === mieUid ? ultimo.aUid : ultimo.daUid;
+      const altroNome = ultimo.daUid === mieUid ? ultimo.aNome : ultimo.daNome;
+      const nonLetti = lista.filter(m => m.aUid === mieUid && !m.letto).length;
+      conversazioni[altroUid] = { altroUid, altroNome, ultimoTesto: ultimo.testo, ultimaData: ultimo.data, nonLetti };
+    });
+
+    const lista = Object.values(conversazioni).sort((a, b) => b.ultimaData - a.ultimaData);
+    res.json({ conversazioni: lista });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ errore: "Errore del server." });
+  }
+});
+
+// ===== AMICI =====
+app.post("/api/amici/richiedi", limiteAmici, richiediAuth, async (req, res) => {
+  if (!db) return res.status(500).json({ errore: "Servizio non disponibile." });
+  try {
+    const { destinatarioUid } = req.body;
+    if (!destinatarioUid) return res.status(400).json({ errore: "Dati mancanti." });
+    if (destinatarioUid === req.utente.uid) return res.status(400).json({ errore: "Non puoi inviare una richiesta a te stesso." });
+
+    const snapDest = await db.ref("utenti/" + destinatarioUid).once("value");
+    const destinatario = snapDest.val();
+    if (!destinatario) return res.status(404).json({ errore: "Utente non trovato." });
+
+    const stato = await statoAmicizia(req.utente.uid, destinatarioUid);
+    if (stato === "amici") return res.status(400).json({ errore: "Siete già amici." });
+    if (stato === "richiesta_inviata") return res.json({ ok: true });
+    if (stato === "richiesta_ricevuta") return res.status(400).json({ errore: "Questo utente ti ha già inviato una richiesta: accettala dal suo profilo." });
+
+    const mioNickname = req.utente.nickname;
+    const ora = Date.now();
+
+    await db.ref().update({
+      [`utenti/${req.utente.uid}/richiesteInviate/${destinatarioUid}`]: { aNome: destinatario.nickname, data: ora },
+      [`utenti/${destinatarioUid}/richiesteRicevute/${req.utente.uid}`]: { daNome: mioNickname, data: ora }
+    });
+
+    await db.ref("utenti/" + destinatarioUid + "/notifiche").push({
+      tipo: "richiestaAmicizia",
+      testo: `${mioNickname} ti ha inviato una richiesta di amicizia`,
+      data: ora,
+      letta: false,
+      daUid: req.utente.uid,
+      daNome: mioNickname
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ errore: "Errore del server, riprova." });
+  }
+});
+
+app.post("/api/amici/accetta", richiediAuth, async (req, res) => {
+  if (!db) return res.status(500).json({ errore: "Servizio non disponibile." });
+  try {
+    const { daUid } = req.body;
+    if (!daUid) return res.status(400).json({ errore: "Dati mancanti." });
+
+    const snapRichiesta = await db.ref("utenti/" + req.utente.uid + "/richiesteRicevute/" + daUid).once("value");
+    if (!snapRichiesta.exists()) return res.status(400).json({ errore: "Nessuna richiesta da questo utente." });
+
+    const mioNickname = req.utente.nickname;
+
+    await db.ref().update({
+      [`utenti/${req.utente.uid}/richiesteRicevute/${daUid}`]: null,
+      [`utenti/${daUid}/richiesteInviate/${req.utente.uid}`]: null,
+      [`utenti/${req.utente.uid}/amici/${daUid}`]: true,
+      [`utenti/${daUid}/amici/${req.utente.uid}`]: true
+    });
+
+    await db.ref("utenti/" + daUid + "/notifiche").push({
+      tipo: "amiciziaAccettata",
+      testo: `${mioNickname} ha accettato la tua richiesta di amicizia`,
+      data: Date.now(),
+      letta: false
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ errore: "Errore del server, riprova." });
+  }
+});
+
+app.post("/api/amici/rifiuta", richiediAuth, async (req, res) => {
+  if (!db) return res.status(500).json({ errore: "Servizio non disponibile." });
+  try {
+    const { daUid } = req.body;
+    if (!daUid) return res.status(400).json({ errore: "Dati mancanti." });
+    await db.ref().update({
+      [`utenti/${req.utente.uid}/richiesteRicevute/${daUid}`]: null,
+      [`utenti/${daUid}/richiesteInviate/${req.utente.uid}`]: null
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ errore: "Errore del server, riprova." });
+  }
+});
+
+app.post("/api/amici/rimuovi", richiediAuth, async (req, res) => {
+  if (!db) return res.status(500).json({ errore: "Servizio non disponibile." });
+  try {
+    const { altroUid } = req.body;
+    if (!altroUid) return res.status(400).json({ errore: "Dati mancanti." });
+    await db.ref().update({
+      [`utenti/${req.utente.uid}/amici/${altroUid}`]: null,
+      [`utenti/${altroUid}/amici/${req.utente.uid}`]: null
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ errore: "Errore del server, riprova." });
+  }
+});
+
+app.get("/api/amici", richiediAuth, async (req, res) => {
+  if (!db) return res.status(500).json({ errore: "Servizio non disponibile." });
+  try {
+    const snap = await db.ref("utenti/" + req.utente.uid + "/amici").once("value");
+    const mappa = snap.val() || {};
+    const uids = Object.keys(mappa);
+    const amici = await Promise.all(uids.map(async (uidAmico) => {
+      const s = await db.ref("utenti/" + uidAmico).once("value");
+      const u = s.val();
+      return u ? { uid: uidAmico, nickname: u.nickname, avatar: u.avatar || null } : null;
+    }));
+    res.json({ amici: amici.filter(Boolean) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ errore: "Errore del server." });
+  }
+});
+
+// ===== NOTIFICHE =====
+app.get("/api/notifiche", richiediAuth, async (req, res) => {
+  if (!db) return res.status(500).json({ errore: "Servizio non disponibile." });
+  try {
+    const snap = await db.ref("utenti/" + req.utente.uid + "/notifiche").once("value");
+    const tutte = snap.val() || {};
+    const lista = Object.entries(tutte)
+      .map(([id, n]) => ({ id, ...n }))
+      .sort((a, b) => b.data - a.data)
+      .slice(0, 30);
+    const nonLette = lista.filter(n => !n.letta).length;
+    res.json({ notifiche: lista, nonLette });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ errore: "Errore del server." });
+  }
+});
+
+app.post("/api/notifiche/segna-lette", richiediAuth, async (req, res) => {
+  if (!db) return res.status(500).json({ errore: "Servizio non disponibile." });
+  try {
+    const snap = await db.ref("utenti/" + req.utente.uid + "/notifiche").once("value");
+    const tutte = snap.val() || {};
+    const aggiornamenti = {};
+    Object.keys(tutte).forEach(id => { if (!tutte[id].letta) aggiornamenti[id + "/letta"] = true; });
+    if (Object.keys(aggiornamenti).length) {
+      await db.ref("utenti/" + req.utente.uid + "/notifiche").update(aggiornamenti);
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ errore: "Errore del server." });
+  }
+});
+
+// ===== API ADMIN =====
+app.get("/api/admin/utenti", richiediAdmin, async (req, res) => {
+  if (!db) return res.status(500).json({ errore: "Database non disponibile." });
+  const snap = await db.ref("utenti").once("value");
+  const val = snap.val() || {};
+  const lista = Object.keys(val).map(uid => ({
+    uid, email: val[uid].email, nickname: val[uid].nickname,
+    stato: val[uid].stato, sospesoFino: val[uid].sospesoFino,
+    avvisi: val[uid].avvisi || [], ruolo: val[uid].ruolo || "utente"
+  }));
+  res.json({ utenti: lista });
+});
+
+app.post("/api/admin/avviso", richiediAdmin, async (req, res) => {
+  const { uid, motivo } = req.body;
+  if (!uid || !motivo) return res.status(400).json({ errore: "Dati mancanti." });
+  const ref = db.ref("utenti/" + uid + "/avvisi");
+  const snap = await ref.once("value");
+  const avvisiAttuali = snap.val() || [];
+  avvisiAttuali.push({ data: Date.now(), motivo });
+  await ref.set(avvisiAttuali);
+
+  await db.ref("utenti/" + uid + "/notifiche").push({
+    tipo: "avviso",
+    testo: "Hai ricevuto un avviso dallo staff",
+    data: Date.now(),
+    letta: false
+  });
+
+  res.json({ ok: true });
+});
+
+app.post("/api/admin/sospendi", richiediAdmin, async (req, res) => {
+  const { uid, giorni, motivo } = req.body;
+  if (!uid || !giorni) return res.status(400).json({ errore: "Dati mancanti." });
+  if (uid === req.utenteAdmin.uid) return res.status(400).json({ errore: "Non puoi sospendere il tuo stesso account." });
+  const sospesoFino = Date.now() + (parseInt(giorni) * 24 * 60 * 60 * 1000);
+  await db.ref("utenti/" + uid).update({ stato: "sospeso", sospesoFino, motivoSospensione: motivo || "" });
+  res.json({ ok: true });
+});
+
+app.post("/api/admin/rimuovi-sospensione", richiediAdmin, async (req, res) => {
+  const { uid } = req.body;
+  if (!uid) return res.status(400).json({ errore: "Dati mancanti." });
+  await db.ref("utenti/" + uid).update({ stato: "attivo", sospesoFino: null });
+  res.json({ ok: true });
+});
+
+app.post("/api/admin/banna", richiediAdmin, async (req, res) => {
+  const { uid, motivo } = req.body;
+  if (!uid) return res.status(400).json({ errore: "Dati mancanti." });
+  if (uid === req.utenteAdmin.uid) return res.status(400).json({ errore: "Non puoi bannare il tuo stesso account." });
+  await db.ref("utenti/" + uid).update({ stato: "bannato", motivoBan: motivo || "" });
+  res.json({ ok: true });
+});
+
+app.post("/api/admin/riattiva", richiediAdmin, async (req, res) => {
+  const { uid } = req.body;
+  if (!uid) return res.status(400).json({ errore: "Dati mancanti." });
+  await db.ref("utenti/" + uid).update({ stato: "attivo", sospesoFino: null });
+  res.json({ ok: true });
+});
+
+// ===== DADO VERO DA RANDOM.ORG (con fallback automatico) =====
+function tiraDadoRandomOrg() {
+  return new Promise((resolve) => {
+    const url = "https://www.random.org/integers/?num=2&min=1&max=6&col=1&base=10&format=plain&rnd=new";
+    const richiesta = https.get(url, { timeout: 4000 }, (res) => {
+      let dati = "";
+      res.on("data", chunk => dati += chunk);
+      res.on("end", () => {
+        try {
+          const numeri = dati.trim().split("\n").map(n => parseInt(n.trim(), 10)).filter(n => !isNaN(n) && n >= 1 && n <= 6);
+          if (numeri.length === 2) resolve({ dado1: numeri[0], dado2: numeri[1] });
+          else resolve(null);
+        } catch (e) { resolve(null); }
+      });
+    });
+    richiesta.on("timeout", () => { richiesta.destroy(); resolve(null); });
+    richiesta.on("error", () => resolve(null));
+  });
+}
+async function lanciaDueDadiSicuri() {
+  const risultato = await tiraDadoRandomOrg();
+  if (risultato) return risultato;
+  return { dado1: Math.floor(Math.random() * 6) + 1, dado2: Math.floor(Math.random() * 6) + 1 };
+}
+
+// ===== LOGICA DI GIOCO =====
+const CASELLE_AVANZA_ANCORA = [9, 18, 27, 36, 45, 54];
+const CASELLE_SALTA_TRE_TURNI = [19, 31];
+const CASELLE_SALTA_UN_TURNO = [52];
+const CASELLE_TORNA_A = { 42: 38, 50: 1, 58: 1 };
+const CASELLA_TIRA_ANCORA = 6;
+const CASELLA_VITTORIA = 63;
+
+let stanze = {
+  BAR: { giocatoriOnline: {}, partite: {} },
+  PUB: { giocatoriOnline: {}, partite: {} },
+  DISCOPUB: { giocatoriOnline: {}, partite: {} },
+  SERATE: { giocatoriOnline: {}, partite: {} }
+};
+
+async function ripristinaPartiteDaFirebase() {
+  const partiteFirebase = await caricaPartite();
+  for (const id in partiteFirebase) {
+    const p = partiteFirebase[id];
+    if (!stanze[p.stanza]) continue;
+    stanze[p.stanza].partite[id] = {
+      ...p,
+      maxGiocatori: p.maxGiocatori || (Object.keys(p.giocatori || {}).length || 2),
+      giocatori: p.giocatori || {},
+      ordineGiocatori: p.ordineGiocatori || [],
+      turnoAttuale: p.turnoAttuale || 0,
+      iniziata: p.iniziata || false,
+      iniziataIl: p.iniziataIl || null,
+      elaborandoTiro: false,
+      invitati: {}
+    };
+  }
+  console.log("Partite ripristinate da Firebase:", Object.keys(partiteFirebase).length);
+}
+
+let contatoreId = 0;
+const socketsPerId = {};
+
+function calcolaMovimento(posizioneAttuale, valoreDado) {
+  let percorso = [];
+  let nuovaPosizione = posizioneAttuale + valoreDado;
+  let messaggi = [];
+  let turniDaSaltare = 0;
+  let vittoria = false;
+  let tiraAncora = false;
+
+  if (nuovaPosizione > CASELLA_VITTORIA) {
+    for (let p = posizioneAttuale + 1; p <= CASELLA_VITTORIA; p++) percorso.push(p);
+    const eccesso = nuovaPosizione - CASELLA_VITTORIA;
+    nuovaPosizione = CASELLA_VITTORIA - eccesso;
+    for (let p = CASELLA_VITTORIA - 1; p >= nuovaPosizione; p--) percorso.push(p);
+    messaggi.push("Hai superato il traguardo, rimbalzi indietro!");
+  } else {
+    for (let p = posizioneAttuale + 1; p <= nuovaPosizione; p++) percorso.push(p);
+  }
+
+  if (nuovaPosizione === CASELLA_VITTORIA) {
+    vittoria = true;
+    messaggi.push("🎉 Hai vinto!");
+    return { nuovaPosizione, percorso, messaggi, turniDaSaltare, vittoria, tiraAncora };
+  }
+  if (nuovaPosizione === CASELLA_TIRA_ANCORA) {
+    tiraAncora = true;
+    messaggi.push("Sali sul ponte! Tira ancora i dadi.");
+  }
+  if (CASELLE_AVANZA_ANCORA.includes(nuovaPosizione)) {
+    messaggi.push("Avanzi dello stesso numero di caselle!");
+    const r = calcolaMovimento(nuovaPosizione, valoreDado);
+    return {
+      nuovaPosizione: r.nuovaPosizione, percorso: percorso.concat(r.percorso),
+      messaggi: messaggi.concat(r.messaggi), turniDaSaltare: r.turniDaSaltare,
+      vittoria: r.vittoria, tiraAncora: r.tiraAncora
+    };
+  }
+  if (CASELLE_SALTA_TRE_TURNI.includes(nuovaPosizione)) { turniDaSaltare = 3; messaggi.push("Rimani fermo per 3 turni!"); }
+  if (CASELLE_SALTA_UN_TURNO.includes(nuovaPosizione)) { turniDaSaltare = 1; messaggi.push("Salti un turno!"); }
+  if (CASELLE_TORNA_A[nuovaPosizione] !== undefined) {
+    const casellaFinale = CASELLE_TORNA_A[nuovaPosizione];
+    messaggi.push(`Torni alla casella ${casellaFinale}!`);
+    percorso.push(casellaFinale);
+    nuovaPosizione = casellaFinale;
+  }
+  return { nuovaPosizione, percorso, messaggi, turniDaSaltare, vittoria, tiraAncora };
+}
+
+function lanciaDueDadi() { return (Math.floor(Math.random() * 6) + 1) + (Math.floor(Math.random() * 6) + 1); }
+
+function determinaOrdineIniziale(idsGiocatori) {
+  let risultati = idsGiocatori.map(id => ({ id, punteggio: lanciaDueDadi() }));
+  risultati.sort((a, b) => b.punteggio - a.punteggio);
+  let ordineFinale = [];
+  let i = 0;
+  while (i < risultati.length) {
+    let gruppoPari = [risultati[i]];
+    let j = i + 1;
+    while (j < risultati.length && risultati[j].punteggio === risultati[i].punteggio) { gruppoPari.push(risultati[j]); j++; }
+    if (gruppoPari.length > 1) ordineFinale = ordineFinale.concat(determinaOrdineIniziale(gruppoPari.map(g => g.id)));
+    else ordineFinale.push(gruppoPari[0].id);
+    i = j;
+  }
+  return ordineFinale;
+}
+
+async function avviaPartitaAutomaticamente(partita) {
+  const idsGiocatori = Object.keys(partita.giocatori);
+  const ordineDeterminato = determinaOrdineIniziale(idsGiocatori);
+  partita.ordineGiocatori = ordineDeterminato;
+  partita.turnoAttuale = 0;
+  partita.iniziata = true;
+  partita.iniziataIl = Date.now();
+  partita.elaborandoTiro = false;
+  const nomiInOrdine = ordineDeterminato.map(id => partita.giocatori[id].nome);
+  Object.values(partita.giocatori).forEach(g => {
+    if (g.socket && g.socket.readyState === WebSocket.OPEN) {
+      g.socket.send(JSON.stringify({ tipo: "partitaAvviata", partitaId: partita.id, ordineGiocatori: nomiInOrdine, turnoDiId: partita.ordineGiocatori[0] }));
+    }
+  });
+  const trovato = trovaPartita(partita.id);
+  await salvaPartita({ ...partita, stanza: trovato ? trovato.nomeStanza : partita.stanza });
+}
+
+function passaAlProssimoTurno(partita) {
+  let tentativi = 0;
+  do {
+    partita.turnoAttuale = (partita.turnoAttuale + 1) % partita.ordineGiocatori.length;
+    const idProssimo = partita.ordineGiocatori[partita.turnoAttuale];
+    const giocatoreProssimo = partita.giocatori[idProssimo];
+    if ((giocatoreProssimo.turniSaltati || 0) > 0) { giocatoreProssimo.turniSaltati--; tentativi++; } else break;
+  } while (tentativi < partita.ordineGiocatori.length);
+}
+
+function trovaPartita(partitaId) {
+  for (const nomeStanza in stanze) {
+    if (stanze[nomeStanza].partite[partitaId]) return { partita: stanze[nomeStanza].partite[partitaId], nomeStanza };
+  }
+  return null;
+}
+
+function costruisciStatoGiocatori(partita) {
+  return partita.ordineGiocatori.map(id => ({
+    id,
+    nome: partita.giocatori[id].nome,
+    avatar: partita.giocatori[id].avatar || null,
+    posizione: partita.giocatori[id].posizione
+  }));
+}
+
+function inviaAllaStanza(nomeStanza, messaggio) {
+  if (!stanze[nomeStanza]) return;
+  Object.keys(stanze[nomeStanza].giocatoriOnline).forEach(id => {
+    const s = socketsPerId[id];
+    if (s && s.readyState === WebSocket.OPEN) s.send(JSON.stringify(messaggio));
+  });
+}
+
+function inviaListaPartite(nomeStanza) {
+  if (!stanze[nomeStanza]) return;
+
+  const lista = Object.values(stanze[nomeStanza].partite).map(p => ({
+    id: p.id,
+    creatore: p.creatore,
+    creatoDa: p.creatoDa,
+    tempo: p.tempo,
+    punti: p.punti,
+    modalita: p.modalita,
+    maxGiocatori: p.maxGiocatori,
+    numGiocatoriAttuali: Object.keys(p.giocatori).length,
+
+    // NUOVO: manda i giocatori presenti nella schedina
+    giocatori: Object.values(p.giocatori).map(g => ({
+      nome: g.nome,
+      avatar: g.avatar || null
+    }))
+  }));
+
+  inviaAllaStanza(nomeStanza, { 
+    tipo: "listaPartite", 
+    partite: lista 
+  });
+}
+
+function inviaConteggioStanze() {
+  const conteggi = {};
+  const giocatoriPerStanza = {};
+
+  for (const nome in stanze) {
+    const valori = Object.values(stanze[nome].giocatoriOnline);
+
+    conteggi[nome] = valori.length;
+
+    giocatoriPerStanza[nome] = valori.map(g => ({
+      uid: g.uid,
+      nickname: g.nickname,
+      avatar: g.avatar || null,
+      tipoDispositivo: g.tipoDispositivo || "computer",
+      stato: g.stato || "lobby"
+    }));
+  }
+
+  const messaggio = JSON.stringify({
+    tipo: "conteggioStanze",
+    stanze: conteggi,
+    giocatori: giocatoriPerStanza
+  });
+
+  wss.clients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(messaggio);
+    }
+  });
+}
+
+const HEARTBEAT_MS = 15000;
+const heartbeatInterval = setInterval(() => {
+  wss.clients.forEach(socket => {
+    if (socket.isAlive === false) return socket.terminate();
+    socket.isAlive = false;
+    socket.ping();
+  });
+}, HEARTBEAT_MS);
+wss.on("close", () => clearInterval(heartbeatInterval));
+
+function rilevaTipoDispositivo(userAgent) {
+  const ua = userAgent || "";
   if (/iPad/i.test(ua) || (/Android/i.test(ua) && !/Mobile/i.test(ua))) return "tablet";
   if (/iPhone|iPod/i.test(ua) || (/Android/i.test(ua) && /Mobile/i.test(ua))) return "cellulare";
   return "computer";
 }
 
-async function verificaSessione() {
-  try {
-    const risposta = await fetch("https://gioco-oca-server.onrender.com/api/me", { credentials: "include" });
-    if (!risposta.ok) { window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href); return; }
-    const dati = await risposta.json();
-    mioUid = dati.uid;
+// ===== CONNESSIONI WEBSOCKET =====
+wss.on("connection", (socket, request) => {
+  socket.isAlive = true;
+  socket.on("pong", () => { socket.isAlive = true; });
 
-    const immagineAvatar = dati.avatar
-      ? `<img class="avatar" src="${dati.avatar}">`
-      : `<div class="avatar" style="background:${coloreDaNome(dati.nickname)};">${iniziale(dati.nickname)}</div>`;
+  const tipoDispositivo = rilevaTipoDispositivo(request.headers["user-agent"]);
 
-    document.getElementById("areaUtente").innerHTML = `
-      <div class="utente-box">
-        <div class="avatar-container">${immagineAvatar}</div>
-        <div class="nickname">${dati.nickname}</div>
-        <div class="dispositivo">${iconaDispositivo(rilevaTipoDispositivoClient())}</div>
-        <button onclick="window.location.href='messaggi-privati.html'">💬 Messaggi</button>
-      </div>
-    `;
+  const socketId = "s" + (contatoreId++);
+  socketsPerId[socketId] = socket;
 
-    connetti();
-    caricaAmici();
-    caricaNotifiche(false);
-  } catch (e) {
-    window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href);
-  }
-}
+  let stanzaAttuale = null;
+  let nickname = null;
+  let mioAvatar = null;
 
-function vaiAccount() { window.location.href = "opzioni-account.html"; }
+  const tokenDalCookie = estraiTokenDaCookieHeader(request.headers.cookie);
+  const datiTokenIniziali = verificaToken(tokenDalCookie);
+  let uid = datiTokenIniziali ? datiTokenIniziali.uid : null;
 
-async function esci() {
-  try { await fetch("https://gioco-oca-server.onrender.com/api/logout", { method: "POST", credentials: "include" }); } catch (e) {}
-  window.location.href = "login.html";
-}
+  socket.on("message", async (message) => {
+    try {
+      let dati;
+      try { dati = JSON.parse(message); } catch (e) { return; }
 
-function connetti() {
-  socket = new WebSocket("wss://gioco-oca-server.onrender.com");
+      if (dati.tipo === "richiediConteggio") { inviaConteggioStanze(); return; }
 
-  socket.onopen = () => {
-    socket.send(JSON.stringify({ tipo: "entraLobby", stanza: stanza }));
-  };
+      if (dati.tipo === "entraLobby") {
+        if (!db) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Servizio account non disponibile." })); return; }
+        if (!uid) { socket.send(JSON.stringify({ tipo: "sessioneScaduta" })); return; }
+        if (!dati.stanza) return;
 
-  socket.onclose = () => { setTimeout(() => location.reload(), 3000); };
+        const snap = await db.ref("utenti/" + uid).once("value");
+        const utenteDb = snap.val();
+        if (!utenteDb) { socket.send(JSON.stringify({ tipo: "sessioneScaduta" })); return; }
+        if (utenteDb.stato === "bannato") { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Il tuo account è stato bannato." })); return; }
+        if (utenteDb.stato === "sospeso" && utenteDb.sospesoFino && utenteDb.sospesoFino > Date.now()) {
+          const dataFine = new Date(utenteDb.sospesoFino).toLocaleString("it-IT");
+          socket.send(JSON.stringify({ tipo: "errore", messaggio: "Account sospeso fino al " + dataFine + "." }));
+          return;
+        }
 
-  socket.onmessage = (msg) => {
-    const dati = JSON.parse(msg.data);
+        stanzaAttuale = dati.stanza;
+        nickname = utenteDb.nickname;
+        mioAvatar = utenteDb.avatar || null;
 
-    if (dati.tipo === "sessioneScaduta") {
-      window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href);
-      return;
-    }
-    if (dati.tipo === "online") document.getElementById("online").innerHTML = dati.numero;
-    if (dati.tipo === "conteggioStanze" && dati.giocatori) mostraGiocatori(dati.giocatori[stanza] || []);
-    if (dati.tipo === "chat") aggiungiMessaggio(dati.uid, dati.nome, dati.testo);
-    if (dati.tipo === "listaPartite") mostraPartite(dati.partite);
-    if (dati.tipo === "errore") alert(dati.messaggio);
-    if (dati.tipo === "partitaAvviata") window.location.href = `gioco.html?partita=${dati.partitaId}&stanza=${stanza}`;
-    if (dati.tipo === "invitoRicevuto") mostraInvitoRicevuto(dati);
-    if (dati.tipo === "invitoInviato") segnaInvitatoNelModal(dati.destinatarioUid);
-    if (dati.tipo === "invitoRifiutato") alert((dati.destinatarioNome || "Il giocatore") + " ha rifiutato l'invito.");
-  };
-}
+        if (!stanze[stanzaAttuale]) stanze[stanzaAttuale] = { giocatoriOnline: {}, partite: {} };
+        stanze[stanzaAttuale].giocatoriOnline[socketId] = {
+         uid,
+         nickname,
+         avatar: mioAvatar,
+         tipoDispositivo,
+         stato: "lobby"
+        };
 
-// ===== CREAZIONE / LISTA PARTITE =====
-function creaPartita() {
-  const tipo = document.getElementById("tipoPartita").value;
-  socket.send(JSON.stringify({
-    tipo: "creaPartita",
-    tempo: document.getElementById("tempo").value,
-    punti: document.getElementById("punti").value,
-    modalita: tipo,
-    maxGiocatori: document.getElementById("numeroGiocatori").value
-  }));
-  if (tipo === "privata") aspettaPropriaPartitaPrivata = true;
-}
 
-function eliminaPartita() {
-  if (!confirm("Vuoi eliminare la partita creata?")) return;
-  socket.send(JSON.stringify({ tipo: "eliminaPartita" }));
-}
-
-function mostraPartite(lista) {
-  let html = "";
-  if (lista.length === 0) html = "<p>Nessuna partita disponibile</p>";
-  lista.forEach(partita => {
-    const piena = partita.numGiocatoriAttuali >= partita.maxGiocatori;
-    const eMia = partita.creatoDa === mioUid;
-    let bottoneHtml;
-    if (partita.modalita === "privata") {
-      if (eMia) {
-        bottoneHtml = `<button onclick="apriModalInvito('${partita.id}')" ${piena ? 'disabled' : ''}>${piena ? 'Al completo' : '➕ Invita giocatori'}</button>`;
-      } else {
-        bottoneHtml = `<button disabled>🔒 Solo su invito</button>`;
+        inviaConteggioStanze();
+        inviaAllaStanza(stanzaAttuale, { tipo: "online", numero: Object.keys(stanze[stanzaAttuale].giocatoriOnline).length });
+        inviaListaPartite(stanzaAttuale);
+        return;
       }
-    } else {
-      bottoneHtml = `<button onclick="entraPartita('${partita.id}')" ${piena ? 'disabled' : ''}>${piena ? 'Piena' : 'Entra'}</button>`;
+
+      if (dati.tipo === "riprendiPartita") {
+        if (!uid) { socket.send(JSON.stringify({ tipo: "sessioneScaduta" })); return; }
+        const trovato = trovaPartita(dati.partitaId);
+        if (!trovato) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Partita non trovata." })); return; }
+        const { partita, nomeStanza } = trovato;
+        stanzaAttuale = nomeStanza;
+
+        const mioGiocatore = partita.giocatori[uid];
+        if (!mioGiocatore) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Non fai parte di questa partita." })); return; }
+
+        if (db) {
+          try {
+            const snapUtente = await db.ref("utenti/" + uid).once("value");
+            const utenteDb = snapUtente.val();
+            if (utenteDb) mioGiocatore.avatar = utenteDb.avatar || null;
+          } catch (e) { /* se fallisce, tiene quello che c'era già in memoria */ }
+        }
+
+        mioGiocatore.socket = socket;
+        nickname = mioGiocatore.nome;
+        mioAvatar = mioGiocatore.avatar || null;
+
+        socket.send(JSON.stringify({
+          tipo: "statoPartita",
+          giocatori: costruisciStatoGiocatori(partita),
+          turnoDiId: partita.ordineGiocatori[partita.turnoAttuale]
+        }));
+        return;
+      }
+
+      if (dati.tipo === "creaPartita") {
+        if (!stanzaAttuale || !uid) return;
+        const haGiaCreato = Object.values(stanze[stanzaAttuale].partite).some(p => p.creatoDa === uid);
+        if (haGiaCreato) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Hai già una partita attiva." })); return; }
+
+        const partitaId = "p" + Date.now() + Math.floor(Math.random() * 1000);
+        const max = parseInt(dati.maxGiocatori);
+
+        stanze[stanzaAttuale].partite[partitaId] = {
+          id: partitaId,
+          creatore: nickname,
+          creatoDa: uid,
+          tempo: dati.tempo,
+          punti: dati.punti,
+          modalita: dati.modalita,
+          maxGiocatori: (!max || max < 2 || max > 8 ? 2 : max),
+          giocatori: {
+  [uid]: {
+    nome: nickname,
+    avatar: mioAvatar,
+    posizione: 0,
+    socket,
+    turniSaltati: 0,
+    stato: "in_partita"
+  }
+},
+
+ordineGiocatori: [uid],
+turnoAttuale: 0,
+iniziata: false,
+elaborandoTiro: false,
+invitati: dati.modalita === "privata" ? { [uid]: true } : null
+
+};
+
+if (stanze[stanzaAttuale].giocatoriOnline[socketId]) {
+  stanze[stanzaAttuale].giocatoriOnline[socketId].stato = "in_partita";
+}
+
+        await salvaPartita({ ...stanze[stanzaAttuale].partite[partitaId], stanza: stanzaAttuale });
+        inviaListaPartite(stanzaAttuale);
+        return;
+      }
+
+      if (dati.tipo === "entraPartita") {
+        if (!stanzaAttuale || !uid) return;
+        const partita = stanze[stanzaAttuale].partite[dati.id];
+        if (!partita) return;
+        if (partita.giocatori[uid]) return;
+        if (Object.keys(partita.giocatori).length >= partita.maxGiocatori) return;
+
+        if (partita.modalita === "privata") {
+          socket.send(JSON.stringify({ tipo: "errore", messaggio: "Questa è una partita privata: puoi entrare solo se il creatore ti invita direttamente." }));
+          return;
+        }
+
+        partita.giocatori[uid] = { 
+  nome: nickname, 
+  avatar: mioAvatar, 
+  posizione: 0, 
+  socket, 
+  turniSaltati: 0 
+};
+
+        partita.ordineGiocatori.push(uid);
+
+        await aggiornaStatoPartita(partita.id, {
+          giocatori: preparaGiocatoriPerFirebase(partita.giocatori),
+          ordineGiocatori: partita.ordineGiocatori
+        });
+
+        inviaListaPartite(stanzaAttuale);
+
+        if (Object.keys(partita.giocatori).length === partita.maxGiocatori) await avviaPartitaAutomaticamente(partita);
+        return;
+      }
+
+      if (dati.tipo === "invitaPartita") {
+        if (!uid) return;
+        const trovato = trovaPartita(dati.partitaId);
+        if (!trovato) return;
+        const { partita, nomeStanza } = trovato;
+
+        if (partita.creatoDa !== uid) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Solo il creatore della partita può invitare altri giocatori." })); return; }
+        if (partita.modalita !== "privata") return;
+        if (Object.keys(partita.giocatori).length >= partita.maxGiocatori) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "La partita è già al completo." })); return; }
+
+        const destinatarioUid = dati.destinatarioUid;
+        if (!destinatarioUid || destinatarioUid === uid) return;
+        if (partita.giocatori[destinatarioUid]) return;
+
+        const stanzaOggetto = stanze[nomeStanza];
+        if (!stanzaOggetto) return;
+        const socketIdDestinatario = Object.keys(stanzaOggetto.giocatoriOnline).find(sid => stanzaOggetto.giocatoriOnline[sid].uid === destinatarioUid);
+        if (!socketIdDestinatario) {
+          socket.send(JSON.stringify({ tipo: "errore", messaggio: "Questo giocatore non è più online in questa stanza." }));
+          return;
+        }
+
+        const giocatoreOnline = stanzaOggetto.giocatoriOnline[socketIdDestinatario];
+
+if (giocatoreOnline.stato === "in_partita") {
+  socket.send(JSON.stringify({
+    tipo:"errore",
+    messaggio:"Questo giocatore è già in partita."
+  }));
+  return;
+}
+
+
+        if (!partita.invitati) partita.invitati = {};
+        partita.invitati[destinatarioUid] = true;
+
+        const socketDestinatario = socketsPerId[socketIdDestinatario];
+        const nomeDestinatario = stanzaOggetto.giocatoriOnline[socketIdDestinatario].nickname;
+
+        if (socketDestinatario && socketDestinatario.readyState === WebSocket.OPEN) {
+          socketDestinatario.send(JSON.stringify({
+            tipo: "invitoRicevuto",
+            partitaId: partita.id,
+            stanza: nomeStanza,
+            daUid: uid,
+            daNome: nickname
+          }));
+        }
+
+        if (db) {
+          db.ref("utenti/" + destinatarioUid + "/notifiche").push({
+            tipo: "invitoPartita",
+            testo: `${nickname} ti ha invitato a giocare nella stanza ${nomeStanza}`,
+            data: Date.now(),
+            letta: false,
+            daUid: uid,
+            daNome: nickname,
+            stanza: nomeStanza,
+            partitaId: partita.id
+          }).catch(() => {});
+        }
+
+        socket.send(JSON.stringify({ tipo: "invitoInviato", destinatarioUid, destinatarioNome: nomeDestinatario }));
+        return;
+      }
+
+      if (dati.tipo === "rispostaInvito") {
+        if (!uid) return;
+        const trovato = trovaPartita(dati.partitaId);
+        if (!trovato) return;
+        const { partita, nomeStanza } = trovato;
+
+        if (!partita.invitati || !partita.invitati[uid]) return;
+
+        if (!dati.accettato) {
+          delete partita.invitati[uid];
+          const hostGiocatore = partita.giocatori[partita.creatoDa];
+          if (hostGiocatore && hostGiocatore.socket && hostGiocatore.socket.readyState === WebSocket.OPEN) {
+            hostGiocatore.socket.send(JSON.stringify({ tipo: "invitoRifiutato", destinatarioNome: nickname }));
+          }
+          return;
+        }
+
+        if (partita.giocatori[uid]) return;
+        if (Object.keys(partita.giocatori).length >= partita.maxGiocatori) {
+          socket.send(JSON.stringify({ tipo: "errore", messaggio: "La partita si è già riempita." }));
+          return;
+        }
+
+        stanzaAttuale = nomeStanza;
+        partita.giocatori[uid] = { 
+  nome: nickname, 
+  avatar: mioAvatar, 
+  posizione: 0, 
+  socket, 
+  turniSaltati: 0 
+};
+
+stanze[nomeStanza].giocatoriOnline[socketId].stato = "in_partita";
+
+        partita.ordineGiocatori.push(uid);
+
+        await aggiornaStatoPartita(partita.id, {
+          giocatori: preparaGiocatoriPerFirebase(partita.giocatori),
+          ordineGiocatori: partita.ordineGiocatori
+        });
+
+        inviaListaPartite(nomeStanza);
+
+        if (Object.keys(partita.giocatori).length === partita.maxGiocatori) await avviaPartitaAutomaticamente(partita);
+        return;
+      }
+
+      if (dati.tipo === "eliminaPartita") {
+        if (!stanzaAttuale || !uid) return;
+        const partite = stanze[stanzaAttuale].partite;
+        const idDaEliminare = Object.keys(partite).find(pid => partite[pid].creatoDa === uid);
+        if (!idDaEliminare) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Non hai nessuna partita da eliminare." })); return; }
+        await rimuoviPartita(stanzaAttuale, idDaEliminare);
+        inviaListaPartite(stanzaAttuale);
+        return;
+      }
+
+      if (dati.tipo === "chat") {
+        if (!stanzaAttuale) return;
+        if (typeof dati.testo !== "string") return;
+        const testo = pulisciTesto(dati.testo, 300);
+        if (testo.length === 0) return;
+        inviaAllaStanza(stanzaAttuale, { tipo: "chat", uid, nome: nickname, testo });
+        return;
+      }
+
+      if (dati.tipo === "chatPartita") {
+        if (!uid) return;
+        if (typeof dati.testo !== "string") return;
+        const testo = pulisciTesto(dati.testo, 300);
+        if (!testo) return;
+
+        const trovato = trovaPartita(dati.partitaId);
+        if (!trovato) return;
+        const partita = trovato.partita;
+        const mittente = partita.giocatori[uid];
+        if (!mittente) return;
+
+        Object.values(partita.giocatori).forEach(g => {
+          if (g.socket && g.socket.readyState === WebSocket.OPEN) {
+            g.socket.send(JSON.stringify({ tipo: "chatPartita", nome: mittente.nome, testo }));
+          }
+        });
+        return;
+      }
+
+      if (dati.tipo === "tiraDadi") {
+        if (!uid) return;
+        const trovato = trovaPartita(dati.partitaId);
+        if (!trovato) return;
+        const partita = trovato.partita;
+        const nomeStanzaPartita = trovato.nomeStanza;
+
+        const idDiTurno = partita.ordineGiocatori[partita.turnoAttuale];
+        if (idDiTurno !== uid) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Non è il tuo turno!" })); return; }
+
+        if (partita.elaborandoTiro) return;
+        partita.elaborandoTiro = true;
+
+        try {
+          const { dado1, dado2 } = await lanciaDueDadiSicuri();
+          const valoreDado = dado1 + dado2;
+
+          const giocatore = partita.giocatori[uid];
+          const risultato = calcolaMovimento(giocatore.posizione, valoreDado);
+          giocatore.posizione = risultato.nuovaPosizione;
+          if (risultato.turniDaSaltare > 0) giocatore.turniSaltati = risultato.turniDaSaltare;
+          if (!risultato.tiraAncora && !risultato.vittoria) passaAlProssimoTurno(partita);
+
+          const statoGiocatori = costruisciStatoGiocatori(partita);
+          const idProssimo = partita.ordineGiocatori[partita.turnoAttuale];
+
+          Object.values(partita.giocatori).forEach(g => {
+            if (g.socket && g.socket.readyState === WebSocket.OPEN) {
+              g.socket.send(JSON.stringify({
+                tipo: "aggiornamentoPartita", giocatori: statoGiocatori, dado1, dado2, valoreDado,
+                percorso: risultato.percorso, idGiocatoreCheHaTirato: uid,
+                messaggi: risultato.messaggi, turnoDiId: idProssimo,
+                vittoria: risultato.vittoria, vincitore: risultato.vittoria ? giocatore.nome : null
+              }));
+            }
+          });
+
+          if (risultato.vittoria) {
+            await concludiPartita(partita, uid, nomeStanzaPartita, null);
+            await rimuoviPartita(nomeStanzaPartita, partita.id);
+            inviaListaPartite(nomeStanzaPartita);
+          } else {
+            await aggiornaStatoPartita(partita.id, {
+              giocatori: preparaGiocatoriPerFirebase(partita.giocatori),
+              ordineGiocatori: partita.ordineGiocatori,
+              turnoAttuale: partita.turnoAttuale,
+              iniziata: partita.iniziata
+            });
+          }
+        } finally {
+          partita.elaborandoTiro = false;
+        }
+        return;
+      }
+
+      if (dati.tipo === "abbandonaPartita") {
+        if (!uid) return;
+        const trovato = trovaPartita(dati.partitaId);
+        if (!trovato) return;
+        const { partita, nomeStanza } = trovato;
+        if (!partita.giocatori[uid]) return;
+
+        const elencoPartecipantiOriginali = partita.ordineGiocatori.map(id => ({
+          uid: id, nome: partita.giocatori[id] ? partita.giocatori[id].nome : "?"
+        }));
+
+        const nomeUscente = partita.giocatori[uid].nome;
+        delete partita.giocatori[uid];
+        partita.ordineGiocatori = partita.ordineGiocatori.filter(id => id !== uid);
+        const restanti = Object.keys(partita.giocatori);
+
+        if (restanti.length === 0) {
+          await rimuoviPartita(nomeStanza, partita.id);
+          inviaListaPartite(nomeStanza);
+          return;
+        }
+        if (partita.turnoAttuale >= partita.ordineGiocatori.length) partita.turnoAttuale = 0;
+
+        if (restanti.length === 1 && partita.iniziata) {
+          const vincitoreId = restanti[0];
+          const vincitoreNome = partita.giocatori[vincitoreId].nome;
+          const statoGiocatori = costruisciStatoGiocatori(partita);
+          Object.values(partita.giocatori).forEach(g => {
+            if (g.socket && g.socket.readyState === WebSocket.OPEN) {
+              g.socket.send(JSON.stringify({ tipo: "statoPartita", giocatori: statoGiocatori, turnoDiId: vincitoreId, vittoria: true, vincitore: vincitoreNome, messaggi: [nomeUscente + " ha abbandonato la partita."] }));
+            }
+          });
+          await concludiPartita(partita, vincitoreId, nomeStanza, elencoPartecipantiOriginali);
+          await rimuoviPartita(nomeStanza, partita.id);
+        } else {
+          const idAttuale = partita.ordineGiocatori[partita.turnoAttuale];
+          const statoGiocatori = costruisciStatoGiocatori(partita);
+          Object.values(partita.giocatori).forEach(g => {
+            if (g.socket && g.socket.readyState === WebSocket.OPEN) {
+              g.socket.send(JSON.stringify({ tipo: "statoPartita", giocatori: statoGiocatori, turnoDiId: idAttuale, messaggi: [nomeUscente + " ha abbandonato la partita."] }));
+            }
+          });
+          await aggiornaStatoPartita(partita.id, {
+            giocatori: preparaGiocatoriPerFirebase(partita.giocatori),
+            ordineGiocatori: partita.ordineGiocatori,
+            turnoAttuale: partita.turnoAttuale
+          });
+        }
+        inviaListaPartite(nomeStanza);
+        return;
+      }
+
+    } catch (erroreInterno) {
+      console.error("Errore nella gestione di un messaggio:", erroreInterno);
     }
-    html += `
-    <div class="partita">
-      🎲 ${partita.creatore}<br>
-      ${partita.modalita === "privata" ? "🔒 Privata" : "🔓 Pubblica"}<br>
-      ⏱ ${partita.tempo} secondi<br>
-      🏆 ${partita.punti} punti<br>
-      ${creaMiniGiocatoriPartita(partita)}
-      ${bottoneHtml}
-    </div>`;
   });
-  document.getElementById("partite").innerHTML = html;
 
-  if (aspettaPropriaPartitaPrivata) {
-    const mia = lista.find(p => p.creatoDa === mioUid && p.modalita === "privata");
-    if (mia) { aspettaPropriaPartitaPrivata = false; apriModalInvito(mia.id); }
-  }
-}
+  socket.on("close", () => {
+    try {
+      delete socketsPerId[socketId];
+      if (!stanzaAttuale || !stanze[stanzaAttuale]) return;
 
-function creaMiniGiocatoriPartita(partita){
+      delete stanze[stanzaAttuale].giocatoriOnline[socketId];
+      inviaConteggioStanze();
+      inviaAllaStanza(stanzaAttuale, { tipo: "online", numero: Object.keys(stanze[stanzaAttuale].giocatoriOnline).length });
 
-    if(!partita.giocatori || partita.giocatori.length===0)
-        return "";
-
-    let visibili = partita.giocatori.slice(0,3);
-
-    let html = `
-    <div style="
-      display:flex;
-      align-items:center;
-      gap:8px;
-      margin:10px 0;
-    ">
-    `;
-
-    visibili.forEach(g=>{
-
-        const img = g.avatar
-        ? `<img src="${g.avatar}" style="
-             width:35px;
-             height:35px;
-             border-radius:50%;
-             object-fit:cover;
-           ">`
-        :
-        `<div style="
-          width:35px;
-          height:35px;
-          border-radius:50%;
-          background:#43a047;
-          color:white;
-          display:flex;
-          align-items:center;
-          justify-content:center;
-          font-weight:bold;
-        ">
-        ${iniziale(g.nome)}
-        </div>`;
-
-
-        html += `
-        <div title="${g.nome}">
-          ${img}
-        </div>`;
-    });
-
-
-    const altri = partita.giocatori.length - 3;
-
-    if(altri>0){
-        html += `
-        <div style="
-          width:35px;
-          height:35px;
-          border-radius:50%;
-          background:#ddd;
-          display:flex;
-          align-items:center;
-          justify-content:center;
-          font-weight:bold;
-        ">
-        +${altri}
-        </div>`;
+      const partite = stanze[stanzaAttuale].partite;
+      for (const pid in partite) {
+        const partita = partite[pid];
+        if (uid && partita.giocatori[uid] && !partita.iniziata) {
+          delete partita.giocatori[uid];
+          partita.ordineGiocatori = partita.ordineGiocatori.filter(id => id !== uid);
+          if (Object.keys(partita.giocatori).length === 0) delete partite[pid];
+        }
+      }
+      inviaListaPartite(stanzaAttuale);
+    } catch (erroreInterno) {
+      console.error("Errore nella chiusura di una connessione:", erroreInterno);
     }
-
-
-    html += "</div>";
-
-    return html;
-}
-
-function entraPartita(id) {
-  socket.send(JSON.stringify({ tipo: "entraPartita", id: id }));
-}
-
-// ===== CHAT =====
-function inviaChat() {
-  let testo = document.getElementById("messaggio").value.trim();
-
-  if (testo === "") return;
-
-  if (testo.length > 200) {
-    alert("Massimo 200 caratteri.");
-    return;
-  }
-
-  socket.send(JSON.stringify({ tipo: "chat", testo: testo }));
-  document.getElementById("messaggio").value = "";
-}
-
-
-// Invio con Enter
-document.getElementById("messaggio").addEventListener("keydown", function(e) {
-
-  if (e.key === "Enter") {
-    e.preventDefault();
-    inviaChat();
-  }
-
+  });
 });
 
-
-// Emoji
-function apriEmoji() {
-  const pannello = document.getElementById("pannelloEmoji");
-
-  if (pannello.style.display === "none") {
-    pannello.style.display = "block";
-  } else {
-    pannello.style.display = "none";
-  }
-}
-
-
-document.getElementById("pannelloEmoji").addEventListener("click", function(e) {
-
-  if (e.target.textContent.trim() !== "") {
-
-    const input = document.getElementById("messaggio");
-
-    input.value += e.target.textContent.trim();
-
-    input.focus();
-
-  }
-
+server.listen(PORT, async () => {
+  console.log("Server avviato sulla porta " + PORT);
+  await ripristinaPartiteDaFirebase();
 });
-
-function aggiungiMessaggio(uid, nome, testo) {
-  let chat = document.getElementById("chat");
-  const cliccabile = uid && uid !== mioUid;
-  const nomeHtml = cliccabile
-    ? `<span class="nickname-riga" style="cursor:pointer;color:#ff6600;" onclick="apriPopupGiocatore('${uid}','${nome}')">${nome}</span>`
-    : `<b>${nome}</b>`;
-  const ora = new Date().toLocaleTimeString("it-IT", {
-    hour: "2-digit",
-    minute: "2-digit"
-});
-
-function pulisciTestoChat(testo) {
-  return testo
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
-
-chat.innerHTML += `
-<div class="messaggio">
-    <span style="color:#888;font-size:12px;">[${ora}]</span>
-    ${nomeHtml}: ${pulisciTestoChat(testo)}
-</div>`;
-
-  chat.scrollTop = chat.scrollHeight;
-}
-
-// ===== ONLINE IN QUESTA STANZA =====
-function mostraGiocatori(lista) {
-  ultimaListaOnlineStanza = lista || [];
-  aggiornaContatoreAmiciOnline();
-
-  const contenitore = document.getElementById("listaOnline");
-  if (!contenitore) return;
-
-  if (!lista || lista.length === 0) {
-    contenitore.innerHTML = "<p style='color:#999; font-style:italic;'>Nessun giocatore online</p>";
-    return;
-  }
-
-  const listaOrdinata = [...lista].sort((a, b) => {
-
-    const aAmico = mieiAmiciUid.has(a.uid);
-    const bAmico = mieiAmiciUid.has(b.uid);
-
-    if (aAmico && !bAmico) return -1;
-    if (!aAmico && bAmico) return 1;
-
-    return a.nickname.localeCompare(b.nickname, "it");
-});
-
-const amici = listaOrdinata.filter(g => mieiAmiciUid.has(g.uid));
-const altri = listaOrdinata.filter(g => !mieiAmiciUid.has(g.uid));
-
-let html = "";
-
-if (amici.length) {
-    html += "<h3 style='margin:10px;color:#43a047;'>👥 Amici online</h3>";
-    html += amici.map(g => creaRigaGiocatore(g)).join("");
-}
-
-if (altri.length) {
-    html += "<h3 style='margin:10px;color:#666;'>🟢 Altri giocatori</h3>";
-    html += altri.map(g => creaRigaGiocatore(g)).join("");
-}
-
-contenitore.innerHTML = html;
-
-}
-
-function creaRigaGiocatore(g) {
-
-    const immagine = g.avatar
-      ? `<img class="avatar-mini" src="${g.avatar}">`
-      : `<div class="avatar-mini" style="background:${coloreDaNome(g.nickname)};">${iniziale(g.nickname)}</div>`;
-
-    const cliccabile = g.uid && g.uid !== mioUid;
-
-    return `
-      <div class="giocatore-online" ${cliccabile ? `onclick="apriPopupGiocatore('${g.uid}','${g.nickname}')" style="cursor:pointer;"` : ""}>
-        ${immagine}
-        <div>
-  <span class="nickname-riga">${g.nickname}</span>
-
-  <div style="font-size:13px;color:#777;">
-    ${iconaDispositivo(g.tipoDispositivo)}
-  </div>
-
-  <div style="font-size:13px;font-weight:bold;color:${
-    g.stato === "partita" ? "#ff6600" : "#43a047"
-  };">
-    ${
-      g.stato === "partita"
-      ? "🎲 In partita"
-      : "🟢 In lobby"
-    }
-  </div>
-
-</div>
-
-      </div>`;
-}
-
-async function caricaTopGiocatori() {
-  try {
-    const risposta = await fetch("/api/top-giocatori");
-    const dati = await risposta.json();
-    const contenitore = document.getElementById("top");
-    if (!dati.giocatori || dati.giocatori.length === 0) { contenitore.innerHTML = "Nessun giocatore ancora."; return; }
-    contenitore.innerHTML = dati.giocatori.map((g, index) => {
-      let medaglia = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : "🏅";
-      return `<div class="top-player">${medaglia} <b><a href="profilo-pubblico.html?nickname=${encodeURIComponent(g.nickname)}" style="color:inherit;">${g.nickname}</a></b><br>🎯 Vittorie: ${g.vinte}<br>🎮 Partite: ${g.giocate}</div><br>`;
-    }).join("");
-  } catch (e) {
-    document.getElementById("top").innerHTML = "Errore caricamento classifica";
-  }
-}
-
-// ===== AMICI =====
-async function caricaAmici() {
-  try {
-    const r = await fetch("https://gioco-oca-server.onrender.com/api/amici", { credentials: "include" });
-    if (!r.ok) return;
-    const d = await r.json();
-    mieiAmiciUid = new Set((d.amici || []).map(a => a.uid));
-    aggiornaContatoreAmiciOnline();
-  } catch (e) {}
-}
-function aggiornaContatoreAmiciOnline() {
-  const conteggio = ultimaListaOnlineStanza.filter(g => mieiAmiciUid.has(g.uid)).length;
-  const el = document.getElementById("amiciOnline");
-  if (el) el.textContent = conteggio;
-}
-
-// ===== POPUP PICCOLO SU UN GIOCATORE =====
-function apriPopupGiocatore(uidTarget, nomeTarget) {
-  if (!uidTarget || uidTarget === mioUid) return;
-  const overlay = document.getElementById("overlayPopupGiocatore");
-  document.getElementById("popupGiocatoreContenuto").innerHTML = "Caricamento...";
-  overlay.classList.add("aperto");
-  caricaDatiPopupGiocatore(nomeTarget);
-}
-function chiudiPopupGiocatore() {
-  document.getElementById("overlayPopupGiocatore").classList.remove("aperto");
-}
-document.getElementById("overlayPopupGiocatore").addEventListener("click", (e) => {
-  if (e.target.id === "overlayPopupGiocatore") chiudiPopupGiocatore();
-});
-
-async function caricaDatiPopupGiocatore(nomeTarget) {
-  try {
-    const risposta = await fetch("https://gioco-oca-server.onrender.com/api/profilo-pubblico/" + encodeURIComponent(nomeTarget), { credentials: "include" });
-    if (!risposta.ok) { document.getElementById("popupGiocatoreContenuto").innerHTML = "Errore nel caricamento."; return; }
-    const dati = await risposta.json();
-    disegnaPopupGiocatore(dati);
-  } catch (e) {
-    document.getElementById("popupGiocatoreContenuto").innerHTML = "Errore di connessione.";
-  }
-}
-
-function disegnaPopupGiocatore(dati) {
-  const online = ultimaListaOnlineStanza.some(g => g.uid === dati.uid);
-  const immagine = dati.avatar
-    ? `<img class="popup-avatar" src="${dati.avatar}">`
-    : `<div class="popup-avatar" style="background:${coloreDaNome(dati.nickname)};">${iniziale(dati.nickname)}</div>`;
-
-  let azioneHtml;
-  if (dati.statoAmicizia === "amici") {
-    azioneHtml = `<button class="btn-popup btn-rimuovi-amico" onclick="rimuoviAmico('${dati.uid}')">🗑️ Rimuovi amico</button>`;
-  } else if (dati.statoAmicizia === "richiesta_inviata") {
-    azioneHtml = `<button class="btn-popup" disabled>⏳ Richiesta inviata</button>`;
-  } else if (dati.statoAmicizia === "richiesta_ricevuta") {
-    azioneHtml = `<button class="btn-popup btn-accetta" onclick="accettaAmicizia('${dati.uid}')">✅ Accetta</button><button class="btn-popup btn-rifiuta" onclick="rifiutaAmicizia('${dati.uid}')">❌ Rifiuta</button>`;
-  } else {
-    azioneHtml = `<button class="btn-popup btn-invia-richiesta" onclick="inviaRichiestaAmicizia('${dati.uid}')">➕ Invia richiesta</button>`;
-  }
-
-  document.getElementById("popupGiocatoreContenuto").innerHTML = `
-    <div class="popup-avatar-container">${immagine}</div>
-    <div class="popup-nickname">${dati.nickname}</div>
-    <div class="popup-stato-online">${online ? "🟢 Online ora in questa stanza" : "⚫ Non online in questa stanza al momento"}</div>
-    <div class="popup-azioni">${azioneHtml}</div>
-    <a href="profilo-pubblico.html?nickname=${encodeURIComponent(dati.nickname)}" class="popup-link-profilo">👤 Vedi profilo completo</a>
-  `;
-}
-
-async function inviaRichiestaAmicizia(destinatarioUid) {
-  try {
-    const r = await fetch("https://gioco-oca-server.onrender.com/api/amici/richiedi", {
-      method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ destinatarioUid })
-    });
-    const d = await r.json();
-    if (!r.ok) { alert(d.errore || "Errore."); return; }
-    chiudiPopupGiocatore();
-  } catch (e) { alert("Errore di connessione."); }
-}
-async function accettaAmicizia(daUid) {
-  try {
-    const r = await fetch("https://gioco-oca-server.onrender.com/api/amici/accetta", {
-      method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ daUid })
-    });
-    if (!r.ok) { const d = await r.json(); alert(d.errore || "Errore."); return; }
-    chiudiPopupGiocatore();
-    caricaAmici();
-  } catch (e) { alert("Errore di connessione."); }
-}
-async function rifiutaAmicizia(daUid) {
-  try {
-    await fetch("https://gioco-oca-server.onrender.com/api/amici/rifiuta", {
-      method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ daUid })
-    });
-    chiudiPopupGiocatore();
-  } catch (e) { alert("Errore di connessione."); }
-}
-async function rimuoviAmico(altroUid) {
-  if (!confirm("Vuoi rimuovere questa persona dai tuoi amici?")) return;
-  try {
-    const r = await fetch("https://gioco-oca-server.onrender.com/api/amici/rimuovi", {
-      method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ altroUid })
-    });
-    if (!r.ok) { const d = await r.json(); alert(d.errore || "Errore."); return; }
-    chiudiPopupGiocatore();
-    caricaAmici();
-  } catch (e) { alert("Errore di connessione."); }
-}
-
-// ===== NOTIFICHE =====
-async function caricaNotifiche(apriPannello) {
-  try {
-    const r = await fetch("https://gioco-oca-server.onrender.com/api/notifiche", { credentials: "include" });
-    if (!r.ok) return;
-    const d = await r.json();
-    aggiornaBadgeNotifiche(d.nonLette || 0);
-    if (apriPannello) disegnaListaNotifiche(d.notifiche || []);
-  } catch (e) {}
-}
-function aggiornaBadgeNotifiche(n) {
-  const badge = document.getElementById("badgeNotifiche");
-  if (n > 0) { badge.style.display = "flex"; badge.textContent = n > 9 ? "9+" : n; }
-  else badge.style.display = "none";
-}
-function disegnaListaNotifiche(lista) {
-  const box = document.getElementById("listaNotifiche");
-  if (!lista.length) { box.innerHTML = '<div class="notifica-vuota">Nessuna notifica</div>'; return; }
-  box.innerHTML = lista.map(n => {
-    let azioni = "";
-    if (n.tipo === "richiestaAmicizia") {
-      azioni = `<div class="notifica-azioni">
-        <button class="btn-mini btn-accetta" onclick="accettaAmiciziaDaNotifica('${n.daUid}', this)">Accetta</button>
-        <button class="btn-mini btn-rifiuta" onclick="rifiutaAmiciziaDaNotifica('${n.daUid}', this)">Rifiuta</button>
-      </div>`;
-    } else if (n.tipo === "invitoPartita" && n.stanza) {
-      azioni = `<a class="btn-mini btn-vai" href="lobby.html?stanza=${encodeURIComponent(n.stanza)}">Vai alla stanza</a>`;
-    } else if (n.tipo === "avviso") {
-      azioni = `<a class="btn-mini btn-vai" href="messaggi.html">Vedi avviso</a>`;
-    }
-    return `<div class="notifica-riga">
-      <div class="notifica-testo">🔔 ${n.testo}</div>
-      <div class="notifica-data">${new Date(n.data).toLocaleString("it-IT")}</div>
-      ${azioni}
-    </div>`;
-  }).join("");
-}
-function toggleNotifiche() {
-  const pannello = document.getElementById("pannelloNotifiche");
-  const aperto = !pannello.classList.contains("nascosto");
-  if (aperto) { pannello.classList.add("nascosto"); return; }
-  pannello.classList.remove("nascosto");
-  caricaNotifiche(true);
-  fetch("https://gioco-oca-server.onrender.com/api/notifiche/segna-lette", { method: "POST", credentials: "include" })
-    .then(() => aggiornaBadgeNotifiche(0))
-    .catch(() => {});
-}
-document.addEventListener("click", (e) => {
-  if (!e.target.closest("#areaCampanella")) document.getElementById("pannelloNotifiche").classList.add("nascosto");
-});
-async function accettaAmiciziaDaNotifica(daUid, bottone) {
-  await accettaAmicizia(daUid);
-  bottone.closest(".notifica-riga").remove();
-  caricaAmici();
-}
-async function rifiutaAmiciziaDaNotifica(daUid, bottone) {
-  await rifiutaAmicizia(daUid);
-  bottone.closest(".notifica-riga").remove();
-}
-setInterval(() => caricaNotifiche(false), 10000);
-
-// ===== INVITO A PARTITA PRIVATA =====
-function apriModalInvito(partitaId) {
-  partitaDaInvitareId = partitaId;
-  disegnaListaModalInvito();
-  document.getElementById("overlayModalInvito").classList.add("aperto");
-}
-function chiudiModalInvito() {
-  document.getElementById("overlayModalInvito").classList.remove("aperto");
-  partitaDaInvitareId = null;
-}
-document.getElementById("overlayModalInvito").addEventListener("click", (e) => {
-  if (e.target.id === "overlayModalInvito") chiudiModalInvito();
-});
-function disegnaListaModalInvito() {
-  const altri = ultimaListaOnlineStanza.filter(g => g.uid !== mioUid);
-  const box = document.getElementById("listaModalInvito");
-  if (!altri.length) { box.innerHTML = "<p style='text-align:center;color:#999;padding:20px;'>Nessun altro giocatore online in questa stanza al momento.</p>"; return; }
-  box.innerHTML = altri.map(g => {
-    const immagine = g.avatar
-      ? `<img class="modal-invito-avatar" src="${g.avatar}">`
-      : `<div class="modal-invito-avatar" style="background:${coloreDaNome(g.nickname)};">${iniziale(g.nickname)}</div>`;
-    return `
-      <div class="modal-invito-riga" id="rigaInvito-${g.uid}" onclick="invitaGiocatore('${g.uid}')">
-        ${immagine}
-        <span>${g.nickname}</span>
-      </div>`;
-  }).join("");
-}
-function invitaGiocatore(destinatarioUid) {
-  if (!partitaDaInvitareId) return;
-  socket.send(JSON.stringify({ tipo: "invitaPartita", partitaId: partitaDaInvitareId, destinatarioUid }));
-}
-function segnaInvitatoNelModal(destinatarioUid) {
-  const riga = document.getElementById("rigaInvito-" + destinatarioUid);
-  if (riga) {
-    riga.classList.add("modal-invito-riga-invitato");
-    riga.innerHTML += ' <span class="modal-invito-check">✓ Invitato</span>';
-    riga.onclick = null;
-  }
-}
-
-function mostraInvitoRicevuto(dati) {
-  invitoAttivoPartitaId = dati.partitaId;
-  document.getElementById("testoInvitoRicevuto").textContent = "🎲 " + dati.daNome + " ti ha invitato a giocare!";
-  document.getElementById("cardInvitoRicevuto").classList.remove("nascosto");
-}
-function rispondiInvito(accettato) {
-  if (!invitoAttivoPartitaId) return;
-  socket.send(JSON.stringify({ tipo: "rispostaInvito", partitaId: invitoAttivoPartitaId, accettato }));
-  document.getElementById("cardInvitoRicevuto").classList.add("nascosto");
-  invitoAttivoPartitaId = null;
-}
-
-caricaTopGiocatori();
-verificaSessione();
-</script>
-
-</body>
-</html>
