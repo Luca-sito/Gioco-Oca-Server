@@ -511,9 +511,24 @@ function creaRigaGiocatore(g) {
       <div class="giocatore-online" ${cliccabile ? `onclick="apriPopupGiocatore('${g.uid}','${g.nickname}')" style="cursor:pointer;"` : ""}>
         ${immagine}
         <div>
-          <span class="nickname-riga">${g.nickname}</span>
-          <div style="font-size:13px;color:#777;">${iconaDispositivo(g.tipoDispositivo)}</div>
-        </div>
+  <span class="nickname-riga">${g.nickname}</span>
+
+  <div style="font-size:13px;color:#777;">
+    ${iconaDispositivo(g.tipoDispositivo)}
+  </div>
+
+  <div style="font-size:13px;font-weight:bold;color:${
+    g.stato === "partita" ? "#ff6600" : "#43a047"
+  };">
+    ${
+      g.stato === "partita"
+      ? "🎲 In partita"
+      : "🟢 In lobby"
+    }
+  </div>
+
+</div>
+
       </div>`;
 }
 
