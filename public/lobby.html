@@ -282,13 +282,40 @@ button:disabled{ background:#ccc; cursor:not-allowed; opacity:1; }
 
 <div id="pannelloEmoji" style="
   display:none;
+  position:absolute;
+  bottom:50px;
+  left:0;
+  width:280px;
   padding:8px;
   background:#fff;
   border:1px solid #ccc;
   border-radius:8px;
-  margin-top:5px;
+  box-shadow:0 4px 12px rgba(0,0,0,0.2);
+  z-index:1000;
+  cursor:pointer;
 ">
-  😀 😃 😄 😁 😂 😊 😉 😎 😍 😢 😡 😱 👍 👎 ❤️ 🔥 🎲 🏆 🎉 👋
+ 
+  <span>😀</span>
+  <span>😃</span>
+  <span>😄</span>
+  <span>😁</span>
+  <span>😂</span>
+  <span>😊</span>
+  <span>😉</span>
+  <span>😎</span>
+  <span>😍</span>
+  <span>😢</span>
+  <span>😡</span>
+  <span>😱</span>
+  <span>👍</span>
+  <span>👎</span>
+  <span>❤️</span>
+  <span>🔥</span>
+  <span>🎲</span>
+  <span>🏆</span>
+  <span>🎉</span>
+  <span>👋</span>
+
 </div>
 
   </div>
@@ -613,11 +640,11 @@ function apriEmoji() {
 
 document.getElementById("pannelloEmoji").addEventListener("click", function(e) {
 
-  if (e.target.textContent.trim() !== "") {
+  if (e.target.tagName === "SPAN") {
 
     const input = document.getElementById("messaggio");
 
-    input.value += e.target.textContent.trim();
+    input.value += e.target.textContent;
 
     input.focus();
 
