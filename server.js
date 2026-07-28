@@ -1375,26 +1375,31 @@ wss.on("connection", (socket, request) => {
         const partitaId = "p" + Date.now() + Math.floor(Math.random() * 1000);
         const max = parseInt(dati.maxGiocatori);
 
-        stanze[stanzaAttuale].partite[partitaId] = {
-          id: partitaId,
-          creatore: nickname,
-          creatoDa: uid,
-          tempo: dati.tempo,
-          punti: dati.punti,
-          modalita: dati.modalita,
-          maxGiocatori: (!max || max < 2 || max > 8 ? 2 : max),
-          giocatori:
-           [uid]: {
-           nome: nickname,
-           avatar: mioAvatar,
-           posizione: 0,
-           socket,
-           turniSaltati: 0,
-           stato: "in_partita"
-          }
+stanze[stanzaAttuale].partite[partitaId] = {
+  id: partitaId,
+  creatore: nickname,
+  creatoDa: uid,
+  tempo: dati.tempo,
+  punti: dati.punti,
+  modalita: dati.modalita,
+  maxGiocatori: (!max || max < 2 || max > 8 ? 2 : max),
 
-          ordineGiocatori: [uid], turnoAttuale: 0, iniziata: false, elaborandoTiro: false,
-          invitati: dati.modalita === "privata" ? { [uid]: true } : null
+  giocatori: {
+    [uid]: {
+      nome: nickname,
+      avatar: mioAvatar,
+      posizione: 0,
+      socket,
+      turniSaltati: 0,
+      stato: "in_partita"
+    }
+  },
+
+  ordineGiocatori: [uid],
+  turnoAttuale: 0,
+  iniziata: false,
+  elaborandoTiro: false,
+  invitati: dati.modalita === "privata" ? { [uid]: true } : null
 };
 
 if (stanze[stanzaAttuale].giocatoriOnline[socketId]) {
