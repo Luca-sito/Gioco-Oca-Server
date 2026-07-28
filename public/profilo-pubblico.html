@@ -134,12 +134,22 @@ async function carica() {
     }
 
     const areaAzioni = document.getElementById("areaAzioni");
-    const eIlMioProfilo = me && me.uid === dati.uid;
-    let html = `<a href="storico.html?nickname=${encodeURIComponent(dati.nickname)}" class="btn-storico">📜 Storico partite</a>`;
-    if (!eIlMioProfilo) {
-      html += `<a href="messaggi-privati.html?con=${encodeURIComponent(dati.uid)}&nome=${encodeURIComponent(dati.nickname)}" class="btn-messaggio">💬 Scrivi un messaggio</a>`;
-    }
-    areaAzioni.innerHTML = html;
+const eIlMioProfilo = me && me.uid === dati.uid;
+let html = `<a href="storico.html?nickname=${encodeURIComponent(dati.nickname)}" class="btn-storico">📜 Storico partite</a>`;
+if (!eIlMioProfilo) {
+  html += `<a href="messaggi-privati.html?con=${encodeURIComponent(dati.uid)}&nome=${encodeURIComponent(dati.nickname)}" class="btn-messaggio">💬 Scrivi un messaggio</a>`;
+
+  if (dati.statoAmicizia === "amici") {
+    html += `<button class="btn-amicizia btn-rimuovi-amico-profilo" onclick="rimuoviAmicoProfilo('${dati.uid}')">🗑️ Rimuovi amico</button>`;
+  } else if (dati.statoAmicizia === "richiesta_inviata") {
+    html += `<button class="btn-amicizia" disabled>⏳ Richiesta inviata</button>`;
+  } else if (dati.statoAmicizia === "richiesta_ricevuta") {
+    html += `<button class="btn-amicizia btn-accetta-profilo" onclick="accettaAmiciziaProfilo('${dati.uid}')">✅ Accetta richiesta</button>`;
+  } else {
+    html += `<button class="btn-amicizia btn-invia-profilo" onclick="inviaRichiestaProfilo('${dati.uid}')">➕ Aggiungi amico</button>`;
+  }
+}
+areaAzioni.innerHTML = html;
 
   } catch (e) {
     document.getElementById("nomeProfilo").textContent = "Errore nel caricamento";
