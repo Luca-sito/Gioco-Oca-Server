@@ -16,6 +16,7 @@ h2{ margin:0; padding:12px; background:#111; color:white; text-align:center; fon
 select,button,input{ width:100%; padding:10px; margin-bottom:10px; border-radius:5px; border:1px solid #ccc; font-size:15px; }
 button{ cursor:pointer; background:#333; color:white; font-weight:bold; }
 button:hover{ opacity:0.8; }
+button:disabled{ background:#ccc; cursor:not-allowed; opacity:1; }
 .crea{ background:#ffc400; color:#000; }
 .elimina{ background:#dc3545; color:white; }
 #partite{ height:45%; overflow-y:auto; padding:10px; }
@@ -31,12 +32,67 @@ button:hover{ opacity:0.8; }
 .utente-box{ padding:15px; text-align:center; }
 .avatar-container{ display:flex; justify-content:center; }
 .nickname{ font-weight:bold; margin-top:10px; }
-a.nickname { color:#222; text-decoration:none; }
+.nickname-riga{ font-weight:bold; }
 .dispositivo{ margin-top:8px; font-size:14px; color:#555; font-weight:bold; }
 #listaOnline{ max-height:500px; overflow-y:auto; padding:10px; }
 .giocatore-online{ display:flex; align-items:center; gap:10px; padding:10px; border-bottom:1px solid #ddd; }
 .avatar-mini{ width:40px; height:40px; border-radius:50%; object-fit:cover; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:#43a047; color:white; font-weight:bold; font-size:16px; }
 .avatar{ width:70px; height:70px; border-radius:50%; object-fit:cover; border:3px solid #222; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; font-size:25px; }
+
+/* Campanella notifiche */
+#areaCampanella{ position:fixed; top:14px; right:14px; z-index:520; }
+#btnCampanella{ position:relative; width:44px; height:44px; border-radius:50%; background:#111; color:#ffd700; font-size:19px; border:2px solid #ffd700; cursor:pointer; padding:0; margin:0; }
+.badge-notifiche{ position:absolute; top:-4px; right:-4px; background:#e53935; color:white; font-size:10px; font-weight:bold; min-width:16px; height:16px; border-radius:8px; display:flex; align-items:center; justify-content:center; padding:0 3px; }
+.pannello-notifiche{ position:absolute; top:52px; right:0; width:300px; max-width:calc(100vw - 20px); background:white; border:1px solid #ccc; border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,0.25); max-height:400px; overflow-y:auto; }
+.pannello-notifiche.nascosto{ display:none; }
+.notifiche-titolo{ padding:12px 14px; font-weight:bold; background:#111; color:#ffd700; border-radius:10px 10px 0 0; }
+.notifica-riga{ padding:10px 14px; border-bottom:1px solid #eee; font-size:13px; }
+.notifica-testo{ margin-bottom:4px; }
+.notifica-data{ font-size:11px; color:#999; margin-bottom:6px; }
+.notifica-azioni{ display:flex; gap:6px; }
+.notifica-vuota{ padding:20px; text-align:center; color:#999; font-style:italic; font-size:13px; }
+.btn-mini{ padding:6px 10px; border:none; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; text-decoration:none; display:inline-block; }
+.btn-mini.btn-accetta{ background:#43a047; color:white; }
+.btn-mini.btn-rifiuta{ background:#e53935; color:white; }
+.btn-mini.btn-vai{ background:#ff6600; color:white; }
+
+/* Invito ricevuto (in alto a destra) */
+#cardInvitoRicevuto{ position:fixed; top:66px; right:14px; z-index:510; width:260px; max-width:calc(100vw - 28px); background:white; border:2px solid #ffd700; border-radius:10px; padding:14px; box-shadow:0 8px 24px rgba(0,0,0,0.3); font-size:14px; }
+#cardInvitoRicevuto.nascosto{ display:none; }
+.invito-bottoni{ display:flex; gap:8px; margin-top:10px; }
+.invito-bottoni button{ flex:1; padding:9px; border:none; border-radius:6px; font-weight:bold; cursor:pointer; margin:0; }
+.btn-rifiuta-invito{ background:#e53935; color:white; }
+.btn-accetta-invito{ background:#43a047; color:white; }
+
+/* Popup piccolo su un giocatore */
+.overlay-popup-giocatore, .overlay-modal-invito{ display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.55); z-index:700; align-items:center; justify-content:center; }
+.overlay-popup-giocatore.aperto, .overlay-modal-invito.aperto{ display:flex; }
+.popup-giocatore-box{ position:relative; background:white; border-radius:12px; padding:22px; width:260px; max-width:calc(100vw - 32px); text-align:center; }
+.popup-giocatore-box .chiudi-popup{ position:absolute; top:8px; right:10px; background:none; border:none; font-size:16px; color:#999; width:auto; padding:4px; margin:0; }
+.popup-avatar-container{ display:flex; justify-content:center; margin-bottom:8px; }
+.popup-avatar{ width:64px; height:64px; border-radius:50%; object-fit:cover; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; font-size:24px; }
+.popup-nickname{ font-weight:bold; font-size:16px; margin-bottom:4px; }
+.popup-stato-online{ font-size:12px; color:#666; margin-bottom:14px; }
+.popup-azioni{ margin-bottom:10px; display:flex; gap:8px; }
+.btn-popup{ flex:1; padding:10px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; margin:0; }
+.btn-popup:disabled{ background:#ddd; color:#888; cursor:not-allowed; }
+.btn-invia-richiesta{ background:#ffc400; color:#111; }
+.btn-accetta{ background:#43a047; color:white; }
+.btn-rifiuta{ background:#e53935; color:white; }
+.btn-rimuovi-amico{ background:#7a1b1b; color:#ffab91; }
+.popup-link-profilo{ display:block; font-size:12px; color:#ff6600; text-decoration:none; margin-top:6px; }
+
+/* Modal invita giocatori (partita privata) */
+.modal-invito-box{ background:white; border-radius:12px; width:380px; max-width:calc(100vw - 32px); max-height:75vh; display:flex; flex-direction:column; overflow:hidden; }
+.modal-invito-titolo{ padding:14px 16px; background:#111; color:#ffd700; font-weight:bold; display:flex; justify-content:space-between; align-items:center; }
+.modal-invito-titolo button{ background:none; border:none; color:#ffd700; font-size:16px; cursor:pointer; width:auto; padding:0; margin:0; }
+#listaModalInvito{ overflow-y:auto; padding:10px; }
+.modal-invito-riga{ display:flex; align-items:center; gap:10px; padding:10px; border-radius:8px; cursor:pointer; }
+.modal-invito-riga:hover{ background:#f4f4f4; }
+.modal-invito-riga-invitato{ opacity:0.55; cursor:default; }
+.modal-invito-avatar{ width:38px; height:38px; border-radius:50%; object-fit:cover; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; flex-shrink:0; }
+.modal-invito-check{ margin-left:auto; font-size:12px; color:#43a047; font-weight:bold; }
+
 @media(max-width:900px){
   .contenitore{ flex-direction:column; height:auto; }
   .sinistra,.centro,.destra{ width:100%; }
@@ -44,9 +100,56 @@ a.nickname { color:#222; text-decoration:none; }
   #chat{ height:200px; width:90%; margin-left:30px; }
   #listaOnline{ max-height:260px; }
 }
+@media(max-width:480px){
+  body{ font-size:15px; }
+  .contenitore{ padding:2px; gap:3px; }
+  .box{ padding:10px; }
+  h2{ font-size:15px; padding:9px; }
+  select,button,input{ padding:11px; font-size:15px; }
+  .utente-box{ padding:10px; }
+  .avatar{ width:56px; height:56px; font-size:20px; }
+  #listaOnline{ max-height:200px; }
+  #areaCampanella{ top:8px; right:8px; }
+  #cardInvitoRicevuto{ top:58px; right:8px; left:8px; width:auto; max-width:none; }
+  .pannello-notifiche{ width:calc(100vw - 16px); right:-6px; }
+  .modal-invito-box{ width:calc(100vw - 24px); }
+}
 </style>
 </head>
 <body>
+
+<div id="areaCampanella">
+  <button id="btnCampanella" onclick="toggleNotifiche()">🔔<span id="badgeNotifiche" class="badge-notifiche" style="display:none;">0</span></button>
+  <div id="pannelloNotifiche" class="pannello-notifiche nascosto">
+    <div class="notifiche-titolo">Notifiche</div>
+    <div id="listaNotifiche">Caricamento...</div>
+  </div>
+</div>
+
+<div id="cardInvitoRicevuto" class="nascosto">
+  <div id="testoInvitoRicevuto"></div>
+  <div class="invito-bottoni">
+    <button class="btn-rifiuta-invito" onclick="rispondiInvito(false)">Rifiuta</button>
+    <button class="btn-accetta-invito" onclick="rispondiInvito(true)">Accetta invito</button>
+  </div>
+</div>
+
+<div id="overlayPopupGiocatore" class="overlay-popup-giocatore">
+  <div class="popup-giocatore-box">
+    <button class="chiudi-popup" onclick="chiudiPopupGiocatore()">✕</button>
+    <div id="popupGiocatoreContenuto">Caricamento...</div>
+  </div>
+</div>
+
+<div id="overlayModalInvito" class="overlay-modal-invito">
+  <div class="modal-invito-box">
+    <div class="modal-invito-titolo">
+      Seleziona chi vuoi invitare
+      <button onclick="chiudiModalInvito()">✕</button>
+    </div>
+    <div id="listaModalInvito"></div>
+  </div>
+</div>
 
 <div class="contenitore">
   <div class="sinistra">
@@ -76,7 +179,7 @@ a.nickname { color:#222; text-decoration:none; }
       <p>Tipo partita</p>
       <select id="tipoPartita">
         <option value="pubblica">🔓 Pubblica</option>
-        <option value="privata">🔒 Privata</option>
+        <option value="privata">🔒 Privata (solo su invito)</option>
       </select>
 
       <button class="crea" onclick="creaPartita()">Crea partita</button>
@@ -98,7 +201,7 @@ a.nickname { color:#222; text-decoration:none; }
     <div id="top">Caricamento...</div>
     <hr>
     <h2 id="nomeStanza">STANZA</h2>
-    <h3 style="text-align:center;">👤 <span id="online">0</span> online</h3>
+    <h3 style="text-align:center;">👤 <span id="online">0</span> online &nbsp; 👥 <span id="amiciOnline">0</span> amici</h3>
     <div id="areaUtente"></div>
     <h2>🟢 Online in questa stanza</h2>
     <div id="listaOnline"></div>
@@ -110,6 +213,13 @@ let socket;
 const parametri = new URLSearchParams(window.location.search);
 const stanza = parametri.get("stanza") || "BAR";
 document.getElementById("nomeStanza").innerHTML = stanza;
+
+let mioUid = null;
+let mieiAmiciUid = new Set();
+let ultimaListaOnlineStanza = [];
+let aspettaPropriaPartitaPrivata = false;
+let partitaDaInvitareId = null;
+let invitoAttivoPartitaId = null;
 
 function iniziale(nome) { return (nome || "?").trim().charAt(0).toUpperCase(); }
 function coloreDaNome(nome) {
@@ -137,6 +247,7 @@ async function verificaSessione() {
     const risposta = await fetch("https://gioco-oca-server.onrender.com/api/me", { credentials: "include" });
     if (!risposta.ok) { window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href); return; }
     const dati = await risposta.json();
+    mioUid = dati.uid;
 
     const immagineAvatar = dati.avatar
       ? `<img class="avatar" src="${dati.avatar}">`
@@ -147,12 +258,16 @@ async function verificaSessione() {
         <div class="avatar-container">${immagineAvatar}</div>
         <div class="nickname">${dati.nickname}</div>
         <div class="dispositivo">${iconaDispositivo(rilevaTipoDispositivoClient())}</div>
+        <button onclick="window.location.href='profilo.html'">👤 Il mio profilo</button>
+        <button onclick="window.location.href='messaggi-privati.html'">💬 Messaggi</button>
         <button onclick="vaiAccount()">⚙️ Il mio account</button>
-        <button onclick="window.location.href='messaggi-privati.html'">💬 Messaggi privati in arrivo</button>
+        <button onclick="esci()">🚪 Logout</button>
       </div>
     `;
 
     connetti();
+    caricaAmici();
+    caricaNotifiche(false);
   } catch (e) {
     window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href);
   }
@@ -183,28 +298,27 @@ function connetti() {
     }
     if (dati.tipo === "online") document.getElementById("online").innerHTML = dati.numero;
     if (dati.tipo === "conteggioStanze" && dati.giocatori) mostraGiocatori(dati.giocatori[stanza] || []);
-    if (dati.tipo === "chat") aggiungiMessaggio(dati.nome, dati.testo);
+    if (dati.tipo === "chat") aggiungiMessaggio(dati.uid, dati.nome, dati.testo);
     if (dati.tipo === "listaPartite") mostraPartite(dati.partite);
     if (dati.tipo === "errore") alert(dati.messaggio);
     if (dati.tipo === "partitaAvviata") window.location.href = `gioco.html?partita=${dati.partitaId}&stanza=${stanza}`;
+    if (dati.tipo === "invitoRicevuto") mostraInvitoRicevuto(dati);
+    if (dati.tipo === "invitoInviato") segnaInvitatoNelModal(dati.destinatarioUid);
+    if (dati.tipo === "invitoRifiutato") alert((dati.destinatarioNome || "Il giocatore") + " ha rifiutato l'invito.");
   };
 }
 
+// ===== CREAZIONE / LISTA PARTITE =====
 function creaPartita() {
   const tipo = document.getElementById("tipoPartita").value;
-  let codicePrivato = "";
-  if (tipo === "privata") {
-    codicePrivato = prompt("Inserisci il codice della partita privata:");
-    if (!codicePrivato || codicePrivato.trim() === "") { alert("Devi inserire un codice"); return; }
-  }
   socket.send(JSON.stringify({
     tipo: "creaPartita",
     tempo: document.getElementById("tempo").value,
     punti: document.getElementById("punti").value,
     modalita: tipo,
-    codicePrivato: codicePrivato,
     maxGiocatori: document.getElementById("numeroGiocatori").value
   }));
+  if (tipo === "privata") aspettaPropriaPartitaPrivata = true;
 }
 
 function eliminaPartita() {
@@ -217,6 +331,17 @@ function mostraPartite(lista) {
   if (lista.length === 0) html = "<p>Nessuna partita disponibile</p>";
   lista.forEach(partita => {
     const piena = partita.numGiocatoriAttuali >= partita.maxGiocatori;
+    const eMia = partita.creatoDa === mioUid;
+    let bottoneHtml;
+    if (partita.modalita === "privata") {
+      if (eMia) {
+        bottoneHtml = `<button onclick="apriModalInvito('${partita.id}')" ${piena ? 'disabled' : ''}>${piena ? 'Al completo' : '➕ Invita giocatori'}</button>`;
+      } else {
+        bottoneHtml = `<button disabled>🔒 Solo su invito</button>`;
+      }
+    } else {
+      bottoneHtml = `<button onclick="entraPartita('${partita.id}')" ${piena ? 'disabled' : ''}>${piena ? 'Piena' : 'Entra'}</button>`;
+    }
     html += `
     <div class="partita">
       🎲 ${partita.creatore}<br>
@@ -224,21 +349,22 @@ function mostraPartite(lista) {
       ⏱ ${partita.tempo} secondi<br>
       🏆 ${partita.punti} punti<br>
       👥 ${partita.numGiocatoriAttuali} su ${partita.maxGiocatori}
-      <button onclick="entraPartita('${partita.id}', '${partita.modalita}')" ${piena ? 'disabled' : ''}>${piena ? 'Piena' : 'Entra'}</button>
+      ${bottoneHtml}
     </div>`;
   });
   document.getElementById("partite").innerHTML = html;
-}
 
-function entraPartita(id, modalita) {
-  let codicePrivato = "";
-  if (modalita === "privata") {
-    codicePrivato = prompt("Inserisci il codice della partita:");
-    if (!codicePrivato) return;
+  if (aspettaPropriaPartitaPrivata) {
+    const mia = lista.find(p => p.creatoDa === mioUid && p.modalita === "privata");
+    if (mia) { aspettaPropriaPartitaPrivata = false; apriModalInvito(mia.id); }
   }
-  socket.send(JSON.stringify({ tipo: "entraPartita", id: id, codicePrivato: codicePrivato }));
 }
 
+function entraPartita(id) {
+  socket.send(JSON.stringify({ tipo: "entraPartita", id: id }));
+}
+
+// ===== CHAT =====
 function inviaChat() {
   let testo = document.getElementById("messaggio").value;
   if (testo === "") return;
@@ -246,13 +372,21 @@ function inviaChat() {
   document.getElementById("messaggio").value = "";
 }
 
-function aggiungiMessaggio(nome, testo) {
+function aggiungiMessaggio(uid, nome, testo) {
   let chat = document.getElementById("chat");
-  chat.innerHTML += `<div class="messaggio"><b><a href="profilo-pubblico.html?nickname=${encodeURIComponent(nome)}" style="color:inherit;">${nome}</a></b>: ${testo}</div>`;
+  const cliccabile = uid && uid !== mioUid;
+  const nomeHtml = cliccabile
+    ? `<span class="nickname-riga" style="cursor:pointer;color:#ff6600;" onclick="apriPopupGiocatore('${uid}','${nome}')">${nome}</span>`
+    : `<b>${nome}</b>`;
+  chat.innerHTML += `<div class="messaggio">${nomeHtml}: ${testo}</div>`;
   chat.scrollTop = chat.scrollHeight;
 }
 
+// ===== ONLINE IN QUESTA STANZA =====
 function mostraGiocatori(lista) {
+  ultimaListaOnlineStanza = lista || [];
+  aggiornaContatoreAmiciOnline();
+
   const contenitore = document.getElementById("listaOnline");
   if (!contenitore) return;
 
@@ -266,11 +400,13 @@ function mostraGiocatori(lista) {
       ? `<img class="avatar-mini" src="${g.avatar}">`
       : `<div class="avatar-mini" style="background:${coloreDaNome(g.nickname)};">${iniziale(g.nickname)}</div>`;
 
+    const cliccabile = g.uid && g.uid !== mioUid;
+
     return `
-      <div class="giocatore-online">
+      <div class="giocatore-online" ${cliccabile ? `onclick="apriPopupGiocatore('${g.uid}','${g.nickname}')" style="cursor:pointer;"` : ""}>
         ${immagine}
         <div>
-          <a class="nickname" href="profilo-pubblico.html?nickname=${encodeURIComponent(g.nickname)}">${g.nickname}</a>
+          <span class="nickname-riga">${g.nickname}</span>
           <div style="font-size:13px;color:#777;">${iconaDispositivo(g.tipoDispositivo)}</div>
         </div>
       </div>`;
@@ -290,6 +426,232 @@ async function caricaTopGiocatori() {
   } catch (e) {
     document.getElementById("top").innerHTML = "Errore caricamento classifica";
   }
+}
+
+// ===== AMICI =====
+async function caricaAmici() {
+  try {
+    const r = await fetch("https://gioco-oca-server.onrender.com/api/amici", { credentials: "include" });
+    if (!r.ok) return;
+    const d = await r.json();
+    mieiAmiciUid = new Set((d.amici || []).map(a => a.uid));
+    aggiornaContatoreAmiciOnline();
+  } catch (e) {}
+}
+function aggiornaContatoreAmiciOnline() {
+  const conteggio = ultimaListaOnlineStanza.filter(g => mieiAmiciUid.has(g.uid)).length;
+  const el = document.getElementById("amiciOnline");
+  if (el) el.textContent = conteggio;
+}
+
+// ===== POPUP PICCOLO SU UN GIOCATORE =====
+function apriPopupGiocatore(uidTarget, nomeTarget) {
+  if (!uidTarget || uidTarget === mioUid) return;
+  const overlay = document.getElementById("overlayPopupGiocatore");
+  document.getElementById("popupGiocatoreContenuto").innerHTML = "Caricamento...";
+  overlay.classList.add("aperto");
+  caricaDatiPopupGiocatore(nomeTarget);
+}
+function chiudiPopupGiocatore() {
+  document.getElementById("overlayPopupGiocatore").classList.remove("aperto");
+}
+document.getElementById("overlayPopupGiocatore").addEventListener("click", (e) => {
+  if (e.target.id === "overlayPopupGiocatore") chiudiPopupGiocatore();
+});
+
+async function caricaDatiPopupGiocatore(nomeTarget) {
+  try {
+    const risposta = await fetch("https://gioco-oca-server.onrender.com/api/profilo-pubblico/" + encodeURIComponent(nomeTarget), { credentials: "include" });
+    if (!risposta.ok) { document.getElementById("popupGiocatoreContenuto").innerHTML = "Errore nel caricamento."; return; }
+    const dati = await risposta.json();
+    disegnaPopupGiocatore(dati);
+  } catch (e) {
+    document.getElementById("popupGiocatoreContenuto").innerHTML = "Errore di connessione.";
+  }
+}
+
+function disegnaPopupGiocatore(dati) {
+  const online = ultimaListaOnlineStanza.some(g => g.uid === dati.uid);
+  const immagine = dati.avatar
+    ? `<img class="popup-avatar" src="${dati.avatar}">`
+    : `<div class="popup-avatar" style="background:${coloreDaNome(dati.nickname)};">${iniziale(dati.nickname)}</div>`;
+
+  let azioneHtml;
+  if (dati.statoAmicizia === "amici") {
+    azioneHtml = `<button class="btn-popup btn-rimuovi-amico" onclick="rimuoviAmico('${dati.uid}')">🗑️ Rimuovi amico</button>`;
+  } else if (dati.statoAmicizia === "richiesta_inviata") {
+    azioneHtml = `<button class="btn-popup" disabled>⏳ Richiesta inviata</button>`;
+  } else if (dati.statoAmicizia === "richiesta_ricevuta") {
+    azioneHtml = `<button class="btn-popup btn-accetta" onclick="accettaAmicizia('${dati.uid}')">✅ Accetta</button><button class="btn-popup btn-rifiuta" onclick="rifiutaAmicizia('${dati.uid}')">❌ Rifiuta</button>`;
+  } else {
+    azioneHtml = `<button class="btn-popup btn-invia-richiesta" onclick="inviaRichiestaAmicizia('${dati.uid}')">➕ Invia richiesta</button>`;
+  }
+
+  document.getElementById("popupGiocatoreContenuto").innerHTML = `
+    <div class="popup-avatar-container">${immagine}</div>
+    <div class="popup-nickname">${dati.nickname}</div>
+    <div class="popup-stato-online">${online ? "🟢 Online ora in questa stanza" : "⚫ Non online in questa stanza al momento"}</div>
+    <div class="popup-azioni">${azioneHtml}</div>
+    <a href="profilo-pubblico.html?nickname=${encodeURIComponent(dati.nickname)}" class="popup-link-profilo">👤 Vedi profilo completo</a>
+  `;
+}
+
+async function inviaRichiestaAmicizia(destinatarioUid) {
+  try {
+    const r = await fetch("https://gioco-oca-server.onrender.com/api/amici/richiedi", {
+      method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ destinatarioUid })
+    });
+    const d = await r.json();
+    if (!r.ok) { alert(d.errore || "Errore."); return; }
+    chiudiPopupGiocatore();
+  } catch (e) { alert("Errore di connessione."); }
+}
+async function accettaAmicizia(daUid) {
+  try {
+    const r = await fetch("https://gioco-oca-server.onrender.com/api/amici/accetta", {
+      method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ daUid })
+    });
+    if (!r.ok) { const d = await r.json(); alert(d.errore || "Errore."); return; }
+    chiudiPopupGiocatore();
+    caricaAmici();
+  } catch (e) { alert("Errore di connessione."); }
+}
+async function rifiutaAmicizia(daUid) {
+  try {
+    await fetch("https://gioco-oca-server.onrender.com/api/amici/rifiuta", {
+      method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ daUid })
+    });
+    chiudiPopupGiocatore();
+  } catch (e) { alert("Errore di connessione."); }
+}
+async function rimuoviAmico(altroUid) {
+  if (!confirm("Vuoi rimuovere questa persona dai tuoi amici?")) return;
+  try {
+    const r = await fetch("https://gioco-oca-server.onrender.com/api/amici/rimuovi", {
+      method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ altroUid })
+    });
+    if (!r.ok) { const d = await r.json(); alert(d.errore || "Errore."); return; }
+    chiudiPopupGiocatore();
+    caricaAmici();
+  } catch (e) { alert("Errore di connessione."); }
+}
+
+// ===== NOTIFICHE =====
+async function caricaNotifiche(apriPannello) {
+  try {
+    const r = await fetch("https://gioco-oca-server.onrender.com/api/notifiche", { credentials: "include" });
+    if (!r.ok) return;
+    const d = await r.json();
+    aggiornaBadgeNotifiche(d.nonLette || 0);
+    if (apriPannello) disegnaListaNotifiche(d.notifiche || []);
+  } catch (e) {}
+}
+function aggiornaBadgeNotifiche(n) {
+  const badge = document.getElementById("badgeNotifiche");
+  if (n > 0) { badge.style.display = "flex"; badge.textContent = n > 9 ? "9+" : n; }
+  else badge.style.display = "none";
+}
+function disegnaListaNotifiche(lista) {
+  const box = document.getElementById("listaNotifiche");
+  if (!lista.length) { box.innerHTML = '<div class="notifica-vuota">Nessuna notifica</div>'; return; }
+  box.innerHTML = lista.map(n => {
+    let azioni = "";
+    if (n.tipo === "richiestaAmicizia") {
+      azioni = `<div class="notifica-azioni">
+        <button class="btn-mini btn-accetta" onclick="accettaAmiciziaDaNotifica('${n.daUid}', this)">Accetta</button>
+        <button class="btn-mini btn-rifiuta" onclick="rifiutaAmiciziaDaNotifica('${n.daUid}', this)">Rifiuta</button>
+      </div>`;
+    } else if (n.tipo === "invitoPartita" && n.stanza) {
+      azioni = `<a class="btn-mini btn-vai" href="lobby.html?stanza=${encodeURIComponent(n.stanza)}">Vai alla stanza</a>`;
+    } else if (n.tipo === "avviso") {
+      azioni = `<a class="btn-mini btn-vai" href="messaggi.html">Vedi avviso</a>`;
+    }
+    return `<div class="notifica-riga">
+      <div class="notifica-testo">🔔 ${n.testo}</div>
+      <div class="notifica-data">${new Date(n.data).toLocaleString("it-IT")}</div>
+      ${azioni}
+    </div>`;
+  }).join("");
+}
+function toggleNotifiche() {
+  const pannello = document.getElementById("pannelloNotifiche");
+  const aperto = !pannello.classList.contains("nascosto");
+  if (aperto) { pannello.classList.add("nascosto"); return; }
+  pannello.classList.remove("nascosto");
+  caricaNotifiche(true);
+  fetch("https://gioco-oca-server.onrender.com/api/notifiche/segna-lette", { method: "POST", credentials: "include" })
+    .then(() => aggiornaBadgeNotifiche(0))
+    .catch(() => {});
+}
+document.addEventListener("click", (e) => {
+  if (!e.target.closest("#areaCampanella")) document.getElementById("pannelloNotifiche").classList.add("nascosto");
+});
+async function accettaAmiciziaDaNotifica(daUid, bottone) {
+  await accettaAmicizia(daUid);
+  bottone.closest(".notifica-riga").remove();
+  caricaAmici();
+}
+async function rifiutaAmiciziaDaNotifica(daUid, bottone) {
+  await rifiutaAmicizia(daUid);
+  bottone.closest(".notifica-riga").remove();
+}
+setInterval(() => caricaNotifiche(false), 10000);
+
+// ===== INVITO A PARTITA PRIVATA =====
+function apriModalInvito(partitaId) {
+  partitaDaInvitareId = partitaId;
+  disegnaListaModalInvito();
+  document.getElementById("overlayModalInvito").classList.add("aperto");
+}
+function chiudiModalInvito() {
+  document.getElementById("overlayModalInvito").classList.remove("aperto");
+  partitaDaInvitareId = null;
+}
+document.getElementById("overlayModalInvito").addEventListener("click", (e) => {
+  if (e.target.id === "overlayModalInvito") chiudiModalInvito();
+});
+function disegnaListaModalInvito() {
+  const altri = ultimaListaOnlineStanza.filter(g => g.uid !== mioUid);
+  const box = document.getElementById("listaModalInvito");
+  if (!altri.length) { box.innerHTML = "<p style='text-align:center;color:#999;padding:20px;'>Nessun altro giocatore online in questa stanza al momento.</p>"; return; }
+  box.innerHTML = altri.map(g => {
+    const immagine = g.avatar
+      ? `<img class="modal-invito-avatar" src="${g.avatar}">`
+      : `<div class="modal-invito-avatar" style="background:${coloreDaNome(g.nickname)};">${iniziale(g.nickname)}</div>`;
+    return `
+      <div class="modal-invito-riga" id="rigaInvito-${g.uid}" onclick="invitaGiocatore('${g.uid}')">
+        ${immagine}
+        <span>${g.nickname}</span>
+      </div>`;
+  }).join("");
+}
+function invitaGiocatore(destinatarioUid) {
+  if (!partitaDaInvitareId) return;
+  socket.send(JSON.stringify({ tipo: "invitaPartita", partitaId: partitaDaInvitareId, destinatarioUid }));
+}
+function segnaInvitatoNelModal(destinatarioUid) {
+  const riga = document.getElementById("rigaInvito-" + destinatarioUid);
+  if (riga) {
+    riga.classList.add("modal-invito-riga-invitato");
+    riga.innerHTML += ' <span class="modal-invito-check">✓ Invitato</span>';
+    riga.onclick = null;
+  }
+}
+
+function mostraInvitoRicevuto(dati) {
+  invitoAttivoPartitaId = dati.partitaId;
+  document.getElementById("testoInvitoRicevuto").textContent = "🎲 " + dati.daNome + " ti ha invitato a giocare!";
+  document.getElementById("cardInvitoRicevuto").classList.remove("nascosto");
+}
+function rispondiInvito(accettato) {
+  if (!invitoAttivoPartitaId) return;
+  socket.send(JSON.stringify({ tipo: "rispostaInvito", partitaId: invitoAttivoPartitaId, accettato }));
+  document.getElementById("cardInvitoRicevuto").classList.add("nascosto");
+  invitoAttivoPartitaId = null;
 }
 
 caricaTopGiocatori();
