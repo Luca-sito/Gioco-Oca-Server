@@ -23,25 +23,28 @@ button:disabled{ background:#ccc; cursor:not-allowed; opacity:1; }
 .partita{ border:1px solid #ddd; padding:12px; margin-bottom:10px; border-radius:8px; background:#fafafa; }
 .scheda-partita{
  display:flex;
- gap:15px;
+ gap:20px;
  padding:12px;
  border:1px solid #ddd;
  border-radius:10px;
  background:#fafafa;
  margin-bottom:10px;
+ align-items:flex-start;
 }
 
 .info-partita{
- width:150px;
+ width:180px;
  font-weight:bold;
  line-height:1.8;
+ flex-shrink:0;
 }
 
 .giocatori-mini{
  flex:1;
  display:grid;
- grid-template-columns:repeat(2,1fr);
- gap:6px;
+ grid-template-columns:repeat(2, 1fr);
+ gap:8px;
+ align-content:start;
 }
 
 .mini-giocatore{
@@ -500,32 +503,56 @@ function mostraPartite(lista) {
     } else {
       bottoneHtml = `<button onclick="entraPartita('${partita.id}')" ${piena ? 'disabled' : ''}>${piena ? 'Piena' : 'Entra'}</button>`;
     }
-    html += `
-<div class="scheda-partita">
 
-html += `
-<div class="scheda-partita">
+lista.forEach(partita => {
+  const piena = partita.numGiocatoriAttuali >= partita.maxGiocatori;
+  const eMia = partita.creatoDa === mioUid;
 
-  <div class="info-partita">
-    🎲 ${partita.creatore}<br>
-    ${partita.modalita === "privata" ? "🔒 Privata" : "🔓 Pubblica"}<br>
-    ⏱ ${partita.tempo} secondi<br>
-    🏆 ${partita.punti} punti
+  let bottoneHtml;
 
-    <div style="margin-top:8px;">
-      👥 ${partita.numGiocatoriAttuali} su ${partita.maxGiocatori}
+  if (partita.modalita === "privata") {
+    if (eMia) {
+      bottoneHtml = `
+        <button onclick="apriModalInvito('${partita.id}')" ${piena ? 'disabled' : ''}>
+          ${piena ? 'Al completo' : '➕ Invita giocatori'}
+        </button>`;
+    } else {
+      bottoneHtml = `<button disabled>🔒 Solo su invito</button>`;
+    }
+  } else {
+    bottoneHtml = `
+      <button onclick="entraPartita('${partita.id}')" ${piena ? 'disabled' : ''}>
+        ${piena ? 'Piena' : 'Entra'}
+      </button>`;
+  }
+
+
+  html += `
+  <div class="scheda-partita">
+
+    <div class="info-partita">
+      🎲 ${partita.creatore}<br>
+      ${partita.modalita === "privata" ? "🔒 Privata" : "🔓 Pubblica"}<br>
+      ⏱ ${partita.tempo} secondi<br>
+      🏆 ${partita.punti} punti
+
+      <div style="margin-top:8px;">
+        👥 ${partita.numGiocatoriAttuali} su ${partita.maxGiocatori}
+      </div>
     </div>
-  </div>
 
-  <div class="giocatori-mini">
-    ${creaGiocatoriPartita(partita)}
-  </div>
 
-  <div>
-    ${bottoneHtml}
-  </div>
+    <div class="giocatori-mini">
+      ${creaGiocatoriPartita(partita)}
+    </div>
 
-</div>`;
+
+    <div>
+      ${bottoneHtml}
+    </div>
+
+  </div>`;
+});
 
   });
   document.getElementById("partite").innerHTML = html;
