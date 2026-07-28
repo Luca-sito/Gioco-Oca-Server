@@ -1246,7 +1246,8 @@ function inviaConteggioStanze() {
       uid: g.uid,
       nickname: g.nickname,
       avatar: g.avatar || null,
-      tipoDispositivo: g.tipoDispositivo || "computer"
+      tipoDispositivo: g.tipoDispositivo || "computer",
+      stato: g.stato || "lobby"
     }));
   }
 
@@ -1326,11 +1327,13 @@ wss.on("connection", (socket, request) => {
 
         if (!stanze[stanzaAttuale]) stanze[stanzaAttuale] = { giocatoriOnline: {}, partite: {} };
         stanze[stanzaAttuale].giocatoriOnline[socketId] = {
-          uid,
-          nickname,
-          avatar: mioAvatar,
-          tipoDispositivo
+         uid,
+         nickname,
+         avatar: mioAvatar,
+         tipoDispositivo,
+         stato: "lobby"
         };
+
 
         inviaConteggioStanze();
         inviaAllaStanza(stanzaAttuale, { tipo: "online", numero: Object.keys(stanze[stanzaAttuale].giocatoriOnline).length });
@@ -1384,10 +1387,29 @@ wss.on("connection", (socket, request) => {
           punti: dati.punti,
           modalita: dati.modalita,
           maxGiocatori: (!max || max < 2 || max > 8 ? 2 : max),
-          giocatori: { [uid]: { nome: nickname, avatar: mioAvatar, posizione: 0, socket, turniSaltati: 0 } },
-          ordineGiocatori: [uid], turnoAttuale: 0, iniziata: false, elaborandoTiro: false,
-          invitati: dati.modalita === "privata" ? { [uid]: true } : null
-        };
+          giocatori: {
+  [uid]: {
+    nome: nickname,
+    avatar: mioAvatar,
+    posizione: 0,
+    socket,
+    turniSaltati: 0,
+    stato: "in_partita"
+  }
+},
+
+ordineGiocatori: [uid],
+turnoAttuale: 0,
+iniziata: false,
+elaborandoTiro: false,
+invitati: dati.modalita === "privata" ? { [uid]: true } : null
+
+};
+
+if (stanze[stanzaAttuale].giocatoriOnline[socketId]) {
+  stanze[stanzaAttuale].giocatoriOnline[socketId].stato = "in_partita";
+}
+
         await salvaPartita({ ...stanze[stanzaAttuale].partite[partitaId], stanza: stanzaAttuale });
         inviaListaPartite(stanzaAttuale);
         return;
@@ -1405,7 +1427,14 @@ wss.on("connection", (socket, request) => {
           return;
         }
 
-        partita.giocatori[uid] = { nome: nickname, avatar: mioAvatar, posizione: 0, socket, turniSaltati: 0 };
+        partita.giocatori[uid] = { 
+  nome: nickname, 
+  avatar: mioAvatar, 
+  posizione: 0, 
+  socket, 
+  turniSaltati: 0 
+};
+
         partita.ordineGiocatori.push(uid);
 
         await aggiornaStatoPartita(partita.id, {
@@ -1440,6 +1469,17 @@ wss.on("connection", (socket, request) => {
           socket.send(JSON.stringify({ tipo: "errore", messaggio: "Questo giocatore non è più online in questa stanza." }));
           return;
         }
+
+        const giocatoreOnline = stanzaOggetto.giocatoriOnline[socketIdDestinatario];
+
+if (giocatoreOnline.stato === "in_partita") {
+  socket.send(JSON.stringify({
+    tipo:"errore",
+    messaggio:"Questo giocatore è già in partita."
+  }));
+  return;
+}
+
 
         if (!partita.invitati) partita.invitati = {};
         partita.invitati[destinatarioUid] = true;
@@ -1498,7 +1538,16 @@ wss.on("connection", (socket, request) => {
         }
 
         stanzaAttuale = nomeStanza;
-        partita.giocatori[uid] = { nome: nickname, avatar: mioAvatar, posizione: 0, socket, turniSaltati: 0 };
+        partita.giocatori[uid] = { 
+  nome: nickname, 
+  avatar: mioAvatar, 
+  posizione: 0, 
+  socket, 
+  turniSaltati: 0 
+};
+
+stanze[nomeStanza].giocatoriOnline[socketId].stato = "in_partita";
+
         partita.ordineGiocatori.push(uid);
 
         await aggiornaStatoPartita(partita.id, {
