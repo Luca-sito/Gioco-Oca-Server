@@ -27,17 +27,11 @@ app.set("trust proxy", 1);
 
 const ORIGINI_CONSENTITE = [
   "https://solfriniluca1.wixstudio.com",
-  "https://solfriniluca1-wixstudio-com.filesusr.com",
   "https://gioco-oca-server.onrender.com"
 ];
 
 app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin) return callback(null, true);
-    if (ORIGINI_CONSENTITE.includes(origin)) return callback(null, true);
-    console.log("CORS bloccato:", origin);
-    callback(null, false);
-  },
+  origin: ORIGINI_CONSENTITE,
   credentials: true
 }));
 
