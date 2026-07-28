@@ -1406,7 +1406,6 @@ if (stanze[stanzaAttuale].giocatoriOnline[socketId]) {
   stanze[stanzaAttuale].giocatoriOnline[socketId].stato = "in_partita";
 }
 
-        };
         await salvaPartita({ ...stanze[stanzaAttuale].partite[partitaId], stanza: stanzaAttuale });
         inviaListaPartite(stanzaAttuale);
         return;
