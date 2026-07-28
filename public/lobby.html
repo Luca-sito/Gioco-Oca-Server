@@ -192,8 +192,23 @@ button:disabled{ background:#ccc; cursor:not-allowed; opacity:1; }
     <div id="partite"><p>Nessuna partita disponibile</p></div>
     <h2>Chat</h2>
     <div id="chat"></div>
-    <input id="messaggio" placeholder="Scrivi un messaggio">
-    <button onclick="inviaChat()">Invia</button>
+    <div style="display:flex; gap:5px;">
+  <button onclick="apriEmoji()" style="width:45px;">😊</button>
+  <input id="messaggio" placeholder="Scrivi un messaggio">
+  <button onclick="inviaChat()">Invia</button>
+</div>
+
+<div id="pannelloEmoji" style="
+  display:none;
+  padding:8px;
+  background:#fff;
+  border:1px solid #ccc;
+  border-radius:8px;
+  margin-top:5px;
+">
+  😀 😃 😄 😁 😂 😊 😉 😎 😍 😢 😡 😱 👍 👎 ❤️ 🔥 🎲 🏆 🎉 👋
+</div>
+
   </div>
 
   <div class="destra">
@@ -363,11 +378,56 @@ function entraPartita(id) {
 
 // ===== CHAT =====
 function inviaChat() {
-  let testo = document.getElementById("messaggio").value;
+  let testo = document.getElementById("messaggio").value.trim();
+
   if (testo === "") return;
+
+  if (testo.length > 200) {
+    alert("Massimo 200 caratteri.");
+    return;
+  }
+
   socket.send(JSON.stringify({ tipo: "chat", testo: testo }));
   document.getElementById("messaggio").value = "";
 }
+
+
+// Invio con Enter
+document.getElementById("messaggio").addEventListener("keydown", function(e) {
+
+  if (e.key === "Enter") {
+    e.preventDefault();
+    inviaChat();
+  }
+
+});
+
+
+// Emoji
+function apriEmoji() {
+  const pannello = document.getElementById("pannelloEmoji");
+
+  if (pannello.style.display === "none") {
+    pannello.style.display = "block";
+  } else {
+    pannello.style.display = "none";
+  }
+}
+
+
+document.getElementById("pannelloEmoji").addEventListener("click", function(e) {
+
+  if (e.target.textContent.trim() !== "") {
+
+    const input = document.getElementById("messaggio");
+
+    input.value += e.target.textContent.trim();
+
+    input.focus();
+
+  }
+
+});
 
 function aggiungiMessaggio(uid, nome, testo) {
   let chat = document.getElementById("chat");
@@ -375,7 +435,24 @@ function aggiungiMessaggio(uid, nome, testo) {
   const nomeHtml = cliccabile
     ? `<span class="nickname-riga" style="cursor:pointer;color:#ff6600;" onclick="apriPopupGiocatore('${uid}','${nome}')">${nome}</span>`
     : `<b>${nome}</b>`;
-  chat.innerHTML += `<div class="messaggio">${nomeHtml}: ${testo}</div>`;
+  const ora = new Date().toLocaleTimeString("it-IT", {
+    hour: "2-digit",
+    minute: "2-digit"
+});
+
+function pulisciTestoChat(testo) {
+  return testo
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+chat.innerHTML += `
+<div class="messaggio">
+    <span style="color:#888;font-size:12px;">[${ora}]</span>
+    ${nomeHtml}: ${pulisciTestoChat(testo)}
+</div>`;
+
   chat.scrollTop = chat.scrollHeight;
 }
 
@@ -392,7 +469,38 @@ function mostraGiocatori(lista) {
     return;
   }
 
-  contenitore.innerHTML = lista.map(g => {
+  const listaOrdinata = [...lista].sort((a, b) => {
+
+    const aAmico = mieiAmiciUid.has(a.uid);
+    const bAmico = mieiAmiciUid.has(b.uid);
+
+    if (aAmico && !bAmico) return -1;
+    if (!aAmico && bAmico) return 1;
+
+    return a.nickname.localeCompare(b.nickname, "it");
+});
+
+const amici = listaOrdinata.filter(g => mieiAmiciUid.has(g.uid));
+const altri = listaOrdinata.filter(g => !mieiAmiciUid.has(g.uid));
+
+let html = "";
+
+if (amici.length) {
+    html += "<h3 style='margin:10px;color:#43a047;'>👥 Amici online</h3>";
+    html += amici.map(g => creaRigaGiocatore(g)).join("");
+}
+
+if (altri.length) {
+    html += "<h3 style='margin:10px;color:#666;'>🟢 Altri giocatori</h3>";
+    html += altri.map(g => creaRigaGiocatore(g)).join("");
+}
+
+contenitore.innerHTML = html;
+
+}
+
+function creaRigaGiocatore(g) {
+
     const immagine = g.avatar
       ? `<img class="avatar-mini" src="${g.avatar}">`
       : `<div class="avatar-mini" style="background:${coloreDaNome(g.nickname)};">${iniziale(g.nickname)}</div>`;
@@ -407,7 +515,6 @@ function mostraGiocatori(lista) {
           <div style="font-size:13px;color:#777;">${iconaDispositivo(g.tipoDispositivo)}</div>
         </div>
       </div>`;
-  }).join("");
 }
 
 async function caricaTopGiocatori() {
