@@ -94,6 +94,11 @@ const limiteMessaggiPrivati = rateLimit({
   max: 20,
   message: { errore: "Stai inviando messaggi troppo velocemente, rallenta un po'." }
 });
+const limiteAmici = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 30,
+  message: { errore: "Troppe richieste di amicizia in poco tempo, rallenta un po'." }
+});
 
 // ===== FIREBASE ADMIN =====
 let db = null;
@@ -131,7 +136,6 @@ async function salvaPartita(partita) {
     tempo: partita.tempo,
     punti: partita.punti,
     modalita: partita.modalita,
-    codicePrivato: partita.codicePrivato || null,
     maxGiocatori: partita.maxGiocatori,
     giocatori: preparaGiocatoriPerFirebase(partita.giocatori),
     ordineGiocatori: partita.ordineGiocatori,
@@ -162,11 +166,8 @@ async function rimuoviPartita(nomeStanza, partitaId) {
 }
 
 // ===== LIVELLI, XP, BADGE =====
-// Soglia XP per raggiungere ogni livello. Livello 1 parte da 0.
-// Diffs: 300,400,500,600,700,800,900,1000,1100 — cresce di 100 ogni volta,
-// estendendo lo schema che avevi dato per i primi 3 livelli.
 const SOGLIE_LIVELLO = [0, 300, 700, 1200, 1800, 2500, 3300, 4200, 5200, 6300];
-const SOGLIA_VELOCISTA_SECONDI = 300; // 5 minuti — cambia solo questo numero per modificare il badge Velocista
+const SOGLIA_VELOCISTA_SECONDI = 300;
 
 function calcolaLivello(xp) {
   let livello = 1;
@@ -196,19 +197,13 @@ function calcolaBadge(utente) {
   return badge;
 }
 
-function xpVincita() { return 50 + Math.floor(Math.random() * 151); }   // 50-200
-function xpSconfitta() { return 20 + Math.floor(Math.random() * 61); } // 20-80
+function xpVincita() { return 50 + Math.floor(Math.random() * 151); }
+function xpSconfitta() { return 20 + Math.floor(Math.random() * 61); }
 
 function idConversazione(uidA, uidB) {
   return [uidA, uidB].sort().join("_");
 }
 
-// Chiamata a fine partita (vittoria normale O vittoria per abbandono avversario).
-// elencoPartecipanti: [{uid, nome}, ...] — passato esplicitamente da chi chiama,
-// perché nel caso di abbandono il roster va catturato PRIMA che il giocatore
-// uscente venga rimosso dalla partita, altrimenti lo storico lo perderebbe.
-// Chi abbandona viene comunque trattato come sconfitto (perde XP, streak azzerata):
-// altrimenti si potrebbe abbandonare apposta per "proteggere" una striscia di vittorie.
 async function concludiPartita(partita, vincitoreUid, nomeStanza, elencoPartecipanti) {
   if (!db) return;
   try {
@@ -325,6 +320,20 @@ async function trovaUtentePerNickname(nicknameLower) {
   const val = snap.val();
   const uid = Object.keys(val)[0];
   return { uid, ...val[uid] };
+}
+
+// Relazione di amicizia tra due utenti: "amici" | "richiesta_inviata" | "richiesta_ricevuta" | "nessuno" | "se_stesso"
+async function statoAmicizia(mioUid, altroUid) {
+  if (mioUid === altroUid) return "se_stesso";
+  const [snapAmici, snapInviata, snapRicevuta] = await Promise.all([
+    db.ref(`utenti/${mioUid}/amici/${altroUid}`).once("value"),
+    db.ref(`utenti/${mioUid}/richiesteInviate/${altroUid}`).once("value"),
+    db.ref(`utenti/${mioUid}/richiesteRicevute/${altroUid}`).once("value")
+  ]);
+  if (snapAmici.exists()) return "amici";
+  if (snapInviata.exists()) return "richiesta_inviata";
+  if (snapRicevuta.exists()) return "richiesta_ricevuta";
+  return "nessuno";
 }
 
 async function inviaEmailVerifica(emailDestinatario, nickname, token) {
@@ -669,6 +678,7 @@ app.get("/api/profilo-pubblico/:nickname", richiediAuth, async (req, res) => {
     const vinte = utente.partiteVinte || 0;
     const winRate = giocate > 0 ? Math.round((vinte / giocate) * 100) : 0;
     const { livello, sogliaAttuale, sogliaProssima } = calcolaLivello(utente.xp || 0);
+    const relazioneAmicizia = await statoAmicizia(req.utente.uid, utente.uid);
 
     res.json({
       uid: utente.uid,
@@ -685,7 +695,8 @@ app.get("/api/profilo-pubblico/:nickname", richiediAuth, async (req, res) => {
       sogliaProssima,
       streakVittorieMassima: utente.streakVittorieMassima || 0,
       vittoriaPiuVeloceSecondi: utente.vittoriaPiuVeloceSecondi ?? null,
-      badge: calcolaBadge(utente)
+      badge: calcolaBadge(utente),
+      statoAmicizia: relazioneAmicizia
     });
   } catch (err) {
     console.error(err);
@@ -693,9 +704,6 @@ app.get("/api/profilo-pubblico/:nickname", richiediAuth, async (req, res) => {
   }
 });
 
-// Nota: legge l'intera collezione storicoPartite e filtra in JS — semplice e corretto
-// alle dimensioni attuali del progetto; se in futuro crescerà molto, andrà ottimizzato
-// con un indice per utente (denormalizzazione), ma non serve ora.
 app.get("/api/storico", richiediAuth, async (req, res) => {
   if (!db) return res.status(500).json({ errore: "Servizio non disponibile." });
   try {
@@ -815,6 +823,164 @@ app.get("/api/conversazioni", richiediAuth, async (req, res) => {
   }
 });
 
+// ===== AMICI =====
+app.post("/api/amici/richiedi", limiteAmici, richiediAuth, async (req, res) => {
+  if (!db) return res.status(500).json({ errore: "Servizio non disponibile." });
+  try {
+    const { destinatarioUid } = req.body;
+    if (!destinatarioUid) return res.status(400).json({ errore: "Dati mancanti." });
+    if (destinatarioUid === req.utente.uid) return res.status(400).json({ errore: "Non puoi inviare una richiesta a te stesso." });
+
+    const snapDest = await db.ref("utenti/" + destinatarioUid).once("value");
+    const destinatario = snapDest.val();
+    if (!destinatario) return res.status(404).json({ errore: "Utente non trovato." });
+
+    const stato = await statoAmicizia(req.utente.uid, destinatarioUid);
+    if (stato === "amici") return res.status(400).json({ errore: "Siete già amici." });
+    if (stato === "richiesta_inviata") return res.json({ ok: true });
+    if (stato === "richiesta_ricevuta") return res.status(400).json({ errore: "Questo utente ti ha già inviato una richiesta: accettala dal suo profilo." });
+
+    const mioNickname = req.utente.nickname;
+    const ora = Date.now();
+
+    await db.ref().update({
+      [`utenti/${req.utente.uid}/richiesteInviate/${destinatarioUid}`]: { aNome: destinatario.nickname, data: ora },
+      [`utenti/${destinatarioUid}/richiesteRicevute/${req.utente.uid}`]: { daNome: mioNickname, data: ora }
+    });
+
+    await db.ref("utenti/" + destinatarioUid + "/notifiche").push({
+      tipo: "richiestaAmicizia",
+      testo: `${mioNickname} ti ha inviato una richiesta di amicizia`,
+      data: ora,
+      letta: false,
+      daUid: req.utente.uid,
+      daNome: mioNickname
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ errore: "Errore del server, riprova." });
+  }
+});
+
+app.post("/api/amici/accetta", richiediAuth, async (req, res) => {
+  if (!db) return res.status(500).json({ errore: "Servizio non disponibile." });
+  try {
+    const { daUid } = req.body;
+    if (!daUid) return res.status(400).json({ errore: "Dati mancanti." });
+
+    const snapRichiesta = await db.ref("utenti/" + req.utente.uid + "/richiesteRicevute/" + daUid).once("value");
+    if (!snapRichiesta.exists()) return res.status(400).json({ errore: "Nessuna richiesta da questo utente." });
+
+    const mioNickname = req.utente.nickname;
+
+    await db.ref().update({
+      [`utenti/${req.utente.uid}/richiesteRicevute/${daUid}`]: null,
+      [`utenti/${daUid}/richiesteInviate/${req.utente.uid}`]: null,
+      [`utenti/${req.utente.uid}/amici/${daUid}`]: true,
+      [`utenti/${daUid}/amici/${req.utente.uid}`]: true
+    });
+
+    await db.ref("utenti/" + daUid + "/notifiche").push({
+      tipo: "amiciziaAccettata",
+      testo: `${mioNickname} ha accettato la tua richiesta di amicizia`,
+      data: Date.now(),
+      letta: false
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ errore: "Errore del server, riprova." });
+  }
+});
+
+app.post("/api/amici/rifiuta", richiediAuth, async (req, res) => {
+  if (!db) return res.status(500).json({ errore: "Servizio non disponibile." });
+  try {
+    const { daUid } = req.body;
+    if (!daUid) return res.status(400).json({ errore: "Dati mancanti." });
+    await db.ref().update({
+      [`utenti/${req.utente.uid}/richiesteRicevute/${daUid}`]: null,
+      [`utenti/${daUid}/richiesteInviate/${req.utente.uid}`]: null
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ errore: "Errore del server, riprova." });
+  }
+});
+
+app.post("/api/amici/rimuovi", richiediAuth, async (req, res) => {
+  if (!db) return res.status(500).json({ errore: "Servizio non disponibile." });
+  try {
+    const { altroUid } = req.body;
+    if (!altroUid) return res.status(400).json({ errore: "Dati mancanti." });
+    await db.ref().update({
+      [`utenti/${req.utente.uid}/amici/${altroUid}`]: null,
+      [`utenti/${altroUid}/amici/${req.utente.uid}`]: null
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ errore: "Errore del server, riprova." });
+  }
+});
+
+app.get("/api/amici", richiediAuth, async (req, res) => {
+  if (!db) return res.status(500).json({ errore: "Servizio non disponibile." });
+  try {
+    const snap = await db.ref("utenti/" + req.utente.uid + "/amici").once("value");
+    const mappa = snap.val() || {};
+    const uids = Object.keys(mappa);
+    const amici = await Promise.all(uids.map(async (uidAmico) => {
+      const s = await db.ref("utenti/" + uidAmico).once("value");
+      const u = s.val();
+      return u ? { uid: uidAmico, nickname: u.nickname, avatar: u.avatar || null } : null;
+    }));
+    res.json({ amici: amici.filter(Boolean) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ errore: "Errore del server." });
+  }
+});
+
+// ===== NOTIFICHE =====
+app.get("/api/notifiche", richiediAuth, async (req, res) => {
+  if (!db) return res.status(500).json({ errore: "Servizio non disponibile." });
+  try {
+    const snap = await db.ref("utenti/" + req.utente.uid + "/notifiche").once("value");
+    const tutte = snap.val() || {};
+    const lista = Object.entries(tutte)
+      .map(([id, n]) => ({ id, ...n }))
+      .sort((a, b) => b.data - a.data)
+      .slice(0, 30);
+    const nonLette = lista.filter(n => !n.letta).length;
+    res.json({ notifiche: lista, nonLette });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ errore: "Errore del server." });
+  }
+});
+
+app.post("/api/notifiche/segna-lette", richiediAuth, async (req, res) => {
+  if (!db) return res.status(500).json({ errore: "Servizio non disponibile." });
+  try {
+    const snap = await db.ref("utenti/" + req.utente.uid + "/notifiche").once("value");
+    const tutte = snap.val() || {};
+    const aggiornamenti = {};
+    Object.keys(tutte).forEach(id => { if (!tutte[id].letta) aggiornamenti[id + "/letta"] = true; });
+    if (Object.keys(aggiornamenti).length) {
+      await db.ref("utenti/" + req.utente.uid + "/notifiche").update(aggiornamenti);
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ errore: "Errore del server." });
+  }
+});
+
 // ===== API ADMIN =====
 app.get("/api/admin/utenti", richiediAdmin, async (req, res) => {
   if (!db) return res.status(500).json({ errore: "Database non disponibile." });
@@ -836,6 +1002,14 @@ app.post("/api/admin/avviso", richiediAdmin, async (req, res) => {
   const avvisiAttuali = snap.val() || [];
   avvisiAttuali.push({ data: Date.now(), motivo });
   await ref.set(avvisiAttuali);
+
+  await db.ref("utenti/" + uid + "/notifiche").push({
+    tipo: "avviso",
+    testo: "Hai ricevuto un avviso dallo staff",
+    data: Date.now(),
+    letta: false
+  });
+
   res.json({ ok: true });
 });
 
@@ -917,14 +1091,14 @@ async function ripristinaPartiteDaFirebase() {
     if (!stanze[p.stanza]) continue;
     stanze[p.stanza].partite[id] = {
       ...p,
-      codicePrivato: p.codicePrivato || null,
       maxGiocatori: p.maxGiocatori || (Object.keys(p.giocatori || {}).length || 2),
       giocatori: p.giocatori || {},
       ordineGiocatori: p.ordineGiocatori || [],
       turnoAttuale: p.turnoAttuale || 0,
       iniziata: p.iniziata || false,
       iniziataIl: p.iniziataIl || null,
-      elaborandoTiro: false
+      elaborandoTiro: false,
+      invitati: {}
     };
   }
   console.log("Partite ripristinate da Firebase:", Object.keys(partiteFirebase).length);
@@ -1053,7 +1227,7 @@ function inviaAllaStanza(nomeStanza, messaggio) {
 function inviaListaPartite(nomeStanza) {
   if (!stanze[nomeStanza]) return;
   const lista = Object.values(stanze[nomeStanza].partite).map(p => ({
-    id: p.id, creatore: p.creatore, tempo: p.tempo, punti: p.punti,
+    id: p.id, creatore: p.creatore, creatoDa: p.creatoDa, tempo: p.tempo, punti: p.punti,
     modalita: p.modalita, maxGiocatori: p.maxGiocatori, numGiocatoriAttuali: Object.keys(p.giocatori).length
   }));
   inviaAllaStanza(nomeStanza, { tipo: "listaPartite", partite: lista });
@@ -1069,6 +1243,7 @@ function inviaConteggioStanze() {
     conteggi[nome] = valori.length;
 
     giocatoriPerStanza[nome] = valori.map(g => ({
+      uid: g.uid,
       nickname: g.nickname,
       avatar: g.avatar || null,
       tipoDispositivo: g.tipoDispositivo || "computer"
@@ -1151,6 +1326,7 @@ wss.on("connection", (socket, request) => {
 
         if (!stanze[stanzaAttuale]) stanze[stanzaAttuale] = { giocatoriOnline: {}, partite: {} };
         stanze[stanzaAttuale].giocatoriOnline[socketId] = {
+          uid,
           nickname,
           avatar: mioAvatar,
           tipoDispositivo
@@ -1207,10 +1383,10 @@ wss.on("connection", (socket, request) => {
           tempo: dati.tempo,
           punti: dati.punti,
           modalita: dati.modalita,
-          codicePrivato: dati.modalita === "privata" ? dati.codicePrivato : null,
           maxGiocatori: (!max || max < 2 || max > 8 ? 2 : max),
           giocatori: { [uid]: { nome: nickname, avatar: mioAvatar, posizione: 0, socket, turniSaltati: 0 } },
-          ordineGiocatori: [uid], turnoAttuale: 0, iniziata: false, elaborandoTiro: false
+          ordineGiocatori: [uid], turnoAttuale: 0, iniziata: false, elaborandoTiro: false,
+          invitati: dati.modalita === "privata" ? { [uid]: true } : null
         };
         await salvaPartita({ ...stanze[stanzaAttuale].partite[partitaId], stanza: stanzaAttuale });
         inviaListaPartite(stanzaAttuale);
@@ -1224,8 +1400,8 @@ wss.on("connection", (socket, request) => {
         if (partita.giocatori[uid]) return;
         if (Object.keys(partita.giocatori).length >= partita.maxGiocatori) return;
 
-        if (partita.modalita === "privata" && dati.codicePrivato !== partita.codicePrivato) {
-          socket.send(JSON.stringify({ tipo: "errore", messaggio: "Codice partita non corretto." }));
+        if (partita.modalita === "privata") {
+          socket.send(JSON.stringify({ tipo: "errore", messaggio: "Questa è una partita privata: puoi entrare solo se il creatore ti invita direttamente." }));
           return;
         }
 
@@ -1238,6 +1414,99 @@ wss.on("connection", (socket, request) => {
         });
 
         inviaListaPartite(stanzaAttuale);
+
+        if (Object.keys(partita.giocatori).length === partita.maxGiocatori) await avviaPartitaAutomaticamente(partita);
+        return;
+      }
+
+      if (dati.tipo === "invitaPartita") {
+        if (!uid) return;
+        const trovato = trovaPartita(dati.partitaId);
+        if (!trovato) return;
+        const { partita, nomeStanza } = trovato;
+
+        if (partita.creatoDa !== uid) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Solo il creatore della partita può invitare altri giocatori." })); return; }
+        if (partita.modalita !== "privata") return;
+        if (Object.keys(partita.giocatori).length >= partita.maxGiocatori) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "La partita è già al completo." })); return; }
+
+        const destinatarioUid = dati.destinatarioUid;
+        if (!destinatarioUid || destinatarioUid === uid) return;
+        if (partita.giocatori[destinatarioUid]) return;
+
+        const stanzaOggetto = stanze[nomeStanza];
+        if (!stanzaOggetto) return;
+        const socketIdDestinatario = Object.keys(stanzaOggetto.giocatoriOnline).find(sid => stanzaOggetto.giocatoriOnline[sid].uid === destinatarioUid);
+        if (!socketIdDestinatario) {
+          socket.send(JSON.stringify({ tipo: "errore", messaggio: "Questo giocatore non è più online in questa stanza." }));
+          return;
+        }
+
+        if (!partita.invitati) partita.invitati = {};
+        partita.invitati[destinatarioUid] = true;
+
+        const socketDestinatario = socketsPerId[socketIdDestinatario];
+        const nomeDestinatario = stanzaOggetto.giocatoriOnline[socketIdDestinatario].nickname;
+
+        if (socketDestinatario && socketDestinatario.readyState === WebSocket.OPEN) {
+          socketDestinatario.send(JSON.stringify({
+            tipo: "invitoRicevuto",
+            partitaId: partita.id,
+            stanza: nomeStanza,
+            daUid: uid,
+            daNome: nickname
+          }));
+        }
+
+        if (db) {
+          db.ref("utenti/" + destinatarioUid + "/notifiche").push({
+            tipo: "invitoPartita",
+            testo: `${nickname} ti ha invitato a giocare nella stanza ${nomeStanza}`,
+            data: Date.now(),
+            letta: false,
+            daUid: uid,
+            daNome: nickname,
+            stanza: nomeStanza,
+            partitaId: partita.id
+          }).catch(() => {});
+        }
+
+        socket.send(JSON.stringify({ tipo: "invitoInviato", destinatarioUid, destinatarioNome: nomeDestinatario }));
+        return;
+      }
+
+      if (dati.tipo === "rispostaInvito") {
+        if (!uid) return;
+        const trovato = trovaPartita(dati.partitaId);
+        if (!trovato) return;
+        const { partita, nomeStanza } = trovato;
+
+        if (!partita.invitati || !partita.invitati[uid]) return;
+
+        if (!dati.accettato) {
+          delete partita.invitati[uid];
+          const hostGiocatore = partita.giocatori[partita.creatoDa];
+          if (hostGiocatore && hostGiocatore.socket && hostGiocatore.socket.readyState === WebSocket.OPEN) {
+            hostGiocatore.socket.send(JSON.stringify({ tipo: "invitoRifiutato", destinatarioNome: nickname }));
+          }
+          return;
+        }
+
+        if (partita.giocatori[uid]) return;
+        if (Object.keys(partita.giocatori).length >= partita.maxGiocatori) {
+          socket.send(JSON.stringify({ tipo: "errore", messaggio: "La partita si è già riempita." }));
+          return;
+        }
+
+        stanzaAttuale = nomeStanza;
+        partita.giocatori[uid] = { nome: nickname, avatar: mioAvatar, posizione: 0, socket, turniSaltati: 0 };
+        partita.ordineGiocatori.push(uid);
+
+        await aggiornaStatoPartita(partita.id, {
+          giocatori: preparaGiocatoriPerFirebase(partita.giocatori),
+          ordineGiocatori: partita.ordineGiocatori
+        });
+
+        inviaListaPartite(nomeStanza);
 
         if (Object.keys(partita.giocatori).length === partita.maxGiocatori) await avviaPartitaAutomaticamente(partita);
         return;
@@ -1258,7 +1527,7 @@ wss.on("connection", (socket, request) => {
         if (typeof dati.testo !== "string") return;
         const testo = pulisciTesto(dati.testo, 300);
         if (testo.length === 0) return;
-        inviaAllaStanza(stanzaAttuale, { tipo: "chat", nome: nickname, testo });
+        inviaAllaStanza(stanzaAttuale, { tipo: "chat", uid, nome: nickname, testo });
         return;
       }
 
@@ -1344,8 +1613,6 @@ wss.on("connection", (socket, request) => {
         const { partita, nomeStanza } = trovato;
         if (!partita.giocatori[uid]) return;
 
-        // Cattura il roster completo PRIMA di rimuovere chi abbandona, altrimenti
-        // lo storico/le statistiche perderebbero questo giocatore
         const elencoPartecipantiOriginali = partita.ordineGiocatori.map(id => ({
           uid: id, nome: partita.giocatori[id] ? partita.giocatori[id].nome : "?"
         }));
