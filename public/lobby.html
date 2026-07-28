@@ -276,24 +276,43 @@ button:disabled{ background:#ccc; cursor:not-allowed; opacity:1; }
     <div id="chat"></div>
     <div style="position:relative;">
 
-  <div id="pannelloEmoji" style="
-    display:none;
-    position:absolute;
-    bottom:55px;
-    left:0;
-    width:100%;
-    padding:10px;
-    background:white;
-    border:1px solid #ccc;
-    border-radius:10px;
-    box-shadow:0 4px 12px rgba(0,0,0,0.2);
-    z-index:100;
-    font-size:22px;
-    cursor:pointer;
-  ">
-    😀 😃 😄 😁 😂 😊 😉 😎 😍 😢 😡 😱 👍 👎 ❤️ 🔥 🎲 🏆 🎉 👋
-  </div>
+<div id="pannelloEmoji" style="
+  display:none;
+  position:absolute;
+  bottom:55px;
+  left:0;
+  width:100%;
+  padding:10px;
+  background:white;
+  border:1px solid #ccc;
+  border-radius:10px;
+  box-shadow:0 4px 12px rgba(0,0,0,0.2);
+  z-index:100;
+  font-size:22px;
+">
 
+<span>😀</span>
+<span>😃</span>
+<span>😄</span>
+<span>😁</span>
+<span>😂</span>
+<span>😊</span>
+<span>😉</span>
+<span>😎</span>
+<span>😍</span>
+<span>😢</span>
+<span>😡</span>
+<span>😱</span>
+<span>👍</span>
+<span>👎</span>
+<span>❤️</span>
+<span>🔥</span>
+<span>🎲</span>
+<span>🏆</span>
+<span>🎉</span>
+<span>👋</span>
+
+</div>
 
   <div style="display:flex; gap:5px;">
     <button onclick="apriEmoji()" style="width:45px;">😊</button>
@@ -484,20 +503,26 @@ function mostraPartite(lista) {
     html += `
 <div class="scheda-partita">
 
+html += `
+<div class="scheda-partita">
+
   <div class="info-partita">
     🎲 ${partita.creatore}<br>
     ${partita.modalita === "privata" ? "🔒 Privata" : "🔓 Pubblica"}<br>
     ⏱ ${partita.tempo} secondi<br>
     🏆 ${partita.punti} punti
-    <br>
-    ${creaListaGiocatoriPartita(partita.giocatori)}
 
-<div style="margin-top:8px;">
-👥 ${partita.numGiocatoriAttuali} su ${partita.maxGiocatori}
+    <div style="margin-top:8px;">
+      👥 ${partita.numGiocatoriAttuali} su ${partita.maxGiocatori}
+    </div>
   </div>
 
   <div class="giocatori-mini">
     ${creaGiocatoriPartita(partita)}
+  </div>
+
+  <div>
+    ${bottoneHtml}
   </div>
 
 </div>`;
@@ -625,14 +650,13 @@ function apriEmoji() {
   }
 }
 
-
 document.getElementById("pannelloEmoji").addEventListener("click", function(e) {
 
-  if (e.target.textContent.trim() !== "") {
+  if (e.target.tagName === "SPAN") {
 
     const input = document.getElementById("messaggio");
 
-    input.value += e.target.textContent.trim();
+    input.value += e.target.innerText;
 
     input.focus();
 
