@@ -274,21 +274,33 @@ button:disabled{ background:#ccc; cursor:not-allowed; opacity:1; }
     <div id="partite"><p>Nessuna partita disponibile</p></div>
     <h2>Chat</h2>
     <div id="chat"></div>
-    <div style="display:flex; gap:5px;">
-  <button onclick="apriEmoji()" style="width:45px;">😊</button>
-  <input id="messaggio" placeholder="Scrivi un messaggio">
-  <button onclick="inviaChat()">Invia</button>
-</div>
+    <div style="position:relative;">
 
-<div id="pannelloEmoji" style="
-  display:none;
-  padding:8px;
-  background:#fff;
-  border:1px solid #ccc;
-  border-radius:8px;
-  margin-top:5px;
-">
-  😀 😃 😄 😁 😂 😊 😉 😎 😍 😢 😡 😱 👍 👎 ❤️ 🔥 🎲 🏆 🎉 👋
+  <div id="pannelloEmoji" style="
+    display:none;
+    position:absolute;
+    bottom:55px;
+    left:0;
+    width:100%;
+    padding:10px;
+    background:white;
+    border:1px solid #ccc;
+    border-radius:10px;
+    box-shadow:0 4px 12px rgba(0,0,0,0.2);
+    z-index:100;
+    font-size:22px;
+    cursor:pointer;
+  ">
+    😀 😃 😄 😁 😂 😊 😉 😎 😍 😢 😡 😱 👍 👎 ❤️ 🔥 🎲 🏆 🎉 👋
+  </div>
+
+
+  <div style="display:flex; gap:5px;">
+    <button onclick="apriEmoji()" style="width:45px;">😊</button>
+    <input id="messaggio" placeholder="Scrivi un messaggio">
+    <button onclick="inviaChat()">Invia</button>
+  </div>
+
 </div>
 
   </div>
