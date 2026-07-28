@@ -1226,11 +1226,28 @@ function inviaAllaStanza(nomeStanza, messaggio) {
 
 function inviaListaPartite(nomeStanza) {
   if (!stanze[nomeStanza]) return;
+
   const lista = Object.values(stanze[nomeStanza].partite).map(p => ({
-    id: p.id, creatore: p.creatore, creatoDa: p.creatoDa, tempo: p.tempo, punti: p.punti,
-    modalita: p.modalita, maxGiocatori: p.maxGiocatori, numGiocatoriAttuali: Object.keys(p.giocatori).length
+    id: p.id,
+    creatore: p.creatore,
+    creatoDa: p.creatoDa,
+    tempo: p.tempo,
+    punti: p.punti,
+    modalita: p.modalita,
+    maxGiocatori: p.maxGiocatori,
+    numGiocatoriAttuali: Object.keys(p.giocatori).length,
+
+    // NUOVO: manda i giocatori presenti nella schedina
+    giocatori: Object.values(p.giocatori).map(g => ({
+      nome: g.nome,
+      avatar: g.avatar || null
+    }))
   }));
-  inviaAllaStanza(nomeStanza, { tipo: "listaPartite", partite: lista });
+
+  inviaAllaStanza(nomeStanza, { 
+    tipo: "listaPartite", 
+    partite: lista 
+  });
 }
 
 function inviaConteggioStanze() {
