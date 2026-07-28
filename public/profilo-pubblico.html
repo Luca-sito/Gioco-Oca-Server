@@ -156,6 +156,39 @@ areaAzioni.innerHTML = html;
   }
 }
 
+async function inviaRichiestaProfilo(destinatarioUid) {
+  try {
+    const r = await fetch("https://gioco-oca-server.onrender.com/api/amici/richiedi", {
+      method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ destinatarioUid })
+    });
+    const d = await r.json();
+    if (!r.ok) { alert(d.errore || "Errore."); return; }
+    carica();
+  } catch (e) { alert("Errore di connessione."); }
+}
+async function accettaAmiciziaProfilo(daUid) {
+  try {
+    const r = await fetch("https://gioco-oca-server.onrender.com/api/amici/accetta", {
+      method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ daUid })
+    });
+    if (!r.ok) { const d = await r.json(); alert(d.errore || "Errore."); return; }
+    carica();
+  } catch (e) { alert("Errore di connessione."); }
+}
+async function rimuoviAmicoProfilo(altroUid) {
+  if (!confirm("Vuoi rimuovere questa persona dai tuoi amici?")) return;
+  try {
+    const r = await fetch("https://gioco-oca-server.onrender.com/api/amici/rimuovi", {
+      method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ altroUid })
+    });
+    if (!r.ok) { const d = await r.json(); alert(d.errore || "Errore."); return; }
+    carica();
+  } catch (e) { alert("Errore di connessione."); }
+}
+
 carica();
 </script>
 
