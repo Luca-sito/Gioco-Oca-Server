@@ -11,10 +11,6 @@ const admin = require("firebase-admin");
 const multer = require("multer");
 const rateLimit = require("express-rate-limit");
 const helmet = require("helmet");
-const { v4: uuidv4 } = require("uuid");
-const { Resend } = require("resend");
-
-const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 const app = express();
 
@@ -32,7 +28,12 @@ const ORIGINI_CONSENTITE = [
 ];
 
 app.use(cors({
-  origin: ORIGINI_CONSENTITE,
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+    if (ORIGINI_CONSENTITE.includes(origin)) return callback(null, true);
+    console.log("CORS bloccato:", origin);
+    callback(null, false);
+  },
   credentials: true
 }));
 
@@ -49,7 +50,6 @@ app.use(express.static(path.join(__dirname, "public")));
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 const PORT = process.env.PORT || 3000;
-const DOMINIO_SERVER = "https://gioco-oca-server.onrender.com";
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
@@ -59,8 +59,7 @@ if (!JWT_SECRET) {
 const OPZIONI_COOKIE = {
   httpOnly: true,
   secure: true,
-  sameSite: "none",
-  path: "/",
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
   maxAge: 30 * 24 * 60 * 60 * 1000
 };
 
@@ -303,13 +302,6 @@ async function trovaUtentePerEmail(emailLower) {
   const uid = Object.keys(val)[0];
   return { uid, ...val[uid] };
 }
-async function trovaUtentePerTokenVerifica(token) {
-  const snap = await db.ref("utenti").orderByChild("tokenVerificaEmail").equalTo(token).once("value");
-  if (!snap.exists()) return null;
-  const dati = snap.val();
-  const uid = Object.keys(dati)[0];
-  return { uid, ...dati[uid] };
-}
 async function trovaUtentePerNickname(nicknameLower) {
   const snap = await db.ref("utenti").orderByChild("nicknameLower").equalTo(nicknameLower).once("value");
   if (!snap.exists()) return null;
@@ -318,7 +310,6 @@ async function trovaUtentePerNickname(nicknameLower) {
   return { uid, ...val[uid] };
 }
 
-// Relazione di amicizia tra due utenti: "amici" | "richiesta_inviata" | "richiesta_ricevuta" | "nessuno" | "se_stesso"
 async function statoAmicizia(mioUid, altroUid) {
   if (mioUid === altroUid) return "se_stesso";
   const [snapAmici, snapInviata, snapRicevuta] = await Promise.all([
@@ -332,27 +323,9 @@ async function statoAmicizia(mioUid, altroUid) {
   return "nessuno";
 }
 
-async function inviaEmailVerifica(emailDestinatario, nickname, token) {
-  if (!resend) return;
-  const linkVerifica = DOMINIO_SERVER + "/api/verifica-email/" + token;
-  try {
-    await resend.emails.send({
-      from: "Giochi Società <onboarding@resend.dev>",
-      to: emailDestinatario,
-      subject: "Verifica il tuo account - Giochi Società",
-      html: `
-        <h2>Ciao ${nickname}</h2>
-        <p>Per attivare il tuo account su Giochi Società clicca qui:</p>
-        <a href="${linkVerifica}">Verifica la mia email</a>
-        <p>Se non hai richiesto tu questa registrazione, ignora pure questa email.</p>
-      `
-    });
-  } catch (erroreEmail) {
-    console.error("Errore invio email verifica:", erroreEmail);
-  }
-}
-
 // ===== API REGISTRAZIONE / LOGIN =====
+// Registrazione immediata: crea l'account e logga subito l'utente,
+// nessuna verifica email (Resend rimosso).
 app.post("/api/registrati", limiteLogin, async (req, res) => {
   if (!db) return res.status(500).json({ errore: "Servizio account non disponibile al momento." });
   try {
@@ -388,7 +361,6 @@ app.post("/api/registrati", limiteLogin, async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 10);
     const nuovoRef = db.ref("utenti").push();
     const uid = nuovoRef.key;
-    const tokenVerifica = uuidv4();
 
     await nuovoRef.set({
       partiteVinte: 0,
@@ -400,8 +372,6 @@ app.post("/api/registrati", limiteLogin, async (req, res) => {
       vittoriaPiuVeloceSecondi: null,
       email: emailPulita,
       emailLower: emailPulita,
-      emailVerificata: false,
-      tokenVerificaEmail: tokenVerifica,
       nickname: nicknamePulito,
       nicknameLower,
       passwordHash,
@@ -411,63 +381,12 @@ app.post("/api/registrati", limiteLogin, async (req, res) => {
       sospesoFino: null,
       avvisi: [],
       creatoIl: Date.now(),
-      ultimoAccesso: null
+      ultimoAccesso: Date.now()
     });
 
-    await inviaEmailVerifica(emailPulita, nicknamePulito, tokenVerifica);
-
-    res.json({ messaggio: "Registrazione completata! Controlla la tua email per attivare l'account.", email: emailPulita });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ errore: "Errore del server, riprova." });
-  }
-});
-
-app.get("/api/verifica-email/:token", async (req, res) => {
-  if (!db) return res.send("Servizio non disponibile.");
-  try {
-    const utente = await trovaUtentePerTokenVerifica(req.params.token);
-
-    const paginaBase = (titolo, testo) => `
-      <!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><title>${titolo}</title>
-      <style>
-        body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#101820;font-family:Arial,sans-serif;color:#e8e8e8;}
-        .box{background:#1e2a38;border:2px solid #ffd700;border-radius:14px;padding:36px;max-width:400px;text-align:center;}
-        h2{color:#ffd700;margin-top:0;}
-      </style></head><body><div class="box"><h2>${titolo}</h2><p>${testo}</p></div></body></html>
-`;
-
-    if (!utente) {
-      return res.send(paginaBase("Link non valido", "Questo link di verifica non è valido o è già stato utilizzato."));
-    }
-
-    await db.ref("utenti/" + utente.uid).update({ emailVerificata: true, tokenVerificaEmail: null });
-
-    res.send(paginaBase("Email verificata! 🎉", "Il tuo account è ora attivo. Puoi accedere ritornando nella pagina precedente e cliccando su Accedi"));
-  } catch (err) {
-    console.error(err);
-    res.status(500).send("Errore durante la verifica.");
-  }
-});
-
-app.post("/api/rinvia-verifica", limiteContatti, async (req, res) => {
-  if (!db) return res.status(500).json({ errore: "Servizio non disponibile." });
-  try {
-    const { email } = req.body;
-    if (!email) return res.status(400).json({ errore: "Inserisci la tua email." });
-
-    const emailPulita = pulisciTesto(email, 100).toLowerCase();
-    const utente = await trovaUtentePerEmail(emailPulita);
-
-    const rispostaGenerica = { messaggio: "Se l'indirizzo è registrato e non ancora verificato, ti abbiamo inviato una nuova email." };
-
-    if (!utente || utente.emailVerificata) return res.json(rispostaGenerica);
-
-    const nuovoToken = uuidv4();
-    await db.ref("utenti/" + utente.uid).update({ tokenVerificaEmail: nuovoToken });
-    await inviaEmailVerifica(utente.email, utente.nickname, nuovoToken);
-
-    res.json(rispostaGenerica);
+    const token = creaToken(uid, nicknamePulito, "utente");
+    res.cookie("token", token, OPZIONI_COOKIE);
+    res.json({ nickname: nicknamePulito, ruolo: "utente" });
   } catch (err) {
     console.error(err);
     res.status(500).json({ errore: "Errore del server, riprova." });
@@ -499,10 +418,6 @@ app.post("/api/login", limiteLogin, async (req, res) => {
         await db.ref("utenti/" + utente.uid).update({ stato: "attivo", sospesoFino: null });
         utente.stato = "attivo";
       }
-    }
-
-    if (utente.emailVerificata === false) {
-      return res.status(403).json({ errore: "Devi verificare la tua email prima di accedere.", nonVerificata: true });
     }
 
     await db.ref("utenti/" + utente.uid).update({ ultimoAccesso: Date.now() });
@@ -1242,8 +1157,7 @@ function inviaConteggioStanze() {
       uid: g.uid,
       nickname: g.nickname,
       avatar: g.avatar || null,
-      tipoDispositivo: g.tipoDispositivo || "computer",
-      stato: g.stato || "lobby"
+      tipoDispositivo: g.tipoDispositivo || "computer"
     }));
   }
 
@@ -1323,13 +1237,11 @@ wss.on("connection", (socket, request) => {
 
         if (!stanze[stanzaAttuale]) stanze[stanzaAttuale] = { giocatoriOnline: {}, partite: {} };
         stanze[stanzaAttuale].giocatoriOnline[socketId] = {
-         uid,
-         nickname,
-         avatar: mioAvatar,
-         tipoDispositivo,
-         stato: "lobby"
+          uid,
+          nickname,
+          avatar: mioAvatar,
+          tipoDispositivo
         };
-
 
         inviaConteggioStanze();
         inviaAllaStanza(stanzaAttuale, { tipo: "online", numero: Object.keys(stanze[stanzaAttuale].giocatoriOnline).length });
@@ -1375,37 +1287,18 @@ wss.on("connection", (socket, request) => {
         const partitaId = "p" + Date.now() + Math.floor(Math.random() * 1000);
         const max = parseInt(dati.maxGiocatori);
 
-stanze[stanzaAttuale].partite[partitaId] = {
-  id: partitaId,
-  creatore: nickname,
-  creatoDa: uid,
-  tempo: dati.tempo,
-  punti: dati.punti,
-  modalita: dati.modalita,
-  maxGiocatori: (!max || max < 2 || max > 8 ? 2 : max),
-
-  giocatori: {
-    [uid]: {
-      nome: nickname,
-      avatar: mioAvatar,
-      posizione: 0,
-      socket,
-      turniSaltati: 0,
-      stato: "in_partita"
-    }
-  },
-
-  ordineGiocatori: [uid],
-  turnoAttuale: 0,
-  iniziata: false,
-  elaborandoTiro: false,
-  invitati: dati.modalita === "privata" ? { [uid]: true } : null
-};
-
-if (stanze[stanzaAttuale].giocatoriOnline[socketId]) {
-  stanze[stanzaAttuale].giocatoriOnline[socketId].stato = "in_partita";
-}
-
+        stanze[stanzaAttuale].partite[partitaId] = {
+          id: partitaId,
+          creatore: nickname,
+          creatoDa: uid,
+          tempo: dati.tempo,
+          punti: dati.punti,
+          modalita: dati.modalita,
+          maxGiocatori: (!max || max < 2 || max > 8 ? 2 : max),
+          giocatori: { [uid]: { nome: nickname, avatar: mioAvatar, posizione: 0, socket, turniSaltati: 0 } },
+          ordineGiocatori: [uid], turnoAttuale: 0, iniziata: false, elaborandoTiro: false,
+          invitati: dati.modalita === "privata" ? { [uid]: true } : null
+        };
         await salvaPartita({ ...stanze[stanzaAttuale].partite[partitaId], stanza: stanzaAttuale });
         inviaListaPartite(stanzaAttuale);
         return;
@@ -1423,16 +1316,7 @@ if (stanze[stanzaAttuale].giocatoriOnline[socketId]) {
           return;
         }
 
-        partita.giocatori[uid] = { 
-  nome: nickname, 
-  avatar: mioAvatar, 
-  posizione: 0, 
-  socket, 
-  turniSaltati: 0 
-};
-
-stanze[stanzaAttuale].giocatoriOnline[socketId].stato = "in_partita";
-
+        partita.giocatori[uid] = { nome: nickname, avatar: mioAvatar, posizione: 0, socket, turniSaltati: 0 };
         partita.ordineGiocatori.push(uid);
 
         await aggiornaStatoPartita(partita.id, {
@@ -1467,17 +1351,6 @@ stanze[stanzaAttuale].giocatoriOnline[socketId].stato = "in_partita";
           socket.send(JSON.stringify({ tipo: "errore", messaggio: "Questo giocatore non è più online in questa stanza." }));
           return;
         }
-
-        const giocatoreOnline = stanzaOggetto.giocatoriOnline[socketIdDestinatario];
-
-if (giocatoreOnline.stato === "in_partita") {
-  socket.send(JSON.stringify({
-    tipo:"errore",
-    messaggio:"Questo giocatore è già in partita."
-  }));
-  return;
-}
-
 
         if (!partita.invitati) partita.invitati = {};
         partita.invitati[destinatarioUid] = true;
@@ -1536,16 +1409,7 @@ if (giocatoreOnline.stato === "in_partita") {
         }
 
         stanzaAttuale = nomeStanza;
-        partita.giocatori[uid] = { 
-  nome: nickname, 
-  avatar: mioAvatar, 
-  posizione: 0, 
-  socket, 
-  turniSaltati: 0 
-};
-
-stanze[nomeStanza].giocatoriOnline[socketId].stato = "in_partita";
-
+        partita.giocatori[uid] = { nome: nickname, avatar: mioAvatar, posizione: 0, socket, turniSaltati: 0 };
         partita.ordineGiocatori.push(uid);
 
         await aggiornaStatoPartita(partita.id, {
