@@ -292,8 +292,7 @@ grid-template-columns:1fr 1fr;
 /* mini chat */
 
 /* ===========================
-   CHAT MOBILE NASCOSTA
-   (si apre dal pulsante)
+   CHAT MOBILE
 =========================== */
 
 .centro h2:nth-of-type(2),
@@ -304,6 +303,84 @@ grid-template-columns:1fr 1fr;
     display:none;
 }
 
+
+/* contenitore chat popup */
+
+#chatMobile{
+
+    height:calc(100% - 130px) !important;
+
+    overflow-y:auto;
+
+    background:#fafafa;
+
+    border:1px solid #ddd;
+
+    border-radius:12px;
+
+    padding:12px;
+
+    margin-top:15px;
+
+}
+
+
+/* messaggi */
+
+#chatMobile .messaggio{
+
+    background:white;
+
+    border-radius:10px;
+
+    padding:10px;
+
+    margin-bottom:8px;
+
+    border:1px solid #eee;
+
+}
+
+
+/* emoji */
+
+#emojiMobile{
+
+    margin-top:10px;
+
+    display:flex;
+
+    flex-wrap:wrap;
+
+    gap:8px;
+
+    justify-content:center;
+
+}
+
+
+/* barra scrittura */
+
+#messaggioMobile{
+
+    height:45px;
+
+    border-radius:20px;
+
+    padding-left:15px;
+
+}
+
+
+#messaggioMobile + button{
+
+    width:80px;
+
+    height:45px;
+
+    border-radius:20px;
+
+}
 
 /* badge rosso mobile */
 
@@ -771,22 +848,24 @@ function apriChatMobile(){
 
 document.getElementById("contenutoMobile").innerHTML=`
 
-<h2>💬 Chat</h2>
+<div style="
+height:100%;
+display:flex;
+flex-direction:column;
+">
 
-
-<div id="chatMobile" style="
-height:65%;
-overflow-y:auto;
-background:#fafafa;
-padding:10px;
-border-radius:12px;
-border:1px solid #ddd;
+<h2 style="
 margin-bottom:10px;
 ">
+💬 Chat
+</h2>
+
+<div id="chatMobile">
 
 ${document.getElementById("chat").innerHTML}
 
 </div>
+
 
 
 <div id="emojiMobile" style="
@@ -796,9 +875,24 @@ border:1px solid #ddd;
 border-radius:10px;
 padding:10px;
 font-size:25px;
+line-height:35px;
+margin-bottom:8px;
 ">
 
-😀 😃 😄 😁 😂 😊 😉 😎 😍 😢 😡 😱 👍 👎 ❤️ 🔥 🎲 🏆 🎉 👋
+<span onclick="aggiungiEmojiMobile('😀')">😀</span>
+<span onclick="aggiungiEmojiMobile('😂')">😂</span>
+<span onclick="aggiungiEmojiMobile('😊')">😊</span>
+<span onclick="aggiungiEmojiMobile('😉')">😉</span>
+<span onclick="aggiungiEmojiMobile('😎')">😎</span>
+<span onclick="aggiungiEmojiMobile('😍')">😍</span>
+<span onclick="aggiungiEmojiMobile('😢')">😢</span>
+<span onclick="aggiungiEmojiMobile('😡')">😡</span>
+<span onclick="aggiungiEmojiMobile('👍')">👍</span>
+<span onclick="aggiungiEmojiMobile('❤️')">❤️</span>
+<span onclick="aggiungiEmojiMobile('🔥')">🔥</span>
+<span onclick="aggiungiEmojiMobile('🎲')">🎲</span>
+<span onclick="aggiungiEmojiMobile('🏆')">🏆</span>
+<span onclick="aggiungiEmojiMobile('🎉')">🎉</span>
 
 </div>
 
@@ -806,8 +900,8 @@ font-size:25px;
 
 <div style="
 display:flex;
-gap:5px;
-align-items:center;
+gap:6px;
+height:45px;
 ">
 
 
@@ -815,16 +909,18 @@ align-items:center;
 style="
 width:45px;
 margin:0;
+padding:0;
 ">
 😊
 </button>
 
 
 <input id="messaggioMobile"
-placeholder="Scrivi..."
+placeholder="Scrivi un messaggio..."
 style="
 flex:1;
 margin:0;
+width:auto;
 ">
 
 
@@ -832,6 +928,7 @@ margin:0;
 style="
 width:70px;
 margin:0;
+padding:0;
 ">
 Invia
 </button>
@@ -839,6 +936,8 @@ Invia
 
 </div>
 
+
+</div>
 
 `;
 
