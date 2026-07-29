@@ -200,262 +200,73 @@ button:disabled{ background:#ccc; cursor:not-allowed; opacity:1; }
   .modal-invito-box{ width:calc(100vw - 24px); }
 }
 
-/* ===========================
-   VERSIONE SMARTPHONE
-=========================== */
+/* ===== Barre e pannello a comparsa per cellulare ===== */
+#barraSuperioreMobile, #barraFabMobile, #overlayPannelloMobile{ display:none; }
 
+@media(max-width:900px){
+  html, body{ height:100%; overflow:hidden; }
+  body{ padding-top:42px; padding-bottom:78px; box-sizing:border-box; }
+  .contenitore{ flex-direction:column; height:100%; padding:5px; gap:4px; }
 
-#menuMobile{
-display:none;
+  /* Fix: nascondi sinistra/destra SOLO finché sono ancora al loro posto originale.
+     Una regola basata solo sulla classe (.sinistra{display:none}) resterebbe attiva
+     anche dopo che il pannello viene spostato nel foglio a comparsa, perché il
+     selettore per classe non dipende dalla posizione nel DOM — qui invece sì. */
+  .contenitore > .sinistra, .contenitore > .destra{ display:none; }
+
+  .centro{ width:100%; flex:1 1 auto; display:flex; flex-direction:column; min-height:0; }
+  .centro h2{ flex-shrink:0; }
+  #partite{ flex:1 1 auto; height:auto; min-height:0; overflow-y:auto; }
+
+  /* Stesso principio per la chat: invisibile mentre è ancora dentro .centro,
+     visibile appena viene spostata nel foglio a comparsa */
+  .centro > #pannelloChat{ display:none; }
+  #pannelloChat #chat{ height:auto; max-height:45vh; margin-left:0; }
+
+  #barraSuperioreMobile{
+    display:block; position:fixed; top:0; left:0; width:100%;
+    padding:11px 70px 11px 14px; background:#111; color:#ffc400;
+    font-weight:bold; font-size:14px; z-index:60; box-sizing:border-box;
+  }
+
+  #barraFabMobile{
+    display:flex; position:fixed; bottom:0; left:0; width:100%;
+    justify-content:center; gap:18px;
+    padding:10px 10px calc(10px + env(safe-area-inset-bottom));
+    background:#111; z-index:60; box-sizing:border-box;
+  }
+  .fab-tonda{
+    position:relative; width:50px; height:50px; border-radius:50%;
+    background:#222; border:2px solid #ffc400; color:#ffc400;
+    font-size:21px; display:flex; align-items:center; justify-content:center;
+    cursor:pointer; padding:0; margin:0;
+  }
+  .fab-tonda:hover{ opacity:0.85; }
+  .badge-fab{
+    position:absolute; top:-4px; right:-4px; background:#e53935; color:white;
+    font-size:10px; font-weight:bold; min-width:16px; height:16px; border-radius:8px;
+    display:flex; align-items:center; justify-content:center; padding:0 3px;
+  }
+
+  #overlayPannelloMobile{ position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:600; align-items:flex-end; justify-content:center; }
+  #overlayPannelloMobile.aperto{ display:flex; }
+  .pannello-mobile-box{ background:white; width:100%; max-height:78vh; border-radius:16px 16px 0 0; display:flex; flex-direction:column; overflow:hidden; }
+  .pannello-mobile-titolo{ display:flex; justify-content:space-between; align-items:center; padding:14px 16px; background:#111; color:#ffc400; font-weight:bold; flex-shrink:0; }
+  .pannello-mobile-titolo button{ background:none; border:none; color:#ffc400; font-size:18px; cursor:pointer; width:auto; padding:4px; margin:0; }
+  .pannello-mobile-corpo{ padding:14px; overflow-y:auto; }
+  #corpoPannelloMobile .sinistra{ width:100%; border:none; background:none; border-radius:0; display:block; }
 }
 
-
-.popup-mobile{
-display:none;
+@media(max-width:480px){
+  #barraSuperioreMobile{ font-size:13px; padding:9px 60px 9px 12px; }
+  .fab-tonda{ width:44px; height:44px; font-size:18px; }
+  #barraFabMobile{ gap:14px; }
+  .pannello-mobile-box{ max-height:82vh; }
+  #areaCampanella{ top:8px; right:8px; }
+  #cardInvitoRicevuto{ top:58px; right:8px; left:8px; width:auto; max-width:none; }
+  .pannello-notifiche{ width:calc(100vw - 16px); right:-6px; }
+  .modal-invito-box{ width:calc(100vw - 24px); }
 }
-
-
-@media(max-width:600px){
-
-
-body{
-overflow:hidden;
-}
-
-
-/* nascondo pannelli grandi */
-
-.sinistra,
-.destra{
-display:none;
-}
-
-
-.contenitore{
-display:block;
-height:100vh;
-padding:0;
-}
-
-
-.centro{
-width:100%;
-height:100vh;
-border:none;
-border-radius:0;
-}
-
-
-/* titolo */
-
-.centro h2:first-child{
-font-size:16px;
-padding:8px;
-}
-
-
-/* partite subito visibili */
-
-#partite{
-
-height:58vh;
-overflow-y:auto;
-padding:8px;
-
-}
-
-
-.scheda-partita{
-
-display:flex;
-flex-direction:column;
-gap:8px;
-
-}
-
-
-.info-partita{
-
-width:100%;
-font-size:14px;
-
-}
-
-
-.giocatori-mini{
-
-grid-template-columns:1fr 1fr;
-
-}
-
-
-/* mini chat */
-
-#chat{
-
-height:15vh;
-margin:0;
-padding:5px;
-overflow:hidden;
-
-}
-
-
-
-/* nascondo input chat */
-
-#messaggio,
-#messaggio+button{
-
-display:none;
-
-}
-
-
-
-/* MENU TONDO */
-
-#menuMobile{
-
-position:fixed;
-display:flex;
-bottom:0;
-left:0;
-
-width:100%;
-height:75px;
-
-background:white;
-border-top:2px solid #ff6600;
-
-justify-content:space-around;
-align-items:center;
-
-z-index:1000;
-
-}
-
-
-
-.btn-mobile{
-
-width:58px;
-height:58px;
-
-border-radius:50%;
-
-background:#111;
-
-color:#ffd700;
-
-border:2px solid #ffd700;
-
-font-size:22px;
-
-display:flex;
-flex-direction:column;
-align-items:center;
-justify-content:center;
-
-padding:0;
-
-}
-
-
-
-.btn-mobile span{
-
-font-size:9px;
-
-}
-
-
-/* POPUP */
-
-.popup-mobile{
-
-position:fixed;
-
-top:10%;
-left:5%;
-
-width:90%;
-height:75%;
-
-background:white;
-
-border-radius:15px;
-
-box-shadow:0 5px 25px #0005;
-
-z-index:2000;
-
-padding:15px;
-
-overflow:auto;
-
-}
-
-
-.chiudi-mobile{
-
-position:absolute;
-
-right:10px;
-top:10px;
-
-width:35px;
-height:35px;
-
-border-radius:50%;
-
-background:#e53935;
-
-color:white;
-
-border:none;
-
-font-size:18px;
-
-}
-
-
-}
-
-
-/* ===========================
-   GIOCO ORIZZONTALE
-=========================== */
-
-
-@media(max-width:900px) and (orientation:portrait){
-
-
-#bloccoRotazione{
-
-display:flex !important;
-
-}
-
-
-}
-
-
-
-@media(max-width:900px) and (orientation:landscape){
-
-
-#tabellone{
-
-width:100vw;
-
-height:100vh;
-
-}
-
-
-}
-
 </style>
 </head>
 <body>
