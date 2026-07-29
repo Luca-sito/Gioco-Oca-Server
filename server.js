@@ -1334,6 +1334,20 @@ wss.on("connection", (socket, request) => {
           ordineGiocatori: partita.ordineGiocatori
         });
 
+        if (dati.bot === true) {
+  const partita = stanze[stanzaAttuale].partite[partitaId];
+
+  partita.giocatori["bot-test"] = {
+    nome: "Bot Test",
+    avatar: null,
+    posizione: 0,
+    socket: null,
+    turniSaltati: 0
+  };
+
+  partita.ordineGiocatori.push("bot-test");
+}
+
         inviaListaPartite(stanzaAttuale);
 
         if (Object.keys(partita.giocatori).length === partita.maxGiocatori) await avviaPartitaAutomaticamente(partita);
