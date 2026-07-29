@@ -675,10 +675,73 @@ function apriCreaMobile(){
 
 document.getElementById("contenutoMobile").innerHTML=`
 
-<h2>Crea tavolo</h2>
+<h2 style="margin-bottom:15px;">
+🪑 Crea tavolo
+</h2>
 
-<button onclick="creaPartita()">
+<p>Numero giocatori</p>
+
+<select id="numeroGiocatoriMobile">
+<option value="2">2 giocatori</option>
+<option value="3">3 giocatori</option>
+<option value="4">4 giocatori</option>
+<option value="5">5 giocatori</option>
+<option value="6">6 giocatori</option>
+<option value="7">7 giocatori</option>
+<option value="8">8 giocatori</option>
+</select>
+
+
+<p>Tempo di mossa</p>
+
+<select id="tempoMobile">
+<option value="15">15 secondi</option>
+<option value="30">30 secondi</option>
+<option value="60">60 secondi</option>
+</select>
+
+
+<p>Punti partita</p>
+
+<select id="puntiMobile">
+<option value="100">100</option>
+<option value="150">150</option>
+<option value="200">200</option>
+</select>
+
+
+<p>Tipo partita</p>
+
+<select id="tipoPartitaMobile">
+
+<option value="pubblica">
+🔓 Pubblica
+</option>
+
+<option value="privata">
+🔒 Privata
+</option>
+
+</select>
+
+
+<button onclick="creaPartitaMobile()" 
+style="
+margin-top:20px;
+background:#ffc400;
+color:#000;
+">
 🪑 Crea partita
+</button>
+
+
+<button onclick="eliminaPartita()" 
+style="
+background:#dc3545;
+color:white;
+margin-top:10px;
+">
+🗑 Elimina partita
 </button>
 
 `;
@@ -686,8 +749,6 @@ document.getElementById("contenutoMobile").innerHTML=`
 apriMobile();
 
 }
-
-
 
 function apriOnlineMobile(){
 
@@ -769,25 +830,29 @@ document.getElementById("contenutoMobile").innerHTML=`
 
 <p>Numero giocatori</p>
 
-${document.getElementById("numeroGiocatori").outerHTML}
+<select id="numeroGiocatoriMobile2">
+${document.getElementById("numeroGiocatori").innerHTML}
+</select>
 
 
 <p>Tempo</p>
 
-${document.getElementById("tempo").outerHTML}
+<select id="tempoMobile2">
+${document.getElementById("tempo").innerHTML}
+</select>
 
 
 <p>Punti</p>
 
-${document.getElementById("punti").outerHTML}
-
+<select id="puntiMobile2">
+${document.getElementById("punti").innerHTML}
+</select>
 
 `;
 
 apriMobile();
 
 }
-
 
 
 function apriMobile(){
