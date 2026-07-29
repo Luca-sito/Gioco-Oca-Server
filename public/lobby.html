@@ -1504,6 +1504,32 @@ document.getElementById("pannelloEmoji").addEventListener("click", function(e) {
 
 });
 
+function mostraEmojiMobile(){
+
+    const box = document.getElementById("emojiMobile");
+
+    if(!box) return;
+
+    if(box.style.display === "none"){
+        box.style.display = "block";
+    }else{
+        box.style.display = "none";
+    }
+
+}
+
+function aggiungiEmojiMobile(emoji){
+
+    const input = document.getElementById("messaggioMobile");
+
+    if(!input) return;
+
+    input.value += emoji;
+
+    input.focus();
+
+}
+
 function aggiungiMessaggio(uid, nome, testo) {
   let chat = document.getElementById("chat");
 
@@ -1526,10 +1552,10 @@ function aggiungiMessaggio(uid, nome, testo) {
 
   chat.scrollTop = chat.scrollHeight;
 
-
 const mobile = document.getElementById("chatMobile");
+const popupAperto = document.getElementById("popupMobile").style.display === "block";
 
-if(mobile){
+if(mobile && popupAperto){
 
     mobile.innerHTML += `
     <div class="messaggio">
