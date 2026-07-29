@@ -1288,17 +1288,27 @@ wss.on("connection", (socket, request) => {
         const max = parseInt(dati.maxGiocatori);
 
         stanze[stanzaAttuale].partite[partitaId] = {
-          id: partitaId,
-          creatore: nickname,
-          creatoDa: uid,
-          tempo: dati.tempo,
-          punti: dati.punti,
-          modalita: dati.modalita,
-          maxGiocatori: (!max || max < 2 || max > 8 ? 2 : max),
-          giocatori: { [uid]: { nome: nickname, avatar: mioAvatar, posizione: 0, socket, turniSaltati: 0 } },
-          ordineGiocatori: [uid], turnoAttuale: 0, iniziata: false, elaborandoTiro: false,
-          invitati: dati.modalita === "privata" ? { [uid]: true } : null
-        };
+  id: partitaId,
+  creatore: nickname,
+  creatoDa: uid,
+  tempo: dati.tempo,
+  punti: dati.punti,
+  modalita: dati.modalita,
+  maxGiocatori: (!max || max < 2 || max > 8 ? 2 : max),
+
+  giocatori: { 
+    [uid]: { nome: nickname, avatar: mioAvatar, posizione: 0, socket, turniSaltati: 0 },
+    "bot-test": { nome: "Bot Test", avatar: null, posizione: 0, socket: null, turniSaltati: 0 }
+  },
+
+  ordineGiocatori: [uid, "bot-test"],
+  turnoAttuale: 0,
+  iniziata: false,
+  elaborandoTiro: false,
+
+  invitati: dati.modalita === "privata" ? { [uid]: true } : null
+};
+
         await salvaPartita({ ...stanze[stanzaAttuale].partite[partitaId], stanza: stanzaAttuale });
         inviaListaPartite(stanzaAttuale);
         return;
@@ -1316,12 +1326,8 @@ wss.on("connection", (socket, request) => {
           return;
         }
 
-                giocatori: { 
-  [uid]: { nome: nickname, avatar: mioAvatar, posizione: 0, socket, turniSaltati: 0 },
-  "bot-test": { nome: "Bot Test", avatar: null, posizione: 0, socket: null, turniSaltati: 0 }
-},
-
-        ordineGiocatori: [uid, "bot-test"], turnoAttuale: 0, iniziata: false, elaborandoTiro: false,
+        partita.giocatori[uid] = { nome: nickname, avatar: mioAvatar, posizione: 0, socket, turniSaltati: 0 };
+        partita.ordineGiocatori.push(uid);
 
         await aggiornaStatoPartita(partita.id, {
           giocatori: preparaGiocatoriPerFirebase(partita.giocatori),
