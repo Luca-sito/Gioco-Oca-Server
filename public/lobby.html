@@ -993,7 +993,7 @@ margin-bottom:10px;
 
 <div id="chatMobile">
 
-${localStorage.getItem("chatMobile") || document.getElementById("chat").innerHTML}
+${document.getElementById("chat").innerHTML}
 
 </div>
 
@@ -1504,32 +1504,6 @@ document.getElementById("pannelloEmoji").addEventListener("click", function(e) {
 
 });
 
-function mostraEmojiMobile(){
-
-    const box = document.getElementById("emojiMobile");
-
-    if(!box) return;
-
-    if(box.style.display === "none"){
-        box.style.display = "block";
-    }else{
-        box.style.display = "none";
-    }
-
-}
-
-function aggiungiEmojiMobile(emoji){
-
-    const input = document.getElementById("messaggioMobile");
-
-    if(!input) return;
-
-    input.value += emoji;
-
-    input.focus();
-
-}
-
 function aggiungiMessaggio(uid, nome, testo) {
   let chat = document.getElementById("chat");
 
@@ -1552,10 +1526,10 @@ function aggiungiMessaggio(uid, nome, testo) {
 
   chat.scrollTop = chat.scrollHeight;
 
-const mobile = document.getElementById("chatMobile");
-const popupAperto = document.getElementById("popupMobile").style.display === "block";
 
-if(mobile && popupAperto){
+  const mobile = document.getElementById("chatMobile");
+
+  if(mobile){
 
     mobile.innerHTML += `
     <div class="messaggio">
@@ -1565,18 +1539,10 @@ if(mobile && popupAperto){
 
     mobile.scrollTop = mobile.scrollHeight;
 
-}else{
-
     nuoviMessaggiMobile++;
-
-    localStorage.setItem(
-        "chatMobile",
-        document.getElementById("chat").innerHTML
-    );
-
     aggiornaBadgeChatMobile();
 
-}
+  }
 
 }
 
@@ -1906,25 +1872,6 @@ function segnaInvitatoNelModal(destinatarioUid) {
     riga.innerHTML += ' <span class="modal-invito-check">✓ Invitato</span>';
     riga.onclick = null;
   }
-}
-
-function aggiornaBadgeChatMobile(){
-
-    const badge = document.getElementById("badgeChatMobile");
-
-    if(!badge) return;
-
-    if(nuoviMessaggiMobile > 0){
-
-        badge.style.display="flex";
-        badge.textContent = nuoviMessaggiMobile > 9 ? "9+" : nuoviMessaggiMobile;
-
-    }else{
-
-        badge.style.display="none";
-
-    }
-
 }
 
 function mostraInvitoRicevuto(dati) {
