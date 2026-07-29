@@ -767,34 +767,78 @@ apriMobile();
 
 }
 
-
-
 function apriChatMobile(){
 
 document.getElementById("contenutoMobile").innerHTML=`
 
 <h2>💬 Chat</h2>
 
+
 <div id="chatMobile" style="
-height:75%;
-overflow:auto;
-background:#fff;
+height:65%;
+overflow-y:auto;
+background:#fafafa;
 padding:10px;
+border-radius:12px;
 border:1px solid #ddd;
-border-radius:10px;
+margin-bottom:10px;
 ">
+
 ${document.getElementById("chat").innerHTML}
+
 </div>
 
-<div style="display:flex;gap:5px;margin-top:10px;">
 
-<input id="messaggioMobile" placeholder="Scrivi un messaggio">
+<div id="emojiMobile" style="
+display:none;
+background:white;
+border:1px solid #ddd;
+border-radius:10px;
+padding:10px;
+font-size:25px;
+">
 
-<button onclick="inviaChatMobile()">
+😀 😃 😄 😁 😂 😊 😉 😎 😍 😢 😡 😱 👍 👎 ❤️ 🔥 🎲 🏆 🎉 👋
+
+</div>
+
+
+
+<div style="
+display:flex;
+gap:5px;
+align-items:center;
+">
+
+
+<button onclick="mostraEmojiMobile()"
+style="
+width:45px;
+margin:0;
+">
+😊
+</button>
+
+
+<input id="messaggioMobile"
+placeholder="Scrivi..."
+style="
+flex:1;
+margin:0;
+">
+
+
+<button onclick="inviaChatMobile()"
+style="
+width:70px;
+margin:0;
+">
 Invia
 </button>
 
+
 </div>
+
 
 `;
 
@@ -828,25 +872,46 @@ document.getElementById("contenutoMobile").innerHTML=`
 
 <h2>⚙️ Opzioni</h2>
 
-<p>Numero giocatori</p>
 
-<select id="numeroGiocatoriMobile2">
-${document.getElementById("numeroGiocatori").innerHTML}
+<div style="
+display:flex;
+align-items:center;
+justify-content:space-between;
+padding:15px;
+background:#f5f5f5;
+border-radius:10px;
+margin-top:20px;
+">
+
+<div>
+🌗 Tema
+<br>
+<span style="font-size:13px;color:#777;">
+Chiaro / Scuro
+</span>
+</div>
+
+
+<select id="temaMobile" 
+onchange="cambiaTema()"
+style="
+width:120px;
+margin:0;
+">
+
+<option value="chiaro">
+☀️ Chiaro
+</option>
+
+<option value="scuro">
+🌙 Scuro
+</option>
+
 </select>
 
 
-<p>Tempo</p>
+</div>
 
-<select id="tempoMobile2">
-${document.getElementById("tempo").innerHTML}
-</select>
-
-
-<p>Punti</p>
-
-<select id="puntiMobile2">
-${document.getElementById("punti").innerHTML}
-</select>
 
 `;
 
@@ -854,14 +919,46 @@ apriMobile();
 
 }
 
-
 function apriMobile(){
 
 document.getElementById("popupMobile").style.display="block";
 
 }
 
+function cambiaTema(){
 
+const tema=document.getElementById("temaMobile").value;
+
+
+if(tema==="scuro"){
+
+document.body.style.background="#111";
+
+document.querySelectorAll(".centro,.sinistra,.destra,.popup-mobile")
+.forEach(e=>{
+e.style.background="#222";
+e.style.color="white";
+});
+
+
+}else{
+
+
+document.body.style.background="#f2f2f2";
+
+
+document.querySelectorAll(".centro,.sinistra,.destra,.popup-mobile")
+.forEach(e=>{
+e.style.background="white";
+e.style.color="#111";
+});
+
+
+}
+
+localStorage.setItem("tema",tema);
+
+}
 
 function chiudiMobile(){
 
@@ -1570,6 +1667,12 @@ function rispondiInvito(accettato) {
   socket.send(JSON.stringify({ tipo: "rispostaInvito", partitaId: invitoAttivoPartitaId, accettato }));
   document.getElementById("cardInvitoRicevuto").classList.add("nascosto");
   invitoAttivoPartitaId = null;
+}
+
+let temaSalvato=localStorage.getItem("tema");
+
+if(temaSalvato==="scuro"){
+document.body.classList.add("tema-scuro");
 }
 
 caricaTopGiocatori();
