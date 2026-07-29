@@ -1079,8 +1079,7 @@ function aggiungiMessaggio(uid, nome, testo) {
   let chat = document.getElementById("chat");
   const cliccabile = uid && uid !== mioUid;
   const nomeHtml = cliccabile
-    ? `<span class="nickname-riga" style="cursor:pointer;color:#ff6600;" onclick="apriPopupGiocatore('${uid}', ${JSON.stringify(nome)})"
->${nome}</span>`
+    ? `<span class="nickname-riga" style="cursor:pointer;color:#ff6600;" onclick="apriPopupGiocatore('${uid}','${nome}')">${nome}</span>`
     : `<b>${nome}</b>`;
   const ora = new Date().toLocaleTimeString("it-IT", {
     hour: "2-digit",
