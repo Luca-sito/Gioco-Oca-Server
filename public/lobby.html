@@ -1506,61 +1506,45 @@ document.getElementById("pannelloEmoji").addEventListener("click", function(e) {
 
 function aggiungiMessaggio(uid, nome, testo) {
   let chat = document.getElementById("chat");
+
   const cliccabile = uid && uid !== mioUid;
+
   const nomeHtml = cliccabile
     ? `<span class="nickname-riga" style="cursor:pointer;color:#ff6600;" onclick="apriPopupGiocatore('${uid}','${nome}')">${nome}</span>`
     : `<b>${nome}</b>`;
+
   const ora = new Date().toLocaleTimeString("it-IT", {
-    hour: "2-digit",
-    minute: "2-digit"
-});
+    hour:"2-digit",
+    minute:"2-digit"
+  });
 
-function aggiornaBadgeChatMobile(){
-
-    const badge=document.getElementById("badgeChatMobile");
-
-    if(!badge) return;
-
-    if(nuoviMessaggiMobile>0){
-
-        badge.style.display="flex";
-        badge.innerHTML=nuoviMessaggiMobile;
-
-    }else{
-
-        badge.style.display="none";
-
-    }
-
-}
-
-function pulisciTestoChat(testo) {
-  return testo
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
-
-chat.innerHTML += `
-<div class="messaggio">
-    <span style="color:#888;font-size:12px;">[${ora}]</span>
-    ${nomeHtml}: ${pulisciTestoChat(testo)}
-</div>`;
-
-  chat.scrollTop = chat.scrollHeight;
-}
-
-const mobile = document.getElementById("chatMobile");
-
-if(mobile){
-
-  mobile.innerHTML += `
+  chat.innerHTML += `
   <div class="messaggio">
       <span style="color:#888;font-size:12px;">[${ora}]</span>
       ${nomeHtml}: ${pulisciTestoChat(testo)}
   </div>`;
 
-  mobile.scrollTop = mobile.scrollHeight;
+  chat.scrollTop = chat.scrollHeight;
+
+
+const mobile = document.getElementById("chatMobile");
+
+if(mobile){
+
+    mobile.innerHTML += `
+    <div class="messaggio">
+        <span style="color:#888;font-size:12px;">[${ora}]</span>
+        ${nomeHtml}: ${pulisciTestoChat(testo)}
+    </div>`;
+
+    mobile.scrollTop = mobile.scrollHeight;
+
+}else{
+
+    nuoviMessaggiMobile++;
+    aggiornaBadgeChatMobile();
+
+}
 
 }
 
