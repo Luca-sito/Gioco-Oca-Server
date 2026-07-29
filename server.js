@@ -1316,8 +1316,12 @@ wss.on("connection", (socket, request) => {
           return;
         }
 
-        partita.giocatori[uid] = { nome: nickname, avatar: mioAvatar, posizione: 0, socket, turniSaltati: 0 };
-        partita.ordineGiocatori.push(uid);
+                giocatori: { 
+  [uid]: { nome: nickname, avatar: mioAvatar, posizione: 0, socket, turniSaltati: 0 },
+  "bot-test": { nome: "Bot Test", avatar: null, posizione: 0, socket: null, turniSaltati: 0 }
+},
+
+        ordineGiocatori: [uid, "bot-test"], turnoAttuale: 0, iniziata: false, elaborandoTiro: false,
 
         await aggiornaStatoPartita(partita.id, {
           giocatori: preparaGiocatoriPerFirebase(partita.giocatori),
