@@ -910,7 +910,6 @@ function mostraPartite(lista) {
       </button>`;
   }
 
-
   html += `
   <div class="scheda-partita">
 
@@ -925,11 +924,9 @@ function mostraPartite(lista) {
       </div>
     </div>
 
-
     <div class="giocatori-mini">
       ${creaGiocatoriPartita(partita)}
     </div>
-
 
     <div>
       ${bottoneHtml}
@@ -938,8 +935,7 @@ function mostraPartite(lista) {
   </div>`;
 });
 
-  });
-  document.getElementById("partite").innerHTML = html;
+document.getElementById("partite").innerHTML = html;
 
   if (aspettaPropriaPartitaPrivata) {
     const mia = lista.find(p => p.creatoDa === mioUid && p.modalita === "privata");
