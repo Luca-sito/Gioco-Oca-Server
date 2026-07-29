@@ -292,12 +292,7 @@ grid-template-columns:1fr 1fr;
 /* mini chat */
 
 #chat{
-
-height:15vh;
-margin:0;
-padding:5px;
-overflow:hidden;
-
+display:none;
 }
 
 
@@ -674,14 +669,28 @@ apriMobile();
 
 function apriChatMobile(){
 
-
 document.getElementById("contenutoMobile").innerHTML=`
 
 <h2>💬 Chat</h2>
 
-<div style="height:80%;overflow:auto">
-
+<div id="chatMobile" style="
+height:75%;
+overflow:auto;
+background:#fff;
+padding:10px;
+border:1px solid #ddd;
+border-radius:10px;
+">
 ${document.getElementById("chat").innerHTML}
+</div>
+
+<div style="display:flex;gap:5px;margin-top:10px;">
+
+<input id="messaggioMobile" placeholder="Scrivi un messaggio">
+
+<button onclick="inviaChatMobile()">
+Invia
+</button>
 
 </div>
 
@@ -691,7 +700,25 @@ apriMobile();
 
 }
 
+function inviaChatMobile(){
 
+const input = document.getElementById("messaggioMobile");
+
+if(!input) return;
+
+const testo = input.value.trim();
+
+if(!testo) return;
+
+
+socket.send(JSON.stringify({
+ tipo:"chat",
+ testo:testo
+}));
+
+input.value="";
+
+}
 
 function apriOpzioniMobile(){
 
@@ -866,12 +893,6 @@ function mostraPartite(lista) {
     } else {
       bottoneHtml = `<button onclick="entraPartita('${partita.id}')" ${piena ? 'disabled' : ''}>${piena ? 'Piena' : 'Entra'}</button>`;
     }
-
-lista.forEach(partita => {
-  const piena = partita.numGiocatoriAttuali >= partita.maxGiocatori;
-  const eMia = partita.creatoDa === mioUid;
-
-  let bottoneHtml;
 
   if (partita.modalita === "privata") {
     if (eMia) {
@@ -1058,7 +1079,8 @@ function aggiungiMessaggio(uid, nome, testo) {
   let chat = document.getElementById("chat");
   const cliccabile = uid && uid !== mioUid;
   const nomeHtml = cliccabile
-    ? `<span class="nickname-riga" style="cursor:pointer;color:#ff6600;" onclick="apriPopupGiocatore('${uid}','${nome}')">${nome}</span>`
+    ? `<span class="nickname-riga" style="cursor:pointer;color:#ff6600;" onclick="apriPopupGiocatore('${uid}', ${JSON.stringify(nome)})"
+>${nome}</span>`
     : `<b>${nome}</b>`;
   const ora = new Date().toLocaleTimeString("it-IT", {
     hour: "2-digit",
@@ -1079,6 +1101,13 @@ chat.innerHTML += `
 </div>`;
 
   chat.scrollTop = chat.scrollHeight;
+}
+
+const mobile = document.getElementById("chatMobile");
+
+if(mobile){
+  mobile.innerHTML = chat.innerHTML;
+  mobile.scrollTop = mobile.scrollHeight;
 }
 
 // ===== ONLINE IN QUESTA STANZA =====
