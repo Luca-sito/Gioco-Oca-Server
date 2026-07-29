@@ -16,71 +16,6 @@ button:hover { background: #ffaa00; }
 .errore { color: #ff6b6b; font-size: 13px; margin-top: 12px; text-align: center; min-height: 16px; }
 .link-sotto { text-align: center; margin-top: 16px; font-size: 13px; color: #aaa; }
 .link-sotto a { color: #ffd700; text-decoration: none; }
-#rinviaWrapper { display: none; text-align: center; margin-top: 10px; font-size: 13px; }
-#linkRinvia { color: #ffd700; cursor: pointer; text-decoration: underline; }
-
-/* Smartphone piccoli */
-@media (max-width: 480px) {
-
-  body{
-    padding:15px;
-  }
-
-  .scatola{
-    width:100%;
-    max-width:100%;
-    padding:25px 18px;
-    border-radius:12px;
-  }
-
-  h1{
-    font-size:20px;
-  }
-
-  label{
-    font-size:12px;
-  }
-
-  input{
-    font-size:16px; /* evita lo zoom automatico su iPhone */
-    padding:12px;
-  }
-
-  button{
-    font-size:16px;
-    padding:14px;
-  }
-
-  .errore{
-    font-size:12px;
-  }
-
-  .link-sotto,
-  #rinviaWrapper{
-    font-size:12px;
-    line-height:1.5;
-  }
-
-}
-
-/* Smartphone molto piccoli (es. iPhone SE) */
-@media (max-width: 340px){
-
-  .scatola{
-    padding:18px 14px;
-  }
-
-  h1{
-    font-size:18px;
-  }
-
-  input,
-  button{
-    font-size:15px;
-  }
-
-}
-  
 </style>
 </head>
 <body>
@@ -93,7 +28,6 @@ button:hover { background: #ffaa00; }
   <input type="password" id="password" placeholder="••••••••">
   <button onclick="accedi()">Accedi</button>
   <div class="errore" id="errore"></div>
-  <div id="rinviaWrapper">Non hai ricevuto l'email di verifica? <span id="linkRinvia" onclick="rinviaEmail()">Invia di nuovo</span></div>
   <div class="link-sotto">
     Non hai un account? <a id="linkRegistrati" href="registrati.html">Registrati</a>
   </div>
@@ -108,9 +42,7 @@ async function accedi() {
   const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value;
   const erroreEl = document.getElementById("errore");
-  const rinviaWrapper = document.getElementById("rinviaWrapper");
   erroreEl.textContent = "";
-  rinviaWrapper.style.display = "none";
 
   if (!email || !password) { erroreEl.textContent = "Inserisci email e password."; return; }
 
@@ -125,31 +57,12 @@ async function accedi() {
 
     if (!risposta.ok) {
       erroreEl.textContent = dati.errore || "Errore durante il login.";
-      if (dati.nonVerificata) rinviaWrapper.style.display = "block";
       return;
     }
 
     window.location.href = redirect || "https://solfriniluca1.wixstudio.com/giochidisocieta";
   } catch (e) {
     erroreEl.textContent = "Errore di connessione al server.";
-  }
-}
-
-async function rinviaEmail() {
-  const email = document.getElementById("email").value.trim();
-  const link = document.getElementById("linkRinvia");
-  if (!email) { alert("Inserisci prima la tua email nel campo sopra."); return; }
-  link.textContent = "Invio in corso...";
-  try {
-    const risposta = await fetch("https://gioco-oca-server.onrender.com/api/rinvia-verifica", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email })
-    });
-    const dati = await risposta.json();
-    link.textContent = dati.messaggio || "Email inviata di nuovo.";
-  } catch (e) {
-    link.textContent = "Errore, riprova più tardi.";
   }
 }
 </script>
