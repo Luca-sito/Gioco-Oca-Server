@@ -82,6 +82,13 @@ async function registrati() {
     bottone.textContent = "Registrati";
   }
 }
+
+document.addEventListener("keydown", function(e) {
+    if (e.key === "Enter") {
+        registrati();
+    }
+});
+  
 </script>
 
 </body>
