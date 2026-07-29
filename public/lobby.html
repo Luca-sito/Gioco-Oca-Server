@@ -291,22 +291,63 @@ grid-template-columns:1fr 1fr;
 
 /* mini chat */
 
-#chat{
-display:none;
-}
+/* ===========================
+   CHAT MOBILE NASCOSTA
+   (si apre dal pulsante)
+=========================== */
 
-
-
-/* nascondo input chat */
-
+.centro h2:nth-of-type(2),
+#chat,
 #messaggio,
-#messaggio+button{
+#messaggio+button,
+#pannelloEmoji{
+    display:none;
+}
 
-display:none;
+
+/* badge rosso mobile */
+
+.badge-mobile{
+
+    position:absolute;
+    top:-6px;
+    right:-6px;
+
+    min-width:18px;
+    height:18px;
+
+    background:#e53935;
+    color:white;
+
+    border-radius:50%;
+
+    font-size:11px;
+    font-weight:bold;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
 
 }
 
 
+/* evidenzia solo partite */
+
+#partite{
+
+    height:calc(100vh - 90px);
+    overflow-y:auto;
+
+}
+
+
+/* pulsanti menu */
+
+.btn-mobile{
+
+    position:relative;
+
+}
 
 /* MENU TONDO */
 
@@ -590,9 +631,7 @@ height:100vh;
     <div id="listaOnline"></div>
   </div>
 </div>
- 
-</style>
- 
+
 <script>
 let socket;
 const parametri = new URLSearchParams(window.location.search);
@@ -1084,6 +1123,27 @@ function aggiungiMessaggio(uid, nome, testo) {
     minute: "2-digit"
 });
 
+let nuoviMessaggiMobile = 0;
+
+function aggiornaBadgeChatMobile(){
+
+    const badge=document.getElementById("badgeChatMobile");
+
+    if(!badge) return;
+
+    if(nuoviMessaggiMobile>0){
+
+        badge.style.display="flex";
+        badge.innerHTML=nuoviMessaggiMobile;
+
+    }else{
+
+        badge.style.display="none";
+
+    }
+
+}
+
 function pulisciTestoChat(testo) {
   return testo
     .replace(/&/g, "&amp;")
@@ -1460,13 +1520,27 @@ verificaSessione();
 </button>
 
 <button class="btn-mobile" onclick="apriOnlineMobile()">
+
 👥
+
 <span>Online</span>
+
+<span id="badgeOnlineMobile" class="badge-mobile" style="display:none;">
+0
+</span>
+
 </button>
 
 <button class="btn-mobile" onclick="apriChatMobile()">
+
 💬
+
 <span>Chat</span>
+
+<span id="badgeChatMobile" class="badge-mobile" style="display:none;">
+0
+</span>
+
 </button>
 
 <button class="btn-mobile" onclick="apriOpzioniMobile()">
