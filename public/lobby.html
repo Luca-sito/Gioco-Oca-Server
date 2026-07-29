@@ -416,7 +416,59 @@ grid-template-columns:1fr 1fr;
 
 /* pulsante emoji */
 
-#messaggioMobile ~ button:first-of-type{
+#messaggioMobile{
+    position:absolute;
+
+    bottom:15px;
+    left:60px;
+    right:85px;
+
+    width:auto !important;
+
+    height:45px;
+
+    margin:0;
+
+    padding:10px;
+
+    border-radius:20px;
+}
+
+
+#messaggioMobile{
+    z-index:2;
+}
+
+
+#messaggioMobile + button{
+
+    position:absolute;
+
+    bottom:15px;
+
+    right:10px;
+
+    width:70px !important;
+
+    height:45px;
+
+    border-radius:20px;
+
+}
+
+
+/* pulsante emoji PRIMO elemento della barra */
+
+#messaggioMobile{
+}
+
+
+#messaggioMobile:before{
+    content:"";
+}
+
+
+.popup-mobile button[onclick="mostraEmojiMobile()"]{
 
     position:absolute;
 
@@ -430,12 +482,11 @@ grid-template-columns:1fr 1fr;
 
     border-radius:50%;
 
-    margin:0;
-
     padding:0;
 
-}
+    margin:0;
 
+}
 
 /* pulsante invia */
 
@@ -796,6 +847,7 @@ document.getElementById("nomeStanza").innerHTML = stanza;
 
 let mioUid = null;
 let mieiAmiciUid = new Set();
+let nuoviMessaggiMobile = 0;
 let ultimaListaOnlineStanza = [];
 let aspettaPropriaPartitaPrivata = false;
 let partitaDaInvitareId = null;
@@ -1463,8 +1515,6 @@ function aggiungiMessaggio(uid, nome, testo) {
     minute: "2-digit"
 });
 
-let nuoviMessaggiMobile = 0;
-
 function aggiornaBadgeChatMobile(){
 
     const badge=document.getElementById("badgeChatMobile");
@@ -1503,8 +1553,15 @@ chat.innerHTML += `
 const mobile = document.getElementById("chatMobile");
 
 if(mobile){
-  mobile.innerHTML = chat.innerHTML;
+
+  mobile.innerHTML += `
+  <div class="messaggio">
+      <span style="color:#888;font-size:12px;">[${ora}]</span>
+      ${nomeHtml}: ${pulisciTestoChat(testo)}
+  </div>`;
+
   mobile.scrollTop = mobile.scrollHeight;
+
 }
 
 // ===== ONLINE IN QUESTA STANZA =====
