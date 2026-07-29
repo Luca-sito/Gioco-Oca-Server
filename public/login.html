@@ -34,6 +34,11 @@ button:hover { background: #ffaa00; }
 </div>
 
 <script>
+
+if (window.top !== window.self) {
+    window.top.location.href = window.location.href;
+}
+
 const parametri = new URLSearchParams(window.location.search);
 const redirect = parametri.get("redirect");
 if (redirect) document.getElementById("linkRegistrati").href = "registrati.html?redirect=" + encodeURIComponent(redirect);
@@ -60,6 +65,7 @@ async function accedi() {
       return;
     }
 
+    localStorage.setItem("loginEffettuato", "si");
     window.location.href = redirect || "https://solfriniluca1.wixstudio.com/giochisocieta";
   } catch (e) {
     erroreEl.textContent = "Errore di connessione al server.";
@@ -71,7 +77,7 @@ document.addEventListener("keydown", function(e) {
         accedi();
     }
 });
-  
+
 </script>
 
 </body>
