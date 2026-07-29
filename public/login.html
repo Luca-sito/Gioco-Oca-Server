@@ -65,6 +65,13 @@ async function accedi() {
     erroreEl.textContent = "Errore di connessione al server.";
   }
 }
+
+document.addEventListener("keydown", function(e) {
+    if (e.key === "Enter") {
+        accedi();
+    }
+});
+  
 </script>
 
 </body>
