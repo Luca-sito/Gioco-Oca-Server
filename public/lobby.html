@@ -307,14 +307,22 @@ grid-template-columns:1fr 1fr;
    CHAT MOBILE SISTEMATA
 =========================== */
 
+/* ===========================
+   CHAT MOBILE SISTEMATA
+=========================== */
+
+
 #chatMobile{
+
+    display:flex;
+    flex-direction:column;
 
     position:absolute;
 
-    top:60px;
-    left:15px;
-    right:15px;
-    bottom:90px;
+    top:55px;
+    left:10px;
+    right:10px;
+    bottom:75px;
 
     overflow-y:auto;
 
@@ -329,13 +337,13 @@ grid-template-columns:1fr 1fr;
 }
 
 
-/* singoli messaggi */
+/* messaggi */
 
 #chatMobile .messaggio{
 
     background:white;
 
-    padding:8px;
+    padding:10px;
 
     margin-bottom:8px;
 
@@ -343,99 +351,113 @@ grid-template-columns:1fr 1fr;
 
     border:1px solid #eee;
 
+    word-break:break-word;
+
 }
 
 
-/* emoji */
+/* emoji sopra la barra */
 
 #emojiMobile{
 
     position:absolute;
 
-    left:15px;
-    right:15px;
+    left:10px;
+    right:10px;
 
-    bottom:145px;
+    bottom:65px;
 
     background:white;
 
-    border:1px solid #ddd;
+    border:1px solid #ccc;
 
     border-radius:12px;
 
     padding:10px;
 
-    font-size:24px;
+    font-size:25px;
+
+    z-index:10;
 
 }
 
 
-/* barra sotto */
+/* barra scrittura */
 
-.popup-mobile > div:last-child{
+#messaggioMobile{
 
     position:absolute;
 
     bottom:15px;
 
-    left:15px;
+    left:60px;
 
-    right:15px;
-
-    display:flex !important;
-
-    gap:5px;
-
-    align-items:center;
-
-}
-
-
-/* tasto emoji */
-
-.popup-mobile > div:last-child button:first-child{
-
-    width:45px !important;
-
-    flex:none;
-
-    margin:0;
-
-}
-
-
-/* campo scrittura */
-
-#messaggioMobile{
-
-    flex:1;
+    right:85px;
 
     width:auto !important;
 
+    height:45px;
+
     margin:0;
+
+    padding:10px;
+
+    border-radius:20px;
 
 }
 
 
-/* invia */
+/* contenitore dei 3 pulsanti */
 
-.popup-mobile > div:last-child button:last-child{
+#messaggioMobile{
+
+}
+
+
+/* pulsante emoji */
+
+#messaggioMobile ~ button:first-of-type{
+
+    position:absolute;
+
+    bottom:15px;
+
+    left:10px;
+
+    width:45px !important;
+
+    height:45px;
+
+    border-radius:50%;
+
+    margin:0;
+
+    padding:0;
+
+}
+
+
+/* pulsante invia */
+
+#messaggioMobile ~ button:last-of-type{
+
+    position:absolute;
+
+    bottom:15px;
+
+    right:10px;
 
     width:70px !important;
-
-    flex:none;
-
-    margin:0;
-
-}
-
-#messaggioMobile + button{
-
-    width:80px;
 
     height:45px;
 
     border-radius:20px;
+
+    margin:0;
+
+    padding:0;
+
+}
 
 }
 
