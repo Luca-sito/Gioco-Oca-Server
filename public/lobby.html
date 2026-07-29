@@ -303,12 +303,18 @@ grid-template-columns:1fr 1fr;
     display:none;
 }
 
-
-/* contenitore chat popup */
+/* ===========================
+   CHAT MOBILE SISTEMATA
+=========================== */
 
 #chatMobile{
 
-    height:calc(100% - 130px) !important;
+    position:absolute;
+
+    top:60px;
+    left:15px;
+    right:15px;
+    bottom:90px;
 
     overflow-y:auto;
 
@@ -320,22 +326,20 @@ grid-template-columns:1fr 1fr;
 
     padding:12px;
 
-    margin-top:15px;
-
 }
 
 
-/* messaggi */
+/* singoli messaggi */
 
 #chatMobile .messaggio{
 
     background:white;
 
-    border-radius:10px;
-
-    padding:10px;
+    padding:8px;
 
     margin-bottom:8px;
+
+    border-radius:10px;
 
     border:1px solid #eee;
 
@@ -346,31 +350,84 @@ grid-template-columns:1fr 1fr;
 
 #emojiMobile{
 
-    margin-top:10px;
+    position:absolute;
 
-    display:flex;
+    left:15px;
+    right:15px;
 
-    flex-wrap:wrap;
+    bottom:145px;
 
-    gap:8px;
+    background:white;
 
-    justify-content:center;
+    border:1px solid #ddd;
+
+    border-radius:12px;
+
+    padding:10px;
+
+    font-size:24px;
 
 }
 
 
-/* barra scrittura */
+/* barra sotto */
+
+.popup-mobile > div:last-child{
+
+    position:absolute;
+
+    bottom:15px;
+
+    left:15px;
+
+    right:15px;
+
+    display:flex !important;
+
+    gap:5px;
+
+    align-items:center;
+
+}
+
+
+/* tasto emoji */
+
+.popup-mobile > div:last-child button:first-child{
+
+    width:45px !important;
+
+    flex:none;
+
+    margin:0;
+
+}
+
+
+/* campo scrittura */
 
 #messaggioMobile{
 
-    height:45px;
+    flex:1;
 
-    border-radius:20px;
+    width:auto !important;
 
-    padding-left:15px;
+    margin:0;
 
 }
 
+
+/* invia */
+
+.popup-mobile > div:last-child button:last-child{
+
+    width:70px !important;
+
+    flex:none;
+
+    margin:0;
+
+}
 
 #messaggioMobile + button{
 
