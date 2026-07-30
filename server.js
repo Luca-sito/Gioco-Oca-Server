@@ -613,6 +613,56 @@ app.post("/api/modifica-nickname", richiediAuth, async (req, res) => {
   }
 });
 
+// ===== MODIFICA DATI PROFILO =====
+
+app.post("/api/modifica-profilo", richiediAuth, async (req, res) => {
+  if (!db) return res.status(500).json({ errore: "Servizio non disponibile." });
+
+  try {
+
+    const {
+      nome,
+      cognome,
+      dataNascita,
+      sesso,
+      citta,
+      provincia
+    } = req.body;
+
+
+    const datiAggiornati = {
+
+      nome: pulisciTesto(nome || "", 30),
+      cognome: pulisciTesto(cognome || "", 30),
+      dataNascita: pulisciTesto(dataNascita || "", 20),
+      sesso: pulisciTesto(sesso || "", 20),
+      citta: pulisciTesto(citta || "", 40),
+      provincia: pulisciTesto(provincia || "", 40)
+
+    };
+
+
+    await db.ref("utenti/" + req.utente.uid)
+      .update(datiAggiornati);
+
+
+    res.json({
+      ok: true
+    });
+
+
+  } catch (err) {
+
+    console.error("Errore modifica profilo:", err);
+
+    res.status(500).json({
+      errore: "Errore durante il salvataggio."
+    });
+
+  }
+
+});
+
 app.post("/api/profilo/cambia-password", richiediAuth, async(req,res)=>{
 
 if(!db)
