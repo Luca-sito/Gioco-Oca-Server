@@ -2,56 +2,549 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>Profilo - Giochi Società</title>
+
 <style>
-* { box-sizing: border-box; }
-body { margin: 0; background: #101820; color: #e8e8e8; font-family: Arial, sans-serif; line-height: 1.6; }
-.contenitore { max-width: 600px; margin: 0 auto; padding: 40px 24px 80px; }
-.scatola { background: #1e2a38; border: 1px solid #333; border-radius: 14px; padding: 30px; text-align: center; }
-#avatarGrande { width: 84px; height: 84px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 34px; font-weight: bold; margin: 0 auto 16px; }
-h1 { color: #ffd700; font-size: 24px; margin: 0 0 4px; }
-.email { color: #999; font-size: 14px; margin-bottom: 24px; }
-.statistiche { display: flex; justify-content: center; gap: 30px; margin-bottom: 20px; }
-.stat { text-align: center; }
-.stat .numero { font-size: 26px; font-weight: bold; color: #ffd700; }
-.stat .etichetta { font-size: 12px; color: #999; }
-.link-home { display: inline-block; margin-top: 20px; padding: 10px 20px; background: #ffd700; color: #111; text-decoration: none; border-radius: 8px; font-weight: bold; }
-.link-home:hover { background: #ffaa00; }
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin:0;
+  background:#101820;
+  color:#eee;
+  font-family:Arial,sans-serif;
+}
+
+.contenitore {
+  max-width:700px;
+  margin:auto;
+  padding:30px 20px 80px;
+}
+
+.scheda {
+  background:#1e2a38;
+  border:1px solid #333;
+  border-radius:16px;
+  padding:25px;
+  margin-bottom:20px;
+}
+
+.titolo {
+  color:#ffd700;
+  font-size:18px;
+  margin-bottom:15px;
+  font-weight:bold;
+}
+
+
+/* AVATAR */
+
+.avatar-box {
+  text-align:center;
+}
+
+#avatarGrande {
+
+width:110px;
+height:110px;
+border-radius:50%;
+margin:auto;
+display:flex;
+align-items:center;
+justify-content:center;
+overflow:hidden;
+font-size:42px;
+font-weight:bold;
+color:white;
+
+}
+
+#avatarGrande img {
+
+width:100%;
+height:100%;
+object-fit:cover;
+
+}
+
+
+#inputAvatar {
+
+margin-top:15px;
+}
+
+
+/* TESTATA */
+
+h1 {
+
+text-align:center;
+color:#ffd700;
+margin:10px 0 5px;
+
+}
+
+.email {
+
+text-align:center;
+color:#999;
+font-size:14px;
+
+}
+
+.bloccata {
+
+color:#777;
+font-size:12px;
+text-align:center;
+
+}
+
+
+/* LIVELLO */
+
+.livello {
+
+background:#ffd700;
+color:#111;
+padding:5px 18px;
+border-radius:20px;
+display:inline-block;
+font-weight:bold;
+margin:15px auto;
+}
+
+
+.xp-bar {
+
+height:12px;
+background:#101820;
+border-radius:20px;
+overflow:hidden;
+
+}
+
+.xp-riempimento {
+
+height:100%;
+background:#ffd700;
+width:0%;
+transition:.3s;
+
+}
+
+
+.xp-testo {
+
+font-size:13px;
+color:#aaa;
+margin-top:5px;
+text-align:center;
+
+}
+
+
+/* STATISTICHE */
+
+
+.statistiche {
+
+display:flex;
+justify-content:center;
+gap:25px;
+flex-wrap:wrap;
+
+}
+
+
+.stat {
+
+text-align:center;
+
+}
+
+
+.numero {
+
+font-size:25px;
+color:#ffd700;
+font-weight:bold;
+
+}
+
+
+.etichetta {
+
+font-size:12px;
+color:#999;
+
+}
+
+
+
+/* FORM */
+
+
+.gruppo {
+
+margin-bottom:15px;
+
+}
+
+
+label {
+
+display:block;
+color:#bbb;
+font-size:13px;
+margin-bottom:5px;
+
+}
+
+
+input, select {
+
+width:100%;
+padding:12px;
+border-radius:8px;
+border:1px solid #444;
+background:#101820;
+color:white;
+font-size:14px;
+
+}
+
+
+input:disabled {
+
+opacity:.5;
+
+}
+
+
+
+button {
+
+width:100%;
+padding:12px;
+border:none;
+border-radius:8px;
+font-weight:bold;
+cursor:pointer;
+margin-top:10px;
+
+}
+
+
+.btn-oro {
+
+background:#ffd700;
+color:#111;
+
+}
+
+
+.btn-blu {
+
+background:#34495e;
+color:white;
+
+}
+
+
+.btn-rosso {
+
+background:#c0392b;
+color:white;
+
+}
+
+
+button:hover {
+
+opacity:.85;
+
+}
+
+
+
+/* BADGE */
+
+
+.badge-lista {
+
+display:flex;
+flex-wrap:wrap;
+gap:10px;
+justify-content:center;
+
+}
+
+
+.badge {
+
+background:#263746;
+padding:10px;
+border-radius:10px;
+text-align:center;
+font-size:13px;
+
+}
+
+
+.badge span {
+
+font-size:25px;
+display:block;
+
+}
+
+
+.nessuno {
+
+color:#777;
+font-style:italic;
+text-align:center;
+
+}
+
+
+
+/* INFO */
+
+.info {
+
+color:#aaa;
+font-size:13px;
+
+}
+
+
+
+a {
+
+color:#ffd700;
+text-decoration:none;
+
+}
+
+
+@media(max-width:500px){
+
+.scheda {
+
+padding:18px;
+
+}
+
+.statistiche {
+
+gap:15px;
+
+}
+
+}
+
+
 </style>
+
 </head>
+
+
 <body>
 
+
 <div class="contenitore">
-  <div class="scatola">
-
-    <div id="avatarGrande"></div>
-
-    <h1 id="nomeProfilo">Caricamento...</h1>
-
-    <div class="email" id="emailProfilo"></div>
-
-    <div class="statistiche">
-      <div class="stat">
-        <div class="numero" id="numVinte">-</div>
-        <div class="etichetta">Vittorie</div>
-      </div>
-
-      <div class="stat">
-        <div class="numero" id="numGiocate">-</div>
-        <div class="etichetta">Partite giocate</div>
-      </div>
-    </div>
-
-    <button onclick="tornaHome()" class="link-home">
-← Torna alla Home
-</button>
 
 
-  </div>
+<!-- TESTATA PROFILO -->
+
+<div class="scheda avatar-box">
+
+
+<div id="avatarGrande"></div>
+
+
+<h1 id="nickname">Caricamento...</h1>
+
+
+<div class="email" id="email"></div>
+
+<div class="bloccata">
+🔒 Email non modificabile
 </div>
 
 
+<input id="inputAvatar" type="file" accept="image/*">
+
+
+</div>
+
+
+
+
+
+<!-- LIVELLO -->
+
+
+<div class="scheda">
+
+
+<div style="text-align:center">
+
+<div class="livello" id="livello">
+Livello -
+</div>
+
+</div>
+
+
+<div class="xp-bar">
+
+<div class="xp-riempimento" id="barraXP"></div>
+
+</div>
+
+
+<div class="xp-testo" id="testoXP"></div>
+
+
+</div>
+
+
+
+
+
+<!-- STATISTICHE -->
+
+
+<div class="scheda">
+
+
+<div class="titolo">
+🏆 Statistiche
+</div>
+
+
+<div class="statistiche">
+
+
+<div class="stat">
+<div class="numero" id="vinte">0</div>
+<div class="etichetta">Vittorie</div>
+</div>
+
+
+<div class="stat">
+<div class="numero" id="giocate">0</div>
+<div class="etichetta">Partite</div>
+</div>
+
+
+<div class="stat">
+<div class="numero" id="winrate">0%</div>
+<div class="etichetta">Win rate</div>
+</div>
+
+
+<div class="stat">
+<div class="numero" id="streak">0</div>
+<div class="etichetta">Striscia</div>
+</div>
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+<!-- DATI PERSONALI -->
+
+
+<div class="scheda">
+
+
+<div class="titolo">
+👤 Dati personali
+</div>
+
+
+<div class="gruppo">
+<label>Nome</label>
+<input id="nome">
+</div>
+
+
+<div class="gruppo">
+<label>Cognome</label>
+<input id="cognome">
+</div>
+
+
+<div class="gruppo">
+<label>Data di nascita</label>
+<input id="dataNascita" type="date">
+</div>
+
+
+<div class="gruppo">
+<label>Sesso</label>
+
+<select id="sesso">
+
+<option value="">
+Seleziona
+</option>
+
+<option value="M">
+Maschio
+</option>
+
+<option value="F">
+Femmina
+</option>
+
+<option value="Altro">
+Altro
+</option>
+
+</select>
+
+</div>
+
+
+<div class="gruppo">
+<label>Città</label>
+<input id="citta">
+</div>
+
+
+<div class="gruppo">
+<label>Provincia</label>
+<input id="provincia">
+</div>
+
+
+
+<button class="btn-oro" onclick="salvaProfilo()">
+💾 Salva modifiche
+</button>
+
+
+</div>
+
 <script>
+
+const SERVER = "https://gioco-oca-server.onrender.com";
+
 
 const PALETTE = [
 "#6a2c70",
@@ -65,77 +558,792 @@ const PALETTE = [
 ];
 
 
-function coloreDaNome(nome) {
-  let somma = 0;
+function coloreDaNome(nome){
 
-  for (let i = 0; i < nome.length; i++) {
-    somma += nome.charCodeAt(i);
-  }
+let somma = 0;
 
-  return PALETTE[somma % PALETTE.length];
+for(let i=0;i<nome.length;i++){
+somma += nome.charCodeAt(i);
 }
 
-
-async function carica() {
-
-  try {
-
-    const risposta = await fetch(
-      "https://gioco-oca-server.onrender.com/api/me",
-      {
-        credentials: "include"
-      }
-    );
-
-
-    if (!risposta.ok) {
-      window.location.href =
-      "login.html?redirect=" + encodeURIComponent(window.location.href);
-      return;
-    }
-
-
-    const dati = await risposta.json();
-
-
-    document.getElementById("nomeProfilo").textContent =
-    dati.nickname;
-
-    document.getElementById("emailProfilo").textContent =
-    dati.email;
-
-    document.getElementById("numVinte").textContent =
-    dati.partiteVinte || 0;
-
-    document.getElementById("numGiocate").textContent =
-    dati.partiteGiocate || 0;
-
-
-    const avatar =
-    document.getElementById("avatarGrande");
-
-
-    avatar.textContent =
-    dati.nickname.charAt(0).toUpperCase();
-
-
-    avatar.style.background =
-    coloreDaNome(dati.nickname);
-
-
-  } catch (e) {
-
-    document.getElementById("nomeProfilo").textContent =
-    "Errore nel caricamento";
-
-  }
+return PALETTE[somma % PALETTE.length];
 
 }
 
 
-carica();
+
+function mostraAvatar(dati){
+
+const box = document.getElementById("avatarGrande");
+
+
+if(dati.avatar){
+
+box.innerHTML =
+`<img src="${dati.avatar}">`;
+
+}
+
+else {
+
+box.textContent =
+dati.nickname.charAt(0).toUpperCase();
+
+box.style.background =
+coloreDaNome(dati.nickname);
+
+}
+
+}
+
+
+
+
+
+async function caricaProfilo(){
+
+try{
+
+
+const risposta = await fetch(
+SERVER + "/api/me",
+{
+credentials:"include"
+}
+);
+
+
+if(!risposta.ok){
+
+window.location.href =
+"login.html?redirect="+encodeURIComponent(location.href);
+
+return;
+
+}
+
+
+const dati = await risposta.json();
+
+
+
+/* DATI PRINCIPALI */
+
+
+document.getElementById("nickname").textContent =
+dati.nickname;
+
+
+document.getElementById("email").textContent =
+dati.email;
+
+
+
+mostraAvatar(dati);
+
+
+
+
+/* LIVELLO */
+
+
+document.getElementById("livello").textContent =
+"⭐ Livello " + dati.livello;
+
+
+
+if(dati.sogliaProssima != null){
+
+
+let intervallo =
+dati.sogliaProssima - dati.sogliaAttuale;
+
+
+let progresso =
+Math.round(
+((dati.xp - dati.sogliaAttuale) / intervallo) * 100
+);
+
+
+document.getElementById("barraXP").style.width =
+Math.max(0,Math.min(100,progresso))+"%";
+
+
+document.getElementById("testoXP").textContent =
+dati.xp +
+" XP — " +
+(dati.sogliaProssima-dati.xp) +
+" XP al prossimo livello";
+
+
+}
+
+else {
+
+
+document.getElementById("barraXP").style.width =
+"100%";
+
+
+document.getElementById("testoXP").textContent =
+dati.xp+" XP — livello massimo raggiunto!";
+
+
+}
+
+
+
+
+
+/* STATISTICHE */
+
+
+document.getElementById("vinte").textContent =
+dati.partiteVinte || 0;
+
+
+document.getElementById("giocate").textContent =
+dati.partiteGiocate || 0;
+
+
+
+let percentuale =
+dati.partiteGiocate > 0
+?
+Math.round(
+(dati.partiteVinte / dati.partiteGiocate)*100
+)
+:
+0;
+
+
+
+document.getElementById("winrate").textContent =
+percentuale+"%";
+
+
+
+document.getElementById("streak").textContent =
+dati.streakVittorieMassima || 0;
+
+
+
+
+
+/* DATI PERSONALI */
+
+
+document.getElementById("nome").value =
+dati.nome || "";
+
+
+document.getElementById("cognome").value =
+dati.cognome || "";
+
+
+document.getElementById("dataNascita").value =
+dati.dataNascita || "";
+
+
+document.getElementById("sesso").value =
+dati.sesso || "";
+
+
+document.getElementById("citta").value =
+dati.citta || "";
+
+
+document.getElementById("provincia").value =
+dati.provincia || "";
+
+
+
+
+
+/* BADGE */
+
+
+creaBadge(dati.badge || []);
+
+
+
+}
+catch(e){
+
+console.error(e);
+
+alert("Errore caricamento profilo");
+
+}
+
+
+}
+
+
+
+
+
+function creaBadge(lista){
+
+
+let contenitore =
+document.getElementById("badgeLista");
+
+
+if(!contenitore) return;
+
+
+if(lista.length===0){
+
+contenitore.innerHTML =
+'<div class="nessuno">Nessun badge ottenuto</div>';
+
+return;
+
+}
+
+
+contenitore.innerHTML =
+lista.map(b=>
+`
+<div class="badge">
+<span>${b.icona}</span>
+${b.nome}
+</div>
+`
+).join("");
+
+}
+
+
+
+
+/* UPLOAD AVATAR */
+
+
+document
+.getElementById("inputAvatar")
+.addEventListener("change",async function(){
+
+
+const file=this.files[0];
+
+
+if(!file) return;
+
+
+
+const form = new FormData();
+
+form.append("avatar",file);
+
+
+
+try{
+
+
+const risposta =
+await fetch(
+SERVER+"/api/carica-avatar",
+{
+method:"POST",
+credentials:"include",
+body:form
+}
+);
+
+
+
+const dati =
+await risposta.json();
+
+
+
+if(risposta.ok){
+
+document
+.getElementById("avatarGrande")
+.innerHTML =
+`<img src="${dati.avatar}">`;
+
+alert("Avatar aggiornato!");
+
+}
+
+else {
+
+alert(dati.errore || "Errore caricamento avatar");
+
+}
+
+
+
+}
+catch(e){
+
+alert("Errore caricamento avatar");
+
+}
+
+
+
+});
+
+
+
+
+
+caricaProfilo();
+
 
 </script>
+
+<!-- BADGE -->
+
+<div class="scheda">
+
+<div class="titolo">
+🎖️ Obiettivi ottenuti
+</div>
+
+<div class="badge-lista" id="badgeLista"></div>
+
+</div>
+
+
+
+<!-- NICKNAME -->
+
+<div class="scheda">
+
+<div class="titolo">
+✏️ Cambio nickname
+</div>
+
+
+<div class="info">
+Il nickname può essere cambiato una volta ogni 365 giorni.
+</div>
+
+
+<div class="gruppo">
+
+<label>Nuovo nickname</label>
+
+<input id="nuovoNickname" maxlength="15">
+
+</div>
+
+
+<button class="btn-oro" onclick="cambiaNickname()">
+Cambia nickname
+</button>
+
+
+<div class="info" id="infoNickname"></div>
+
+
+</div>
+
+
+
+
+
+<!-- PASSWORD -->
+
+<div class="scheda">
+
+
+<div class="titolo">
+🔑 Cambio password
+</div>
+
+
+
+<div class="gruppo">
+
+<label>Password attuale</label>
+
+<input 
+id="vecchiaPassword"
+type="password">
+
+</div>
+
+
+
+<div class="gruppo">
+
+<label>Nuova password</label>
+
+<input
+id="nuovaPassword"
+type="password">
+
+</div>
+
+
+
+<div class="gruppo">
+
+<label>Conferma nuova password</label>
+
+<input
+id="confermaPassword"
+type="password">
+
+</div>
+
+
+
+<button class="btn-blu" onclick="cambiaPassword()">
+🔒 Cambia password
+</button>
+
+
+</div>
+
+
+
+
+
+<!-- ELIMINA ACCOUNT -->
+
+
+<div class="scheda">
+
+
+<div class="titolo">
+⚠️ Zona pericolosa
+</div>
+
+
+<div class="info">
+L'eliminazione dell'account è permanente.
+</div>
+
+
+<button class="btn-rosso" onclick="eliminaAccount()">
+
+Elimina account
+
+</button>
+
+
+</div>
+
+
+
+
+<button class="btn-blu"
+onclick="tornaHome()">
+
+← Torna alla Home
+
+</button>
+
+
+
+
+
+<script>
+
+
+async function salvaProfilo(){
+
+
+const corpo={
+
+nome:
+document.getElementById("nome").value,
+
+cognome:
+document.getElementById("cognome").value,
+
+dataNascita:
+document.getElementById("dataNascita").value,
+
+sesso:
+document.getElementById("sesso").value,
+
+citta:
+document.getElementById("citta").value,
+
+provincia:
+document.getElementById("provincia").value
+
+};
+
+
+
+try{
+
+
+const risposta =
+await fetch(
+SERVER+"/api/modifica-profilo",
+{
+
+method:"POST",
+
+credentials:"include",
+
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify(corpo)
+
+});
+
+
+
+const dati =
+await risposta.json();
+
+
+
+if(risposta.ok){
+
+alert("Profilo aggiornato!");
+
+}
+
+else {
+
+alert(dati.errore || "Errore");
+
+}
+
+
+
+}
+catch(e){
+
+alert("Errore server");
+
+}
+
+
+}
+
+
+
+
+
+
+
+async function cambiaNickname(){
+
+
+const nickname =
+document.getElementById("nuovoNickname").value.trim();
+
+
+
+if(!nickname){
+
+alert("Inserisci un nickname");
+
+return;
+
+}
+
+
+
+const risposta =
+await fetch(
+SERVER+"/api/modifica-nickname",
+{
+
+method:"POST",
+
+credentials:"include",
+
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+nickname
+})
+
+});
+
+
+const dati =
+await risposta.json();
+
+
+
+if(risposta.ok){
+
+alert("Nickname cambiato!");
+
+location.reload();
+
+}
+
+else {
+
+alert(dati.errore);
+
+}
+
+
+
+}
+
+
+
+
+
+
+
+async function cambiaPassword(){
+
+
+const vecchia =
+document.getElementById("vecchiaPassword").value;
+
+
+const nuova =
+document.getElementById("nuovaPassword").value;
+
+
+const conferma =
+document.getElementById("confermaPassword").value;
+
+
+
+if(nuova!==conferma){
+
+alert("Le password non coincidono");
+
+return;
+
+}
+
+
+
+const risposta =
+await fetch(
+SERVER+"/api/cambia-password",
+{
+
+method:"POST",
+
+credentials:"include",
+
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+
+vecchiaPassword:vecchia,
+
+nuovaPassword:nuova
+
+})
+
+});
+
+
+
+const dati =
+await risposta.json();
+
+
+
+if(risposta.ok){
+
+alert("Password cambiata!");
+
+}
+
+else {
+
+alert(dati.errore);
+
+}
+
+
+
+}
+
+
+
+
+
+
+
+async function eliminaAccount(){
+
+
+const conferma =
+confirm(
+"Sei sicuro? L'account verrà eliminato definitivamente."
+);
+
+
+
+if(!conferma) return;
+
+
+
+const risposta =
+await fetch(
+SERVER+"/api/elimina-account",
+{
+
+method:"POST",
+
+credentials:"include"
+
+});
+
+
+
+const dati =
+await risposta.json();
+
+
+
+if(risposta.ok){
+
+alert("Account eliminato");
+
+window.location.href="login.html";
+
+}
+
+else{
+
+alert(dati.errore);
+
+}
+
+
+}
+
+
+
+
+
+
+
+function tornaHome(){
+
+window.location.href =
+"https://solfriniluca1.wixstudio.com/giochidisocieta";
+
+}
+
+
+
+</script>
+
 
 </body>
 </html>
