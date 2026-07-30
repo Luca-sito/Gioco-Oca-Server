@@ -376,6 +376,13 @@ app.post("/api/registrati", limiteLogin, async (req, res) => {
       nicknameLower,
       passwordHash,
       avatar: null,
+      nome: "",
+      cognome: "",
+      dataNascita: "",
+      sesso: "",
+      citta: "",
+      provincia: "",
+      ultimoCambioNickname: null,
       ruolo: "utente",
       stato: "attivo",
       sospesoFino: null,
@@ -446,26 +453,52 @@ app.get("/api/me", richiediAuth, async (req, res) => {
     const { livello, sogliaAttuale, sogliaProssima } = calcolaLivello(utente.xp || 0);
 
     res.json({
-      uid: req.utente.uid,
-      nickname: utente.nickname,
-      email: utente.email,
-      avatar: utente.avatar || null,
-      ruolo: utente.ruolo || "utente",
-      stato: utente.stato || "attivo",
-      sospesoFino: utente.sospesoFino || null,
-      avvisi: utente.avvisi || [],
-      partiteVinte: utente.partiteVinte || 0,
-      partiteGiocate: utente.partiteGiocate || 0,
-      creatoIl: utente.creatoIl || null,
-      ultimoAccesso: utente.ultimoAccesso || null,
-      xp: utente.xp || 0,
-      livello,
-      sogliaAttuale,
-      sogliaProssima,
-      streakVittorieMassima: utente.streakVittorieMassima || 0,
-      vittoriaPiuVeloceSecondi: utente.vittoriaPiuVeloceSecondi ?? null,
-      badge: calcolaBadge(utente)
-    });
+  uid: req.utente.uid,
+
+  // Dati account
+  nickname: utente.nickname,
+  email: utente.email,
+  avatar: utente.avatar || null,
+
+  // Dati personali modificabili
+  nome: utente.nome || "",
+  cognome: utente.cognome || "",
+  dataNascita: utente.dataNascita || "",
+  sesso: utente.sesso || "",
+  citta: utente.citta || "",
+  provincia: utente.provincia || "",
+
+  // Cambio nickname
+  ultimoCambioNickname: utente.ultimoCambioNickname || null,
+
+  // Stato account
+  ruolo: utente.ruolo || "utente",
+  stato: utente.stato || "attivo",
+  sospesoFino: utente.sospesoFino || null,
+  avvisi: utente.avvisi || [],
+
+  // Statistiche gioco
+  partiteVinte: utente.partiteVinte || 0,
+  partiteGiocate: utente.partiteGiocate || 0,
+
+  // Date account
+  creatoIl: utente.creatoIl || null,
+  ultimoAccesso: utente.ultimoAccesso || null,
+
+  // Progressione
+  xp: utente.xp || 0,
+  livello,
+  sogliaAttuale,
+  sogliaProssima,
+
+  // Record
+  streakVittorieMassima: utente.streakVittorieMassima || 0,
+  vittoriaPiuVeloceSecondi: utente.vittoriaPiuVeloceSecondi ?? null,
+
+  // Badge
+  badge: calcolaBadge(utente)
+});
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ errore: "Errore del server." });
@@ -474,36 +507,200 @@ app.get("/api/me", richiediAuth, async (req, res) => {
 
 app.post("/api/modifica-nickname", richiediAuth, async (req, res) => {
   if (!db) return res.status(500).json({ errore: "Servizio non disponibile." });
+
   try {
+
     const { nickname } = req.body;
-    if (!nickname || !nickname.trim()) return res.status(400).json({ errore: "Inserisci un nickname." });
 
-    const nuovoNickname = pulisciTesto(nickname, 20);
-
-    if (nuovoNickname.length < 5 || nuovoNickname.length > 15) {
-      return res.status(400).json({ errore: "Il nickname deve contenere da 5 a 15 caratteri." });
+    if (!nickname || !nickname.trim()) {
+      return res.status(400).json({
+        errore: "Inserisci un nickname."
+      });
     }
+
+
+    const snap = await db.ref("utenti/" + req.utente.uid).once("value");
+    const utente = snap.val();
+
+    const unAnno = 365 * 24 * 60 * 60 * 1000;
+
+
+    if (
+      utente.ultimoCambioNickname &&
+      Date.now() - utente.ultimoCambioNickname < unAnno
+    ) {
+      return res.status(400).json({
+        errore:"Puoi cambiare nickname una volta ogni 12 mesi."
+      });
+    }
+
+
+    const nuovoNickname = pulisciTesto(nickname,20);
+
+
+    if (
+      nuovoNickname.length < 5 ||
+      nuovoNickname.length > 15
+    ) {
+      return res.status(400).json({
+        errore:"Il nickname deve contenere da 5 a 15 caratteri."
+      });
+    }
+
+
     if (!/^[a-zA-Z0-9_ ]+$/.test(nuovoNickname)) {
-      return res.status(400).json({ errore: "Nickname non valido." });
+      return res.status(400).json({
+        errore:"Nickname non valido."
+      });
     }
 
-    const nicknameLower = nuovoNickname.toLowerCase();
 
-    const esistente = await trovaUtentePerNickname(nicknameLower);
-    if (esistente && esistente.uid !== req.utente.uid) {
-      return res.status(400).json({ errore: "Questo nickname è già in uso." });
+    const nicknameLower =
+      nuovoNickname.toLowerCase();
+
+
+    const esistente =
+      await trovaUtentePerNickname(nicknameLower);
+
+
+    if (
+      esistente &&
+      esistente.uid !== req.utente.uid
+    ) {
+      return res.status(400).json({
+        errore:"Questo nickname è già in uso."
+      });
     }
 
-    await db.ref("utenti/" + req.utente.uid).update({ nickname: nuovoNickname, nicknameLower });
 
-    const nuovoToken = creaToken(req.utente.uid, nuovoNickname, req.utente.ruolo);
-    res.cookie("token", nuovoToken, OPZIONI_COOKIE);
+    await db.ref("utenti/" + req.utente.uid).update({
 
-    res.json({ nickname: nuovoNickname });
-  } catch (err) {
+      nickname: nuovoNickname,
+      nicknameLower,
+      ultimoCambioNickname: Date.now()
+
+    });
+
+
+    const nuovoToken =
+      creaToken(
+        req.utente.uid,
+        nuovoNickname,
+        req.utente.ruolo
+      );
+
+
+    res.cookie(
+      "token",
+      nuovoToken,
+      OPZIONI_COOKIE
+    );
+
+
+    res.json({
+      nickname: nuovoNickname
+    });
+
+
+  } catch(err){
+
     console.error(err);
-    res.status(500).json({ errore: "Errore del server, riprova." });
+
+    res.status(500).json({
+      errore:"Errore del server."
+    });
+
   }
+});
+
+app.post("/api/profilo/cambia-password", richiediAuth, async(req,res)=>{
+
+if(!db)
+return res.status(500).json({
+ errore:"Servizio non disponibile."
+});
+
+
+try{
+
+const {nuovaPassword}=req.body;
+
+
+if(!nuovaPassword || nuovaPassword.length < 6){
+
+return res.status(400).json({
+ errore:"La password deve avere almeno 6 caratteri."
+});
+
+}
+
+
+const hash =
+await bcrypt.hash(nuovaPassword,10);
+
+
+await db.ref("utenti/"+req.utente.uid)
+.update({
+
+passwordHash:hash
+
+});
+
+
+res.json({
+ok:true
+});
+
+
+}catch(err){
+
+console.error(err);
+
+res.status(500).json({
+errore:"Errore cambio password."
+});
+
+}
+
+});
+
+app.delete("/api/profilo/elimina-account", richiediAuth, async(req,res)=>{
+
+if(!db)
+return res.status(500).json({
+ errore:"Servizio non disponibile."
+});
+
+
+try{
+
+
+await db.ref(
+ "utenti/"+req.utente.uid
+).remove();
+
+
+res.clearCookie(
+ "token",
+ OPZIONI_COOKIE
+);
+
+
+res.json({
+ok:true
+});
+
+
+}catch(err){
+
+console.error(err);
+
+res.status(500).json({
+errore:"Errore eliminazione account."
+});
+
+}
+
 });
 
 app.post("/api/carica-avatar", richiediAuth, uploadAvatar.single("avatar"), async (req, res) => {
