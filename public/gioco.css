@@ -213,15 +213,9 @@ html, body {
 
 @media (max-width: 900px) and (orientation: landscape) {
 
-  #scena {
-    width: 100vw;
-    height: 100dvh;
-    overflow: hidden;
-  }
-
   #area-tabellone {
     width: auto;
-    height: 82dvh;
+    height: 65dvh;
     max-width: none;
     max-height: none;
   }
@@ -233,6 +227,7 @@ html, body {
     object-fit: contain;
   }
 
+}
   #pannello-giocatori {
     top: 5px;
     left: 5px;
