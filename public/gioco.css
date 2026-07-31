@@ -225,3 +225,7 @@ html, body {
   }
 
 }
+
+body {
+  background: red !important;
+}
