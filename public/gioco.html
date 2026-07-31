@@ -4,16 +4,22 @@
 <meta charset="UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
+
 <title>Gioco dell'Oca - Partita</title>
 <link rel="stylesheet" href="gioco.css">
 </head>
 <body>
 
+<div id="overlayRuotaTelefono">
+  <div class="ruota-icona">📱</div>
+  <p class="ruota-testo">Ruota il telefono per giocare</p>
+  <p class="ruota-sottotesto">Il tabellone è ottimizzato per la visualizzazione orizzontale</p>
+</div>
+
 <div id="scena">
 
   <div id="area-tabellone">
-    <img id="immagine-tabellone" src="immagini/tabellone.png" alt="Tabellone">
+    <img id="immagine-tabellone" src="https://gioco-oca-server.onrender.com/Immagini/tabellone.png" alt="Tabellone">
     <div id="contenitore-pedine"></div>
     <div id="area-dadi" class="disabilitato" title="Clicca per tirare">
       <div id="dado1"></div>
