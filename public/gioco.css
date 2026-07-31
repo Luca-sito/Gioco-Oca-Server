@@ -228,29 +228,3 @@ html, body {
   }
 
 }
-  #pannello-giocatori {
-    top: 5px;
-    left: 5px;
-    transform: scale(0.55);
-    transform-origin: top left;
-  }
-
-  #menu-wrapper {
-    top: 5px;
-    right: 5px;
-    transform: scale(0.65);
-    transform-origin: top right;
-  }
-
-  #chat-wrapper {
-    bottom: 5px;
-    right: 5px;
-    transform: scale(0.65);
-    transform-origin: bottom right;
-  }
-
-  #area-dadi {
-    bottom: 2%;
-    transform: translateX(-50%) scale(0.65);
-  }
-}
