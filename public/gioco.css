@@ -212,8 +212,13 @@ html, body {
 }
 
 @media (max-width: 900px) and (orientation: landscape) {
+
   #area-tabellone {
-    background: red !important;
-    height: 40dvh !important;
+    width: 60vw !important;
   }
+
+  #immagine-tabellone {
+    width: 100% !important;
+  }
+
 }
