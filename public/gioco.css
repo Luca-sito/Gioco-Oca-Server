@@ -42,8 +42,9 @@ html, body {
 
 #area-tabellone {
   position: relative;
-  width: 95vmin;
+  width: 95vw;
   max-width: 1800px;
+  max-height: 90vh;
 }
 #immagine-tabellone {
   width: 100%;
