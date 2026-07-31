@@ -44,13 +44,12 @@ html, body {
   position: relative;
   width: 90vw;
   max-width: 1700px;
-  max-height: 87vh;
 }
+
 #immagine-tabellone {
   width: 100%;
-  display: block;
-  border-radius: 14px;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+  max-height: 87vh;
+  object-fit: contain;
 }
 #contenitore-pedine {
   position: absolute;
