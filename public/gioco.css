@@ -214,34 +214,14 @@ html, body {
 /* Ottimizzazione solo smartphone orizzontale */
 @media screen and (max-width: 900px) and (orientation: landscape) {
 
-  #scena {
-    width: 100vw;
-    height: 100vh;
-  }
-
   #area-tabellone {
-    width: 90vw;
-    max-width: none;
+    width: 90vw !important;
+    max-width: none !important;
   }
 
   #immagine-tabellone {
-    width: 100%;
-    height: auto;
-  }
-
-  #pannello-giocatori {
-    transform: scale(0.7);
-    transform-origin: top left;
-  }
-
-  #menu-wrapper {
-    transform: scale(0.7);
-    transform-origin: top right;
-  }
-
-  #chat-wrapper {
-    transform: scale(0.7);
-    transform-origin: bottom right;
+    width: 100% !important;
+    height: auto !important;
   }
 
 }
