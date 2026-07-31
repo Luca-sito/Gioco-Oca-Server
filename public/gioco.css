@@ -210,3 +210,46 @@ html, body {
   border: 1.5px solid rgba(255,255,255,0.4);
   object-fit: cover;
 }
+
+@media (max-width: 900px) and (orientation: landscape) {
+
+  #area-tabellone {
+    width: 95vw;
+    max-width: none;
+  }
+
+  #immagine-tabellone {
+    width: 100%;
+    max-height: 90vh;
+    object-fit: contain;
+  }
+
+  #pannello-giocatori {
+    top: 5px;
+    left: 5px;
+    transform: scale(0.75);
+    transform-origin: top left;
+  }
+
+  #menu-wrapper {
+    top: 5px;
+    right: 5px;
+  }
+
+  #chat-wrapper {
+    bottom: 5px;
+    right: 5px;
+  }
+
+  #btn-menu,
+  #btn-chat {
+    width: 42px;
+    height: 42px;
+    font-size: 16px;
+  }
+
+  #area-dadi {
+    bottom: 2%;
+    padding: 6px 10px;
+  }
+}
