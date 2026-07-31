@@ -213,42 +213,49 @@ html, body {
 
 @media (max-width: 900px) and (orientation: landscape) {
 
+  #scena {
+    width: 100vw;
+    height: 100dvh;
+    overflow: hidden;
+  }
+
   #area-tabellone {
-    width: 90vw;
+    width: auto;
+    height: 82dvh;
     max-width: none;
-    max-height: 82vh;
+    max-height: none;
   }
 
   #immagine-tabellone {
-    width: 100%;
-    height: auto;
-    max-height: 82vh;
+    width: auto;
+    height: 100%;
+    max-width: 100vw;
     object-fit: contain;
   }
 
   #pannello-giocatori {
     top: 5px;
     left: 5px;
-    transform: scale(0.65);
+    transform: scale(0.55);
     transform-origin: top left;
   }
 
   #menu-wrapper {
     top: 5px;
     right: 5px;
-    transform: scale(0.75);
+    transform: scale(0.65);
     transform-origin: top right;
   }
 
   #chat-wrapper {
     bottom: 5px;
     right: 5px;
-    transform: scale(0.75);
+    transform: scale(0.65);
     transform-origin: bottom right;
   }
 
   #area-dadi {
     bottom: 2%;
-    transform: translateX(-50%) scale(0.75);
+    transform: translateX(-50%) scale(0.65);
   }
 }
