@@ -42,14 +42,14 @@ html, body {
 
 #area-tabellone {
   position: relative;
-  width: 90vw;
-  max-width: 1700px;
+  width: 92vmin;
+  max-width: 1500px;
 }
-
 #immagine-tabellone {
   width: 100%;
-  max-height: 87vh;
-  object-fit: contain;
+  display: block;
+  border-radius: 14px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.6);
 }
 #contenitore-pedine {
   position: absolute;
@@ -209,16 +209,4 @@ html, body {
   flex-shrink: 0;
   border: 1.5px solid rgba(255,255,255,0.4);
   object-fit: cover;
-}
-
-@media (max-width: 900px) and (orientation: landscape) {
-
-  #area-tabellone {
-    width: 60vw !important;
-  }
-
-  #immagine-tabellone {
-    width: 100% !important;
-  }
-
 }
