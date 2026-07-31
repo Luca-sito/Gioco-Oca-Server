@@ -211,17 +211,11 @@ html, body {
   object-fit: cover;
 }
 
-/* Ottimizzazione solo smartphone orizzontale */
 @media screen and (max-width: 900px) and (orientation: landscape) {
 
   #area-tabellone {
-    width: 90vw !important;
+    width: 70vw !important;
     max-width: none !important;
-  }
-
-  #immagine-tabellone {
-    width: 100% !important;
-    height: auto !important;
   }
 
 }
