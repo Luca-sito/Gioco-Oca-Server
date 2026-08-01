@@ -2,41 +2,107 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>Gioco dell'Oca - Partita</title>
-<link rel="stylesheet" href="gioco.css?v=10">
+<link rel="stylesheet" href="gioco.css">
 </head>
 <body>
-
+<div id="overlayRuotaTelefono">
+  <div class="ruota-icona">📱</div>
+  <p class="ruota-testo">Ruota il telefono per giocare</p>
+  <p class="ruota-sottotesto">Il tabellone è ottimizzato per la visualizzazione orizzontale</p>
+</div>
 <div id="scena">
-
   <div id="area-tabellone">
-    <img id="immagine-tabellone" src="https://gioco-oca-server.onrender.com/Immagini/tabellone.png" alt="Tabellone">
+    <img id="immagine-tabellone" src="immagini/tabellone.png" alt="Tabellone">
     <div id="contenitore-pedine"></div>
     <div id="area-dadi" class="disabilitato" title="Clicca per tirare">
-      <div id="dado1"></div>
-      <div id="dado2"></div>
+      <div id="dado1" class="dado-3d">
+        <div class="cubo">
+          <div class="faccia faccia-1"><span class="pip pip-rossa" style="grid-area:2/2;"></span></div>
+          <div class="faccia faccia-2">
+            <span class="pip" style="grid-area:1/3;"></span>
+            <span class="pip" style="grid-area:3/1;"></span>
+          </div>
+          <div class="faccia faccia-3">
+            <span class="pip" style="grid-area:1/3;"></span>
+            <span class="pip" style="grid-area:2/2;"></span>
+            <span class="pip" style="grid-area:3/1;"></span>
+          </div>
+          <div class="faccia faccia-4">
+            <span class="pip pip-rossa" style="grid-area:1/1;"></span>
+            <span class="pip pip-rossa" style="grid-area:1/3;"></span>
+            <span class="pip pip-rossa" style="grid-area:3/1;"></span>
+            <span class="pip pip-rossa" style="grid-area:3/3;"></span>
+          </div>
+          <div class="faccia faccia-5">
+            <span class="pip" style="grid-area:1/1;"></span>
+            <span class="pip" style="grid-area:1/3;"></span>
+            <span class="pip" style="grid-area:2/2;"></span>
+            <span class="pip" style="grid-area:3/1;"></span>
+            <span class="pip" style="grid-area:3/3;"></span>
+          </div>
+          <div class="faccia faccia-6">
+            <span class="pip" style="grid-area:1/1;"></span>
+            <span class="pip" style="grid-area:2/1;"></span>
+            <span class="pip" style="grid-area:3/1;"></span>
+            <span class="pip" style="grid-area:1/3;"></span>
+            <span class="pip" style="grid-area:2/3;"></span>
+            <span class="pip" style="grid-area:3/3;"></span>
+          </div>
+        </div>
+      </div>
+      <div id="dado2" class="dado-3d">
+        <div class="cubo">
+          <div class="faccia faccia-1"><span class="pip pip-rossa" style="grid-area:2/2;"></span></div>
+          <div class="faccia faccia-2">
+            <span class="pip" style="grid-area:1/3;"></span>
+            <span class="pip" style="grid-area:3/1;"></span>
+          </div>
+          <div class="faccia faccia-3">
+            <span class="pip" style="grid-area:1/3;"></span>
+            <span class="pip" style="grid-area:2/2;"></span>
+            <span class="pip" style="grid-area:3/1;"></span>
+          </div>
+          <div class="faccia faccia-4">
+            <span class="pip pip-rossa" style="grid-area:1/1;"></span>
+            <span class="pip pip-rossa" style="grid-area:1/3;"></span>
+            <span class="pip pip-rossa" style="grid-area:3/1;"></span>
+            <span class="pip pip-rossa" style="grid-area:3/3;"></span>
+          </div>
+          <div class="faccia faccia-5">
+            <span class="pip" style="grid-area:1/1;"></span>
+            <span class="pip" style="grid-area:1/3;"></span>
+            <span class="pip" style="grid-area:2/2;"></span>
+            <span class="pip" style="grid-area:3/1;"></span>
+            <span class="pip" style="grid-area:3/3;"></span>
+          </div>
+          <div class="faccia faccia-6">
+            <span class="pip" style="grid-area:1/1;"></span>
+            <span class="pip" style="grid-area:2/1;"></span>
+            <span class="pip" style="grid-area:3/1;"></span>
+            <span class="pip" style="grid-area:1/3;"></span>
+            <span class="pip" style="grid-area:2/3;"></span>
+            <span class="pip" style="grid-area:3/3;"></span>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
-
   <div id="pannello-giocatori">
     <div id="riga-turno">Caricamento...</div>
     <div id="lista-giocatori"></div>
   </div>
-
   <div id="menu-wrapper">
     <button id="btn-menu" title="Menu">☰</button>
     <div id="pannello-menu" class="nascosto">
       <button onclick="apriProfilo()">👤 Profilo</button>
       <button onclick="apriImpostazioni()">⚙️ Impostazioni</button>
+      <button id="btn-toggle-suoni" onclick="toggleSuoni()">🔊 Suoni: On</button>
       <button class="voce-pericolo" onclick="abbandonaPartita()">🚪 Abbandona partita</button>
     </div>
   </div>
-
   <div id="messaggi-gioco"></div>
-
   <div id="chat-wrapper">
     <button id="btn-chat" title="Apri chat">💬</button>
     <div id="pannello-chat" class="nascosto">
@@ -47,16 +113,13 @@
       </div>
     </div>
   </div>
-
 </div>
-
 <div id="overlay-vittoria" class="overlay">
   <div class="popup-vittoria">
     <h2 id="testo-vincitore"></h2>
     <button onclick="tornaAllaLobby()">Torna alla Lobby</button>
   </div>
 </div>
-
 <script src="gioco.js"></script>
 </body>
 </html>
