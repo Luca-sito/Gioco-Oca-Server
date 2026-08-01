@@ -36,41 +36,173 @@ let mioTurno = false;
 let turnoAttualeId = null;
 let timerRiconnessione = null;
 
-function creaFacciaDado(valore) {
-  const posizioniPip = {
-    1: [[50, 50]], 2: [[25, 25], [75, 75]], 3: [[25, 25], [50, 50], [75, 75]],
-    4: [[25, 25], [75, 25], [25, 75], [75, 75]],
-    5: [[25, 25], [75, 25], [50, 50], [25, 75], [75, 75]],
-    6: [[25, 25], [75, 25], [25, 50], [75, 50], [25, 75], [75, 75]]
-  };
-  const colorePip = (valore === 1 || valore === 4) ? "#e53935" : "#222";
-  const pips = posizioniPip[valore].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="8" fill="${colorePip}"/>`).join("");
-  return `<svg width="55" height="55" viewBox="0 0 100 100"><rect x="4" y="4" width="92" height="92" rx="14" fill="#fff" stroke="#ccc" stroke-width="3"/>${pips}</svg>`;
+// ===== SUONI (sintetizzati via Web Audio API — nessun file audio da caricare) =====
+let suoniAttivi = localStorage.getItem("suoniAttivi") !== "off";
+let contestoAudio = null;
+
+function ottieniContestoAudio() {
+  if (!contestoAudio) {
+    const AudioContextClasse = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClasse) return null;
+    contestoAudio = new AudioContextClasse();
+  }
+  if (contestoAudio.state === "suspended") contestoAudio.resume();
+  return contestoAudio;
 }
 
+function suonaTono(frequenza, durataMs, tipoOnda, volume, ritardoMs) {
+  if (!suoniAttivi) return;
+  const ctx = ottieniContestoAudio();
+  if (!ctx) return;
+  const inizio = ctx.currentTime + (ritardoMs || 0) / 1000;
+  const oscillatore = ctx.createOscillator();
+  const guadagno = ctx.createGain();
+  oscillatore.type = tipoOnda || "sine";
+  oscillatore.frequency.setValueAtTime(frequenza, inizio);
+  guadagno.gain.setValueAtTime(0, inizio);
+  guadagno.gain.linearRampToValueAtTime(volume || 0.12, inizio + 0.01);
+  guadagno.gain.exponentialRampToValueAtTime(0.0001, inizio + durataMs / 1000);
+  oscillatore.connect(guadagno);
+  guadagno.connect(ctx.destination);
+  oscillatore.start(inizio);
+  oscillatore.stop(inizio + durataMs / 1000 + 0.02);
+}
+
+function suonaClick(volume, ritardoMs) {
+  if (!suoniAttivi) return;
+  const ctx = ottieniContestoAudio();
+  if (!ctx) return;
+  const inizio = ctx.currentTime + (ritardoMs || 0) / 1000;
+  const durata = 0.045;
+  const lunghezzaBuffer = Math.floor(ctx.sampleRate * durata);
+  const buffer = ctx.createBuffer(1, lunghezzaBuffer, ctx.sampleRate);
+  const dati = buffer.getChannelData(0);
+  for (let i = 0; i < lunghezzaBuffer; i++) {
+    dati[i] = (Math.random() * 2 - 1) * (1 - i / lunghezzaBuffer);
+  }
+  const sorgente = ctx.createBufferSource();
+  sorgente.buffer = buffer;
+  const guadagno = ctx.createGain();
+  guadagno.gain.setValueAtTime(volume || 0.18, inizio);
+  guadagno.gain.exponentialRampToValueAtTime(0.001, inizio + durata);
+  sorgente.connect(guadagno);
+  guadagno.connect(ctx.destination);
+  sorgente.start(inizio);
+}
+
+function suonaTiroDadi() {
+  if (!suoniAttivi) return;
+  for (let i = 0; i < 7; i++) suonaClick(0.1, i * 130);
+}
+function suonaAtterraggioDadi() {
+  suonaTono(180, 90, "square", 0.14, 0);
+  suonaClick(0.15, 20);
+}
+function suonaPassoPedina() {
+  suonaTono(520, 55, "sine", 0.09, 0);
+}
+function suonaTuoTurno() {
+  suonaTono(660, 120, "sine", 0.11, 0);
+  suonaTono(880, 160, "sine", 0.11, 120);
+}
+function suonaVittoria() {
+  suonaTono(523, 130, "sine", 0.13, 0);
+  suonaTono(659, 130, "sine", 0.13, 130);
+  suonaTono(784, 130, "sine", 0.13, 260);
+  suonaTono(1047, 260, "sine", 0.14, 390);
+}
+function suonaMessaggioChat() {
+  suonaTono(740, 70, "sine", 0.08, 0);
+}
+
+function toggleSuoni() { impostaSuoni(!suoniAttivi); }
+function impostaSuoni(attivi) {
+  suoniAttivi = attivi;
+  localStorage.setItem("suoniAttivi", attivi ? "on" : "off");
+  aggiornaTestoBottoneSuoni();
+}
+function aggiornaTestoBottoneSuoni() {
+  const bottone = document.getElementById("btn-toggle-suoni");
+  if (bottone) bottone.textContent = suoniAttivi ? "🔊 Suoni: On" : "🔇 Suoni: Off";
+}
+
+// ===== DADI 3D: rotazione del cubo fino alla faccia corretta =====
+// Ogni faccia del cubo, a riposo, punta in una direzione fissa (definita nel CSS).
+// Per "mostrare" una faccia al giocatore basta ruotare il cubo dell'inverso esatto
+// della rotazione con cui quella faccia è stata posizionata — questa mappa contiene
+// già quel calcolo per ciascun valore da 1 a 6.
+const CORREZIONE_ANGOLI_DADO = {
+  1: { x: 0, y: 0 },
+  2: { x: 0, y: -90 },
+  3: { x: -90, y: 0 },
+  4: { x: 90, y: 0 },
+  5: { x: 0, y: 90 },
+  6: { x: 0, y: 180 }
+};
+
+let rotazioneAttuale = {
+  dado1: { x: 0, y: 0 },
+  dado2: { x: 0, y: 0 }
+};
+
+function normalizza360(gradi) {
+  return ((gradi % 360) + 360) % 360;
+}
+
+// Calcola la nuova rotazione totale del cubo: parte da dove si trova ora, avanza
+// sempre in avanti (mai un salto all'indietro brusco) fino al valore richiesto,
+// aggiungendo 2-3 giri extra completi solo per l'effetto visivo del lancio.
+function calcolaNuovaRotazione(idDado, valore) {
+  const correzione = CORREZIONE_ANGOLI_DADO[valore];
+  const attuale = rotazioneAttuale[idDado];
+
+  const targetX = normalizza360(correzione.x);
+  const targetY = normalizza360(correzione.y);
+  const modAttualeX = normalizza360(attuale.x);
+  const modAttualeY = normalizza360(attuale.y);
+
+  let deltaX = targetX - modAttualeX; if (deltaX < 0) deltaX += 360;
+  let deltaY = targetY - modAttualeY; if (deltaY < 0) deltaY += 360;
+
+  const giriExtraX = (2 + Math.floor(Math.random() * 2)) * 360;
+  const giriExtraY = (2 + Math.floor(Math.random() * 2)) * 360;
+
+  const nuova = { x: attuale.x + deltaX + giriExtraX, y: attuale.y + deltaY + giriExtraY };
+  rotazioneAttuale[idDado] = nuova;
+  return nuova;
+}
+
+function applicaRotazioneDado(idDado, valore) {
+  const rotazione = calcolaNuovaRotazione(idDado, valore);
+  const cubo = document.querySelector("#" + idDado + " .cubo");
+  if (cubo) cubo.style.transform = `rotateX(${rotazione.x}deg) rotateY(${rotazione.y}deg)`;
+}
+
+// Posiziona i dadi ISTANTANEAMENTE (usato all'avvio e ad ogni risincronizzazione
+// di stato) — niente animazione, altrimenti ogni riconnessione farebbe girare
+// vistosamente i dadi senza che sia stato tirato nulla.
 function mostraDadi(v1, v2) {
-  document.getElementById("dado1").innerHTML = creaFacciaDado(v1);
-  document.getElementById("dado2").innerHTML = creaFacciaDado(v2);
+  const cubo1 = document.querySelector("#dado1 .cubo");
+  const cubo2 = document.querySelector("#dado2 .cubo");
+  if (cubo1) cubo1.style.transition = "none";
+  if (cubo2) cubo2.style.transition = "none";
+  applicaRotazioneDado("dado1", v1);
+  applicaRotazioneDado("dado2", v2);
+  if (cubo1) cubo1.offsetHeight; // forza il reflow prima di riattivare la transizione
+  if (cubo1) cubo1.style.transition = "";
+  if (cubo2) cubo2.style.transition = "";
 }
 
+// Lancio vero e animato: qui la transizione CSS resta attiva, quindi il cubo
+// ruota davvero nello spazio fino ad atterrare sulla faccia giusta.
 function animaLancioDadi(vf1, vf2, callback) {
-  const dado1El = document.getElementById("dado1");
-  const dado2El = document.getElementById("dado2");
-  dado1El.classList.add("dado-rotola");
-  dado2El.classList.add("dado-rotola");
-  let cicli = 0;
-  const intervallo = setInterval(() => {
-    dado1El.innerHTML = creaFacciaDado(Math.floor(Math.random() * 6) + 1);
-    dado2El.innerHTML = creaFacciaDado(Math.floor(Math.random() * 6) + 1);
-    cicli++;
-    if (cicli >= 8) {
-      clearInterval(intervallo);
-      dado1El.classList.remove("dado-rotola");
-      dado2El.classList.remove("dado-rotola");
-      mostraDadi(vf1, vf2);
-      if (callback) callback();
-    }
-  }, 80);
+  suonaTiroDadi();
+  applicaRotazioneDado("dado1", vf1);
+  applicaRotazioneDado("dado2", vf2);
+  setTimeout(() => {
+    suonaAtterraggioDadi();
+    if (callback) callback();
+  }, 1080);
 }
 
 function schiarisciColore(hex, p) { return mescolaColore(hex, 255, p); }
@@ -93,14 +225,12 @@ function coordinatePerCasella(casellaNumero) {
   if (!casella) return null;
   return { left: casella.x * scaleX, top: casella.y * scaleY };
 }
-
 function posizionaPedina(pedina, casellaNumero) {
   const coord = coordinatePerCasella(casellaNumero);
   if (!coord) return;
   pedina.style.left = coord.left + "px";
   pedina.style.top = coord.top + "px";
 }
-
 function ottieniOCreaPedina(idGiocatore, colore, indice) {
   let pedina = document.getElementById("pedina-" + idGiocatore);
   if (!pedina) {
@@ -125,27 +255,21 @@ function ottieniOCreaPedina(idGiocatore, colore, indice) {
   }
   return pedina;
 }
-
 function animaSaltoPedina(idGiocatore, percorso, callback) {
   if (!percorso || percorso.length === 0) { if (callback) callback(); return; }
-
   const indice = ultimoStatoGiocatori.findIndex(g => g.id === idGiocatore);
   const colore = coloriGiocatori[(indice >= 0 ? indice : 0) % coloriGiocatori.length];
   const pedina = ottieniOCreaPedina(idGiocatore, colore, indice >= 0 ? indice : 0);
-
   let passo = 0;
   function saltaProssimo() {
     if (passo >= percorso.length) { if (callback) callback(); return; }
     const casella = percorso[passo];
-
     pedina.classList.add("pedina-salta");
     posizionaPedina(pedina, casella);
-
+    suonaPassoPedina();
     const etichettaCasella = document.getElementById("casella-" + idGiocatore);
     if (etichettaCasella) etichettaCasella.textContent = casella;
-
     setTimeout(() => pedina.classList.remove("pedina-salta"), DURATA_SALTO_MS * 0.6);
-
     passo++;
     setTimeout(saltaProssimo, DURATA_SALTO_MS);
   }
@@ -166,27 +290,22 @@ async function avvia() {
 
 function connetti() {
   socket = new WebSocket("wss://gioco-oca-server.onrender.com");
-
   socket.onopen = () => {
     if (timerRiconnessione) { clearTimeout(timerRiconnessione); timerRiconnessione = null; }
     socket.send(JSON.stringify({ tipo: "riprendiPartita", partitaId }));
   };
-
   socket.onclose = () => {
     document.getElementById("riga-turno").textContent = "🔴 Disconnesso, riconnessione...";
     if (!timerRiconnessione) {
       timerRiconnessione = setTimeout(() => { timerRiconnessione = null; connetti(); }, 3000);
     }
   };
-
   socket.onmessage = (msg) => {
     const dati = JSON.parse(msg.data);
-
     if (dati.tipo === "sessioneScaduta") {
       window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href);
       return;
     }
-
     if (dati.tipo === "statoPartita") {
       ultimoStatoGiocatori = dati.giocatori;
       if (dati.vittoria) {
@@ -210,7 +329,6 @@ function connetti() {
             document.getElementById("messaggi-gioco").textContent =
               "🎲 " + dati.dado1 + " + " + dati.dado2 + " = " + dati.valoreDado +
               (dati.messaggi && dati.messaggi.length ? " — " + dati.messaggi.join(" ") : "");
-
             if (dati.vittoria) {
               turnoAttualeId = null;
               document.getElementById("area-dadi").classList.add("disabilitato");
@@ -226,7 +344,6 @@ function connetti() {
           document.getElementById("messaggi-gioco").textContent =
             "🎲 " + dati.dado1 + " + " + dati.dado2 + " = " + dati.valoreDado +
             (dati.messaggi && dati.messaggi.length ? " — " + dati.messaggi.join(" ") : "");
-
           if (dati.vittoria) {
             turnoAttualeId = null;
             document.getElementById("area-dadi").classList.add("disabilitato");
@@ -239,7 +356,6 @@ function connetti() {
         }
       });
     }
-
     if (dati.tipo === "chatPartita") aggiungiMessaggioChatPartita(dati.nome, dati.testo);
     if (dati.tipo === "errore") {
       alert(dati.messaggio);
@@ -249,34 +365,28 @@ function connetti() {
 }
 
 function aggiornaTurno(turnoDiId) {
+  const eraIlMioTurno = mioTurno;
   turnoAttualeId = turnoDiId;
   mioTurno = (turnoDiId === mioUid);
+  if (mioTurno && !eraIlMioTurno) suonaTuoTurno();
   document.getElementById("riga-turno").textContent = mioTurno ? "🎲 È il tuo turno!" : "⏳ In attesa...";
   document.getElementById("area-dadi").classList.toggle("disabilitato", !mioTurno);
 }
 
 function disegnaGiocatori() {
   const contenitore = document.getElementById("contenitore-pedine");
-
   Array.from(contenitore.children).forEach(p => {
     if (!ultimoStatoGiocatori.some(g => "pedina-" + g.id === p.id)) p.remove();
   });
-
   const listaPannello = document.getElementById("lista-giocatori");
   listaPannello.innerHTML = "";
-
   ultimoStatoGiocatori.forEach((giocatore, indice) => {
     const colore = coloriGiocatori[indice % coloriGiocatori.length];
-
     const pedina = ottieniOCreaPedina(giocatore.id, colore, indice);
     posizionaPedina(pedina, giocatore.posizione);
-
     const avatarHtml = giocatore.avatar
       ? `<img class="avatar-mini" src="${giocatore.avatar}">`
       : `<div class="avatar-mini" style="background:${colore};">${iniziale(giocatore.nome)}</div>`;
-
-    // Nickname cliccabile → profilo pubblico, apre in una nuova scheda per non
-    // abbandonare la partita in corso
     const card = document.createElement("div");
     card.className = "giocatore-card" + (giocatore.id === turnoAttualeId ? " attivo" : "");
     card.innerHTML = `${avatarHtml}<a href="profilo-pubblico.html?nickname=${encodeURIComponent(giocatore.nome)}" target="_blank" style="color:inherit;text-decoration:none;flex-grow:1;">${giocatore.nome}</a><span class="casella-mini" id="casella-${giocatore.id}">${giocatore.posizione}</span>`;
@@ -285,12 +395,11 @@ function disegnaGiocatori() {
 }
 
 function mostraVittoria(nomeVincitore) {
+  suonaVittoria();
   document.getElementById("testo-vincitore").textContent = "🎉 Ha vinto " + nomeVincitore + "!";
   document.getElementById("overlay-vittoria").classList.add("aperto");
 }
-
 function tornaAllaLobby() { window.location.href = `lobby.html?stanza=${stanza}`; }
-
 function abbandonaPartita() {
   if (!confirm("Sei sicuro di voler abbandonare la partita?")) return;
   if (socket && socket.readyState === WebSocket.OPEN) {
@@ -298,15 +407,14 @@ function abbandonaPartita() {
   }
   tornaAllaLobby();
 }
-
 function apriProfilo() { chiudiMenu(); window.location.href = "profilo.html"; }
 function apriImpostazioni() { chiudiMenu(); window.location.href = "opzioni-account.html"; }
 function chiudiMenu() { document.getElementById("pannello-menu").classList.add("nascosto"); }
-
 document.getElementById("btn-menu").onclick = (e) => { e.stopPropagation(); document.getElementById("pannello-menu").classList.toggle("nascosto"); };
 document.addEventListener("click", () => chiudiMenu());
 
 function aggiungiMessaggioChatPartita(nome, testo) {
+  suonaMessaggioChat();
   const box = document.getElementById("chat-messaggi");
   const riga = document.createElement("div");
   riga.className = "chat-msg";
@@ -314,7 +422,6 @@ function aggiungiMessaggioChatPartita(nome, testo) {
   box.appendChild(riga);
   box.scrollTop = box.scrollHeight;
 }
-
 function inviaChatPartita() {
   const input = document.getElementById("chat-input");
   const testo = input.value.trim();
@@ -334,5 +441,6 @@ document.getElementById("area-dadi").onclick = () => {
   socket.send(JSON.stringify({ tipo: "tiraDadi", partitaId }));
 };
 
+aggiornaTestoBottoneSuoni();
 mostraDadi(1, 1);
 avvia();
