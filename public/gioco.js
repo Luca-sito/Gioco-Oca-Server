@@ -399,6 +399,30 @@ function mostraVittoria(nomeVincitore) {
   document.getElementById("testo-vincitore").textContent = "🎉 Ha vinto " + nomeVincitore + "!";
   document.getElementById("overlay-vittoria").classList.add("aperto");
 }
+function aggiornaOrientamento() {
+
+    const overlay = document.getElementById("overlayRuotaTelefono");
+    const scena = document.getElementById("scena");
+
+    const telefono = window.innerWidth < 950;
+
+    const orizzontale = window.innerWidth > window.innerHeight;
+
+    if (telefono && !orizzontale) {
+
+        overlay.style.display = "flex";
+        scena.style.display = "none";
+
+    } else {
+
+        overlay.style.display = "none";
+        scena.style.display = "flex";
+
+        disegnaGiocatori();
+
+    }
+
+}
 function tornaAllaLobby() { window.location.href = `lobby.html?stanza=${stanza}`; }
 function abbandonaPartita() {
   if (!confirm("Sei sicuro di voler abbandonare la partita?")) return;
@@ -440,6 +464,16 @@ document.getElementById("area-dadi").onclick = () => {
   document.getElementById("area-dadi").classList.add("disabilitato");
   socket.send(JSON.stringify({ tipo: "tiraDadi", partitaId }));
 };
+
+window.addEventListener("resize", aggiornaOrientamento);
+
+window.addEventListener("orientationchange", () => {
+
+    setTimeout(aggiornaOrientamento,250);
+
+});
+
+window.addEventListener("load", aggiornaOrientamento);
 
 aggiornaTestoBottoneSuoni();
 mostraDadi(1, 1);
