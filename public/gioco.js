@@ -37,10 +37,9 @@ let turnoAttualeId = null;
 let timerRiconnessione = null;
 let mostrataRivelazioneOrdine = false;
 
-// ===== SUONI (invariati per pedina/vittoria come richiesto) =====
+// ===== SUONI =====
 let suoniAttivi = localStorage.getItem("suoniAttivi") !== "off";
 let contestoAudio = null;
-
 function ottieniContestoAudio() {
   if (!contestoAudio) {
     const AudioContextClasse = window.AudioContext || window.webkitAudioContext;
@@ -88,30 +87,19 @@ function suonaClick(volume, ritardoMs) {
 }
 function suonaTiroDadi() { if (!suoniAttivi) return; for (let i = 0; i < 7; i++) suonaClick(0.1, i * 130); }
 function suonaAtterraggioDadi() { suonaTono(180, 90, "square", 0.14, 0); suonaClick(0.15, 20); }
-function suonaPassoPedina() { suonaTono(520, 55, "sine", 0.09, 0); } // invariato
+function suonaPassoPedina() { suonaTono(520, 55, "sine", 0.09, 0); }
 function suonaTuoTurno() { suonaTono(660, 120, "sine", 0.11, 0); suonaTono(880, 160, "sine", 0.11, 120); }
-function suonaVittoria() { // invariato
-  suonaTono(523, 130, "sine", 0.13, 0);
-  suonaTono(659, 130, "sine", 0.13, 130);
-  suonaTono(784, 130, "sine", 0.13, 260);
-  suonaTono(1047, 260, "sine", 0.14, 390);
+function suonaVittoria() {
+  suonaTono(523, 130, "sine", 0.13, 0); suonaTono(659, 130, "sine", 0.13, 130);
+  suonaTono(784, 130, "sine", 0.13, 260); suonaTono(1047, 260, "sine", 0.14, 390);
 }
 function suonaMessaggioChat() { suonaTono(740, 70, "sine", 0.08, 0); }
-// NUOVO: avviso countdown ultimi 3 secondi
 function suonaAvvisoTempo() { suonaTono(300, 90, "triangle", 0.14, 0); }
-
 function toggleSuoni() { impostaSuoni(!suoniAttivi); }
-function impostaSuoni(attivi) {
-  suoniAttivi = attivi;
-  localStorage.setItem("suoniAttivi", attivi ? "on" : "off");
-  aggiornaTestoBottoneSuoni();
-}
-function aggiornaTestoBottoneSuoni() {
-  const bottone = document.getElementById("btn-toggle-suoni");
-  if (bottone) bottone.textContent = suoniAttivi ? "🔊 Suoni: On" : "🔇 Suoni: Off";
-}
+function impostaSuoni(attivi) { suoniAttivi = attivi; localStorage.setItem("suoniAttivi", attivi ? "on" : "off"); aggiornaTestoBottoneSuoni(); }
+function aggiornaTestoBottoneSuoni() { const b = document.getElementById("btn-toggle-suoni"); if (b) b.textContent = suoniAttivi ? "🔊 Suoni: On" : "🔇 Suoni: Off"; }
 
-// ===== NUOVO: TUTTO SCHERMO =====
+// ===== TUTTO SCHERMO (presente e verificato) =====
 function toggleFullscreen() {
   if (!document.fullscreenElement && !document.webkitFullscreenElement) {
     const richiesta = document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen;
@@ -122,30 +110,23 @@ function toggleFullscreen() {
   }
 }
 function aggiornaTestoBottoneFullscreen() {
-  const bottone = document.getElementById("btn-toggle-fullscreen");
-  if (!bottone) return;
-  const inFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement);
-  bottone.textContent = inFullscreen ? "🡼 Esci da tutto schermo" : "⛶ Tutto schermo";
+  const b = document.getElementById("btn-toggle-fullscreen");
+  if (!b) return;
+  b.textContent = (document.fullscreenElement || document.webkitFullscreenElement) ? "🡼 Esci da tutto schermo" : "⛶ Tutto schermo";
 }
 document.addEventListener("fullscreenchange", aggiornaTestoBottoneFullscreen);
 document.addEventListener("webkitfullscreenchange", aggiornaTestoBottoneFullscreen);
 
-// ===== NUOVO: rotazione telefono gestita interamente via JavaScript =====
+// ===== ROTAZIONE VIA JAVASCRIPT =====
 function calcolaEAggiornaOrientamento() {
-  const larghezza = window.innerWidth;
-  const altezza = window.innerHeight;
-  const inPortrait = altezza > larghezza;
-  const schermoStretto = Math.min(larghezza, altezza) <= 900;
-  document.body.classList.toggle("richiede-rotazione", inPortrait && schermoStretto);
-
-  const altezzaReale = window.visualViewport ? window.visualViewport.height : altezza;
-  document.documentElement.style.setProperty("--altezza-reale", altezzaReale + "px");
+  const larghezza = window.innerWidth, altezza = window.innerHeight;
+  document.body.classList.toggle("richiede-rotazione", altezza > larghezza && Math.min(larghezza, altezza) <= 900);
+  document.documentElement.style.setProperty("--altezza-reale", (window.visualViewport ? window.visualViewport.height : altezza) + "px");
 }
 function rilevaEImpostaModalitaDesktop() {
   const nonTouch = !("ontouchstart" in window) && (navigator.maxTouchPoints || 0) === 0;
   const puntatorePreciso = window.matchMedia && window.matchMedia("(pointer: fine)").matches;
-  const schermoAmpio = window.innerWidth >= 1000;
-  document.body.classList.toggle("modalita-desktop", nonTouch && puntatorePreciso && schermoAmpio);
+  document.body.classList.toggle("modalita-desktop", nonTouch && puntatorePreciso && window.innerWidth >= 1000);
 }
 let timerDebounceResize = null;
 function gestisciResize() {
@@ -159,10 +140,6 @@ function inizializzaGestioneOrientamento() {
   rilevaEImpostaModalitaDesktop();
   window.addEventListener("resize", gestisciResize);
   window.addEventListener("orientationchange", () => {
-    // Su molti browser mobili le dimensioni non sono ancora aggiornate nell'istante
-    // esatto in cui scatta orientationchange: più controlli ravvicinati dopo l'evento
-    // evitano che la schermata resti bloccata su "ruota il telefono" anche dopo aver
-    // già ruotato per davvero.
     setTimeout(gestisciResize, 50);
     setTimeout(gestisciResize, 300);
     setTimeout(gestisciResize, 700);
@@ -170,14 +147,10 @@ function inizializzaGestioneOrientamento() {
   if (window.visualViewport) window.visualViewport.addEventListener("resize", gestisciResize);
 }
 function riposizionaTuttePedine() {
-  ultimoStatoGiocatori.forEach(giocatore => {
-    const pedina = document.getElementById("pedina-" + giocatore.id);
-    if (pedina) posizionaPedina(pedina, giocatore.posizione);
-  });
+  ultimoStatoGiocatori.forEach(g => { const p = document.getElementById("pedina-" + g.id); if (p) posizionaPedina(p, g.posizione); });
 }
 
-// ===== NUOVO: messaggio a tutto schermo (sostituisce il messaggio in alto per gli
-// eventi speciali tipo "Avanza dello stesso numero di caselle!") =====
+// ===== MESSAGGIO A TUTTO SCHERMO =====
 let timerFlashMessaggio = null;
 function mostraMessaggioGiocoGrande(testo) {
   if (!testo) return;
@@ -185,13 +158,13 @@ function mostraMessaggioGiocoGrande(testo) {
   if (!el) return;
   el.querySelector("span").textContent = testo;
   el.classList.remove("visibile");
-  void el.offsetWidth; // forza il riavvio dell'animazione anche se già in corso
+  void el.offsetWidth;
   el.classList.add("visibile");
   if (timerFlashMessaggio) clearTimeout(timerFlashMessaggio);
   timerFlashMessaggio = setTimeout(() => el.classList.remove("visibile"), 1000);
 }
 
-// ===== NUOVO: schermata "chi inizia" =====
+// ===== SCHERMATA "CHI INIZIA" =====
 function mostraRivelazioneOrdineTurni(giocatoriOrdinati, punteggi) {
   const overlay = document.getElementById("overlay-ordine-turni");
   const lista = document.getElementById("lista-ordine-turni");
@@ -199,7 +172,6 @@ function mostraRivelazioneOrdineTurni(giocatoriOrdinati, punteggi) {
   lista.innerHTML = "";
   overlay.classList.add("aperto");
   suonaTiroDadi();
-
   giocatoriOrdinati.forEach((g, indice) => {
     const riga = document.createElement("div");
     riga.className = "riga-ordine-turno";
@@ -208,16 +180,14 @@ function mostraRivelazioneOrdineTurni(giocatoriOrdinati, punteggi) {
     riga.innerHTML = `<div class="posizione-turno">${indice + 1}</div><div class="nome-ordine">${g.nome}</div><div class="punteggio-ordine">🎲 ${punteggio}</div>`;
     lista.appendChild(riga);
   });
-
   setTimeout(() => overlay.classList.remove("aperto"), 1300 + giocatoriOrdinati.length * 150 + 1300);
 }
 
-// ===== NUOVO: countdown live di turno =====
+// ===== COUNTDOWN LIVE DI TURNO =====
 let tempoInizioTurnoAttuale = null;
 let durataMossaMsAttuale = null;
 let intervalCountdown = null;
 let ultimoSecondoAvviso = null;
-
 function avviaCountdownTurno(tempoInizio, durataMs) {
   tempoInizioTurnoAttuale = tempoInizio;
   durataMossaMsAttuale = durataMs;
@@ -229,18 +199,112 @@ function avviaCountdownTurno(tempoInizio, durataMs) {
 function aggiornaCountdownTurno() {
   const elemento = document.getElementById("countdown-turno");
   if (!elemento || tempoInizioTurnoAttuale == null || durataMossaMsAttuale == null) return;
-  const trascorso = Date.now() - tempoInizioTurnoAttuale;
-  const secondiRimanenti = Math.max(0, Math.ceil((durataMossaMsAttuale - trascorso) / 1000));
+  const secondiRimanenti = Math.max(0, Math.ceil((durataMossaMsAttuale - (Date.now() - tempoInizioTurnoAttuale)) / 1000));
   elemento.textContent = "⏱ " + secondiRimanenti + "s";
   elemento.classList.toggle("countdown-scaduto", secondiRimanenti <= 0);
-
   if (mioTurno && secondiRimanenti <= 3 && secondiRimanenti >= 1 && secondiRimanenti !== ultimoSecondoAvviso) {
     ultimoSecondoAvviso = secondiRimanenti;
     suonaAvvisoTempo();
   }
 }
 
-function creaFacciaDado(valore) { /* non più usata dai dadi 3D, lasciata inutilizzata di proposito per compatibilità */ }
+// ===== NUOVO: MICROFONO IN TEMPO REALE (solo tra amici, mai forzato) =====
+let microfonoAttivo = false;
+let flussoAudioLocale = null;
+let connessioniPeer = {};
+let elementiAudioRemoti = {};
+let mieiAmiciUidPerAudio = new Set();
+const CONFIGURAZIONE_ICE = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+
+async function caricaAmiciPerAudio() {
+  try {
+    const r = await fetch("https://gioco-oca-server.onrender.com/api/amici", { credentials: "include" });
+    if (!r.ok) return;
+    const d = await r.json();
+    mieiAmiciUidPerAudio = new Set((d.amici || []).map(a => a.uid));
+  } catch (e) {}
+}
+async function toggleMicrofono() { if (microfonoAttivo) disattivaMicrofono(); else await attivaMicrofono(); }
+async function attivaMicrofono() {
+  try {
+    flussoAudioLocale = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+  } catch (e) {
+    alert("Non è stato possibile accedere al microfono. Controlla i permessi del browser.");
+    return;
+  }
+  microfonoAttivo = true;
+  aggiornaTestoBottoneMicrofono();
+  if (mieiAmiciUidPerAudio.size === 0) await caricaAmiciPerAudio();
+  ultimoStatoGiocatori.forEach(g => { if (g.id !== mioUid && mieiAmiciUidPerAudio.has(g.id)) avviaConnessioneAudio(g.id, true); });
+}
+function disattivaMicrofono() {
+  microfonoAttivo = false;
+  if (flussoAudioLocale) { flussoAudioLocale.getTracks().forEach(t => t.stop()); flussoAudioLocale = null; }
+  Object.keys(connessioniPeer).forEach(chiudiConnessioneAudio);
+  aggiornaTestoBottoneMicrofono();
+}
+function aggiornaTestoBottoneMicrofono() {
+  const b = document.getElementById("btn-toggle-microfono");
+  if (b) b.textContent = microfonoAttivo ? "🎤 Microfono: On" : "🔇 Microfono: Off";
+}
+function creaConnessionePeer(altroUid) {
+  const pc = new RTCPeerConnection(CONFIGURAZIONE_ICE);
+  if (flussoAudioLocale) flussoAudioLocale.getTracks().forEach(t => pc.addTrack(t, flussoAudioLocale));
+  pc.onicecandidate = (evento) => {
+    if (evento.candidate) socket.send(JSON.stringify({ tipo: "webrtc-ice-candidate", partitaId, destinatarioUid: altroUid, candidate: evento.candidate }));
+  };
+  pc.ontrack = (evento) => {
+    let elementoAudio = elementiAudioRemoti[altroUid];
+    if (!elementoAudio) {
+      elementoAudio = document.createElement("audio");
+      elementoAudio.autoplay = true;
+      elementoAudio.id = "audio-remoto-" + altroUid;
+      document.body.appendChild(elementoAudio);
+      elementiAudioRemoti[altroUid] = elementoAudio;
+    }
+    elementoAudio.srcObject = evento.streams[0];
+    disegnaGiocatori(); // aggiorna l'iconcina 🎤 accanto al giocatore ora collegato
+  };
+  connessioniPeer[altroUid] = pc;
+  return pc;
+}
+async function avviaConnessioneAudio(altroUid, sonoIoAdIniziare) {
+  if (connessioniPeer[altroUid]) return;
+  const pc = creaConnessionePeer(altroUid);
+  if (sonoIoAdIniziare) {
+    const offerta = await pc.createOffer();
+    await pc.setLocalDescription(offerta);
+    socket.send(JSON.stringify({ tipo: "webrtc-offer", partitaId, destinatarioUid: altroUid, sdp: offerta }));
+  }
+}
+async function gestisciOffertaRicevuta(mittenteUid, sdp) {
+  if (!microfonoAttivo) return;
+  const pc = connessioniPeer[mittenteUid] || creaConnessionePeer(mittenteUid);
+  await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+  const risposta = await pc.createAnswer();
+  await pc.setLocalDescription(risposta);
+  socket.send(JSON.stringify({ tipo: "webrtc-answer", partitaId, destinatarioUid: mittenteUid, sdp: risposta }));
+}
+async function gestisciRispostaRicevuta(mittenteUid, sdp) {
+  const pc = connessioniPeer[mittenteUid];
+  if (!pc) return;
+  await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+}
+async function gestisciCandidatoRicevuto(mittenteUid, candidate) {
+  const pc = connessioniPeer[mittenteUid];
+  if (!pc || !candidate) return;
+  try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch (e) {}
+}
+function chiudiConnessioneAudio(altroUid) {
+  const pc = connessioniPeer[altroUid];
+  if (pc) { pc.close(); delete connessioniPeer[altroUid]; }
+  const elementoAudio = elementiAudioRemoti[altroUid];
+  if (elementoAudio) { elementoAudio.remove(); delete elementiAudioRemoti[altroUid]; }
+}
+window.addEventListener("beforeunload", () => {
+  if (flussoAudioLocale) flussoAudioLocale.getTracks().forEach(t => t.stop());
+  Object.keys(connessioniPeer).forEach(chiudiConnessioneAudio);
+});
 
 // ===== DADI 3D =====
 const CORREZIONE_ANGOLI_DADO = { 1: { x: 0, y: 0 }, 2: { x: 0, y: -90 }, 3: { x: -90, y: 0 }, 4: { x: 90, y: 0 }, 5: { x: 0, y: 90 }, 6: { x: 0, y: 180 } };
@@ -249,15 +313,9 @@ function normalizza360(gradi) { return ((gradi % 360) + 360) % 360; }
 function calcolaNuovaRotazione(idDado, valore) {
   const correzione = CORREZIONE_ANGOLI_DADO[valore];
   const attuale = rotazioneAttuale[idDado];
-  const targetX = normalizza360(correzione.x);
-  const targetY = normalizza360(correzione.y);
-  const modAttualeX = normalizza360(attuale.x);
-  const modAttualeY = normalizza360(attuale.y);
-  let deltaX = targetX - modAttualeX; if (deltaX < 0) deltaX += 360;
-  let deltaY = targetY - modAttualeY; if (deltaY < 0) deltaY += 360;
-  const giriExtraX = (2 + Math.floor(Math.random() * 2)) * 360;
-  const giriExtraY = (2 + Math.floor(Math.random() * 2)) * 360;
-  const nuova = { x: attuale.x + deltaX + giriExtraX, y: attuale.y + deltaY + giriExtraY };
+  let deltaX = normalizza360(correzione.x) - normalizza360(attuale.x); if (deltaX < 0) deltaX += 360;
+  let deltaY = normalizza360(correzione.y) - normalizza360(attuale.y); if (deltaY < 0) deltaY += 360;
+  const nuova = { x: attuale.x + deltaX + (2 + Math.floor(Math.random() * 2)) * 360, y: attuale.y + deltaY + (2 + Math.floor(Math.random() * 2)) * 360 };
   rotazioneAttuale[idDado] = nuova;
   return nuova;
 }
@@ -267,8 +325,7 @@ function applicaRotazioneDado(idDado, valore) {
   if (cubo) cubo.style.transform = `rotateX(${rotazione.x}deg) rotateY(${rotazione.y}deg)`;
 }
 function mostraDadi(v1, v2) {
-  const cubo1 = document.querySelector("#dado1 .cubo");
-  const cubo2 = document.querySelector("#dado2 .cubo");
+  const cubo1 = document.querySelector("#dado1 .cubo"), cubo2 = document.querySelector("#dado2 .cubo");
   if (cubo1) cubo1.style.transition = "none";
   if (cubo2) cubo2.style.transition = "none";
   applicaRotazioneDado("dado1", v1);
@@ -295,7 +352,6 @@ function mescolaColore(hex, target, p) {
   return `rgb(${r},${g},${b})`;
 }
 function iniziale(nome) { return (nome || "?").trim().charAt(0).toUpperCase(); }
-
 function coordinatePerCasella(casellaNumero) {
   const immagine = document.getElementById("immagine-tabellone");
   const scaleX = immagine.clientWidth / immagine.naturalWidth;
@@ -345,7 +401,7 @@ function animaSaltoPedina(idGiocatore, percorso, callback) {
     const casella = percorso[passo];
     pedina.classList.add("pedina-salta");
     posizionaPedina(pedina, casella);
-    suonaPassoPedina(); // invariato
+    suonaPassoPedina();
     const etichettaCasella = document.getElementById("casella-" + idGiocatore);
     if (etichettaCasella) etichettaCasella.textContent = casella;
     setTimeout(() => pedina.classList.remove("pedina-salta"), DURATA_SALTO_MS * 0.6);
@@ -359,8 +415,7 @@ async function avvia() {
   try {
     const risposta = await fetch("https://gioco-oca-server.onrender.com/api/me", { credentials: "include" });
     if (!risposta.ok) { window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href); return; }
-    const dati = await risposta.json();
-    mioUid = dati.uid;
+    mioUid = (await risposta.json()).uid;
     connetti();
   } catch (e) {
     window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href);
@@ -375,149 +430,4 @@ function connetti() {
   };
   socket.onclose = () => {
     document.getElementById("riga-turno").textContent = "🔴 Disconnesso, riconnessione...";
-    if (!timerRiconnessione) timerRiconnessione = setTimeout(() => { timerRiconnessione = null; connetti(); }, 3000);
-  };
-  socket.onmessage = (msg) => {
-    const dati = JSON.parse(msg.data);
-    if (dati.tipo === "sessioneScaduta") {
-      window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href);
-      return;
-    }
-
-    if (dati.tipo === "statoPartita") {
-      ultimoStatoGiocatori = dati.giocatori;
-
-      if (!mostrataRivelazioneOrdine && dati.punteggiOrdineIniziale && !dati.vittoria) {
-        mostrataRivelazioneOrdine = true;
-        mostraRivelazioneOrdineTurni(dati.giocatori, dati.punteggiOrdineIniziale);
-      }
-
-      if (dati.vittoria) {
-        turnoAttualeId = null;
-        document.getElementById("area-dadi").classList.add("disabilitato");
-        disegnaGiocatori();
-        mostraVittoria(dati.vincitore);
-      } else {
-        aggiornaTurno(dati.turnoDiId);
-        disegnaGiocatori();
-      }
-      if (dati.messaggi && dati.messaggi.length) mostraMessaggioGiocoGrande(dati.messaggi.join(" "));
-      if (dati.tempoInizioTurno != null && dati.durataMossaMs != null) avviaCountdownTurno(dati.tempoInizioTurno, dati.durataMossaMs);
-      mostraDadi(1, 1);
-    }
-
-    if (dati.tipo === "aggiornamentoPartita") {
-      animaLancioDadi(dati.dado1, dati.dado2, () => {
-        const completaAggiornamento = () => {
-          ultimoStatoGiocatori = dati.giocatori;
-          document.getElementById("messaggi-gioco").textContent = "🎲 " + dati.dado1 + " + " + dati.dado2 + " = " + dati.valoreDado;
-          if (dati.messaggi && dati.messaggi.length) mostraMessaggioGiocoGrande(dati.messaggi.join(" "));
-          if (dati.tempoInizioTurno != null && dati.durataMossaMs != null) avviaCountdownTurno(dati.tempoInizioTurno, dati.durataMossaMs);
-
-          if (dati.vittoria) {
-            turnoAttualeId = null;
-            document.getElementById("area-dadi").classList.add("disabilitato");
-            disegnaGiocatori();
-            mostraVittoria(dati.vincitore);
-          } else {
-            aggiornaTurno(dati.turnoDiId);
-            disegnaGiocatori();
-          }
-        };
-        if (dati.percorso && dati.idGiocatoreCheHaTirato) {
-          animaSaltoPedina(dati.idGiocatoreCheHaTirato, dati.percorso, completaAggiornamento);
-        } else {
-          completaAggiornamento();
-        }
-      });
-    }
-
-    if (dati.tipo === "chatPartita") aggiungiMessaggioChatPartita(dati.nome, dati.testo);
-    if (dati.tipo === "errore") {
-      alert(dati.messaggio);
-      if (mioTurno) document.getElementById("area-dadi").classList.remove("disabilitato");
-    }
-  };
-}
-
-function aggiornaTurno(turnoDiId) {
-  const eraIlMioTurno = mioTurno;
-  turnoAttualeId = turnoDiId;
-  mioTurno = (turnoDiId === mioUid);
-  if (mioTurno && !eraIlMioTurno) suonaTuoTurno();
-  document.getElementById("riga-turno").textContent = mioTurno ? "🎲 È il tuo turno!" : "⏳ In attesa...";
-  document.getElementById("area-dadi").classList.toggle("disabilitato", !mioTurno);
-}
-
-function disegnaGiocatori() {
-  const contenitore = document.getElementById("contenitore-pedine");
-  Array.from(contenitore.children).forEach(p => {
-    if (!ultimoStatoGiocatori.some(g => "pedina-" + g.id === p.id)) p.remove();
-  });
-  const listaPannello = document.getElementById("lista-giocatori");
-  listaPannello.innerHTML = "";
-  ultimoStatoGiocatori.forEach((giocatore, indice) => {
-    const colore = coloriGiocatori[indice % coloriGiocatori.length];
-    const pedina = ottieniOCreaPedina(giocatore.id, colore, indice);
-    posizionaPedina(pedina, giocatore.posizione);
-    const avatarHtml = giocatore.avatar
-      ? `<img class="avatar-mini" src="${giocatore.avatar}">`
-      : `<div class="avatar-mini" style="background:${colore};">${iniziale(giocatore.nome)}</div>`;
-
-    const eAttivo = giocatore.id === turnoAttualeId;
-    const countdownHtml = eAttivo ? `<span class="countdown-turno" id="countdown-turno">⏱ --s</span>` : "";
-
-    const card = document.createElement("div");
-    card.className = "giocatore-card" + (eAttivo ? " attivo" : "");
-    card.innerHTML = `${avatarHtml}<a href="profilo-pubblico.html?nickname=${encodeURIComponent(giocatore.nome)}" target="_blank" style="color:inherit;text-decoration:none;flex-grow:1;">${giocatore.nome}</a>${countdownHtml}<span class="casella-mini" id="casella-${giocatore.id}">${giocatore.posizione}</span>`;
-    listaPannello.appendChild(card);
-  });
-}
-
-function mostraVittoria(nomeVincitore) {
-  suonaVittoria(); // invariato
-  document.getElementById("testo-vincitore").textContent = "🎉 Ha vinto " + nomeVincitore + "!";
-  document.getElementById("overlay-vittoria").classList.add("aperto");
-}
-function tornaAllaLobby() { window.location.href = `lobby.html?stanza=${stanza}`; }
-function abbandonaPartita() {
-  if (!confirm("Sei sicuro di voler abbandonare la partita?")) return;
-  if (socket && socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ tipo: "abbandonaPartita", partitaId }));
-  tornaAllaLobby();
-}
-function apriProfilo() { chiudiMenu(); window.location.href = "profilo.html"; }
-function apriImpostazioni() { chiudiMenu(); window.location.href = "opzioni-account.html"; }
-function chiudiMenu() { document.getElementById("pannello-menu").classList.add("nascosto"); }
-document.getElementById("btn-menu").onclick = (e) => { e.stopPropagation(); document.getElementById("pannello-menu").classList.toggle("nascosto"); };
-document.addEventListener("click", () => chiudiMenu());
-
-function aggiungiMessaggioChatPartita(nome, testo) {
-  suonaMessaggioChat();
-  const box = document.getElementById("chat-messaggi");
-  const riga = document.createElement("div");
-  riga.className = "chat-msg";
-  riga.innerHTML = `<b>${nome}:</b> ${testo}`;
-  box.appendChild(riga);
-  box.scrollTop = box.scrollHeight;
-}
-function inviaChatPartita() {
-  const input = document.getElementById("chat-input");
-  const testo = input.value.trim();
-  if (!testo) return;
-  if (socket && socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ tipo: "chatPartita", partitaId, testo }));
-  input.value = "";
-}
-document.getElementById("chat-input").addEventListener("keypress", (e) => { if (e.key === "Enter") inviaChatPartita(); });
-document.getElementById("btn-chat").onclick = (e) => { e.stopPropagation(); document.getElementById("pannello-chat").classList.toggle("nascosto"); };
-
-document.getElementById("area-dadi").onclick = () => {
-  if (!mioTurno) return;
-  if (!socket || socket.readyState !== WebSocket.OPEN) return;
-  document.getElementById("area-dadi").classList.add("disabilitato");
-  socket.send(JSON.stringify({ tipo: "tiraDadi", partitaId }));
-};
-
-aggiornaTestoBottoneSuoni();
-mostraDadi(1, 1);
-inizializzaGestioneOrientamento();
-avvia();
+    if (!timerRiconnessione) timerR
