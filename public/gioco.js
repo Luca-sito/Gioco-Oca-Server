@@ -35,8 +35,9 @@ let ultimoStatoGiocatori = [];
 let mioTurno = false;
 let turnoAttualeId = null;
 let timerRiconnessione = null;
+let mostrataRivelazioneOrdine = false;
 
-// ===== SUONI (sintetizzati via Web Audio API — nessun file audio da caricare) =====
+// ===== SUONI (invariati per pedina/vittoria come richiesto) =====
 let suoniAttivi = localStorage.getItem("suoniAttivi") !== "off";
 let contestoAudio = null;
 
@@ -49,7 +50,6 @@ function ottieniContestoAudio() {
   if (contestoAudio.state === "suspended") contestoAudio.resume();
   return contestoAudio;
 }
-
 function suonaTono(frequenza, durataMs, tipoOnda, volume, ritardoMs) {
   if (!suoniAttivi) return;
   const ctx = ottieniContestoAudio();
@@ -67,7 +67,6 @@ function suonaTono(frequenza, durataMs, tipoOnda, volume, ritardoMs) {
   oscillatore.start(inizio);
   oscillatore.stop(inizio + durataMs / 1000 + 0.02);
 }
-
 function suonaClick(volume, ritardoMs) {
   if (!suoniAttivi) return;
   const ctx = ottieniContestoAudio();
@@ -77,9 +76,7 @@ function suonaClick(volume, ritardoMs) {
   const lunghezzaBuffer = Math.floor(ctx.sampleRate * durata);
   const buffer = ctx.createBuffer(1, lunghezzaBuffer, ctx.sampleRate);
   const dati = buffer.getChannelData(0);
-  for (let i = 0; i < lunghezzaBuffer; i++) {
-    dati[i] = (Math.random() * 2 - 1) * (1 - i / lunghezzaBuffer);
-  }
+  for (let i = 0; i < lunghezzaBuffer; i++) dati[i] = (Math.random() * 2 - 1) * (1 - i / lunghezzaBuffer);
   const sorgente = ctx.createBufferSource();
   sorgente.buffer = buffer;
   const guadagno = ctx.createGain();
@@ -89,31 +86,19 @@ function suonaClick(volume, ritardoMs) {
   guadagno.connect(ctx.destination);
   sorgente.start(inizio);
 }
-
-function suonaTiroDadi() {
-  if (!suoniAttivi) return;
-  for (let i = 0; i < 7; i++) suonaClick(0.1, i * 130);
-}
-function suonaAtterraggioDadi() {
-  suonaTono(180, 90, "square", 0.14, 0);
-  suonaClick(0.15, 20);
-}
-function suonaPassoPedina() {
-  suonaTono(520, 55, "sine", 0.09, 0);
-}
-function suonaTuoTurno() {
-  suonaTono(660, 120, "sine", 0.11, 0);
-  suonaTono(880, 160, "sine", 0.11, 120);
-}
-function suonaVittoria() {
+function suonaTiroDadi() { if (!suoniAttivi) return; for (let i = 0; i < 7; i++) suonaClick(0.1, i * 130); }
+function suonaAtterraggioDadi() { suonaTono(180, 90, "square", 0.14, 0); suonaClick(0.15, 20); }
+function suonaPassoPedina() { suonaTono(520, 55, "sine", 0.09, 0); } // invariato
+function suonaTuoTurno() { suonaTono(660, 120, "sine", 0.11, 0); suonaTono(880, 160, "sine", 0.11, 120); }
+function suonaVittoria() { // invariato
   suonaTono(523, 130, "sine", 0.13, 0);
   suonaTono(659, 130, "sine", 0.13, 130);
   suonaTono(784, 130, "sine", 0.13, 260);
   suonaTono(1047, 260, "sine", 0.14, 390);
 }
-function suonaMessaggioChat() {
-  suonaTono(740, 70, "sine", 0.08, 0);
-}
+function suonaMessaggioChat() { suonaTono(740, 70, "sine", 0.08, 0); }
+// NUOVO: avviso countdown ultimi 3 secondi
+function suonaAvvisoTempo() { suonaTono(300, 90, "triangle", 0.14, 0); }
 
 function toggleSuoni() { impostaSuoni(!suoniAttivi); }
 function impostaSuoni(attivi) {
@@ -126,61 +111,161 @@ function aggiornaTestoBottoneSuoni() {
   if (bottone) bottone.textContent = suoniAttivi ? "🔊 Suoni: On" : "🔇 Suoni: Off";
 }
 
-// ===== DADI 3D: rotazione del cubo fino alla faccia corretta =====
-// Ogni faccia del cubo, a riposo, punta in una direzione fissa (definita nel CSS).
-// Per "mostrare" una faccia al giocatore basta ruotare il cubo dell'inverso esatto
-// della rotazione con cui quella faccia è stata posizionata — questa mappa contiene
-// già quel calcolo per ciascun valore da 1 a 6.
-const CORREZIONE_ANGOLI_DADO = {
-  1: { x: 0, y: 0 },
-  2: { x: 0, y: -90 },
-  3: { x: -90, y: 0 },
-  4: { x: 90, y: 0 },
-  5: { x: 0, y: 90 },
-  6: { x: 0, y: 180 }
-};
+// ===== NUOVO: TUTTO SCHERMO =====
+function toggleFullscreen() {
+  if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+    const richiesta = document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen;
+    if (richiesta) richiesta.call(document.documentElement);
+  } else {
+    const esci = document.exitFullscreen || document.webkitExitFullscreen;
+    if (esci) esci.call(document);
+  }
+}
+function aggiornaTestoBottoneFullscreen() {
+  const bottone = document.getElementById("btn-toggle-fullscreen");
+  if (!bottone) return;
+  const inFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement);
+  bottone.textContent = inFullscreen ? "🡼 Esci da tutto schermo" : "⛶ Tutto schermo";
+}
+document.addEventListener("fullscreenchange", aggiornaTestoBottoneFullscreen);
+document.addEventListener("webkitfullscreenchange", aggiornaTestoBottoneFullscreen);
 
-let rotazioneAttuale = {
-  dado1: { x: 0, y: 0 },
-  dado2: { x: 0, y: 0 }
-};
+// ===== NUOVO: rotazione telefono gestita interamente via JavaScript =====
+function calcolaEAggiornaOrientamento() {
+  const larghezza = window.innerWidth;
+  const altezza = window.innerHeight;
+  const inPortrait = altezza > larghezza;
+  const schermoStretto = Math.min(larghezza, altezza) <= 900;
+  document.body.classList.toggle("richiede-rotazione", inPortrait && schermoStretto);
 
-function normalizza360(gradi) {
-  return ((gradi % 360) + 360) % 360;
+  const altezzaReale = window.visualViewport ? window.visualViewport.height : altezza;
+  document.documentElement.style.setProperty("--altezza-reale", altezzaReale + "px");
+}
+function rilevaEImpostaModalitaDesktop() {
+  const nonTouch = !("ontouchstart" in window) && (navigator.maxTouchPoints || 0) === 0;
+  const puntatorePreciso = window.matchMedia && window.matchMedia("(pointer: fine)").matches;
+  const schermoAmpio = window.innerWidth >= 1000;
+  document.body.classList.toggle("modalita-desktop", nonTouch && puntatorePreciso && schermoAmpio);
+}
+let timerDebounceResize = null;
+function gestisciResize() {
+  calcolaEAggiornaOrientamento();
+  rilevaEImpostaModalitaDesktop();
+  clearTimeout(timerDebounceResize);
+  timerDebounceResize = setTimeout(riposizionaTuttePedine, 120);
+}
+function inizializzaGestioneOrientamento() {
+  calcolaEAggiornaOrientamento();
+  rilevaEImpostaModalitaDesktop();
+  window.addEventListener("resize", gestisciResize);
+  window.addEventListener("orientationchange", () => {
+    // Su molti browser mobili le dimensioni non sono ancora aggiornate nell'istante
+    // esatto in cui scatta orientationchange: più controlli ravvicinati dopo l'evento
+    // evitano che la schermata resti bloccata su "ruota il telefono" anche dopo aver
+    // già ruotato per davvero.
+    setTimeout(gestisciResize, 50);
+    setTimeout(gestisciResize, 300);
+    setTimeout(gestisciResize, 700);
+  });
+  if (window.visualViewport) window.visualViewport.addEventListener("resize", gestisciResize);
+}
+function riposizionaTuttePedine() {
+  ultimoStatoGiocatori.forEach(giocatore => {
+    const pedina = document.getElementById("pedina-" + giocatore.id);
+    if (pedina) posizionaPedina(pedina, giocatore.posizione);
+  });
 }
 
-// Calcola la nuova rotazione totale del cubo: parte da dove si trova ora, avanza
-// sempre in avanti (mai un salto all'indietro brusco) fino al valore richiesto,
-// aggiungendo 2-3 giri extra completi solo per l'effetto visivo del lancio.
+// ===== NUOVO: messaggio a tutto schermo (sostituisce il messaggio in alto per gli
+// eventi speciali tipo "Avanza dello stesso numero di caselle!") =====
+let timerFlashMessaggio = null;
+function mostraMessaggioGiocoGrande(testo) {
+  if (!testo) return;
+  const el = document.getElementById("flash-messaggio-gioco");
+  if (!el) return;
+  el.querySelector("span").textContent = testo;
+  el.classList.remove("visibile");
+  void el.offsetWidth; // forza il riavvio dell'animazione anche se già in corso
+  el.classList.add("visibile");
+  if (timerFlashMessaggio) clearTimeout(timerFlashMessaggio);
+  timerFlashMessaggio = setTimeout(() => el.classList.remove("visibile"), 1000);
+}
+
+// ===== NUOVO: schermata "chi inizia" =====
+function mostraRivelazioneOrdineTurni(giocatoriOrdinati, punteggi) {
+  const overlay = document.getElementById("overlay-ordine-turni");
+  const lista = document.getElementById("lista-ordine-turni");
+  if (!overlay || !lista) return;
+  lista.innerHTML = "";
+  overlay.classList.add("aperto");
+  suonaTiroDadi();
+
+  giocatoriOrdinati.forEach((g, indice) => {
+    const riga = document.createElement("div");
+    riga.className = "riga-ordine-turno";
+    riga.style.animationDelay = (indice * 0.15) + "s";
+    const punteggio = punteggi && punteggi[g.nome] != null ? punteggi[g.nome] : "?";
+    riga.innerHTML = `<div class="posizione-turno">${indice + 1}</div><div class="nome-ordine">${g.nome}</div><div class="punteggio-ordine">🎲 ${punteggio}</div>`;
+    lista.appendChild(riga);
+  });
+
+  setTimeout(() => overlay.classList.remove("aperto"), 1300 + giocatoriOrdinati.length * 150 + 1300);
+}
+
+// ===== NUOVO: countdown live di turno =====
+let tempoInizioTurnoAttuale = null;
+let durataMossaMsAttuale = null;
+let intervalCountdown = null;
+let ultimoSecondoAvviso = null;
+
+function avviaCountdownTurno(tempoInizio, durataMs) {
+  tempoInizioTurnoAttuale = tempoInizio;
+  durataMossaMsAttuale = durataMs;
+  ultimoSecondoAvviso = null;
+  if (intervalCountdown) clearInterval(intervalCountdown);
+  intervalCountdown = setInterval(aggiornaCountdownTurno, 250);
+  aggiornaCountdownTurno();
+}
+function aggiornaCountdownTurno() {
+  const elemento = document.getElementById("countdown-turno");
+  if (!elemento || tempoInizioTurnoAttuale == null || durataMossaMsAttuale == null) return;
+  const trascorso = Date.now() - tempoInizioTurnoAttuale;
+  const secondiRimanenti = Math.max(0, Math.ceil((durataMossaMsAttuale - trascorso) / 1000));
+  elemento.textContent = "⏱ " + secondiRimanenti + "s";
+  elemento.classList.toggle("countdown-scaduto", secondiRimanenti <= 0);
+
+  if (mioTurno && secondiRimanenti <= 3 && secondiRimanenti >= 1 && secondiRimanenti !== ultimoSecondoAvviso) {
+    ultimoSecondoAvviso = secondiRimanenti;
+    suonaAvvisoTempo();
+  }
+}
+
+function creaFacciaDado(valore) { /* non più usata dai dadi 3D, lasciata inutilizzata di proposito per compatibilità */ }
+
+// ===== DADI 3D =====
+const CORREZIONE_ANGOLI_DADO = { 1: { x: 0, y: 0 }, 2: { x: 0, y: -90 }, 3: { x: -90, y: 0 }, 4: { x: 90, y: 0 }, 5: { x: 0, y: 90 }, 6: { x: 0, y: 180 } };
+let rotazioneAttuale = { dado1: { x: 0, y: 0 }, dado2: { x: 0, y: 0 } };
+function normalizza360(gradi) { return ((gradi % 360) + 360) % 360; }
 function calcolaNuovaRotazione(idDado, valore) {
   const correzione = CORREZIONE_ANGOLI_DADO[valore];
   const attuale = rotazioneAttuale[idDado];
-
   const targetX = normalizza360(correzione.x);
   const targetY = normalizza360(correzione.y);
   const modAttualeX = normalizza360(attuale.x);
   const modAttualeY = normalizza360(attuale.y);
-
   let deltaX = targetX - modAttualeX; if (deltaX < 0) deltaX += 360;
   let deltaY = targetY - modAttualeY; if (deltaY < 0) deltaY += 360;
-
   const giriExtraX = (2 + Math.floor(Math.random() * 2)) * 360;
   const giriExtraY = (2 + Math.floor(Math.random() * 2)) * 360;
-
   const nuova = { x: attuale.x + deltaX + giriExtraX, y: attuale.y + deltaY + giriExtraY };
   rotazioneAttuale[idDado] = nuova;
   return nuova;
 }
-
 function applicaRotazioneDado(idDado, valore) {
   const rotazione = calcolaNuovaRotazione(idDado, valore);
   const cubo = document.querySelector("#" + idDado + " .cubo");
   if (cubo) cubo.style.transform = `rotateX(${rotazione.x}deg) rotateY(${rotazione.y}deg)`;
 }
-
-// Posiziona i dadi ISTANTANEAMENTE (usato all'avvio e ad ogni risincronizzazione
-// di stato) — niente animazione, altrimenti ogni riconnessione farebbe girare
-// vistosamente i dadi senza che sia stato tirato nulla.
 function mostraDadi(v1, v2) {
   const cubo1 = document.querySelector("#dado1 .cubo");
   const cubo2 = document.querySelector("#dado2 .cubo");
@@ -188,21 +273,15 @@ function mostraDadi(v1, v2) {
   if (cubo2) cubo2.style.transition = "none";
   applicaRotazioneDado("dado1", v1);
   applicaRotazioneDado("dado2", v2);
-  if (cubo1) cubo1.offsetHeight; // forza il reflow prima di riattivare la transizione
+  if (cubo1) cubo1.offsetHeight;
   if (cubo1) cubo1.style.transition = "";
   if (cubo2) cubo2.style.transition = "";
 }
-
-// Lancio vero e animato: qui la transizione CSS resta attiva, quindi il cubo
-// ruota davvero nello spazio fino ad atterrare sulla faccia giusta.
 function animaLancioDadi(vf1, vf2, callback) {
   suonaTiroDadi();
   applicaRotazioneDado("dado1", vf1);
   applicaRotazioneDado("dado2", vf2);
-  setTimeout(() => {
-    suonaAtterraggioDadi();
-    if (callback) callback();
-  }, 1080);
+  setTimeout(() => { suonaAtterraggioDadi(); if (callback) callback(); }, 1080);
 }
 
 function schiarisciColore(hex, p) { return mescolaColore(hex, 255, p); }
@@ -266,7 +345,7 @@ function animaSaltoPedina(idGiocatore, percorso, callback) {
     const casella = percorso[passo];
     pedina.classList.add("pedina-salta");
     posizionaPedina(pedina, casella);
-    suonaPassoPedina();
+    suonaPassoPedina(); // invariato
     const etichettaCasella = document.getElementById("casella-" + idGiocatore);
     if (etichettaCasella) etichettaCasella.textContent = casella;
     setTimeout(() => pedina.classList.remove("pedina-salta"), DURATA_SALTO_MS * 0.6);
@@ -296,9 +375,7 @@ function connetti() {
   };
   socket.onclose = () => {
     document.getElementById("riga-turno").textContent = "🔴 Disconnesso, riconnessione...";
-    if (!timerRiconnessione) {
-      timerRiconnessione = setTimeout(() => { timerRiconnessione = null; connetti(); }, 3000);
-    }
+    if (!timerRiconnessione) timerRiconnessione = setTimeout(() => { timerRiconnessione = null; connetti(); }, 3000);
   };
   socket.onmessage = (msg) => {
     const dati = JSON.parse(msg.data);
@@ -306,8 +383,15 @@ function connetti() {
       window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href);
       return;
     }
+
     if (dati.tipo === "statoPartita") {
       ultimoStatoGiocatori = dati.giocatori;
+
+      if (!mostrataRivelazioneOrdine && dati.punteggiOrdineIniziale && !dati.vittoria) {
+        mostrataRivelazioneOrdine = true;
+        mostraRivelazioneOrdineTurni(dati.giocatori, dati.punteggiOrdineIniziale);
+      }
+
       if (dati.vittoria) {
         turnoAttualeId = null;
         document.getElementById("area-dadi").classList.add("disabilitato");
@@ -317,33 +401,19 @@ function connetti() {
         aggiornaTurno(dati.turnoDiId);
         disegnaGiocatori();
       }
-      if (dati.messaggi && dati.messaggi.length) document.getElementById("messaggi-gioco").textContent = dati.messaggi.join(" ");
+      if (dati.messaggi && dati.messaggi.length) mostraMessaggioGiocoGrande(dati.messaggi.join(" "));
+      if (dati.tempoInizioTurno != null && dati.durataMossaMs != null) avviaCountdownTurno(dati.tempoInizioTurno, dati.durataMossaMs);
       mostraDadi(1, 1);
     }
 
     if (dati.tipo === "aggiornamentoPartita") {
       animaLancioDadi(dati.dado1, dati.dado2, () => {
-        if (dati.percorso && dati.idGiocatoreCheHaTirato) {
-          animaSaltoPedina(dati.idGiocatoreCheHaTirato, dati.percorso, () => {
-            ultimoStatoGiocatori = dati.giocatori;
-            document.getElementById("messaggi-gioco").textContent =
-              "🎲 " + dati.dado1 + " + " + dati.dado2 + " = " + dati.valoreDado +
-              (dati.messaggi && dati.messaggi.length ? " — " + dati.messaggi.join(" ") : "");
-            if (dati.vittoria) {
-              turnoAttualeId = null;
-              document.getElementById("area-dadi").classList.add("disabilitato");
-              disegnaGiocatori();
-              mostraVittoria(dati.vincitore);
-            } else {
-              aggiornaTurno(dati.turnoDiId);
-              disegnaGiocatori();
-            }
-          });
-        } else {
+        const completaAggiornamento = () => {
           ultimoStatoGiocatori = dati.giocatori;
-          document.getElementById("messaggi-gioco").textContent =
-            "🎲 " + dati.dado1 + " + " + dati.dado2 + " = " + dati.valoreDado +
-            (dati.messaggi && dati.messaggi.length ? " — " + dati.messaggi.join(" ") : "");
+          document.getElementById("messaggi-gioco").textContent = "🎲 " + dati.dado1 + " + " + dati.dado2 + " = " + dati.valoreDado;
+          if (dati.messaggi && dati.messaggi.length) mostraMessaggioGiocoGrande(dati.messaggi.join(" "));
+          if (dati.tempoInizioTurno != null && dati.durataMossaMs != null) avviaCountdownTurno(dati.tempoInizioTurno, dati.durataMossaMs);
+
           if (dati.vittoria) {
             turnoAttualeId = null;
             document.getElementById("area-dadi").classList.add("disabilitato");
@@ -353,9 +423,15 @@ function connetti() {
             aggiornaTurno(dati.turnoDiId);
             disegnaGiocatori();
           }
+        };
+        if (dati.percorso && dati.idGiocatoreCheHaTirato) {
+          animaSaltoPedina(dati.idGiocatoreCheHaTirato, dati.percorso, completaAggiornamento);
+        } else {
+          completaAggiornamento();
         }
       });
     }
+
     if (dati.tipo === "chatPartita") aggiungiMessaggioChatPartita(dati.nome, dati.testo);
     if (dati.tipo === "errore") {
       alert(dati.messaggio);
@@ -387,48 +463,26 @@ function disegnaGiocatori() {
     const avatarHtml = giocatore.avatar
       ? `<img class="avatar-mini" src="${giocatore.avatar}">`
       : `<div class="avatar-mini" style="background:${colore};">${iniziale(giocatore.nome)}</div>`;
+
+    const eAttivo = giocatore.id === turnoAttualeId;
+    const countdownHtml = eAttivo ? `<span class="countdown-turno" id="countdown-turno">⏱ --s</span>` : "";
+
     const card = document.createElement("div");
-    card.className = "giocatore-card" + (giocatore.id === turnoAttualeId ? " attivo" : "");
-    card.innerHTML = `${avatarHtml}<a href="profilo-pubblico.html?nickname=${encodeURIComponent(giocatore.nome)}" target="_blank" style="color:inherit;text-decoration:none;flex-grow:1;">${giocatore.nome}</a><span class="casella-mini" id="casella-${giocatore.id}">${giocatore.posizione}</span>`;
+    card.className = "giocatore-card" + (eAttivo ? " attivo" : "");
+    card.innerHTML = `${avatarHtml}<a href="profilo-pubblico.html?nickname=${encodeURIComponent(giocatore.nome)}" target="_blank" style="color:inherit;text-decoration:none;flex-grow:1;">${giocatore.nome}</a>${countdownHtml}<span class="casella-mini" id="casella-${giocatore.id}">${giocatore.posizione}</span>`;
     listaPannello.appendChild(card);
   });
 }
 
 function mostraVittoria(nomeVincitore) {
-  suonaVittoria();
+  suonaVittoria(); // invariato
   document.getElementById("testo-vincitore").textContent = "🎉 Ha vinto " + nomeVincitore + "!";
   document.getElementById("overlay-vittoria").classList.add("aperto");
-}
-function aggiornaOrientamento() {
-
-    const overlay = document.getElementById("overlayRuotaTelefono");
-    const scena = document.getElementById("scena");
-
-    const telefono = window.innerWidth < 950;
-
-    const orizzontale = window.innerWidth > window.innerHeight;
-
-    if (telefono && !orizzontale) {
-
-        overlay.style.display = "flex";
-        scena.style.display = "none";
-
-    } else {
-
-        overlay.style.display = "none";
-        scena.style.display = "flex";
-
-        disegnaGiocatori();
-
-    }
-
 }
 function tornaAllaLobby() { window.location.href = `lobby.html?stanza=${stanza}`; }
 function abbandonaPartita() {
   if (!confirm("Sei sicuro di voler abbandonare la partita?")) return;
-  if (socket && socket.readyState === WebSocket.OPEN) {
-    socket.send(JSON.stringify({ tipo: "abbandonaPartita", partitaId }));
-  }
+  if (socket && socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ tipo: "abbandonaPartita", partitaId }));
   tornaAllaLobby();
 }
 function apriProfilo() { chiudiMenu(); window.location.href = "profilo.html"; }
@@ -450,9 +504,7 @@ function inviaChatPartita() {
   const input = document.getElementById("chat-input");
   const testo = input.value.trim();
   if (!testo) return;
-  if (socket && socket.readyState === WebSocket.OPEN) {
-    socket.send(JSON.stringify({ tipo: "chatPartita", partitaId, testo }));
-  }
+  if (socket && socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ tipo: "chatPartita", partitaId, testo }));
   input.value = "";
 }
 document.getElementById("chat-input").addEventListener("keypress", (e) => { if (e.key === "Enter") inviaChatPartita(); });
@@ -465,16 +517,7 @@ document.getElementById("area-dadi").onclick = () => {
   socket.send(JSON.stringify({ tipo: "tiraDadi", partitaId }));
 };
 
-window.addEventListener("resize", aggiornaOrientamento);
-
-window.addEventListener("orientationchange", () => {
-
-    setTimeout(aggiornaOrientamento,250);
-
-});
-
-window.addEventListener("load", aggiornaOrientamento);
-
 aggiornaTestoBottoneSuoni();
 mostraDadi(1, 1);
+inizializzaGestioneOrientamento();
 avvia();
