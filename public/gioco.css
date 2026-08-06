@@ -1,51 +1,47 @@
 * { box-sizing: border-box; }
 html, body {
-  margin: 0; padding: 0; height: 100%;
+  margin: 0; padding: 0;
+  min-height: var(--altezza-reale, 100vh);
   background: #0d1620;
   color: #eee;
   font-family: Arial, sans-serif;
-  overflow: hidden;
+  overflow-x: hidden;
 }
+body.modalita-desktop html, body.modalita-desktop { overflow: hidden; }
 
-/* Fix del bug "100vh mobile": l'altezza vera arriva da JavaScript in questa
-   variabile — 100vh resta solo come ripiego per i browser più vecchi */
+/* ===== SCENA: mobile-first, impilata verticalmente e scorrevole ===== */
 #scena {
   position: relative;
-  width: 100vw;
-  height: var(--altezza-reale, 100vh);
+  width: 100%;
+  min-height: var(--altezza-reale, 100vh);
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 72px 12px 40px;
+}
+body.modalita-desktop #scena {
+  flex-direction: row;
   align-items: center;
   justify-content: center;
+  padding: 0;
+  height: var(--altezza-reale, 100vh);
+  min-height: 0;
+  overflow: hidden;
 }
 
 #area-tabellone {
   position: relative;
-  width: 92vmin;
-  max-width: 1500px;
+  width: min(92vw, 620px);
+  flex-shrink: 0;
+  margin-bottom: 90px; /* spazio riservato ai dadi, che stanno appena sotto */
 }
-/* Solo su Computer veri (rilevati via JS: mouse + niente touch + schermo largo),
-   sfrutta sia larghezza che altezza disponibili invece del solo vmin */
 body.modalita-desktop #area-tabellone {
   width: min(78vw, 1780px, calc(92vh * 1.48));
-  max-width: none;
+  margin-bottom: 0;
 }
-#immagine-tabellone {
-  width: 100%;
-  display: block;
-  border-radius: 14px;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.6);
-}
-#contenitore-pedine {
-  position: absolute;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  pointer-events: none;
-}
-.pedina {
-  position: absolute;
-  transform: translate(-50%, -100%);
-  transition: left 0.5s ease, top 0.5s ease;
-}
+#immagine-tabellone { width: 100%; display: block; border-radius: 14px; box-shadow: 0 10px 40px rgba(0,0,0,0.6); }
+#contenitore-pedine { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+.pedina { position: absolute; transform: translate(-50%, -100%); transition: left 0.5s ease, top 0.5s ease; }
 .pedina-salta { animation: salto-pedina 0.32s ease; }
 @keyframes salto-pedina {
   0%   { transform: translate(-50%, -100%) scale(1); }
@@ -53,59 +49,80 @@ body.modalita-desktop #area-tabellone {
   100% { transform: translate(-50%, -100%) scale(1); }
 }
 
+/* Dadi: sotto il tabellone su mobile, sovrapposti come prima su Computer */
 #area-dadi {
   position: absolute;
-  bottom: 6%;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 20px;
-  cursor: pointer;
-  padding: 16px 24px;
-  background: rgba(10, 16, 22, 0.6);
+  top: 100%; left: 50%; transform: translateX(-50%);
+  margin-top: 16px;
+  display: flex; gap: 16px; cursor: pointer;
+  padding: 14px 20px;
+  background: rgba(10,16,22,0.6);
   border: 1px solid rgba(255,215,0,0.3);
   border-radius: 16px;
   backdrop-filter: blur(3px);
   z-index: 20;
   transition: opacity 0.2s, background 0.2s;
 }
+body.modalita-desktop #area-dadi { top: auto; bottom: 6%; margin-top: 0; }
 #area-dadi.disabilitato { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
-#area-dadi:not(.disabilitato):hover { background: rgba(10, 16, 22, 0.85); }
+#area-dadi:not(.disabilitato):hover { background: rgba(10,16,22,0.85); }
 
-.dado-3d { width: 56px; height: 56px; perspective: 600px; }
-.dado-3d .cubo {
-  position: relative; width: 100%; height: 100%;
-  transform-style: preserve-3d;
-  transition: transform 1.05s cubic-bezier(0.22, 0.85, 0.4, 1);
-}
+.dado-3d { width: 52px; height: 52px; perspective: 600px; }
+body.modalita-desktop .dado-3d { width: 56px; height: 56px; }
+.dado-3d .cubo { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform 1.05s cubic-bezier(0.22,0.85,0.4,1); }
 .faccia {
-  position: absolute; top: 0; left: 0; width: 56px; height: 56px;
+  position: absolute; top: 0; left: 0; width: 52px; height: 52px;
   background: #fdfdfd; border: 2px solid #ccc; border-radius: 9px;
   box-shadow: inset 0 0 10px rgba(0,0,0,0.08);
-  display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr);
-  padding: 7px;
+  display: grid; grid-template-columns: repeat(3,1fr); grid-template-rows: repeat(3,1fr); padding: 6px;
 }
-.faccia-1 { transform: rotateY(0deg)    translateZ(28px); }
-.faccia-6 { transform: rotateY(180deg)  translateZ(28px); }
-.faccia-3 { transform: rotateX(90deg)   translateZ(28px); }
-.faccia-4 { transform: rotateX(-90deg)  translateZ(28px); }
-.faccia-2 { transform: rotateY(90deg)   translateZ(28px); }
-.faccia-5 { transform: rotateY(-90deg)  translateZ(28px); }
-.pip { width: 9px; height: 9px; border-radius: 50%; background: #222; align-self: center; justify-self: center; }
+body.modalita-desktop .faccia { width: 56px; height: 56px; padding: 7px; }
+.faccia-1 { transform: rotateY(0deg)    translateZ(26px); }
+.faccia-6 { transform: rotateY(180deg)  translateZ(26px); }
+.faccia-3 { transform: rotateX(90deg)   translateZ(26px); }
+.faccia-4 { transform: rotateX(-90deg)  translateZ(26px); }
+.faccia-2 { transform: rotateY(90deg)   translateZ(26px); }
+.faccia-5 { transform: rotateY(-90deg)  translateZ(26px); }
+body.modalita-desktop .faccia-1 { transform: rotateY(0deg)    translateZ(28px); }
+body.modalita-desktop .faccia-6 { transform: rotateY(180deg)  translateZ(28px); }
+body.modalita-desktop .faccia-3 { transform: rotateX(90deg)   translateZ(28px); }
+body.modalita-desktop .faccia-4 { transform: rotateX(-90deg)  translateZ(28px); }
+body.modalita-desktop .faccia-2 { transform: rotateY(90deg)   translateZ(28px); }
+body.modalita-desktop .faccia-5 { transform: rotateY(-90deg)  translateZ(28px); }
+.pip { width: 8px; height: 8px; border-radius: 50%; background: #222; align-self: center; justify-self: center; }
+body.modalita-desktop .pip { width: 9px; height: 9px; }
 .pip-rossa { background: #e53935; }
 
+/* ===== PANNELLO GIOCATORI: barra fissa su mobile (solo turno), popup su richiesta;
+   sempre espanso e fisso in alto a sinistra su Computer, come prima ===== */
 #pannello-giocatori {
-  position: absolute; top: 18px; left: 18px;
-  background: rgba(10, 16, 22, 0.78);
-  border: 1px solid rgba(255,215,0,0.25);
-  border-radius: 12px; padding: 12px 16px;
-  min-width: 200px; max-width: 260px; z-index: 20; backdrop-filter: blur(3px);
+  position: fixed;
+  top: 10px; left: 10px; right: 74px;
+  z-index: 40;
+  background: rgba(10,16,22,0.85);
+  border: 1px solid rgba(255,215,0,0.3);
+  border-radius: 12px;
+  padding: 10px 14px;
+  backdrop-filter: blur(3px);
 }
-#riga-turno {
-  color: #ffd700; font-weight: bold; font-size: 14px;
-  margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.15);
+#pannello-giocatori.aperto { z-index: 70; }
+body.modalita-desktop #pannello-giocatori {
+  top: 18px; left: 18px; right: auto;
+  min-width: 200px; max-width: 260px;
+  z-index: 20;
 }
-.giocatore-card { display: flex; align-items: center; gap: 8px; padding: 5px 0; font-size: 13px; }
+#riga-turno { color: #ffd700; font-weight: bold; font-size: 14px; }
+#pannello-giocatori.aperto #riga-turno,
+body.modalita-desktop #riga-turno {
+  padding-bottom: 8px; margin-bottom: 4px;
+  border-bottom: 1px solid rgba(255,255,255,0.15);
+}
+#lista-giocatori { display: none; max-height: 55vh; overflow-y: auto; }
+#pannello-giocatori.aperto #lista-giocatori,
+body.modalita-desktop #lista-giocatori { display: block; max-height: none; overflow-y: visible; }
+
+.giocatore-card { display: flex; align-items: center; gap: 6px; padding: 6px 0; font-size: 13px; }
+.giocatore-card a { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .giocatore-card.attivo { font-weight: bold; color: #ffd700; }
 .avatar-mini {
   width: 24px; height: 24px; border-radius: 50%;
@@ -113,25 +130,40 @@ body.modalita-desktop #area-tabellone {
   font-size: 12px; font-weight: bold; color: #fff; flex-shrink: 0;
   border: 1.5px solid rgba(255,255,255,0.4); object-fit: cover;
 }
-.casella-mini { margin-left: auto; opacity: 0.75; font-size: 12px; }
-
-/* NUOVO: countdown live accanto al nickname di chi è in turno */
+.casella-mini { margin-left: auto; opacity: 0.75; font-size: 12px; flex-shrink: 0; }
 .countdown-turno {
   font-size: 12px; font-weight: bold; color: #ffd700;
   background: rgba(255,215,0,0.12); padding: 2px 7px; border-radius: 10px; flex-shrink: 0;
 }
 .countdown-turno.countdown-scaduto { color: #ff6b6b; background: rgba(255,107,107,0.15); }
 
-#menu-wrapper { position: absolute; top: 18px; right: 18px; z-index: 30; }
-#btn-menu {
-  width: 60px; height: 60px; border-radius: 50%;
-  background: rgba(10,16,22,0.78); border: 1px solid rgba(255,215,0,0.3);
-  color: #ffd700; font-size: 18px; cursor: pointer;
+/* Indicatori microfono sulla card di un giocatore */
+.stato-audio { font-size: 13px; flex-shrink: 0; }
+.stato-audio.attivo { color: #43a047; }
+.stato-audio.in-attesa { opacity: 0.6; }
+.btn-chiama-audio {
+  background: rgba(67,160,71,0.18); border: 1px solid rgba(67,160,71,0.4);
+  color: #43a047; border-radius: 8px; font-size: 12px; padding: 3px 6px; cursor: pointer; flex-shrink: 0;
 }
+
+/* Sfondo scuro + pulsante 👤 per aprire il pannello su mobile */
+#backdrop-giocatori { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 35; }
+#backdrop-giocatori.aperto { display: block; }
+#giocatori-wrapper { position: fixed; bottom: 18px; left: 18px; z-index: 30; }
+body.modalita-desktop #backdrop-giocatori, body.modalita-desktop #giocatori-wrapper { display: none; }
+
+/* ===== Pulsanti tondi ===== */
+#btn-menu, #btn-chat, #btn-giocatori {
+  width: 52px; height: 52px; border-radius: 50%;
+  background: rgba(10,16,22,0.85); border: 1px solid rgba(255,215,0,0.3);
+  color: #ffd700; font-size: 20px; cursor: pointer;
+}
+body.modalita-desktop #btn-menu, body.modalita-desktop #btn-chat { width: 60px; height: 60px; font-size: 18px; }
+#menu-wrapper { position: fixed; top: 14px; right: 14px; z-index: 45; }
 #pannello-menu {
-  position: absolute; top: 50px; right: 0;
+  position: absolute; top: 58px; right: 0;
   background: #121c26; border: 1px solid rgba(255,215,0,0.25);
-  border-radius: 10px; overflow: hidden; width: 200px;
+  border-radius: 10px; overflow: hidden; width: 215px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.5);
 }
 #pannello-menu.nascosto { display: none; }
@@ -145,30 +177,28 @@ body.modalita-desktop #area-tabellone {
 #pannello-menu .voce-pericolo { color: #ff6b6b; }
 
 #messaggi-gioco {
-  position: absolute; top: 18px; left: 50%; transform: translateX(-50%);
-  background: rgba(10,16,22,0.78); color: #ffd700; padding: 8px 18px; border-radius: 20px;
-  font-size: 13px; min-height: 14px; text-align: center; z-index: 15; max-width: 60vw;
+  position: fixed; top: 62px; left: 50%; transform: translateX(-50%);
+  background: rgba(10,16,22,0.85); color: #ffd700; padding: 8px 18px; border-radius: 20px;
+  font-size: 13px; min-height: 14px; text-align: center; z-index: 15; max-width: 82vw;
 }
+body.modalita-desktop #messaggi-gioco { top: 18px; max-width: 60vw; }
 
-/* NUOVO: flash a tutto schermo per i messaggi tipo "Avanza dello stesso numero..." */
+/* ===== Messaggio a tutto schermo ===== */
 #flash-messaggio-gioco {
   display: none; position: fixed; inset: 0; z-index: 500;
   align-items: center; justify-content: center; text-align: center;
-  padding: 40px; background: rgba(10, 16, 22, 0.55); pointer-events: none;
+  padding: 40px; background: rgba(10,16,22,0.55); pointer-events: none;
 }
 #flash-messaggio-gioco.visibile { display: flex; animation: flash-messaggio-anim 1s ease forwards; }
-#flash-messaggio-gioco span {
-  font-size: clamp(24px, 6vw, 54px); font-weight: 900; color: #ffd700;
-  text-shadow: 0 4px 18px rgba(0,0,0,0.7); max-width: 90vw;
-}
+#flash-messaggio-gioco span { font-size: clamp(24px,6vw,54px); font-weight: 900; color: #ffd700; text-shadow: 0 4px 18px rgba(0,0,0,0.7); max-width: 90vw; }
 @keyframes flash-messaggio-anim {
-  0%   { opacity: 0; transform: scale(0.85); }
-  12%  { opacity: 1; transform: scale(1); }
-  78%  { opacity: 1; transform: scale(1); }
+  0% { opacity: 0; transform: scale(0.85); }
+  12% { opacity: 1; transform: scale(1); }
+  78% { opacity: 1; transform: scale(1); }
   100% { opacity: 0; transform: scale(1.04); }
 }
 
-/* NUOVO: schermata "chi inizia" (rivelazione dadi ordine turni) */
+/* ===== Schermata "chi inizia" ===== */
 .popup-ordine-turni {
   background: #121c26; border: 2px solid #ffd700; border-radius: 14px;
   padding: 30px; text-align: center; max-width: 480px; width: 92vw; max-height: 82vh; overflow-y: auto;
@@ -190,14 +220,20 @@ body.modalita-desktop #area-tabellone {
 .riga-ordine-turno .punteggio-ordine { color: #ffd700; font-weight: bold; font-size: 15px; }
 .sottotitolo-ordine { color: #999; font-size: 13px; margin-top: 16px; }
 
-#chat-wrapper { position: absolute; bottom: 18px; right: 18px; z-index: 30; }
-#btn-chat {
-  width: 60px; height: 60px; border-radius: 50%;
-  background: rgba(10,16,22,0.78); border: 1px solid rgba(255,215,0,0.3);
-  color: #ffd700; font-size: 20px; cursor: pointer;
-}
+/* ===== Popup richiesta microfono in arrivo ===== */
+#popup-richiesta-audio { position: fixed; top: 70px; left: 50%; transform: translateX(-50%); z-index: 90; width: min(90vw, 320px); }
+#popup-richiesta-audio.nascosto { display: none; }
+.popup-richiesta-audio-box { background: #121c26; border: 2px solid #ffd700; border-radius: 12px; padding: 16px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+.popup-richiesta-audio-box p { margin: 0 0 12px; font-size: 14px; color: #eee; }
+.richiesta-audio-bottoni { display: flex; gap: 10px; }
+.richiesta-audio-bottoni button { flex: 1; padding: 10px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+.btn-rifiuta-audio { background: #e53935; color: white; }
+.btn-accetta-audio { background: #43a047; color: white; }
+
+/* ===== Chat ===== */
+#chat-wrapper { position: fixed; bottom: 18px; right: 18px; z-index: 30; }
 #pannello-chat {
-  position: absolute; bottom: 68px; right: 0; width: 280px; height: 320px;
+  position: absolute; bottom: 62px; right: 0; width: 280px; height: 320px;
   background: #121c26; border: 1px solid rgba(255,215,0,0.25);
   border-radius: 12px; display: flex; flex-direction: column; overflow: hidden;
   box-shadow: 0 8px 24px rgba(0,0,0,0.5);
@@ -218,62 +254,8 @@ body.modalita-desktop #area-tabellone {
 .popup-vittoria { background: #121c26; border: 2px solid #ffd700; border-radius: 12px; padding: 40px; text-align: center; }
 .popup-vittoria button { margin-top: 20px; padding: 12px 24px; background: #ffd700; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
 
-@media (max-width: 700px) {
-  #pannello-giocatori { max-width: 165px; font-size: 12px; padding: 8px 10px; }
-  #pannello-chat { width: 220px; }
-  #messaggi-gioco { font-size: 11px; padding: 6px 14px; max-width: 65vw; }
-  #btn-menu, #btn-chat { width: 46px; height: 46px; font-size: 18px; }
-  .dado-3d { width: 44px; height: 44px; }
-  .faccia { width: 44px; height: 44px; padding: 5px; }
-  .faccia-1 { transform: rotateY(0deg)   translateZ(22px); }
-  .faccia-6 { transform: rotateY(180deg) translateZ(22px); }
-  .faccia-3 { transform: rotateX(90deg)  translateZ(22px); }
-  .faccia-4 { transform: rotateX(-90deg) translateZ(22px); }
-  .faccia-2 { transform: rotateY(90deg)  translateZ(22px); }
-  .faccia-5 { transform: rotateY(-90deg) translateZ(22px); }
-  .pip { width: 7px; height: 7px; }
-  #area-dadi { gap: 12px; padding: 10px 16px; }
-  .countdown-turno { font-size: 10px; padding: 1px 5px; }
-}
-
-/* Schermata "ruota il telefono" — la mostra/nasconde ora SOLO la classe .richiede-rotazione,
-   applicata via JavaScript (mai più una media query orientation) */
-#overlayRuotaTelefono {
-  display: none; position: fixed; inset: 0; background: #0d1620; color: #ffd700; z-index: 9999;
-  flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px;
-}
-.ruota-icona { font-size: 60px; margin-bottom: 14px; animation: ruota-pulse 1.6s ease-in-out infinite; }
-.ruota-testo { font-size: 18px; font-weight: bold; margin: 0 0 6px; }
-.ruota-sottotesto { font-size: 13px; color: #aaa; margin: 0; max-width: 280px; }
-@keyframes ruota-pulse { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(90deg); } }
-
-body.richiede-rotazione #overlayRuotaTelefono { display: flex; }
-body.richiede-rotazione #scena { display: none; }
-
-/* Ottimizzazione per Samsung S22/S25 e telefoni simili ruotati in orizzontale
-   (~740-860px larghezza, ~330-390px altezza reale) — tuning specifico dei pannelli
-   più il tabellone ora dimensionato per ALTEZZA (il file tabellone.png è più largo
-   che alto: sfrutta così molta più larghezza disponibile invece di restare piccolo) */
-@media (max-width: 960px) and (orientation: landscape) {
-  #area-tabellone { width: auto; height: 88vh; max-width: 96vw; }
-  #area-tabellone #immagine-tabellone { width: auto; height: 100%; max-width: none; }
-
-  #pannello-giocatori { max-width: 135px; font-size: 11px; padding: 8px 10px; }
-  #riga-turno { font-size: 12px; margin-bottom: 6px; padding-bottom: 6px; }
-  .avatar-mini { width: 20px; height: 20px; font-size: 10px; }
-  #btn-menu, #btn-chat { width: 44px; height: 44px; font-size: 16px; }
-  #pannello-chat { width: 200px; height: 210px; bottom: 54px; }
-  #messaggi-gioco { font-size: 10px; padding: 5px 12px; top: 8px; }
-  .countdown-turno { font-size: 10px; padding: 1px 5px; }
-
-  .dado-3d { width: 38px; height: 38px; }
-  .faccia { width: 38px; height: 38px; padding: 4px; }
-  .faccia-1 { transform: rotateY(0deg)   translateZ(19px); }
-  .faccia-6 { transform: rotateY(180deg) translateZ(19px); }
-  .faccia-3 { transform: rotateX(90deg)  translateZ(19px); }
-  .faccia-4 { transform: rotateX(-90deg) translateZ(19px); }
-  .faccia-2 { transform: rotateY(90deg)  translateZ(19px); }
-  .faccia-5 { transform: rotateY(-90deg) translateZ(19px); }
-  .pip { width: 5px; height: 5px; }
-  #area-dadi { padding: 6px 12px; gap: 6px; bottom: 2%; }
+@media (max-width: 360px) {
+  #area-tabellone { width: 94vw; }
+  #pannello-menu { width: 185px; }
+  #popup-richiesta-audio { width: calc(100vw - 24px); }
 }
