@@ -207,11 +207,6 @@ async function statoAmicizia(mioUid, altroUid) {
   if (snapRicevuta.exists()) return "richiesta_ricevuta";
   return "nessuno";
 }
-// NUOVO: usato per autorizzare il segnale audio — vale SOLO tra amici confermati
-async function verificaAmicizia(uidA, uidB) {
-  if (!db) return false;
-  return (await statoAmicizia(uidA, uidB)) === "amici";
-}
 
 // ===== API REGISTRAZIONE / LOGIN =====
 app.post("/api/registrati", limiteLogin, async (req, res) => {
@@ -599,7 +594,8 @@ async function ripristinaPartiteDaFirebase() {
       chatAttiva: p.chatAttiva !== false,
       giocatori: p.giocatori || {}, ordineGiocatori: p.ordineGiocatori || [], turnoAttuale: p.turnoAttuale || 0,
       iniziata: p.iniziata || false, iniziataIl: p.iniziataIl || null, elaborandoTiro: false, invitati: {},
-      timerTurno: null, tempoInizioTurno: null, punteggiOrdineIniziale: p.punteggiOrdineIniziale || null
+      timerTurno: null, tempoInizioTurno: null, punteggiOrdineIniziale: p.punteggiOrdineIniziale || null,
+      coppieAudioApprovate: new Set()
     };
     if (stanze[p.stanza].partite[id].iniziata) avviaTimerTurno(stanze[p.stanza].partite[id], p.stanza);
   }
@@ -747,10 +743,8 @@ async function gestisciScadenzaTurno(partita, nomeStanza) {
   await eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatoreDiTurno, true);
 }
 
-// FIX PRINCIPALE DEL BUG SEGNALATO: prima il messaggio veniva trasmesso PRIMA di
-// avviare il timer del turno successivo — quindi non conteneva mai il nuovo orario di
-// inizio, e il countdown lato client restava fermo sull'ultimo valore (0). Ora il
-// timer riparte PRIMA di trasmettere, così il messaggio porta sempre l'orario corretto.
+// Il timer del turno successivo riparte SEMPRE prima della trasmissione ai client:
+// è così che il countdown lato client riceve ogni volta l'orario di inizio corretto
 async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, automatico) {
   if (partita.elaborandoTiro) return;
   partita.elaborandoTiro = true;
@@ -771,7 +765,7 @@ async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, auto
     const idProssimo = partita.ordineGiocatori[partita.turnoAttuale];
     const messaggiFinali = automatico ? ["⏱️ Tempo scaduto: mossa automatica."].concat(risultato.messaggi) : risultato.messaggi;
 
-    if (!risultato.vittoria) avviaTimerTurno(partita, nomeStanza); // PRIMA di trasmettere
+    if (!risultato.vittoria) avviaTimerTurno(partita, nomeStanza);
 
     Object.values(partita.giocatori).forEach(g => {
       if (g.socket && g.socket.readyState === WebSocket.OPEN) {
@@ -863,8 +857,48 @@ wss.on("connection", (socket, request) => {
 
       if (dati.tipo === "richiediConteggio") { inviaConteggioStanze(); return; }
 
-      // NUOVO: relay dei segnali WebRTC — SOLO tra amici confermati, controllato anche
-      // qui lato server (mai fidarsi solo del client per questa regola)
+      // NUOVO: richiesta di apertura chiamata audio — richiede il SÌ esplicito
+      // dell'altra persona, non è più legata all'essere amici
+      if (dati.tipo === "richiestaAudio") {
+        if (!uid) return;
+        const trovato = trovaPartita(dati.partitaId);
+        if (!trovato) return;
+        const { partita } = trovato;
+        if (!partita.giocatori[uid]) return;
+        const destinatarioUid = dati.destinatarioUid;
+        if (!destinatarioUid || destinatarioUid === uid) return;
+        const destinatario = partita.giocatori[destinatarioUid];
+        if (!destinatario) return;
+        if (destinatario.socket && destinatario.socket.readyState === WebSocket.OPEN) {
+          destinatario.socket.send(JSON.stringify({ tipo: "richiestaAudioRicevuta", mittenteUid: uid, mittenteNome: nickname }));
+        }
+        return;
+      }
+
+      if (dati.tipo === "rispostaAudio") {
+        if (!uid) return;
+        const trovato = trovaPartita(dati.partitaId);
+        if (!trovato) return;
+        const { partita } = trovato;
+        if (!partita.giocatori[uid]) return;
+        const destinatarioUid = dati.destinatarioUid;
+        if (!destinatarioUid || !partita.giocatori[destinatarioUid]) return;
+
+        if (dati.accettato) {
+          if (!partita.coppieAudioApprovate) partita.coppieAudioApprovate = new Set();
+          partita.coppieAudioApprovate.add(idConversazione(uid, destinatarioUid));
+        }
+
+        const mittenteOriginale = partita.giocatori[destinatarioUid];
+        if (mittenteOriginale.socket && mittenteOriginale.socket.readyState === WebSocket.OPEN) {
+          mittenteOriginale.socket.send(JSON.stringify({ tipo: "rispostaAudioRicevuta", mittenteUid: uid, mittenteNome: nickname, accettato: !!dati.accettato }));
+        }
+        return;
+      }
+
+      // Relay dei segnali WebRTC veri e propri — ora richiede che i DUE giocatori
+      // abbiano già completato reciprocamente il flusso richiestaAudio/rispostaAudio
+      // qui sopra, indipendentemente da amicizia o tipo di stanza
       if (dati.tipo === "webrtc-offer" || dati.tipo === "webrtc-answer" || dati.tipo === "webrtc-ice-candidate") {
         if (!uid) return;
         const trovato = trovaPartita(dati.partitaId);
@@ -875,7 +909,8 @@ wss.on("connection", (socket, request) => {
         if (!destinatarioUid) return;
         const destinatario = partita.giocatori[destinatarioUid];
         if (!destinatario || !destinatario.socket || destinatario.socket.readyState !== WebSocket.OPEN) return;
-        if (!(await verificaAmicizia(uid, destinatarioUid))) return;
+        const coppiaApprovata = partita.coppieAudioApprovate && partita.coppieAudioApprovate.has(idConversazione(uid, destinatarioUid));
+        if (!coppiaApprovata) return;
         destinatario.socket.send(JSON.stringify({ tipo: dati.tipo, mittenteUid: uid, sdp: dati.sdp || null, candidate: dati.candidate || null }));
         return;
       }
@@ -927,10 +962,11 @@ wss.on("connection", (socket, request) => {
         stanze[stanzaAttuale].partite[partitaId] = {
           id: partitaId, creatore: nickname, creatoDa: uid, tempo: dati.tempo, punti: dati.punti, modalita: dati.modalita,
           maxGiocatori: (!max || max < 2 || max > 8 ? 2 : max),
-          chatAttiva: dati.chatAttiva !== false, // NUOVO: attiva per default, salvo scelta esplicita
+          chatAttiva: dati.chatAttiva !== false,
           giocatori: { [uid]: { nome: nickname, avatar: mioAvatar, posizione: 0, socket, turniSaltati: 0, tentativiAutomaticiConsecutivi: 0 } },
           ordineGiocatori: [uid], turnoAttuale: 0, iniziata: false, elaborandoTiro: false,
-          invitati: dati.modalita === "privata" ? { [uid]: true } : null, timerTurno: null, tempoInizioTurno: null
+          invitati: dati.modalita === "privata" ? { [uid]: true } : null, timerTurno: null, tempoInizioTurno: null,
+          coppieAudioApprovate: new Set()
         };
         await salvaPartita({ ...stanze[stanzaAttuale].partite[partitaId], stanza: stanzaAttuale });
         inviaListaPartite(stanzaAttuale);
@@ -1025,8 +1061,6 @@ wss.on("connection", (socket, request) => {
         const trovato = trovaPartita(dati.partitaId);
         if (!trovato) return;
         const partita = trovato.partita;
-        // NUOVO: rispetta l'impostazione "chat disattivata" scelta alla creazione — controllato
-        // lato server, non solo nascosta lato client
         if (partita.chatAttiva === false) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "La chat è disattivata in questa partita." })); return; }
         const mittente = partita.giocatori[uid];
         if (!mittente) return;
