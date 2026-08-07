@@ -9,7 +9,9 @@ html, body {
 }
 body.modalita-desktop html, body.modalita-desktop { overflow: hidden; }
 
-/* ===== SCENA: mobile-first, impilata verticalmente e scorrevole ===== */
+/* ===== SCENA: mobile-first — tabellone e dadi impilati, l'intero blocco è
+   garantito matematicamente a stare dentro l'altezza reale visibile, con
+   margini sopra e sotto ===== */
 #scena {
   position: relative;
   width: 100%;
@@ -17,7 +19,9 @@ body.modalita-desktop html, body.modalita-desktop { overflow: hidden; }
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 72px 12px 40px;
+  justify-content: center;
+  gap: 14px;
+  padding: 64px 12px 20px;
 }
 body.modalita-desktop #scena {
   flex-direction: row;
@@ -26,18 +30,21 @@ body.modalita-desktop #scena {
   padding: 0;
   height: var(--altezza-reale, 100vh);
   min-height: 0;
+  gap: 0;
   overflow: hidden;
 }
 
 #area-tabellone {
   position: relative;
-  width: min(92vw, 620px);
+  /* Vincolo doppio: mai più largo del 92% della larghezza NÉ mai più alto
+     dello spazio verticale realmente disponibile (185px riservati a dadi +
+     margini) — qualunque dei due sia più stretto, vince, mantenendo sempre
+     le proporzioni naturali del tabellone senza deformarlo */
+  width: min(92vw, calc((var(--altezza-reale, 100vh) - 185px) * 1.48), 620px);
   flex-shrink: 0;
-  margin-bottom: 90px; /* spazio riservato ai dadi, che stanno appena sotto */
 }
 body.modalita-desktop #area-tabellone {
   width: min(78vw, 1780px, calc(92vh * 1.48));
-  margin-bottom: 0;
 }
 #immagine-tabellone { width: 100%; display: block; border-radius: 14px; box-shadow: 0 10px 40px rgba(0,0,0,0.6); }
 #contenitore-pedine { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
@@ -49,11 +56,10 @@ body.modalita-desktop #area-tabellone {
   100% { transform: translate(-50%, -100%) scale(1); }
 }
 
-/* Dadi: sotto il tabellone su mobile, sovrapposti come prima su Computer */
+/* Dadi: elemento normale nel flusso verticale su mobile (sotto il tabellone,
+   mai sovrapposto), sovrapposti come sempre al centro-basso su Computer */
 #area-dadi {
-  position: absolute;
-  top: 100%; left: 50%; transform: translateX(-50%);
-  margin-top: 16px;
+  position: static;
   display: flex; gap: 16px; cursor: pointer;
   padding: 14px 20px;
   background: rgba(10,16,22,0.6);
@@ -61,9 +67,13 @@ body.modalita-desktop #area-tabellone {
   border-radius: 16px;
   backdrop-filter: blur(3px);
   z-index: 20;
+  flex-shrink: 0;
   transition: opacity 0.2s, background 0.2s;
 }
-body.modalita-desktop #area-dadi { top: auto; bottom: 6%; margin-top: 0; }
+body.modalita-desktop #area-dadi {
+  position: absolute;
+  bottom: 6%; left: 50%; transform: translateX(-50%);
+}
 #area-dadi.disabilitato { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
 #area-dadi:not(.disabilitato):hover { background: rgba(10,16,22,0.85); }
 
@@ -93,8 +103,7 @@ body.modalita-desktop .faccia-5 { transform: rotateY(-90deg)  translateZ(28px); 
 body.modalita-desktop .pip { width: 9px; height: 9px; }
 .pip-rossa { background: #e53935; }
 
-/* ===== PANNELLO GIOCATORI: barra fissa su mobile (solo turno), popup su richiesta;
-   sempre espanso e fisso in alto a sinistra su Computer, come prima ===== */
+/* ===== PANNELLO GIOCATORI ===== */
 #pannello-giocatori {
   position: fixed;
   top: 10px; left: 10px; right: 74px;
@@ -137,7 +146,6 @@ body.modalita-desktop #lista-giocatori { display: block; max-height: none; overf
 }
 .countdown-turno.countdown-scaduto { color: #ff6b6b; background: rgba(255,107,107,0.15); }
 
-/* Indicatori microfono sulla card di un giocatore */
 .stato-audio { font-size: 13px; flex-shrink: 0; }
 .stato-audio.attivo { color: #43a047; }
 .stato-audio.in-attesa { opacity: 0.6; }
@@ -146,7 +154,6 @@ body.modalita-desktop #lista-giocatori { display: block; max-height: none; overf
   color: #43a047; border-radius: 8px; font-size: 12px; padding: 3px 6px; cursor: pointer; flex-shrink: 0;
 }
 
-/* Sfondo scuro + pulsante 👤 per aprire il pannello su mobile */
 #backdrop-giocatori { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 35; }
 #backdrop-giocatori.aperto { display: block; }
 #giocatori-wrapper { position: fixed; bottom: 18px; left: 18px; z-index: 30; }
@@ -154,6 +161,7 @@ body.modalita-desktop #backdrop-giocatori, body.modalita-desktop #giocatori-wrap
 
 /* ===== Pulsanti tondi ===== */
 #btn-menu, #btn-chat, #btn-giocatori {
+  position: relative;
   width: 52px; height: 52px; border-radius: 50%;
   background: rgba(10,16,22,0.85); border: 1px solid rgba(255,215,0,0.3);
   color: #ffd700; font-size: 20px; cursor: pointer;
@@ -176,6 +184,14 @@ body.modalita-desktop #btn-menu, body.modalita-desktop #btn-chat { width: 60px; 
 #pannello-menu button:hover { background: rgba(255,255,255,0.06); }
 #pannello-menu .voce-pericolo { color: #ff6b6b; }
 
+/* NUOVO: badge messaggi non letti sul bottone chat */
+.badge-chat-partita {
+  position: absolute; top: -4px; right: -4px;
+  background: #e53935; color: white; font-size: 10px; font-weight: bold;
+  min-width: 16px; height: 16px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center; padding: 0 3px;
+}
+
 #messaggi-gioco {
   position: fixed; top: 62px; left: 50%; transform: translateX(-50%);
   background: rgba(10,16,22,0.85); color: #ffd700; padding: 8px 18px; border-radius: 20px;
@@ -183,22 +199,21 @@ body.modalita-desktop #btn-menu, body.modalita-desktop #btn-chat { width: 60px; 
 }
 body.modalita-desktop #messaggi-gioco { top: 18px; max-width: 60vw; }
 
-/* ===== Messaggio a tutto schermo ===== */
+/* Messaggio a tutto schermo — ora dura 2,5 secondi invece di 1 */
 #flash-messaggio-gioco {
   display: none; position: fixed; inset: 0; z-index: 500;
   align-items: center; justify-content: center; text-align: center;
   padding: 40px; background: rgba(10,16,22,0.55); pointer-events: none;
 }
-#flash-messaggio-gioco.visibile { display: flex; animation: flash-messaggio-anim 1s ease forwards; }
+#flash-messaggio-gioco.visibile { display: flex; animation: flash-messaggio-anim 2.5s ease forwards; }
 #flash-messaggio-gioco span { font-size: clamp(24px,6vw,54px); font-weight: 900; color: #ffd700; text-shadow: 0 4px 18px rgba(0,0,0,0.7); max-width: 90vw; }
 @keyframes flash-messaggio-anim {
-  0% { opacity: 0; transform: scale(0.85); }
-  12% { opacity: 1; transform: scale(1); }
-  78% { opacity: 1; transform: scale(1); }
+  0%   { opacity: 0; transform: scale(0.85); }
+  8%   { opacity: 1; transform: scale(1); }
+  85%  { opacity: 1; transform: scale(1); }
   100% { opacity: 0; transform: scale(1.04); }
 }
 
-/* ===== Schermata "chi inizia" ===== */
 .popup-ordine-turni {
   background: #121c26; border: 2px solid #ffd700; border-radius: 14px;
   padding: 30px; text-align: center; max-width: 480px; width: 92vw; max-height: 82vh; overflow-y: auto;
@@ -220,7 +235,6 @@ body.modalita-desktop #messaggi-gioco { top: 18px; max-width: 60vw; }
 .riga-ordine-turno .punteggio-ordine { color: #ffd700; font-weight: bold; font-size: 15px; }
 .sottotitolo-ordine { color: #999; font-size: 13px; margin-top: 16px; }
 
-/* ===== Popup richiesta microfono in arrivo ===== */
 #popup-richiesta-audio { position: fixed; top: 70px; left: 50%; transform: translateX(-50%); z-index: 90; width: min(90vw, 320px); }
 #popup-richiesta-audio.nascosto { display: none; }
 .popup-richiesta-audio-box { background: #121c26; border: 2px solid #ffd700; border-radius: 12px; padding: 16px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
@@ -230,7 +244,6 @@ body.modalita-desktop #messaggi-gioco { top: 18px; max-width: 60vw; }
 .btn-rifiuta-audio { background: #e53935; color: white; }
 .btn-accetta-audio { background: #43a047; color: white; }
 
-/* ===== Chat ===== */
 #chat-wrapper { position: fixed; bottom: 18px; right: 18px; z-index: 30; }
 #pannello-chat {
   position: absolute; bottom: 62px; right: 0; width: 280px; height: 320px;
@@ -255,7 +268,6 @@ body.modalita-desktop #messaggi-gioco { top: 18px; max-width: 60vw; }
 .popup-vittoria button { margin-top: 20px; padding: 12px 24px; background: #ffd700; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
 
 @media (max-width: 360px) {
-  #area-tabellone { width: 94vw; }
   #pannello-menu { width: 185px; }
   #popup-richiesta-audio { width: calc(100vw - 24px); }
 }
