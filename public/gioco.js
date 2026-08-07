@@ -97,14 +97,20 @@ function toggleSuoni() { impostaSuoni(!suoniAttivi); }
 function impostaSuoni(attivi) { suoniAttivi = attivi; localStorage.setItem("suoniAttivi", attivi ? "on" : "off"); aggiornaTestoBottoneSuoni(); }
 function aggiornaTestoBottoneSuoni() { const b = document.getElementById("btn-toggle-suoni"); if (b) b.textContent = suoniAttivi ? "🔊 Suoni: On" : "🔇 Suoni: Off"; }
 
-// ===== TUTTO SCHERMO =====
+// ===== TUTTO SCHERMO — ora segnala chiaramente se fallisce, invece di restare muto =====
 function toggleFullscreen() {
   if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-    const r = document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen;
-    if (r) r.call(document.documentElement);
+    const richiesta = document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen;
+    if (!richiesta) { alert("Il tuo browser non supporta lo schermo intero."); return; }
+    const risultato = richiesta.call(document.documentElement);
+    if (risultato && typeof risultato.catch === "function") {
+      risultato.catch(() => {
+        alert("Non è stato possibile attivare lo schermo intero. Se questa pagina è incorporata dentro un'altra (un iframe), serve un permesso speciale abilitato da chi gestisce quella pagina.");
+      });
+    }
   } else {
-    const e = document.exitFullscreen || document.webkitExitFullscreen;
-    if (e) e.call(document);
+    const esci = document.exitFullscreen || document.webkitExitFullscreen;
+    if (esci) esci.call(document);
   }
 }
 function aggiornaTestoBottoneFullscreen() {
@@ -115,7 +121,7 @@ function aggiornaTestoBottoneFullscreen() {
 document.addEventListener("fullscreenchange", aggiornaTestoBottoneFullscreen);
 document.addEventListener("webkitfullscreenchange", aggiornaTestoBottoneFullscreen);
 
-// ===== ALTEZZA REALE + MODALITÀ DESKTOP (via JavaScript, mai media query orientation) =====
+// ===== ALTEZZA REALE + MODALITÀ DESKTOP =====
 function calcolaAltezzaReale() {
   const altezza = window.visualViewport ? window.visualViewport.height : window.innerHeight;
   document.documentElement.style.setProperty("--altezza-reale", altezza + "px");
@@ -143,7 +149,7 @@ function riposizionaTuttePedine() {
   ultimoStatoGiocatori.forEach(g => { const p = document.getElementById("pedina-" + g.id); if (p) posizionaPedina(p, g.posizione); });
 }
 
-// ===== MESSAGGIO A TUTTO SCHERMO =====
+// ===== MESSAGGIO A TUTTO SCHERMO — dura 2,5 secondi =====
 let timerFlashMessaggio = null;
 function mostraMessaggioGiocoGrande(testo) {
   if (!testo) return;
@@ -154,7 +160,7 @@ function mostraMessaggioGiocoGrande(testo) {
   void el.offsetWidth;
   el.classList.add("visibile");
   if (timerFlashMessaggio) clearTimeout(timerFlashMessaggio);
-  timerFlashMessaggio = setTimeout(() => el.classList.remove("visibile"), 1000);
+  timerFlashMessaggio = setTimeout(() => el.classList.remove("visibile"), 2500);
 }
 
 // ===== SCHERMATA "CHI INIZIA" =====
@@ -176,7 +182,7 @@ function mostraRivelazioneOrdineTurni(giocatoriOrdinati, punteggi) {
   setTimeout(() => overlay.classList.remove("aperto"), 1300 + giocatoriOrdinati.length * 150 + 1300);
 }
 
-// ===== COUNTDOWN DI TURNO =====
+// ===== COUNTDOWN DI TURNO — il suono d'avviso ora è udibile a chiunque, non solo a chi gioca =====
 let tempoInizioTurnoAttuale = null, durataMossaMsAttuale = null, intervalCountdown = null, ultimoSecondoAvviso = null;
 function avviaCountdownTurno(tempoInizio, durataMs) {
   tempoInizioTurnoAttuale = tempoInizio;
@@ -192,7 +198,7 @@ function aggiornaCountdownTurno() {
   const sec = Math.max(0, Math.ceil((durataMossaMsAttuale - (Date.now() - tempoInizioTurnoAttuale)) / 1000));
   el.textContent = "⏱ " + sec + "s";
   el.classList.toggle("countdown-scaduto", sec <= 0);
-  if (mioTurno && sec <= 3 && sec >= 1 && sec !== ultimoSecondoAvviso) { ultimoSecondoAvviso = sec; suonaAvvisoTempo(); }
+  if (sec <= 3 && sec >= 1 && sec !== ultimoSecondoAvviso) { ultimoSecondoAvviso = sec; suonaAvvisoTempo(); }
 }
 
 // ===== MICROFONO: consenso reciproco per coppia, aperto a chiunque nella partita =====
@@ -210,7 +216,7 @@ async function attivaMicrofono() {
   try {
     flussoAudioLocale = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
   } catch (e) {
-    alert("Non è stato possibile accedere al microfono. Controlla i permessi del browser.");
+    alert("Non è stato possibile accedere al microfono. Controlla i permessi del browser (o, se questa pagina è dentro un iframe, i permessi dell'iframe).");
     return;
   }
   microfonoAttivo = true;
@@ -576,6 +582,14 @@ document.getElementById("backdrop-giocatori").onclick = () => {
   document.getElementById("backdrop-giocatori").classList.remove("aperto");
 };
 
+// ===== CHAT + badge messaggi non letti =====
+let messaggiChatNonLetti = 0;
+function aggiornaBadgeChatPartita() {
+  const badge = document.getElementById("badge-chat-partita");
+  if (!badge) return;
+  if (messaggiChatNonLetti > 0) { badge.style.display = "flex"; badge.textContent = messaggiChatNonLetti > 9 ? "9+" : messaggiChatNonLetti; }
+  else badge.style.display = "none";
+}
 function aggiungiMessaggioChatPartita(nome, testo) {
   suonaMessaggioChat();
   const box = document.getElementById("chat-messaggi");
@@ -584,6 +598,12 @@ function aggiungiMessaggioChatPartita(nome, testo) {
   riga.innerHTML = `<b>${nome}:</b> ${testo}`;
   box.appendChild(riga);
   box.scrollTop = box.scrollHeight;
+
+  const pannelloChat = document.getElementById("pannello-chat");
+  if (pannelloChat && pannelloChat.classList.contains("nascosto")) {
+    messaggiChatNonLetti++;
+    aggiornaBadgeChatPartita();
+  }
 }
 function inviaChatPartita() {
   const input = document.getElementById("chat-input");
@@ -593,7 +613,15 @@ function inviaChatPartita() {
   input.value = "";
 }
 document.getElementById("chat-input").addEventListener("keypress", (e) => { if (e.key === "Enter") inviaChatPartita(); });
-document.getElementById("btn-chat").onclick = (e) => { e.stopPropagation(); document.getElementById("pannello-chat").classList.toggle("nascosto"); };
+document.getElementById("btn-chat").onclick = (e) => {
+  e.stopPropagation();
+  const pannello = document.getElementById("pannello-chat");
+  pannello.classList.toggle("nascosto");
+  if (!pannello.classList.contains("nascosto")) {
+    messaggiChatNonLetti = 0;
+    aggiornaBadgeChatPartita();
+  }
+};
 
 document.getElementById("area-dadi").onclick = () => {
   if (!mioTurno) return;
