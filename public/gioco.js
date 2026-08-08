@@ -97,7 +97,7 @@ function toggleSuoni() { impostaSuoni(!suoniAttivi); }
 function impostaSuoni(attivi) { suoniAttivi = attivi; localStorage.setItem("suoniAttivi", attivi ? "on" : "off"); aggiornaTestoBottoneSuoni(); }
 function aggiornaTestoBottoneSuoni() { const b = document.getElementById("btn-toggle-suoni"); if (b) b.textContent = suoniAttivi ? "🔊 Suoni: On" : "🔇 Suoni: Off"; }
 
-// ===== TUTTO SCHERMO — ora segnala chiaramente se fallisce, invece di restare muto =====
+// ===== TUTTO SCHERMO =====
 function toggleFullscreen() {
   if (!document.fullscreenElement && !document.webkitFullscreenElement) {
     const richiesta = document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen;
@@ -121,7 +121,7 @@ function aggiornaTestoBottoneFullscreen() {
 document.addEventListener("fullscreenchange", aggiornaTestoBottoneFullscreen);
 document.addEventListener("webkitfullscreenchange", aggiornaTestoBottoneFullscreen);
 
-// ===== ALTEZZA REALE + MODALITÀ DESKTOP =====
+// ===== ALTEZZA REALE =====
 function calcolaAltezzaReale() {
   const altezza = window.visualViewport ? window.visualViewport.height : window.innerHeight;
   document.documentElement.style.setProperty("--altezza-reale", altezza + "px");
@@ -131,25 +131,112 @@ function rilevaEImpostaModalitaDesktop() {
   const puntatorePreciso = window.matchMedia && window.matchMedia("(pointer: fine)").matches;
   document.body.classList.toggle("modalita-desktop", nonTouch && puntatorePreciso && window.innerWidth >= 1000);
 }
+
+// ===== NUOVO: calcola dimensioni e rotazione del tabellone. Un'unica funzione
+// per tutti e tre i casi (Computer, telefono verticale, telefono orizzontale) —
+// così la logica "quanto è grande" resta in un solo posto, mai divisa tra
+// CSS e JavaScript in modo incoerente. =====
+function aggiornaLayoutTabellone() {
+  const areaTabellone = document.getElementById("area-tabellone");
+  const rotatore = document.getElementById("rotatore-tabellone");
+  const areaDadi = document.getElementById("area-dadi");
+  const immagine = document.getElementById("immagine-tabellone");
+  if (!areaTabellone || !rotatore || !areaDadi || !immagine) return;
+
+  // Rapporto largo/alto naturale del tabellone (l'immagine è più larga che
+  // alta): letto dall'immagine vera appena disponibile, con un valore di
+  // riserva ragionevole nel frattempo
+  const rapportoNaturale = (immagine.naturalWidth && immagine.naturalHeight)
+    ? immagine.naturalWidth / immagine.naturalHeight
+    : 1.48;
+
+  const eDesktop = document.body.classList.contains("modalita-desktop");
+  const larghezzaFinestra = window.innerWidth;
+  const altezzaReale = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+
+  let Wc, Hc, ruotato = false;
+
+  if (eDesktop) {
+    document.body.classList.remove("mobile-verticale", "mobile-orizzontale");
+
+    const larghezzaDisponibile = larghezzaFinestra * 0.78;
+    const altezzaDisponibile = altezzaReale * 0.92;
+    Wc = Math.min(larghezzaDisponibile, altezzaDisponibile * rapportoNaturale, 1780);
+    Hc = Wc / rapportoNaturale;
+
+  } else {
+    const inPortrait = altezzaReale > larghezzaFinestra;
+    ruotato = inPortrait;
+
+    // Imposta la classe PRIMA di misurare l'area dadi, così la misurazione
+    // riflette la vera disposizione (colonna se orizzontale, riga se
+    // verticale) invece di quella del giro precedente
+    document.body.classList.toggle("mobile-verticale", inPortrait);
+    document.body.classList.toggle("mobile-orizzontale", !inPortrait);
+
+    const spazioDadi = areaDadi.getBoundingClientRect();
+
+    if (inPortrait) {
+      // Tabellone ruotato: userà l'altezza dello schermo come "larghezza"
+      const larghezzaDisponibile = larghezzaFinestra * 0.94;
+      const altezzaDisponibile = altezzaReale - spazioDadi.height - 90;
+      Wc = Math.max(120, Math.min(larghezzaDisponibile, altezzaDisponibile / rapportoNaturale));
+      Hc = Wc * rapportoNaturale;
+    } else {
+      // Tabellone dritto, dadi alla sua destra
+      const larghezzaDisponibile = larghezzaFinestra - spazioDadi.width - 40;
+      const altezzaDisponibile = altezzaReale - 70;
+      Wc = Math.max(120, Math.min(larghezzaDisponibile, altezzaDisponibile * rapportoNaturale));
+      Hc = Wc / rapportoNaturale;
+    }
+  }
+
+  areaTabellone.style.width = Wc + "px";
+  areaTabellone.style.height = Hc + "px";
+
+  if (ruotato) {
+    // Ruotare di 90° scambia larghezza e altezza visive: per ottenere
+    // Wc×Hc DOPO la rotazione, il contenitore PRIMA della rotazione deve
+    // avere le due dimensioni scambiate
+    rotatore.style.width = Hc + "px";
+    rotatore.style.height = Wc + "px";
+  } else {
+    rotatore.style.width = Wc + "px";
+    rotatore.style.height = Hc + "px";
+  }
+
+  areaTabellone.classList.toggle("tabellone-ruotato", ruotato);
+
+  riposizionaTuttePedine();
+}
+
 let timerDebounceResize = null;
 function gestisciResize() {
   calcolaAltezzaReale();
   rilevaEImpostaModalitaDesktop();
   clearTimeout(timerDebounceResize);
-  timerDebounceResize = setTimeout(riposizionaTuttePedine, 120);
+  timerDebounceResize = setTimeout(aggiornaLayoutTabellone, 60);
 }
 function inizializzaGestioneOrientamento() {
   calcolaAltezzaReale();
   rilevaEImpostaModalitaDesktop();
+  aggiornaLayoutTabellone();
+
   window.addEventListener("resize", gestisciResize);
   window.addEventListener("orientationchange", () => { setTimeout(gestisciResize, 300); });
   if (window.visualViewport) window.visualViewport.addEventListener("resize", gestisciResize);
+
+  const immagine = document.getElementById("immagine-tabellone");
+  if (immagine) {
+    if (immagine.complete && immagine.naturalWidth) aggiornaLayoutTabellone();
+    else immagine.addEventListener("load", aggiornaLayoutTabellone);
+  }
 }
 function riposizionaTuttePedine() {
   ultimoStatoGiocatori.forEach(g => { const p = document.getElementById("pedina-" + g.id); if (p) posizionaPedina(p, g.posizione); });
 }
 
-// ===== MESSAGGIO A TUTTO SCHERMO — dura 2,5 secondi =====
+// ===== MESSAGGIO A TUTTO SCHERMO =====
 let timerFlashMessaggio = null;
 function mostraMessaggioGiocoGrande(testo) {
   if (!testo) return;
@@ -182,7 +269,7 @@ function mostraRivelazioneOrdineTurni(giocatoriOrdinati, punteggi) {
   setTimeout(() => overlay.classList.remove("aperto"), 1300 + giocatoriOrdinati.length * 150 + 1300);
 }
 
-// ===== COUNTDOWN DI TURNO — il suono d'avviso ora è udibile a chiunque, non solo a chi gioca =====
+// ===== COUNTDOWN DI TURNO =====
 let tempoInizioTurnoAttuale = null, durataMossaMsAttuale = null, intervalCountdown = null, ultimoSecondoAvviso = null;
 function avviaCountdownTurno(tempoInizio, durataMs) {
   tempoInizioTurnoAttuale = tempoInizio;
@@ -380,6 +467,9 @@ function posizionaPedina(pedina, casellaNumero) {
   pedina.style.left = coord.left + "px";
   pedina.style.top = coord.top + "px";
 }
+// La pedina ora ha un livello in più — .pedina-interno — che racchiude l'SVG:
+// serve per contro-ruotarla quando il tabellone è ruotato, senza toccare il
+// posizionamento (gestito dal div esterno .pedina, invariato)
 function ottieniOCreaPedina(idGiocatore, colore, indice) {
   let pedina = document.getElementById("pedina-" + idGiocatore);
   if (!pedina) {
@@ -388,18 +478,20 @@ function ottieniOCreaPedina(idGiocatore, colore, indice) {
     pedina.className = "pedina";
     const idG = "gradPedina" + indice;
     pedina.innerHTML = `
-      <svg width="26" height="38" viewBox="0 0 34 48">
-        <defs><radialGradient id="${idG}" cx="35%" cy="25%" r="75%">
-          <stop offset="0%" stop-color="${schiarisciColore(colore, 55)}"/>
-          <stop offset="55%" stop-color="${colore}"/>
-          <stop offset="100%" stop-color="${scuriscColore(colore, 35)}"/>
-        </radialGradient></defs>
-        <ellipse cx="17" cy="44" rx="12" ry="3.5" fill="rgba(0,0,0,0.3)"/>
-        <ellipse cx="17" cy="42" rx="11" ry="4" fill="${scuriscColore(colore, 25)}"/>
-        <path d="M17 42 C10 42 4 40 4 37 L10 15 C10 15 12 12 17 12 C22 12 24 15 24 15 L30 37 C30 40 24 42 17 42 Z" fill="url(#${idG})" stroke="${scuriscColore(colore, 45)}" stroke-width="0.8"/>
-        <circle cx="17" cy="9" r="7.5" fill="url(#${idG})" stroke="${scuriscColore(colore, 45)}" stroke-width="0.8"/>
-        <ellipse cx="14" cy="6" rx="2.5" ry="1.8" fill="rgba(255,255,255,0.55)"/>
-      </svg>`;
+      <div class="pedina-interno">
+        <svg width="26" height="38" viewBox="0 0 34 48">
+          <defs><radialGradient id="${idG}" cx="35%" cy="25%" r="75%">
+            <stop offset="0%" stop-color="${schiarisciColore(colore, 55)}"/>
+            <stop offset="55%" stop-color="${colore}"/>
+            <stop offset="100%" stop-color="${scuriscColore(colore, 35)}"/>
+          </radialGradient></defs>
+          <ellipse cx="17" cy="44" rx="12" ry="3.5" fill="rgba(0,0,0,0.3)"/>
+          <ellipse cx="17" cy="42" rx="11" ry="4" fill="${scuriscColore(colore, 25)}"/>
+          <path d="M17 42 C10 42 4 40 4 37 L10 15 C10 15 12 12 17 12 C22 12 24 15 24 15 L30 37 C30 40 24 42 17 42 Z" fill="url(#${idG})" stroke="${scuriscColore(colore, 45)}" stroke-width="0.8"/>
+          <circle cx="17" cy="9" r="7.5" fill="url(#${idG})" stroke="${scuriscColore(colore, 45)}" stroke-width="0.8"/>
+          <ellipse cx="14" cy="6" rx="2.5" ry="1.8" fill="rgba(255,255,255,0.55)"/>
+        </svg>
+      </div>`;
     document.getElementById("contenitore-pedine").appendChild(pedina);
   }
   return pedina;
@@ -582,7 +674,6 @@ document.getElementById("backdrop-giocatori").onclick = () => {
   document.getElementById("backdrop-giocatori").classList.remove("aperto");
 };
 
-// ===== CHAT + badge messaggi non letti =====
 let messaggiChatNonLetti = 0;
 function aggiornaBadgeChatPartita() {
   const badge = document.getElementById("badge-chat-partita");
