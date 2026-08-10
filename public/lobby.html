@@ -514,21 +514,8 @@ function rilevaTipoDispositivoClient() {
 function apriCreaMobile(){
 document.getElementById("contenutoMobile").dataset.vista = "crea";
 document.getElementById("contenutoMobile").innerHTML=`
-
-<img
-    src="https://gioco-oca-server.onrender.com/Immagini/Creatavolo.png"
-    alt="Crea tavolo"
-    style="
-        width:50px;
-        height:50px;
-        object-fit:contain;
-        display:block;
-        margin:0 auto 10px auto;
-    "
->
-
 <h2 style="margin-bottom:15px;">
-  Crea tavolo
+🪑 Crea tavolo
 </h2>
 <p>Numero giocatori</p>
 
@@ -1308,8 +1295,16 @@ verificaSessione();
 <!-- MENU MOBILE -->
 <div id="menuMobile">
 <button class="btn-mobile" onclick="apriCreaMobile()">
-🪑
-<span>Crea</span>
+    <img
+        src="https://gioco-oca-server.onrender.com/Immagini/Creatavolo.png"
+        alt="Crea"
+        style="
+            width:24px;
+            height:24px;
+            object-fit:contain;
+        "
+    >
+    <span>Crea</span>
 </button>
 <button class="btn-mobile" onclick="apriOnlineMobile()">
 👥
