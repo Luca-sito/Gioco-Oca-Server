@@ -35,7 +35,20 @@ let ultimoStatoGiocatori = [];
 let mioTurno = false;
 let turnoAttualeId = null;
 let timerRiconnessione = null;
-let mostrataRivelazioneOrdine = false;
+
+// NUOVO: stato esplicito di fase — "determinazione" (Chi inizia?) oppure "normale"
+// (partita vera). Il click sui dadi controlla questa variabile per sapere quale
+// messaggio mandare al server.
+let faseAttuale = "normale";
+let possoTirareIoInDeterminazione = false;
+
+function iniziale(nome) { return (nome || "?").trim().charAt(0).toUpperCase(); }
+function coloreDaNome(nome) {
+  const colori = ["#6a2c70", "#1e40af", "#43a047", "#f57c00", "#c0ca33", "#e53935", "#00838f", "#8d6e63"];
+  let somma = 0;
+  for (let i = 0; i < (nome || "?").length; i++) somma += nome.charCodeAt(i);
+  return colori[somma % colori.length];
+}
 
 // ===== SUONI =====
 let suoniAttivi = localStorage.getItem("suoniAttivi") !== "off";
@@ -84,9 +97,9 @@ function suonaClick(volume, ritardoMs) {
 }
 function suonaTiroDadi() { if (!suoniAttivi) return; for (let i = 0; i < 7; i++) suonaClick(0.1, i * 130); }
 function suonaAtterraggioDadi() { suonaTono(180, 90, "square", 0.14, 0); suonaClick(0.15, 20); }
-function suonaPassoPedina() { suonaTono(520, 55, "sine", 0.09, 0); }
+function suonaPassoPedina() { suonaTono(520, 55, "sine", 0.09, 0); } // invariato, come richiesto
 function suonaTuoTurno() { suonaTono(660, 120, "sine", 0.11, 0); suonaTono(880, 160, "sine", 0.11, 120); }
-function suonaVittoria() {
+function suonaVittoria() { // invariato, come richiesto
   suonaTono(523, 130, "sine", 0.13, 0); suonaTono(659, 130, "sine", 0.13, 130);
   suonaTono(784, 130, "sine", 0.13, 260); suonaTono(1047, 260, "sine", 0.14, 390);
 }
@@ -97,16 +110,14 @@ function toggleSuoni() { impostaSuoni(!suoniAttivi); }
 function impostaSuoni(attivi) { suoniAttivi = attivi; localStorage.setItem("suoniAttivi", attivi ? "on" : "off"); aggiornaTestoBottoneSuoni(); }
 function aggiornaTestoBottoneSuoni() { const b = document.getElementById("btn-toggle-suoni"); if (b) b.textContent = suoniAttivi ? "🔊 Suoni: On" : "🔇 Suoni: Off"; }
 
-// ===== TUTTO SCHERMO =====
+// ===== TUTTO SCHERMO (solo Computer — nascosto via CSS su mobile) =====
 function toggleFullscreen() {
   if (!document.fullscreenElement && !document.webkitFullscreenElement) {
     const richiesta = document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen;
     if (!richiesta) { alert("Il tuo browser non supporta lo schermo intero."); return; }
     const risultato = richiesta.call(document.documentElement);
     if (risultato && typeof risultato.catch === "function") {
-      risultato.catch(() => {
-        alert("Non è stato possibile attivare lo schermo intero. Se questa pagina è incorporata dentro un'altra (un iframe), serve un permesso speciale abilitato da chi gestisce quella pagina.");
-      });
+      risultato.catch(() => { alert("Non è stato possibile attivare lo schermo intero."); });
     }
   } else {
     const esci = document.exitFullscreen || document.webkitExitFullscreen;
@@ -121,10 +132,17 @@ function aggiornaTestoBottoneFullscreen() {
 document.addEventListener("fullscreenchange", aggiornaTestoBottoneFullscreen);
 document.addEventListener("webkitfullscreenchange", aggiornaTestoBottoneFullscreen);
 
-// ===== ALTEZZA REALE =====
-function calcolaAltezzaReale() {
-  const altezza = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-  document.documentElement.style.setProperty("--altezza-reale", altezza + "px");
+// ===== ORIENTAMENTO: rilevamento reale via matchMedia — NIENTE rotazione grafica.
+// In verticale il gioco è semplicemente bloccato da un overlay; in orizzontale il
+// tabellone (già naturalmente più largo che alto) si dimensiona per riempire lo
+// spazio reale disponibile, senza mai scorrere. =====
+function calcolaEAggiornaOrientamento() {
+  const eDesktop = document.body.classList.contains("modalita-desktop");
+  const inLandscape = window.matchMedia("(orientation: landscape)").matches;
+  document.body.classList.toggle("richiede-rotazione", !eDesktop && !inLandscape);
+
+  const altezzaReale = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+  document.documentElement.style.setProperty("--altezza-reale", altezzaReale + "px");
 }
 function rilevaEImpostaModalitaDesktop() {
   const nonTouch = !("ontouchstart" in window) && (navigator.maxTouchPoints || 0) === 0;
@@ -132,111 +150,73 @@ function rilevaEImpostaModalitaDesktop() {
   document.body.classList.toggle("modalita-desktop", nonTouch && puntatorePreciso && window.innerWidth >= 1000);
 }
 
-// ===== NUOVO: calcola dimensioni e rotazione del tabellone. Un'unica funzione
-// per tutti e tre i casi (Computer, telefono verticale, telefono orizzontale) —
-// così la logica "quanto è grande" resta in un solo posto, mai divisa tra
-// CSS e JavaScript in modo incoerente. =====
+// Un'unica funzione di calcolo layout: il tabellone resta SEMPRE nella sua forma
+// naturale (mai ruotato), dimensionato per stare interamente nello spazio libero
+// reale (larghezza E altezza), con margini piccoli e proporzionali — mai valori
+// fissi legati a un singolo modello di telefono.
 function aggiornaLayoutTabellone() {
   const areaTabellone = document.getElementById("area-tabellone");
-  const rotatore = document.getElementById("rotatore-tabellone");
-  const areaDadi = document.getElementById("area-dadi");
   const immagine = document.getElementById("immagine-tabellone");
-  if (!areaTabellone || !rotatore || !areaDadi || !immagine) return;
+  if (!areaTabellone || !immagine) return;
 
-  // Rapporto largo/alto naturale del tabellone (l'immagine è più larga che
-  // alta): letto dall'immagine vera appena disponibile, con un valore di
-  // riserva ragionevole nel frattempo
-  const rapportoNaturale = (immagine.naturalWidth && immagine.naturalHeight)
-    ? immagine.naturalWidth / immagine.naturalHeight
-    : 1.48;
+  const rapportoNaturale = (immagine.naturalWidth && immagine.naturalHeight) ? immagine.naturalWidth / immagine.naturalHeight : 1.48;
 
   const eDesktop = document.body.classList.contains("modalita-desktop");
   const larghezzaFinestra = window.innerWidth;
   const altezzaReale = window.visualViewport ? window.visualViewport.height : window.innerHeight;
 
-  let Wc, Hc, ruotato = false;
+  const margineOrizzontale = Math.max(16, larghezzaFinestra * 0.03);
+  const margineVerticale = eDesktop ? Math.max(16, altezzaReale * 0.03) : Math.max(56, altezzaReale * 0.11);
 
-  if (eDesktop) {
-    document.body.classList.remove("mobile-verticale", "mobile-orizzontale");
+  const larghezzaDisponibile = larghezzaFinestra - margineOrizzontale * 2;
+  const altezzaDisponibile = altezzaReale - margineVerticale * 2;
 
-    const larghezzaDisponibile = larghezzaFinestra * 0.78;
-    const altezzaDisponibile = altezzaReale * 0.92;
-    Wc = Math.min(larghezzaDisponibile, altezzaDisponibile * rapportoNaturale, 1780);
-    Hc = Wc / rapportoNaturale;
-
-  } else {
-    const inPortrait = altezzaReale > larghezzaFinestra;
-    ruotato = inPortrait;
-
-    // Imposta la classe PRIMA di misurare l'area dadi, così la misurazione
-    // riflette la vera disposizione (colonna se orizzontale, riga se
-    // verticale) invece di quella del giro precedente
-    document.body.classList.toggle("mobile-verticale", inPortrait);
-    document.body.classList.toggle("mobile-orizzontale", !inPortrait);
-
-    const spazioDadi = areaDadi.getBoundingClientRect();
-
-    if (inPortrait) {
-      // Tabellone ruotato: userà l'altezza dello schermo come "larghezza"
-      const larghezzaDisponibile = larghezzaFinestra * 0.94;
-      const altezzaDisponibile = altezzaReale - spazioDadi.height - 90;
-      Wc = Math.max(120, Math.min(larghezzaDisponibile, altezzaDisponibile / rapportoNaturale));
-      Hc = Wc * rapportoNaturale;
-    } else {
-      // Tabellone dritto, dadi alla sua destra
-      const larghezzaDisponibile = larghezzaFinestra - spazioDadi.width - 40;
-      const altezzaDisponibile = altezzaReale - 70;
-      Wc = Math.max(120, Math.min(larghezzaDisponibile, altezzaDisponibile * rapportoNaturale));
-      Hc = Wc / rapportoNaturale;
-    }
-  }
+  const Wc = Math.max(120, Math.min(larghezzaDisponibile, altezzaDisponibile * rapportoNaturale));
+  const Hc = Wc / rapportoNaturale;
 
   areaTabellone.style.width = Wc + "px";
   areaTabellone.style.height = Hc + "px";
-
-  if (ruotato) {
-    // Ruotare di 90° scambia larghezza e altezza visive: per ottenere
-    // Wc×Hc DOPO la rotazione, il contenitore PRIMA della rotazione deve
-    // avere le due dimensioni scambiate
-    rotatore.style.width = Hc + "px";
-    rotatore.style.height = Wc + "px";
-  } else {
-    rotatore.style.width = Wc + "px";
-    rotatore.style.height = Hc + "px";
-  }
-
-  areaTabellone.classList.toggle("tabellone-ruotato", ruotato);
 
   riposizionaTuttePedine();
 }
 
 let timerDebounceResize = null;
 function gestisciResize() {
-  calcolaAltezzaReale();
+  calcolaEAggiornaOrientamento();
   rilevaEImpostaModalitaDesktop();
   clearTimeout(timerDebounceResize);
   timerDebounceResize = setTimeout(aggiornaLayoutTabellone, 60);
 }
 function inizializzaGestioneOrientamento() {
-  calcolaAltezzaReale();
+  calcolaEAggiornaOrientamento();
   rilevaEImpostaModalitaDesktop();
   aggiornaLayoutTabellone();
 
   window.addEventListener("resize", gestisciResize);
-  window.addEventListener("orientationchange", () => { setTimeout(gestisciResize, 300); });
+  // Su molti browser mobili le dimensioni non sono ancora aggiornate nell'istante
+  // esatto in cui scatta orientationchange: più controlli ravvicinati dopo l'evento
+  // evitano che la schermata resti bloccata sull'overlay anche dopo aver già ruotato.
+  window.addEventListener("orientationchange", () => {
+    setTimeout(gestisciResize, 50);
+    setTimeout(gestisciResize, 300);
+    setTimeout(gestisciResize, 700);
+  });
   if (window.visualViewport) window.visualViewport.addEventListener("resize", gestisciResize);
 
+  if (immagine_pronta()) aggiornaLayoutTabellone();
+  else document.getElementById("immagine-tabellone").addEventListener("load", aggiornaLayoutTabellone);
+}
+function immagine_pronta() {
   const immagine = document.getElementById("immagine-tabellone");
-  if (immagine) {
-    if (immagine.complete && immagine.naturalWidth) aggiornaLayoutTabellone();
-    else immagine.addEventListener("load", aggiornaLayoutTabellone);
-  }
+  return immagine && immagine.complete && immagine.naturalWidth;
 }
 function riposizionaTuttePedine() {
   ultimoStatoGiocatori.forEach(g => { const p = document.getElementById("pedina-" + g.id); if (p) posizionaPedina(p, g.posizione); });
 }
 
-// ===== MESSAGGIO A TUTTO SCHERMO =====
+// ===== MESSAGGIO A TUTTO SCHERMO (per gli eventi speciali durante il gioco normale
+// — NON per l'annuncio del primo movimento di "Chi inizia?", che va invece nella
+// striscia in alto, come richiesto) =====
 let timerFlashMessaggio = null;
 function mostraMessaggioGiocoGrande(testo) {
   if (!testo) return;
@@ -250,31 +230,116 @@ function mostraMessaggioGiocoGrande(testo) {
   timerFlashMessaggio = setTimeout(() => el.classList.remove("visibile"), 2500);
 }
 
-// ===== SCHERMATA "CHI INIZIA" =====
-function mostraRivelazioneOrdineTurni(giocatoriOrdinati, punteggi) {
-  const overlay = document.getElementById("overlay-ordine-turni");
-  const lista = document.getElementById("lista-ordine-turni");
-  if (!overlay || !lista) return;
-  lista.innerHTML = "";
-  overlay.classList.add("aperto");
-  suonaTiroDadi();
-  giocatoriOrdinati.forEach((g, i) => {
-    const riga = document.createElement("div");
-    riga.className = "riga-ordine-turno";
-    riga.style.animationDelay = (i * 0.15) + "s";
-    const punteggio = punteggi && punteggi[g.nome] != null ? punteggi[g.nome] : "?";
-    riga.innerHTML = `<div class="posizione-turno">${i + 1}</div><div class="nome-ordine">${g.nome}</div><div class="punteggio-ordine">🎲 ${punteggio}</div>`;
-    lista.appendChild(riga);
-  });
-  setTimeout(() => overlay.classList.remove("aperto"), 1300 + giocatoriOrdinati.length * 150 + 1300);
+// ===== "CHI INIZIA?" — turni veri, uno alla volta =====
+let areaDadiHomeGenitore = null;
+let areaDadiHomeFratelloSuccessivo = null;
+
+function spostaDadiInDeterminazione() {
+  const areaDadi = document.getElementById("area-dadi");
+  const slot = document.getElementById("slot-dadi-determinazione");
+  if (!areaDadi || !slot || areaDadi.parentNode === slot) return;
+  areaDadiHomeGenitore = areaDadi.parentNode;
+  areaDadiHomeFratelloSuccessivo = areaDadi.nextSibling;
+  slot.appendChild(areaDadi);
+  areaDadi.classList.add("dadi-in-popup");
+}
+function riportaDadiAllaPartita() {
+  const areaDadi = document.getElementById("area-dadi");
+  if (!areaDadi || !areaDadiHomeGenitore) return;
+  if (areaDadiHomeFratelloSuccessivo) areaDadiHomeGenitore.insertBefore(areaDadi, areaDadiHomeFratelloSuccessivo);
+  else areaDadiHomeGenitore.appendChild(areaDadi);
+  areaDadi.classList.remove("dadi-in-popup");
 }
 
-// ===== COUNTDOWN DI TURNO =====
+function disegnaListaDeterminazione(giocatori, turnoInCorsoUid, gruppoSpareggio) {
+  const lista = document.getElementById("lista-determinazione");
+  if (!lista) return;
+  const spareggioSet = new Set(gruppoSpareggio || []);
+  lista.innerHTML = giocatori.map(g => {
+    const avatarHtml = g.avatar ? `<img class="avatar-mini" src="${g.avatar}">` : `<div class="avatar-mini" style="background:${coloreDaNome(g.nome)};">${iniziale(g.nome)}</div>`;
+    let statoHtml;
+    if (g.risultato != null) statoHtml = `<span class="determinazione-risultato">🎲 ${g.risultato}</span>`;
+    else if (g.uid === turnoInCorsoUid) statoHtml = `<span class="determinazione-in-corso">🎲 sta tirando...</span>`;
+    else statoHtml = `<span class="determinazione-attesa">in attesa</span>`;
+    const tagSpareggio = spareggioSet.has(g.uid) ? `<span class="determinazione-tag-spareggio" title="In spareggio">⚔️</span>` : "";
+    const evidenzia = g.uid === turnoInCorsoUid ? " determinazione-riga-attiva" : "";
+    return `<div class="determinazione-riga${evidenzia}">${avatarHtml}<span class="determinazione-nome">${g.nome}</span>${tagSpareggio}${statoHtml}</div>`;
+  }).join("");
+}
+
+function gestisciStatoDeterminazione(dati) {
+  faseAttuale = "determinazione";
+  document.getElementById("overlay-determinazione").classList.add("aperto");
+  spostaDadiInDeterminazione();
+
+  disegnaListaDeterminazione(dati.giocatori, dati.turnoInCorsoUid, dati.gruppoSpareggioAttuale);
+
+  possoTirareIoInDeterminazione = dati.turnoInCorsoUid === mioUid;
+  document.getElementById("area-dadi").classList.toggle("disabilitato", !possoTirareIoInDeterminazione);
+
+  const sottotitolo = document.getElementById("sottotitolo-determinazione");
+  if (dati.gruppoSpareggioAttuale && dati.gruppoSpareggioAttuale.length) {
+    const nomiSpareggio = dati.gruppoSpareggioAttuale.map(u => { const g = dati.giocatori.find(x => x.uid === u); return g ? g.nome : "?"; }).join(", ");
+    sottotitolo.textContent = "⚔️ Pareggio tra " + nomiSpareggio + " — nuovo tiro per decidere l'ordine tra loro!";
+  } else if (possoTirareIoInDeterminazione) {
+    sottotitolo.textContent = "Tocca a te: tira i dadi!";
+  } else {
+    const inAttesaDi = dati.giocatori.find(g => g.uid === dati.turnoInCorsoUid);
+    sottotitolo.textContent = inAttesaDi ? ("In attesa che " + inAttesaDi.nome + " tiri...") : "I giocatori tirano i dadi uno alla volta.";
+  }
+
+  if (dati.tempoInizioTurno != null && dati.durataMossaMs != null) avviaCountdownTurno(dati.tempoInizioTurno, dati.durataMossaMs);
+  mostraDadi(1, 1);
+}
+
+function gestisciRisultatoDeterminazione(dati) {
+  // Il lancio è animato per TUTTI gli spettatori, non solo per chi ha tirato: ogni
+  // tiro deve essere visto realmente accadere, non solo "assegnato" in silenzio.
+  animaLancioDadi(dati.dado1, dati.dado2, () => {
+    const sottotitolo = document.getElementById("sottotitolo-determinazione");
+    if (sottotitolo) sottotitolo.textContent = dati.nome + " ha fatto " + dati.valoreDado + (dati.automatico ? " (tempo scaduto)" : "") + "!";
+  });
+}
+
+function gestisciDeterminazioneCompletata(dati) {
+  faseAttuale = "normale";
+  document.getElementById("overlay-determinazione").classList.remove("aperto");
+  riportaDadiAllaPartita();
+
+  // Impostato SUBITO, prima dell'animazione: serve a "animaSaltoPedina" per
+  // calcolare correttamente colore/indice del giocatore che si muove
+  ultimoStatoGiocatori = dati.giocatori;
+
+  document.getElementById("messaggi-gioco").textContent =
+    "🎲 " + dati.primoMovimento.nomeGiocatore + " ha fatto " + dati.primoMovimento.valoreDado + " — avanza di " + dati.primoMovimento.valoreDado + " caselle!";
+
+  animaSaltoPedina(dati.primoMovimento.idGiocatore, dati.primoMovimento.percorso, () => {
+    if (dati.primoMovimento.messaggi && dati.primoMovimento.messaggi.length) mostraMessaggioGiocoGrande(dati.primoMovimento.messaggi.join(" "));
+    if (dati.tempoInizioTurno != null && dati.durataMossaMs != null) avviaCountdownTurno(dati.tempoInizioTurno, dati.durataMossaMs);
+
+    if (dati.vittoria) {
+      turnoAttualeId = null;
+      document.getElementById("area-dadi").classList.add("disabilitato");
+      disegnaGiocatori();
+      mostraVittoria(dati.vincitore);
+    } else {
+      aggiornaTurno(dati.turnoDiId);
+      disegnaGiocatori();
+    }
+  });
+}
+
+// ===== COUNTDOWN DI TURNO — con il fix del bug segnalato: il countdown si
+// congela nell'ISTANTE del click locale, senza aspettare la risposta del server
+// (che può richiedere fino a ~1,5s per il vero dado da random.org) =====
 let tempoInizioTurnoAttuale = null, durataMossaMsAttuale = null, intervalCountdown = null, ultimoSecondoAvviso = null;
+let turnoLocalmenteCompletato = false;
+
 function avviaCountdownTurno(tempoInizio, durataMs) {
   tempoInizioTurnoAttuale = tempoInizio;
   durataMossaMsAttuale = durataMs;
   ultimoSecondoAvviso = null;
+  turnoLocalmenteCompletato = false;
   if (intervalCountdown) clearInterval(intervalCountdown);
   intervalCountdown = setInterval(aggiornaCountdownTurno, 250);
   aggiornaCountdownTurno();
@@ -282,6 +347,7 @@ function avviaCountdownTurno(tempoInizio, durataMs) {
 function aggiornaCountdownTurno() {
   const el = document.getElementById("countdown-turno");
   if (!el || tempoInizioTurnoAttuale == null || durataMossaMsAttuale == null) return;
+  if (turnoLocalmenteCompletato) return;
   const sec = Math.max(0, Math.ceil((durataMossaMsAttuale - (Date.now() - tempoInizioTurnoAttuale)) / 1000));
   el.textContent = "⏱ " + sec + "s";
   el.classList.toggle("countdown-scaduto", sec <= 0);
@@ -303,7 +369,7 @@ async function attivaMicrofono() {
   try {
     flussoAudioLocale = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
   } catch (e) {
-    alert("Non è stato possibile accedere al microfono. Controlla i permessi del browser (o, se questa pagina è dentro un iframe, i permessi dell'iframe).");
+    alert("Non è stato possibile accedere al microfono. Controlla i permessi del browser.");
     return;
   }
   microfonoAttivo = true;
@@ -451,7 +517,6 @@ function mescolaColore(hex, target, p) {
   b = Math.round(b + (target - b) * (p / 100));
   return `rgb(${r},${g},${b})`;
 }
-function iniziale(nome) { return (nome || "?").trim().charAt(0).toUpperCase(); }
 
 function coordinatePerCasella(casellaNumero) {
   const immagine = document.getElementById("immagine-tabellone");
@@ -467,9 +532,6 @@ function posizionaPedina(pedina, casellaNumero) {
   pedina.style.left = coord.left + "px";
   pedina.style.top = coord.top + "px";
 }
-// La pedina ora ha un livello in più — .pedina-interno — che racchiude l'SVG:
-// serve per contro-ruotarla quando il tabellone è ruotato, senza toccare il
-// posizionamento (gestito dal div esterno .pedina, invariato)
 function ottieniOCreaPedina(idGiocatore, colore, indice) {
   let pedina = document.getElementById("pedina-" + idGiocatore);
   if (!pedina) {
@@ -478,20 +540,18 @@ function ottieniOCreaPedina(idGiocatore, colore, indice) {
     pedina.className = "pedina";
     const idG = "gradPedina" + indice;
     pedina.innerHTML = `
-      <div class="pedina-interno">
-        <svg width="26" height="38" viewBox="0 0 34 48">
-          <defs><radialGradient id="${idG}" cx="35%" cy="25%" r="75%">
-            <stop offset="0%" stop-color="${schiarisciColore(colore, 55)}"/>
-            <stop offset="55%" stop-color="${colore}"/>
-            <stop offset="100%" stop-color="${scuriscColore(colore, 35)}"/>
-          </radialGradient></defs>
-          <ellipse cx="17" cy="44" rx="12" ry="3.5" fill="rgba(0,0,0,0.3)"/>
-          <ellipse cx="17" cy="42" rx="11" ry="4" fill="${scuriscColore(colore, 25)}"/>
-          <path d="M17 42 C10 42 4 40 4 37 L10 15 C10 15 12 12 17 12 C22 12 24 15 24 15 L30 37 C30 40 24 42 17 42 Z" fill="url(#${idG})" stroke="${scuriscColore(colore, 45)}" stroke-width="0.8"/>
-          <circle cx="17" cy="9" r="7.5" fill="url(#${idG})" stroke="${scuriscColore(colore, 45)}" stroke-width="0.8"/>
-          <ellipse cx="14" cy="6" rx="2.5" ry="1.8" fill="rgba(255,255,255,0.55)"/>
-        </svg>
-      </div>`;
+      <svg width="26" height="38" viewBox="0 0 34 48">
+        <defs><radialGradient id="${idG}" cx="35%" cy="25%" r="75%">
+          <stop offset="0%" stop-color="${schiarisciColore(colore, 55)}"/>
+          <stop offset="55%" stop-color="${colore}"/>
+          <stop offset="100%" stop-color="${scuriscColore(colore, 35)}"/>
+        </radialGradient></defs>
+        <ellipse cx="17" cy="44" rx="12" ry="3.5" fill="rgba(0,0,0,0.3)"/>
+        <ellipse cx="17" cy="42" rx="11" ry="4" fill="${scuriscColore(colore, 25)}"/>
+        <path d="M17 42 C10 42 4 40 4 37 L10 15 C10 15 12 12 17 12 C22 12 24 15 24 15 L30 37 C30 40 24 42 17 42 Z" fill="url(#${idG})" stroke="${scuriscColore(colore, 45)}" stroke-width="0.8"/>
+        <circle cx="17" cy="9" r="7.5" fill="url(#${idG})" stroke="${scuriscColore(colore, 45)}" stroke-width="0.8"/>
+        <ellipse cx="14" cy="6" rx="2.5" ry="1.8" fill="rgba(255,255,255,0.55)"/>
+      </svg>`;
     document.getElementById("contenitore-pedine").appendChild(pedina);
   }
   return pedina;
@@ -543,6 +603,10 @@ function connetti() {
 
     if (dati.tipo === "sessioneScaduta") { window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href); return; }
 
+    if (dati.tipo === "statoDeterminazione") { gestisciStatoDeterminazione(dati); return; }
+    if (dati.tipo === "risultatoDeterminazione") { gestisciRisultatoDeterminazione(dati); return; }
+    if (dati.tipo === "determinazioneCompletata") { gestisciDeterminazioneCompletata(dati); return; }
+
     if (dati.tipo === "richiestaAudioRicevuta") { mostraRichiestaAudioRicevuta(dati.mittenteUid, dati.mittenteNome); return; }
     if (dati.tipo === "rispostaAudioRicevuta") {
       richiesteInviate.delete(dati.mittenteUid);
@@ -555,14 +619,11 @@ function connetti() {
     if (dati.tipo === "webrtc-ice-candidate") { gestisciCandidatoRicevuto(dati.mittenteUid, dati.candidate); return; }
 
     if (dati.tipo === "statoPartita") {
+      faseAttuale = "normale";
       ultimoStatoGiocatori = dati.giocatori;
       const chatWrapper = document.getElementById("chat-wrapper");
       if (chatWrapper) chatWrapper.style.display = dati.chatAttiva === false ? "none" : "";
 
-      if (!mostrataRivelazioneOrdine && dati.punteggiOrdineIniziale && !dati.vittoria) {
-        mostrataRivelazioneOrdine = true;
-        mostraRivelazioneOrdineTurni(dati.giocatori, dati.punteggiOrdineIniziale);
-      }
       if (dati.vittoria) {
         turnoAttualeId = null;
         document.getElementById("area-dadi").classList.add("disabilitato");
@@ -575,6 +636,7 @@ function connetti() {
       if (dati.messaggi && dati.messaggi.length) mostraMessaggioGiocoGrande(dati.messaggi.join(" "));
       if (dati.tempoInizioTurno != null && dati.durataMossaMs != null) avviaCountdownTurno(dati.tempoInizioTurno, dati.durataMossaMs);
       mostraDadi(1, 1);
+      return;
     }
 
     if (dati.tipo === "aggiornamentoPartita") {
@@ -597,12 +659,15 @@ function connetti() {
         if (dati.percorso && dati.idGiocatoreCheHaTirato) animaSaltoPedina(dati.idGiocatoreCheHaTirato, dati.percorso, completa);
         else completa();
       });
+      return;
     }
 
-    if (dati.tipo === "chatPartita") aggiungiMessaggioChatPartita(dati.nome, dati.testo);
+    if (dati.tipo === "chatPartita") { aggiungiMessaggioChatPartita(dati.nome, dati.testo); return; }
     if (dati.tipo === "errore") {
       alert(dati.messaggio);
-      if (mioTurno) document.getElementById("area-dadi").classList.remove("disabilitato");
+      turnoLocalmenteCompletato = false;
+      if (mioTurno || possoTirareIoInDeterminazione) document.getElementById("area-dadi").classList.remove("disabilitato");
+      return;
     }
   };
 }
@@ -708,17 +773,19 @@ document.getElementById("btn-chat").onclick = (e) => {
   e.stopPropagation();
   const pannello = document.getElementById("pannello-chat");
   pannello.classList.toggle("nascosto");
-  if (!pannello.classList.contains("nascosto")) {
-    messaggiChatNonLetti = 0;
-    aggiornaBadgeChatPartita();
-  }
+  if (!pannello.classList.contains("nascosto")) { messaggiChatNonLetti = 0; aggiornaBadgeChatPartita(); }
 };
 
+// Click sui dadi: unico gestore per entrambe le fasi. Ferma SUBITO il countdown
+// visivo locale, prima ancora che il server risponda — è il fix del bug del timer.
 document.getElementById("area-dadi").onclick = () => {
-  if (!mioTurno) return;
+  const possoTirare = faseAttuale === "determinazione" ? possoTirareIoInDeterminazione : mioTurno;
+  if (!possoTirare) return;
   if (!socket || socket.readyState !== WebSocket.OPEN) return;
+  turnoLocalmenteCompletato = true;
   document.getElementById("area-dadi").classList.add("disabilitato");
-  socket.send(JSON.stringify({ tipo: "tiraDadi", partitaId }));
+  if (faseAttuale === "determinazione") socket.send(JSON.stringify({ tipo: "tiraDeterminazione", partitaId }));
+  else socket.send(JSON.stringify({ tipo: "tiraDadi", partitaId }));
 };
 
 aggiornaTestoBottoneSuoni();
