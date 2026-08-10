@@ -89,8 +89,9 @@ async function salvaPartita(partita) {
     id: partita.id, stanza: partita.stanza, creatore: partita.creatore, creatoDa: partita.creatoDa,
     tempo: partita.tempo, punti: partita.punti, modalita: partita.modalita, maxGiocatori: partita.maxGiocatori,
     chatAttiva: partita.chatAttiva !== false,
-    giocatori: preparaGiocatoriPerFirebase(partita.giocatori), ordineGiocatori: partita.ordineGiocatori,
-    turnoAttuale: partita.turnoAttuale, iniziata: partita.iniziata, iniziataIl: partita.iniziataIl || null, aggiornataIl: Date.now()
+    fase: partita.fase || "in_corso",
+    giocatori: preparaGiocatoriPerFirebase(partita.giocatori), ordineGiocatori: partita.ordineGiocatori || [],
+    turnoAttuale: partita.turnoAttuale || 0, iniziata: partita.iniziata, iniziataIl: partita.iniziataIl || null, aggiornataIl: Date.now()
   });
 }
 async function caricaPartite() { if (!db) return {}; const snap = await db.ref("partite").once("value"); return snap.val() || {}; }
@@ -550,11 +551,12 @@ app.post("/api/admin/riattiva", richiediAdmin, async (req, res) => {
   res.json({ ok: true });
 });
 
-// ===== DADO VERO DA RANDOM.ORG (con fallback automatico) =====
+// ===== DADO VERO DA RANDOM.ORG (timeout ridotto a 1.5s: prima erano 4s, troppi
+// per una fase come "chi inizia" dove ogni singolo tiro deve sentirsi istantaneo) =====
 function tiraDadoRandomOrg() {
   return new Promise((resolve) => {
     const url = "https://www.random.org/integers/?num=2&min=1&max=6&col=1&base=10&format=plain&rnd=new";
-    const richiesta = https.get(url, { timeout: 4000 }, (res) => {
+    const richiesta = https.get(url, { timeout: 1500 }, (res) => {
       let dati = "";
       res.on("data", chunk => dati += chunk);
       res.on("end", () => {
@@ -589,15 +591,26 @@ async function ripristinaPartiteDaFirebase() {
   for (const id in partiteFirebase) {
     const p = partiteFirebase[id];
     if (!stanze[p.stanza]) continue;
+    // Nota: la fase "determinazione_ordine" (i veri tiri di "Chi inizia?") vive solo in
+    // memoria, non è persistita in dettaglio su Firebase — in caso di riavvio del server
+    // la scelta più sicura è far ripartire da capo questa fase per le partite ancora non
+    // "iniziata", piuttosto che rischiare uno stato incoerente
     stanze[p.stanza].partite[id] = {
-      ...p, maxGiocatori: p.maxGiocatori || (Object.keys(p.giocatori || {}).length || 2),
+      ...p,
+      maxGiocatori: p.maxGiocatori || (Object.keys(p.giocatori || {}).length || 2),
       chatAttiva: p.chatAttiva !== false,
       giocatori: p.giocatori || {}, ordineGiocatori: p.ordineGiocatori || [], turnoAttuale: p.turnoAttuale || 0,
       iniziata: p.iniziata || false, iniziataIl: p.iniziataIl || null, elaborandoTiro: false, invitati: {},
       timerTurno: null, tempoInizioTurno: null, punteggiOrdineIniziale: p.punteggiOrdineIniziale || null,
-      coppieAudioApprovate: new Set()
+      coppieAudioApprovate: new Set(),
+      fase: p.iniziata ? "in_corso" : "determinazione_ordine"
     };
-    if (stanze[p.stanza].partite[id].iniziata) avviaTimerTurno(stanze[p.stanza].partite[id], p.stanza);
+    const partitaRipristinata = stanze[p.stanza].partite[id];
+    if (partitaRipristinata.iniziata) {
+      avviaTimerTurno(partitaRipristinata, p.stanza);
+    } else if (Object.keys(partitaRipristinata.giocatori).length === partitaRipristinata.maxGiocatori) {
+      iniziaFaseDeterminazione(partitaRipristinata, p.stanza);
+    }
   }
   console.log("Partite ripristinate da Firebase:", Object.keys(partiteFirebase).length);
 }
@@ -626,44 +639,7 @@ function calcolaMovimento(posizioneAttuale, valoreDado) {
   if (CASELLE_TORNA_A[nuovaPosizione] !== undefined) { const cf = CASELLE_TORNA_A[nuovaPosizione]; messaggi.push(`Torni alla casella ${cf}!`); percorso.push(cf); nuovaPosizione = cf; }
   return { nuovaPosizione, percorso, messaggi, turniDaSaltare, vittoria, tiraAncora };
 }
-function lanciaDueDadi() { return (Math.floor(Math.random() * 6) + 1) + (Math.floor(Math.random() * 6) + 1); }
-function determinaOrdineInizialeConPunteggi(idsGiocatori) {
-  const punteggiPerGiocatore = {};
-  function ordina(ids) {
-    let risultati = ids.map(id => ({ id, punteggio: lanciaDueDadi() }));
-    risultati.forEach(r => { punteggiPerGiocatore[r.id] = r.punteggio; });
-    risultati.sort((a, b) => b.punteggio - a.punteggio);
-    let ordineFinale = [], i = 0;
-    while (i < risultati.length) {
-      let gruppoPari = [risultati[i]], j = i + 1;
-      while (j < risultati.length && risultati[j].punteggio === risultati[i].punteggio) { gruppoPari.push(risultati[j]); j++; }
-      if (gruppoPari.length > 1) ordineFinale = ordineFinale.concat(ordina(gruppoPari.map(g => g.id)));
-      else ordineFinale.push(gruppoPari[0].id);
-      i = j;
-    }
-    return ordineFinale;
-  }
-  return { ordineFinale: ordina(idsGiocatori), punteggiPerGiocatore };
-}
-async function avviaPartitaAutomaticamente(partita) {
-  const idsGiocatori = Object.keys(partita.giocatori);
-  const { ordineFinale, punteggiPerGiocatore } = determinaOrdineInizialeConPunteggi(idsGiocatori);
-  partita.ordineGiocatori = ordineFinale;
-  partita.turnoAttuale = 0;
-  partita.iniziata = true;
-  partita.iniziataIl = Date.now();
-  partita.elaborandoTiro = false;
-  const punteggiPerNome = {};
-  idsGiocatori.forEach(id => { punteggiPerNome[partita.giocatori[id].nome] = punteggiPerGiocatore[id]; });
-  partita.punteggiOrdineIniziale = punteggiPerNome;
-  const nomiInOrdine = ordineFinale.map(id => partita.giocatori[id].nome);
-  Object.values(partita.giocatori).forEach(g => {
-    if (g.socket && g.socket.readyState === WebSocket.OPEN) g.socket.send(JSON.stringify({ tipo: "partitaAvviata", partitaId: partita.id, ordineGiocatori: nomiInOrdine, turnoDiId: partita.ordineGiocatori[0] }));
-  });
-  const trovato = trovaPartita(partita.id);
-  await salvaPartita({ ...partita, stanza: trovato ? trovato.nomeStanza : partita.stanza });
-  if (trovato) { inviaConteggioStanze(); avviaTimerTurno(partita, trovato.nomeStanza); }
-}
+
 function passaAlProssimoTurno(partita) {
   let tentativi = 0;
   do {
@@ -672,19 +648,25 @@ function passaAlProssimoTurno(partita) {
     if ((giocatoreProssimo.turniSaltati || 0) > 0) { giocatoreProssimo.turniSaltati--; tentativi++; } else break;
   } while (tentativi < partita.ordineGiocatori.length);
 }
+
 function trovaPartita(partitaId) {
-  for (const nomeStanza in stanze) if (stanze[nomeStanza].partite[partitaId]) return { partita: stanze[nomeStanza].partite[partitaId], nomeStanza };
+  for (const nomeStanza in stanze) {
+    if (stanze[nomeStanza].partite[partitaId]) return { partita: stanze[nomeStanza].partite[partitaId], nomeStanza };
+  }
   return null;
 }
+
 function calcolaUidInPartita(nomeStanza) {
   const uidInPartita = new Set();
   if (!stanze[nomeStanza]) return uidInPartita;
   Object.values(stanze[nomeStanza].partite).forEach(p => { if (p.iniziata) Object.keys(p.giocatori).forEach(uid => uidInPartita.add(uid)); });
   return uidInPartita;
 }
+
 function costruisciStatoGiocatori(partita) {
   return partita.ordineGiocatori.map(id => ({ id, nome: partita.giocatori[id].nome, avatar: partita.giocatori[id].avatar || null, posizione: partita.giocatori[id].posizione }));
 }
+
 function inviaAllaStanza(nomeStanza, messaggio) {
   if (!stanze[nomeStanza]) return;
   Object.keys(stanze[nomeStanza].giocatoriOnline).forEach(id => {
@@ -692,6 +674,7 @@ function inviaAllaStanza(nomeStanza, messaggio) {
     if (s && s.readyState === WebSocket.OPEN) s.send(JSON.stringify(messaggio));
   });
 }
+
 function inviaListaPartite(nomeStanza) {
   if (!stanze[nomeStanza]) return;
   const lista = Object.values(stanze[nomeStanza].partite).map(p => ({
@@ -701,6 +684,7 @@ function inviaListaPartite(nomeStanza) {
   }));
   inviaAllaStanza(nomeStanza, { tipo: "listaPartite", partite: lista });
 }
+
 function inviaConteggioStanze() {
   const conteggi = {}, giocatoriPerStanza = {};
   for (const nome in stanze) {
@@ -712,11 +696,13 @@ function inviaConteggioStanze() {
   const messaggio = JSON.stringify({ tipo: "conteggioStanze", stanze: conteggi, giocatori: giocatoriPerStanza });
   wss.clients.forEach(client => { if (client.readyState === WebSocket.OPEN) client.send(messaggio); });
 }
+
 const HEARTBEAT_MS = 15000;
 const heartbeatInterval = setInterval(() => {
   wss.clients.forEach(socket => { if (socket.isAlive === false) return socket.terminate(); socket.isAlive = false; socket.ping(); });
 }, HEARTBEAT_MS);
 wss.on("close", () => clearInterval(heartbeatInterval));
+
 function rilevaTipoDispositivo(userAgent) {
   const ua = userAgent || "";
   if (/iPad/i.test(ua) || (/Android/i.test(ua) && !/Mobile/i.test(ua))) return "tablet";
@@ -724,7 +710,7 @@ function rilevaTipoDispositivo(userAgent) {
   return "computer";
 }
 
-// ===== TIMER DI TURNO =====
+// ===== TIMER DI TURNO (gioco normale) =====
 function millisecondiMossa(partita) { return (parseInt(partita.tempo) || 30) * 1000; }
 function fermaTimerTurno(partita) { if (partita.timerTurno) { clearTimeout(partita.timerTurno); partita.timerTurno = null; } }
 function avviaTimerTurno(partita, nomeStanza) {
@@ -743,8 +729,8 @@ async function gestisciScadenzaTurno(partita, nomeStanza) {
   await eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatoreDiTurno, true);
 }
 
-// Il timer del turno successivo riparte SEMPRE prima della trasmissione ai client:
-// è così che il countdown lato client riceve ogni volta l'orario di inizio corretto
+// Il timer del turno successivo riparte SEMPRE prima della trasmissione ai client,
+// così il messaggio porta sempre l'orario di inizio corretto (fix del bug precedente)
 async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, automatico) {
   if (partita.elaborandoTiro) return;
   partita.elaborandoTiro = true;
@@ -827,12 +813,218 @@ async function forzaAbbandonoPerInattivita(partita, nomeStanza, idGiocatore) {
     const statoGiocatori = costruisciStatoGiocatori(partita);
     Object.values(partita.giocatori).forEach(g => {
       if (g.socket && g.socket.readyState === WebSocket.OPEN) {
-        g.socket.send(JSON.stringify({ tipo: "statoPartita", giocatori: statoGiocatori, turnoDiId: idAttuale, messaggi: [nomeUscente + " è stato rimosso per inattività prolungata."], tempoInizioTurno: partita.tempoInizioTurno, durataMossaMs: millisecondiMossa(partita) }));
+        g.socket.send(JSON.stringify({
+          tipo: "statoPartita", giocatori: statoGiocatori, turnoDiId: idAttuale,
+          messaggi: [nomeUscente + " è stato rimosso per inattività prolungata."],
+          tempoInizioTurno: partita.tempoInizioTurno, durataMossaMs: millisecondiMossa(partita)
+        }));
       }
     });
     await aggiornaStatoPartita(partita.id, { giocatori: preparaGiocatoriPerFirebase(partita.giocatori), ordineGiocatori: partita.ordineGiocatori, turnoAttuale: partita.turnoAttuale });
   }
   inviaListaPartite(nomeStanza);
+  inviaConteggioStanze();
+}
+
+// ===== FASE "CHI INIZIA?" — turni veri, uno alla volta, ripescaggi in caso di parità =====
+
+// Riceve i risultati raccolti finora e l'elenco di chi deve ancora essere ordinato.
+// Se c'è un pareggio (2+ giocatori con lo stesso punteggio più alto TRA quelli non
+// ancora distinti), lo segnala per far ripetere il tiro SOLO a chi è in parità.
+function calcolaOrdineDaiRisultati(risultati, tuttiGliUid) {
+  const coppie = tuttiGliUid.map(uid => ({ uid, punteggio: risultati[uid] }));
+  coppie.sort((a, b) => b.punteggio - a.punteggio);
+  for (let i = 0; i < coppie.length; i++) {
+    let j = i + 1;
+    while (j < coppie.length && coppie[j].punteggio === coppie[i].punteggio) j++;
+    if (j - i > 1) return { ordineFinale: null, prossimoGruppoParitario: coppie.slice(i, j).map(c => c.uid) };
+    i = j - 1;
+  }
+  return { ordineFinale: coppie.map(c => c.uid), prossimoGruppoParitario: null };
+}
+
+function rimuoviGiocatoreDaDeterminazione(partita, uid) {
+  delete partita.giocatori[uid];
+  partita.ordineDeterminazione = (partita.ordineDeterminazione || []).filter(u2 => u2 !== uid);
+  partita.codaDeterminazione = (partita.codaDeterminazione || []).filter(u2 => u2 !== uid);
+  if (partita.risultatiDeterminazione) delete partita.risultatiDeterminazione[uid];
+  if (partita.gruppoSpareggioAttuale) partita.gruppoSpareggioAttuale = partita.gruppoSpareggioAttuale.filter(u2 => u2 !== uid);
+}
+
+function inviaStatoDeterminazione(partita, nomeStanza) {
+  const elenco = (partita.ordineDeterminazione || []).map(uid => ({
+    uid, nome: partita.giocatori[uid] ? partita.giocatori[uid].nome : "?",
+    avatar: partita.giocatori[uid] ? (partita.giocatori[uid].avatar || null) : null,
+    risultato: partita.risultatiDeterminazione && partita.risultatiDeterminazione[uid] != null ? partita.risultatiDeterminazione[uid] : null
+  }));
+  const messaggio = JSON.stringify({
+    tipo: "statoDeterminazione",
+    giocatori: elenco,
+    turnoInCorsoUid: partita.turnoInCorsoDeterminazione || null,
+    gruppoSpareggioAttuale: partita.gruppoSpareggioAttuale || null,
+    tempoInizioTurno: partita.tempoInizioTurno || null,
+    durataMossaMs: millisecondiMossa(partita)
+  });
+  Object.values(partita.giocatori).forEach(g => { if (g.socket && g.socket.readyState === WebSocket.OPEN) g.socket.send(messaggio); });
+}
+
+function avviaTimerDeterminazione(partita, nomeStanza) {
+  fermaTimerTurno(partita);
+  partita.tempoInizioTurno = Date.now();
+  partita.timerTurno = setTimeout(() => { gestisciScadenzaDeterminazione(partita, nomeStanza); }, millisecondiMossa(partita));
+}
+
+async function gestisciScadenzaDeterminazione(partita, nomeStanza) {
+  if (partita.fase !== "determinazione_ordine") return;
+  const uid = partita.turnoInCorsoDeterminazione;
+  if (!uid) return;
+  const giocatore = partita.giocatori[uid];
+  if (!giocatore) return;
+  giocatore.tentativiAutomaticiConsecutivi = (giocatore.tentativiAutomaticiConsecutivi || 0) + 1;
+  if (giocatore.tentativiAutomaticiConsecutivi > 3) { await espelliPerInattivitaDuranteDeterminazione(partita, nomeStanza, uid); return; }
+  await eseguiTiroDeterminazionePerGiocatore(partita, nomeStanza, uid, true);
+}
+
+async function eseguiTiroDeterminazionePerGiocatore(partita, nomeStanza, uid, automatico) {
+  if (partita.elaborandoTiro) return;
+  partita.elaborandoTiro = true;
+  try {
+    fermaTimerTurno(partita);
+    const { dado1, dado2 } = await lanciaDueDadiSicuri();
+    const valoreDado = dado1 + dado2;
+    if (!partita.risultatiDeterminazione) partita.risultatiDeterminazione = {};
+    partita.risultatiDeterminazione[uid] = valoreDado;
+    partita.turnoInCorsoDeterminazione = null;
+
+    const giocatore = partita.giocatori[uid];
+    const messaggio = JSON.stringify({ tipo: "risultatoDeterminazione", uid, nome: giocatore ? giocatore.nome : "?", dado1, dado2, valoreDado, automatico: !!automatico });
+    Object.values(partita.giocatori).forEach(g => { if (g.socket && g.socket.readyState === WebSocket.OPEN) g.socket.send(messaggio); });
+
+    await avanzaDeterminazione(partita, nomeStanza);
+  } finally {
+    partita.elaborandoTiro = false;
+  }
+}
+
+function iniziaFaseDeterminazione(partita, nomeStanza) {
+  partita.fase = "determinazione_ordine";
+  partita.ordineDeterminazione = Object.keys(partita.giocatori);
+  partita.risultatiDeterminazione = {};
+  partita.codaDeterminazione = [...partita.ordineDeterminazione];
+  partita.turnoInCorsoDeterminazione = null;
+  partita.gruppoSpareggioAttuale = null;
+  avanzaDeterminazione(partita, nomeStanza);
+}
+
+async function avanzaDeterminazione(partita, nomeStanza) {
+  if (partita.codaDeterminazione.length === 0) {
+    const esito = calcolaOrdineDaiRisultati(partita.risultatiDeterminazione, partita.ordineDeterminazione);
+    if (esito.prossimoGruppoParitario) {
+      partita.gruppoSpareggioAttuale = esito.prossimoGruppoParitario;
+      partita.codaDeterminazione = [...esito.prossimoGruppoParitario];
+      await avanzaDeterminazione(partita, nomeStanza);
+      return;
+    }
+    partita.gruppoSpareggioAttuale = null;
+    await completaDeterminazione(partita, nomeStanza, esito.ordineFinale);
+    return;
+  }
+  partita.turnoInCorsoDeterminazione = partita.codaDeterminazione.shift();
+  avviaTimerDeterminazione(partita, nomeStanza);
+  inviaStatoDeterminazione(partita, nomeStanza);
+}
+
+async function espelliPerInattivitaDuranteDeterminazione(partita, nomeStanza, uid) {
+  fermaTimerTurno(partita);
+  const nomeUscente = partita.giocatori[uid] ? partita.giocatori[uid].nome : "?";
+
+  if (db) {
+    try {
+      const u = (await db.ref("utenti/" + uid).once("value")).val();
+      if (u) await db.ref("utenti/" + uid).update({ xp: Math.max(0, (u.xp || 0) - xpPenalitaAbbandonoAutomatico()) });
+    } catch (e) { console.error("Errore penalità inattività in determinazione:", e.message); }
+  }
+
+  rimuoviGiocatoreDaDeterminazione(partita, uid);
+  const restanti = Object.keys(partita.giocatori);
+
+  if (restanti.length <= 1) {
+    await rimuoviPartita(nomeStanza, partita.id);
+    inviaListaPartite(nomeStanza);
+    inviaConteggioStanze();
+    return;
+  }
+
+  partita.turnoInCorsoDeterminazione = null;
+  await avanzaDeterminazione(partita, nomeStanza);
+  inviaListaPartite(nomeStanza);
+  inviaConteggioStanze();
+}
+
+// Il risultato di "chi inizia" del primo classificato NON va perso: diventa la sua
+// prima mossa vera e propria, con tanto di animazione di spostamento sul tabellone.
+async function completaDeterminazione(partita, nomeStanza, ordineFinale) {
+  partita.ordineGiocatori = ordineFinale;
+  partita.turnoAttuale = 0;
+  partita.fase = "in_corso";
+  partita.iniziata = true;
+  partita.iniziataIl = Date.now();
+  partita.elaborandoTiro = false;
+
+  const punteggiPerNome = {};
+  ordineFinale.forEach(uid => { punteggiPerNome[partita.giocatori[uid].nome] = partita.risultatiDeterminazione[uid]; });
+  partita.punteggiOrdineIniziale = punteggiPerNome;
+
+  const primoUid = ordineFinale[0];
+  const primoValore = partita.risultatiDeterminazione[primoUid];
+  const primoGiocatore = partita.giocatori[primoUid];
+
+  const risultatoMovimento = calcolaMovimento(primoGiocatore.posizione, primoValore);
+  primoGiocatore.posizione = risultatoMovimento.nuovaPosizione;
+  if (risultatoMovimento.turniDaSaltare > 0) primoGiocatore.turniSaltati = risultatoMovimento.turniDaSaltare;
+  if (!risultatoMovimento.tiraAncora && !risultatoMovimento.vittoria) passaAlProssimoTurno(partita);
+
+  const nomiInOrdine = ordineFinale.map(id => partita.giocatori[id].nome);
+  const statoGiocatori = costruisciStatoGiocatori(partita);
+  const idProssimo = partita.ordineGiocatori[partita.turnoAttuale];
+
+  if (!risultatoMovimento.vittoria) avviaTimerTurno(partita, nomeStanza);
+
+  Object.values(partita.giocatori).forEach(g => {
+    if (g.socket && g.socket.readyState === WebSocket.OPEN) {
+      g.socket.send(JSON.stringify({
+        tipo: "determinazioneCompletata",
+        ordineGiocatori: nomiInOrdine,
+        punteggiOrdineIniziale: punteggiPerNome,
+        primoMovimento: { idGiocatore: primoUid, nomeGiocatore: primoGiocatore.nome, valoreDado: primoValore, percorso: risultatoMovimento.percorso, messaggi: risultatoMovimento.messaggi },
+        giocatori: statoGiocatori,
+        turnoDiId: idProssimo,
+        tempoInizioTurno: partita.tempoInizioTurno,
+        durataMossaMs: millisecondiMossa(partita),
+        vittoria: risultatoMovimento.vittoria,
+        vincitore: risultatoMovimento.vittoria ? primoGiocatore.nome : null
+      }));
+    }
+  });
+
+  if (risultatoMovimento.vittoria) {
+    await concludiPartita(partita, primoUid, nomeStanza, null);
+    await rimuoviPartita(nomeStanza, partita.id);
+    inviaListaPartite(nomeStanza);
+  } else {
+    await salvaPartita({ ...partita, stanza: nomeStanza });
+  }
+  inviaConteggioStanze();
+}
+
+async function avviaPartitaAutomaticamente(partita) {
+  const trovato = trovaPartita(partita.id);
+  const nomeStanza = trovato ? trovato.nomeStanza : partita.stanza;
+  await salvaPartita({ ...partita, stanza: nomeStanza });
+  Object.values(partita.giocatori).forEach(g => {
+    if (g.socket && g.socket.readyState === WebSocket.OPEN) g.socket.send(JSON.stringify({ tipo: "partitaAvviata", partitaId: partita.id }));
+  });
+  iniziaFaseDeterminazione(partita, nomeStanza);
   inviaConteggioStanze();
 }
 
@@ -857,49 +1049,7 @@ wss.on("connection", (socket, request) => {
 
       if (dati.tipo === "richiediConteggio") { inviaConteggioStanze(); return; }
 
-      // NUOVO: richiesta di apertura chiamata audio — richiede il SÌ esplicito
-      // dell'altra persona, non è più legata all'essere amici
-      if (dati.tipo === "richiestaAudio") {
-        if (!uid) return;
-        const trovato = trovaPartita(dati.partitaId);
-        if (!trovato) return;
-        const { partita } = trovato;
-        if (!partita.giocatori[uid]) return;
-        const destinatarioUid = dati.destinatarioUid;
-        if (!destinatarioUid || destinatarioUid === uid) return;
-        const destinatario = partita.giocatori[destinatarioUid];
-        if (!destinatario) return;
-        if (destinatario.socket && destinatario.socket.readyState === WebSocket.OPEN) {
-          destinatario.socket.send(JSON.stringify({ tipo: "richiestaAudioRicevuta", mittenteUid: uid, mittenteNome: nickname }));
-        }
-        return;
-      }
-
-      if (dati.tipo === "rispostaAudio") {
-        if (!uid) return;
-        const trovato = trovaPartita(dati.partitaId);
-        if (!trovato) return;
-        const { partita } = trovato;
-        if (!partita.giocatori[uid]) return;
-        const destinatarioUid = dati.destinatarioUid;
-        if (!destinatarioUid || !partita.giocatori[destinatarioUid]) return;
-
-        if (dati.accettato) {
-          if (!partita.coppieAudioApprovate) partita.coppieAudioApprovate = new Set();
-          partita.coppieAudioApprovate.add(idConversazione(uid, destinatarioUid));
-        }
-
-        const mittenteOriginale = partita.giocatori[destinatarioUid];
-        if (mittenteOriginale.socket && mittenteOriginale.socket.readyState === WebSocket.OPEN) {
-          mittenteOriginale.socket.send(JSON.stringify({ tipo: "rispostaAudioRicevuta", mittenteUid: uid, mittenteNome: nickname, accettato: !!dati.accettato }));
-        }
-        return;
-      }
-
-      // Relay dei segnali WebRTC veri e propri — ora richiede che i DUE giocatori
-      // abbiano già completato reciprocamente il flusso richiestaAudio/rispostaAudio
-      // qui sopra, indipendentemente da amicizia o tipo di stanza
-      if (dati.tipo === "webrtc-offer" || dati.tipo === "webrtc-answer" || dati.tipo === "webrtc-ice-candidate") {
+      if (dati.tipo === "richiestaAudio" || dati.tipo === "rispostaAudio" || dati.tipo === "webrtc-offer" || dati.tipo === "webrtc-answer" || dati.tipo === "webrtc-ice-candidate") {
         if (!uid) return;
         const trovato = trovaPartita(dati.partitaId);
         if (!trovato) return;
@@ -909,6 +1059,19 @@ wss.on("connection", (socket, request) => {
         if (!destinatarioUid) return;
         const destinatario = partita.giocatori[destinatarioUid];
         if (!destinatario || !destinatario.socket || destinatario.socket.readyState !== WebSocket.OPEN) return;
+
+        if (dati.tipo === "richiestaAudio") {
+          destinatario.socket.send(JSON.stringify({ tipo: "richiestaAudioRicevuta", mittenteUid: uid, mittenteNome: nickname }));
+          return;
+        }
+        if (dati.tipo === "rispostaAudio") {
+          if (dati.accettato) {
+            if (!partita.coppieAudioApprovate) partita.coppieAudioApprovate = new Set();
+            partita.coppieAudioApprovate.add(idConversazione(uid, destinatarioUid));
+          }
+          destinatario.socket.send(JSON.stringify({ tipo: "rispostaAudioRicevuta", mittenteUid: uid, mittenteNome: nickname, accettato: !!dati.accettato }));
+          return;
+        }
         const coppiaApprovata = partita.coppieAudioApprovate && partita.coppieAudioApprovate.has(idConversazione(uid, destinatarioUid));
         if (!coppiaApprovata) return;
         destinatario.socket.send(JSON.stringify({ tipo: dati.tipo, mittenteUid: uid, sdp: dati.sdp || null, candidate: dati.candidate || null }));
@@ -946,11 +1109,24 @@ wss.on("connection", (socket, request) => {
         if (db) { try { const u = (await db.ref("utenti/" + uid).once("value")).val(); if (u) mioGiocatore.avatar = u.avatar || null; } catch (e) {} }
         mioGiocatore.socket = socket;
         nickname = mioGiocatore.nome; mioAvatar = mioGiocatore.avatar || null;
-        socket.send(JSON.stringify({
-          tipo: "statoPartita", giocatori: costruisciStatoGiocatori(partita), turnoDiId: partita.ordineGiocatori[partita.turnoAttuale],
-          punteggiOrdineIniziale: partita.punteggiOrdineIniziale || null, tempoInizioTurno: partita.tempoInizioTurno || Date.now(),
-          durataMossaMs: millisecondiMossa(partita), chatAttiva: partita.chatAttiva !== false
-        }));
+
+        if (partita.fase === "determinazione_ordine") {
+          socket.send(JSON.stringify({
+            tipo: "statoDeterminazione",
+            giocatori: (partita.ordineDeterminazione || []).map(u2 => ({ uid: u2, nome: partita.giocatori[u2] ? partita.giocatori[u2].nome : "?", avatar: partita.giocatori[u2] ? (partita.giocatori[u2].avatar || null) : null, risultato: partita.risultatiDeterminazione && partita.risultatiDeterminazione[u2] != null ? partita.risultatiDeterminazione[u2] : null })),
+            turnoInCorsoUid: partita.turnoInCorsoDeterminazione || null,
+            gruppoSpareggioAttuale: partita.gruppoSpareggioAttuale || null,
+            tempoInizioTurno: partita.tempoInizioTurno || Date.now(),
+            durataMossaMs: millisecondiMossa(partita),
+            chatAttiva: partita.chatAttiva !== false
+          }));
+        } else {
+          socket.send(JSON.stringify({
+            tipo: "statoPartita", giocatori: costruisciStatoGiocatori(partita), turnoDiId: partita.ordineGiocatori[partita.turnoAttuale],
+            punteggiOrdineIniziale: partita.punteggiOrdineIniziale || null, tempoInizioTurno: partita.tempoInizioTurno || Date.now(),
+            durataMossaMs: millisecondiMossa(partita), chatAttiva: partita.chatAttiva !== false
+          }));
+        }
         return;
       }
 
@@ -963,6 +1139,7 @@ wss.on("connection", (socket, request) => {
           id: partitaId, creatore: nickname, creatoDa: uid, tempo: dati.tempo, punti: dati.punti, modalita: dati.modalita,
           maxGiocatori: (!max || max < 2 || max > 8 ? 2 : max),
           chatAttiva: dati.chatAttiva !== false,
+          fase: "attesa_giocatori",
           giocatori: { [uid]: { nome: nickname, avatar: mioAvatar, posizione: 0, socket, turniSaltati: 0, tentativiAutomaticiConsecutivi: 0 } },
           ordineGiocatori: [uid], turnoAttuale: 0, iniziata: false, elaborandoTiro: false,
           invitati: dati.modalita === "privata" ? { [uid]: true } : null, timerTurno: null, tempoInizioTurno: null,
@@ -1070,11 +1247,24 @@ wss.on("connection", (socket, request) => {
         return;
       }
 
+      if (dati.tipo === "tiraDeterminazione") {
+        if (!uid) return;
+        const trovato = trovaPartita(dati.partitaId);
+        if (!trovato) return;
+        const { partita, nomeStanza } = trovato;
+        if (partita.fase !== "determinazione_ordine") return;
+        if (partita.turnoInCorsoDeterminazione !== uid) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Non è il tuo turno per tirare." })); return; }
+        if (partita.giocatori[uid]) partita.giocatori[uid].tentativiAutomaticiConsecutivi = 0;
+        await eseguiTiroDeterminazionePerGiocatore(partita, nomeStanza, uid, false);
+        return;
+      }
+
       if (dati.tipo === "tiraDadi") {
         if (!uid) return;
         const trovato = trovaPartita(dati.partitaId);
         if (!trovato) return;
         const { partita, nomeStanza } = trovato;
+        if (partita.fase !== "in_corso") return;
         if (partita.ordineGiocatori[partita.turnoAttuale] !== uid) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Non è il tuo turno!" })); return; }
         if (partita.giocatori[uid]) partita.giocatori[uid].tentativiAutomaticiConsecutivi = 0;
         await eseguiTiroDadiPerGiocatore(partita, nomeStanza, uid, false);
@@ -1088,6 +1278,22 @@ wss.on("connection", (socket, request) => {
         const { partita, nomeStanza } = trovato;
         if (!partita.giocatori[uid]) return;
 
+        if (partita.fase === "determinazione_ordine") {
+          const eraIlSuoTurnoDiTirare = (partita.turnoInCorsoDeterminazione === uid);
+          fermaTimerTurno(partita);
+          rimuoviGiocatoreDaDeterminazione(partita, uid);
+          const restanti = Object.keys(partita.giocatori);
+          if (restanti.length <= 1) {
+            await rimuoviPartita(nomeStanza, partita.id);
+          } else {
+            if (eraIlSuoTurnoDiTirare) partita.turnoInCorsoDeterminazione = null;
+            await avanzaDeterminazione(partita, nomeStanza);
+          }
+          inviaListaPartite(nomeStanza);
+          inviaConteggioStanze();
+          return;
+        }
+
         const eraLuiIlGiocatoreAttivo = (partita.ordineGiocatori[partita.turnoAttuale] === uid);
         const idGiocatoreAttivoPrimaDiRimuovere = eraLuiIlGiocatoreAttivo ? null : partita.ordineGiocatori[partita.turnoAttuale];
         const elencoPartecipantiOriginali = partita.ordineGiocatori.map(id => ({ uid: id, nome: partita.giocatori[id] ? partita.giocatori[id].nome : "?" }));
@@ -1096,7 +1302,12 @@ wss.on("connection", (socket, request) => {
         partita.ordineGiocatori = partita.ordineGiocatori.filter(id => id !== uid);
         const restanti = Object.keys(partita.giocatori);
 
-        if (restanti.length === 0) { await rimuoviPartita(nomeStanza, partita.id); inviaListaPartite(nomeStanza); inviaConteggioStanze(); return; }
+        if (restanti.length === 0) {
+          await rimuoviPartita(nomeStanza, partita.id);
+          inviaListaPartite(nomeStanza);
+          inviaConteggioStanze();
+          return;
+        }
 
         if (!eraLuiIlGiocatoreAttivo) {
           const nuovoIndice = partita.ordineGiocatori.indexOf(idGiocatoreAttivoPrimaDiRimuovere);
@@ -1119,7 +1330,13 @@ wss.on("connection", (socket, request) => {
           const idAttuale = partita.ordineGiocatori[partita.turnoAttuale];
           const statoGiocatori = costruisciStatoGiocatori(partita);
           Object.values(partita.giocatori).forEach(g => {
-            if (g.socket && g.socket.readyState === WebSocket.OPEN) g.socket.send(JSON.stringify({ tipo: "statoPartita", giocatori: statoGiocatori, turnoDiId: idAttuale, messaggi: [nomeUscente + " ha abbandonato la partita."], tempoInizioTurno: partita.tempoInizioTurno || Date.now(), durataMossaMs: millisecondiMossa(partita) }));
+            if (g.socket && g.socket.readyState === WebSocket.OPEN) {
+              g.socket.send(JSON.stringify({
+                tipo: "statoPartita", giocatori: statoGiocatori, turnoDiId: idAttuale,
+                messaggi: [nomeUscente + " ha abbandonato la partita."],
+                tempoInizioTurno: partita.tempoInizioTurno || Date.now(), durataMossaMs: millisecondiMossa(partita)
+              }));
+            }
           });
           await aggiornaStatoPartita(partita.id, { giocatori: preparaGiocatoriPerFirebase(partita.giocatori), ordineGiocatori: partita.ordineGiocatori, turnoAttuale: partita.turnoAttuale });
         }
@@ -1140,17 +1357,29 @@ wss.on("connection", (socket, request) => {
       delete stanze[stanzaAttuale].giocatoriOnline[socketId];
       inviaConteggioStanze();
       inviaAllaStanza(stanzaAttuale, { tipo: "online", numero: Object.keys(stanze[stanzaAttuale].giocatoriOnline).length });
+
       const partite = stanze[stanzaAttuale].partite;
       for (const pid in partite) {
         const partita = partite[pid];
         if (uid && partita.giocatori[uid] && !partita.iniziata) {
-          delete partita.giocatori[uid];
-          partita.ordineGiocatori = partita.ordineGiocatori.filter(id => id !== uid);
-          if (Object.keys(partita.giocatori).length === 0) delete partite[pid];
+          const eraIlSuoTurnoDiTirare = partita.fase === "determinazione_ordine" && partita.turnoInCorsoDeterminazione === uid;
+          if (partita.fase === "determinazione_ordine") {
+            rimuoviGiocatoreDaDeterminazione(partita, uid);
+          } else {
+            delete partita.giocatori[uid];
+            partita.ordineGiocatori = partita.ordineGiocatori.filter(id => id !== uid);
+          }
+          if (Object.keys(partita.giocatori).length === 0) { delete partite[pid]; continue; }
+          if (partita.fase === "determinazione_ordine" && eraIlSuoTurnoDiTirare) {
+            partita.turnoInCorsoDeterminazione = null;
+            avanzaDeterminazione(partita, stanzaAttuale);
+          }
         }
       }
       inviaListaPartite(stanzaAttuale);
-    } catch (erroreInterno) { console.error("Errore nella chiusura di una connessione:", erroreInterno); }
+    } catch (erroreInterno) {
+      console.error("Errore nella chiusura di una connessione:", erroreInterno);
+    }
   });
 });
 
