@@ -698,82 +698,112 @@ function apriChatMobile(){
     aggiornaBadgeChatMobile();
 
     document.getElementById("contenutoMobile").innerHTML = `
-<div style="
-height:100%;
-display:flex;
-flex-direction:column;
-">
-<h2 style="
-margin-bottom:10px;
-">
-Chat
-</h2>
-<div id="chatMobile" style="flex:1; overflow-y:auto;">
-${document.getElementById("chat").innerHTML}
-</div>
-<div id="emojiMobile" style="
-display:none;
-background:white;
-border:1px solid #ddd;
-border-radius:10px;
-padding:10px;
-font-size:25px;
-line-height:35px;
-margin-bottom:8px;
-">
-<span onclick="aggiungiEmojiMobile('😀')">😀</span>
-<span onclick="aggiungiEmojiMobile('😂')">😂</span>
-<span onclick="aggiungiEmojiMobile('😊')">😊</span>
-<span onclick="aggiungiEmojiMobile('😉')">😉</span>
-<span onclick="aggiungiEmojiMobile('😎')">😎</span>
-<span onclick="aggiungiEmojiMobile('😍')">😍</span>
-<span onclick="aggiungiEmojiMobile('😢')">😢</span>
-<span onclick="aggiungiEmojiMobile('😡')">😡</span>
-<span onclick="aggiungiEmojiMobile('👍')">👍</span>
-<span onclick="aggiungiEmojiMobile('❤️')">❤️</span>
-<span onclick="aggiungiEmojiMobile('🔥')">🔥</span>
-<span onclick="aggiungiEmojiMobile('🎲')">🎲</span>
-<span onclick="aggiungiEmojiMobile('🏆')">🏆</span>
-<span onclick="aggiungiEmojiMobile('🎉')">🎉</span>
-</div>
-<div style="
-display:flex;
-gap:6px;
-height:45px;
-">
-<button onclick="mostraEmojiMobile()"
-style="
-width:45px;
-margin:0;
-padding:0;
-">
-😊
-</button>
-<input id="messaggioMobile"
-placeholder="Scrivi un messaggio..."
-style="
-flex:1;
-margin:0;
-width:auto;
-">
-<button onclick="inviaChatMobile()"
-style="
-width:70px;
-margin:0;
-padding:0;
-">
-Invia
-</button>
-</div>
-</div>
-`;
-const inputMobile = document.getElementById("messaggioMobile");
-inputMobile.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") { e.preventDefault(); inviaChatMobile(); }
-});
-apriMobile();
-const chatMobileBox = document.getElementById("chatMobile");
-chatMobileBox.scrollTop = chatMobileBox.scrollHeight;
+        <h2>💬 Chat</h2>
+
+        <div id="chatMobile" style="
+            height:calc(100vh - 190px);
+            overflow-y:auto;
+            padding:10px;
+            background:#fff;
+            border:1px solid #ddd;
+            border-radius:8px;
+        "></div>
+
+        <div id="emojiMobile" style="
+            display:none;
+            padding:8px;
+            background:#f5f5f5;
+            border:1px solid #ddd;
+            border-radius:8px;
+            margin-top:6px;
+            font-size:25px;
+            line-height:1.8;
+        ">
+            <span onclick="aggiungiEmojiMobile('😀')">😀</span>
+            <span onclick="aggiungiEmojiMobile('😂')">😂</span>
+            <span onclick="aggiungiEmojiMobile('😍')">😍</span>
+            <span onclick="aggiungiEmojiMobile('😎')">😎</span>
+            <span onclick="aggiungiEmojiMobile('😢')">😢</span>
+            <span onclick="aggiungiEmojiMobile('😡')">😡</span>
+            <span onclick="aggiungiEmojiMobile('👍')">👍</span>
+            <span onclick="aggiungiEmojiMobile('❤️')">❤️</span>
+            <span onclick="aggiungiEmojiMobile('🔥')">🔥</span>
+            <span onclick="aggiungiEmojiMobile('🎉')">🎉</span>
+            <span onclick="aggiungiEmojiMobile('🤣')">🤣</span>
+            <span onclick="aggiungiEmojiMobile('😉')">😉</span>
+        </div>
+
+        <div style="
+            display:flex;
+            gap:6px;
+            margin-top:8px;
+        ">
+            <button
+                onclick="mostraEmojiMobile()"
+                style="
+                    width:45px;
+                    height:45px;
+                    padding:0;
+                    font-size:22px;
+                    border-radius:50%;
+                "
+            >
+                😊
+            </button>
+
+            <input
+                id="messaggioMobile"
+                type="text"
+                maxlength="200"
+                placeholder="Scrivi un messaggio..."
+                style="flex:1;"
+            >
+
+            <button
+                onclick="inviaChatMobile()"
+                style="
+                    width:80px;
+                    border-radius:20px;
+                "
+            >
+                Invia
+            </button>
+        </div>
+    `;
+
+    const chatMobile = document.getElementById("chatMobile");
+    const chatDesktop = document.getElementById("chat");
+
+    if (chatDesktop && chatMobile) {
+        chatMobile.innerHTML = chatDesktop.innerHTML;
+        chatMobile.scrollTop = chatMobile.scrollHeight;
+    }
+
+    const input = document.getElementById("messaggioMobile");
+
+    if (input) {
+        input.addEventListener("keydown", function(e) {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                inviaChatMobile();
+            }
+        });
+    }
+}
+function mostraEmojiMobile() {
+    const pannello = document.getElementById("emojiMobile");
+    if (!pannello) return;
+
+    pannello.style.display =
+        pannello.style.display === "block" ? "none" : "block";
+}
+
+function aggiungiEmojiMobile(emoji) {
+    const input = document.getElementById("messaggioMobile");
+    if (!input) return;
+
+    input.value += emoji;
+    input.focus();
 }
 function inviaChatMobile(){
 const input = document.getElementById("messaggioMobile");
