@@ -1300,43 +1300,97 @@ verificaSessione();
 </script>
 <!-- MENU MOBILE -->
 <div id="menuMobile">
-<button class="btn-mobile" onclick="apriCreaMobile()">
-    <img
-        src="https://gioco-oca-server.onrender.com/Immagini/Creatavolo.png"
-        alt="Crea"
-        style="
-            width:24px;
-            height:24px;
-            object-fit:contain;
-        "
-    >
-    <span>Crea</span>
-</button>
-<button class="btn-mobile" onclick="apriOnlineMobile()">
-👥
-<span>Online</span>
-<span id="badgeOnlineMobile" class="badge-mobile" style="display:none;">
-0
-</span>
-</button>
-<button class="btn-mobile" onclick="apriChatMobile()">
-💬
-<span>Chat</span>
-<span id="badgeChatMobile" class="badge-mobile" style="display:none;">
-0
-</span>
-</button>
-<button class="btn-mobile" onclick="apriOpzioniMobile()">
-⚙️
-<span>Opzioni</span>
-</button>
+
+    <!-- CREA -->
+    <button class="btn-mobile" onclick="apriCreaMobile()">
+        <img
+            src="https://gioco-oca-server.onrender.com/Immagini/Creatavolo.png"
+            alt="Crea"
+            style="
+                width:24px;
+                height:24px;
+                object-fit:contain;
+            "
+        >
+        <span>Crea</span>
+    </button>
+
+
+    <!-- ONLINE -->
+    <button class="btn-mobile" onclick="apriOnlineMobile()">
+        <img
+            src="https://gioco-oca-server.onrender.com/Immagini/Amicionline.png"
+            alt="Online"
+            style="
+                width:24px;
+                height:24px;
+                object-fit:contain;
+            "
+        >
+        <span>Online</span>
+
+        <span
+            id="badgeOnlineMobile"
+            class="badge-mobile"
+            style="display:none;"
+        >
+            0
+        </span>
+    </button>
+
+
+    <!-- CHAT -->
+    <button class="btn-mobile" onclick="apriChatMobile()">
+        <img
+            src="https://gioco-oca-server.onrender.com/Immagini/Chatonline.png"
+            alt="Chat"
+            style="
+                width:24px;
+                height:24px;
+                object-fit:contain;
+            "
+        >
+        <span>Chat</span>
+
+        <span
+            id="badgeChatMobile"
+            class="badge-mobile"
+            style="display:none;"
+        >
+            0
+        </span>
+    </button>
+
+
+    <!-- OPZIONI -->
+    <button class="btn-mobile" onclick="apriOpzioniMobile()">
+        <img
+            src="https://gioco-oca-server.onrender.com/Immagini/Impostazioni.png"
+            alt="Opzioni"
+            style="
+                width:24px;
+                height:24px;
+                object-fit:contain;
+            "
+        >
+        <span>Opzioni</span>
+    </button>
+
 </div>
+
+
 <!-- FINESTRE MOBILE -->
 <div id="popupMobile" class="popup-mobile">
-<button class="chiudi-mobile" onclick="chiudiMobile()">
-✕
-</button>
-<div id="contenutoMobile"></div>
+
+    <button
+        class="chiudi-mobile"
+        onclick="chiudiMobile()"
+    >
+        ✕
+    </button>
+
+    <div id="contenutoMobile"></div>
+
 </div>
 </body>
 </html>
