@@ -319,28 +319,52 @@ z-index:1000;
 }
 /* POPUP */
 .popup-mobile{
-position:fixed;
-top:10%;
-left:5%;
-width:90%;
-height:75%;
-background:white;
-border-radius:15px;
-box-shadow:0 5px 25px #0005;
-z-index:2000;
-padding:15px;
-overflow:auto;
-}
-.popup-mobile.crea-schermo-intero{
+    position:fixed;
     top:0;
     left:0;
-    width:100%;
-    height:100%;
+    width:100vw;
+    height:100vh;
+
+    margin:0;
+    padding:20px;
+
+    background:#ffffff;
+
+    border:none;
+    border-radius:0;
+    box-shadow:none;
+
+    z-index:99999;
+
+    overflow-y:auto;
+    overflow-x:hidden;
+
+    display:none;
+}
+
+.popup-mobile.aperto{
+    display:block;
+}
+.popup-mobile.crea-schermo-intero{
+    position:fixed;
+
+    top:0;
+    left:0;
+    right:0;
+    bottom:0;
+
+    width:100vw;
+    height:100vh;
+
     max-width:none;
     max-height:none;
+
+    margin:0;
     border-radius:0;
-    padding:20px;
+    border:none;
     box-shadow:none;
+
+    z-index:99999;
 }
 .chiudi-mobile{
 position:absolute;
@@ -529,76 +553,106 @@ function rilevaTipoDispositivoClient() {
 // MENU MOBILE
 // =======================
 function apriCreaMobile(){
-document.getElementById("contenutoMobile").dataset.vista = "crea";
-document.getElementById("contenutoMobile").innerHTML=`
-<h2 style="margin-bottom:15px;">
-CREA TAVOLO
-</h2>
-<p>Numero giocatori</p>
 
-<select id="numeroGiocatoriMobile">
-<option value="2">2 giocatori</option>
-<option value="3">3 giocatori</option>
-<option value="4">4 giocatori</option>
-<option value="5">5 giocatori</option>
-<option value="6">6 giocatori</option>
-<option value="7">7 giocatori</option>
-<option value="8">8 giocatori</option>
-</select>
-<p>Tempo di mossa</p>
-<select id="tempoMobile">
-<option value="15">15 secondi</option>
-<option value="30">30 secondi</option>
-<option value="60">60 secondi</option>
-</select>
-<p>Punti partita</p>
-<select id="puntiMobile">
-<option value="100">100</option>
-<option value="150">150</option>
-<option value="200">200</option>
-</select>
-<p>Tipo partita</p>
-<select id="tipoPartitaMobile">
-<option value="pubblica">
-🔓 Pubblica
-</option>
-<option value="privata">
-🔒 Privata
-</option>
-</select>
-<button onclick="creaPartitaMobile()" 
-style="
-margin-top:20px;
-background:#ffc400;
-color:#000;
-display:flex;
-align-items:center;
-justify-content:center;
-gap:8px;
-">
+    const popup = document.getElementById("popupMobile");
+    const menu = document.getElementById("menuMobile");
 
-<img
-src="https://gioco-oca-server.onrender.com/Immagini/Creatavolo.png"
-alt=""
-style="
-width:22px;
-height:22px;
-object-fit:contain;
-">
+    // Apre il popup a tutto schermo
+    popup.classList.add("aperto");
+    popup.classList.add("crea-schermo-intero");
 
-<span>Crea partita</span>
+    // Nasconde completamente il menu inferiore
+    menu.style.display = "none";
 
-</button>
-<button onclick="eliminaPartita()" 
-style="
-background:#dc3545;
-color:white;
-margin-top:10px;
-">
-Elimina partita
-</button>
-`;
-apriMobile();
+    document.getElementById("contenutoMobile").dataset.vista = "crea";
+
+    document.getElementById("contenutoMobile").innerHTML = `
+
+        <h2 style="margin-bottom:15px;">
+            CREA TAVOLO
+        </h2>
+
+        <p>Numero giocatori</p>
+
+        <select id="numeroGiocatoriMobile">
+            <option value="2">2 giocatori</option>
+            <option value="3">3 giocatori</option>
+            <option value="4">4 giocatori</option>
+            <option value="5">5 giocatori</option>
+            <option value="6">6 giocatori</option>
+            <option value="7">7 giocatori</option>
+            <option value="8">8 giocatori</option>
+        </select>
+
+        <p>Tempo di mossa</p>
+
+        <select id="tempoMobile">
+            <option value="15">15 secondi</option>
+            <option value="30">30 secondi</option>
+            <option value="60">60 secondi</option>
+        </select>
+
+        <p>Punti partita</p>
+
+        <select id="puntiMobile">
+            <option value="100">100</option>
+            <option value="150">150</option>
+            <option value="200">200</option>
+        </select>
+
+        <p>Tipo partita</p>
+
+        <select id="tipoPartitaMobile">
+
+            <option value="pubblica">
+                🔓 Pubblica
+            </option>
+
+            <option value="privata">
+                🔒 Privata
+            </option>
+
+        </select>
+
+        <button
+            onclick="creaPartitaMobile()"
+            style="
+                margin-top:20px;
+                background:#ffc400;
+                color:#000;
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                gap:8px;
+            "
+        >
+
+            <img
+                src="https://gioco-oca-server.onrender.com/Immagini/Creatavolo.png"
+                alt=""
+                style="
+                    width:22px;
+                    height:22px;
+                    object-fit:contain;
+                "
+            >
+
+            <span>Crea partita</span>
+
+        </button>
+
+        <button
+            onclick="eliminaPartita()"
+            style="
+                background:#dc3545;
+                color:white;
+                margin-top:10px;
+            "
+        >
+            Elimina partita
+        </button>
+
+    `;
 }
 
 // NUOVO: mancava del tutto — è per questo che "Crea partita" da cellulare non faceva nulla
@@ -793,8 +847,18 @@ e.style.color="#111";
 localStorage.setItem("tema",tema);
 }
 function chiudiMobile(){
-document.getElementById("popupMobile").classList.remove("aperto");
-document.getElementById("contenutoMobile").dataset.vista = "";
+
+    const popup = document.getElementById("popupMobile");
+    const menu = document.getElementById("menuMobile");
+
+    // Chiude il popup
+    popup.classList.remove("aperto");
+
+    // Rimuove la modalità a tutto schermo
+    popup.classList.remove("crea-schermo-intero");
+
+    // Fa ricomparire il menu mobile
+    menu.style.display = "flex";
 }
 async function verificaSessione() {
   try {
