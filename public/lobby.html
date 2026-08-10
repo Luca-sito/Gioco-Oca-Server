@@ -559,36 +559,39 @@ function rilevaTipoDispositivoClient() {
 // =======================
 // MENU MOBILE
 // =======================
-function apriCreaMobile(){
 
+function apriPopupMobileFullscreen(vista) {
     const popup = document.getElementById("popupMobile");
     const menu = document.getElementById("menuMobile");
 
-    // Apre il popup a tutto schermo
     popup.classList.add("aperto");
     popup.classList.add("crea-schermo-intero");
 
-    // Nasconde completamente il menu inferiore
     menu.style.display = "none";
 
-    document.getElementById("contenutoMobile").dataset.vista = "crea";
+    document.getElementById("contenutoMobile").dataset.vista = vista;
+}
+
+function apriCreaMobile(){
+
+    apriPopupMobileFullscreen("crea");
 
     document.getElementById("contenutoMobile").innerHTML = `
 
         <div style="
-    width:calc(100% + 30px);
-    margin:-15px -15px 20px -15px;
-    height:65px;
-    background:#000;
-    color:#fff;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-size:20px;
-    font-weight:bold;
-">
-    CREA TAVOLO
-</div>
+            width:calc(100% + 30px);
+            margin:-15px -15px 20px -15px;
+            height:65px;
+            background:#000;
+            color:#fff;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            font-size:20px;
+            font-weight:bold;
+        ">
+            CREA TAVOLO
+        </div>
 
         <p>Numero giocatori</p>
 
@@ -621,15 +624,8 @@ function apriCreaMobile(){
         <p>Tipo partita</p>
 
         <select id="tipoPartitaMobile">
-
-            <option value="pubblica">
-                🔓 Pubblica
-            </option>
-
-            <option value="privata">
-                🔒 Privata
-            </option>
-
+            <option value="pubblica">🔓 Pubblica</option>
+            <option value="privata">🔒 Privata</option>
         </select>
 
         <button
@@ -644,7 +640,6 @@ function apriCreaMobile(){
                 gap:8px;
             "
         >
-
             <img
                 src="https://gioco-oca-server.onrender.com/Immagini/Creatavolo.png"
                 alt=""
@@ -654,9 +649,7 @@ function apriCreaMobile(){
                     object-fit:contain;
                 "
             >
-
             <span>Crea partita</span>
-
         </button>
 
         <button
@@ -669,11 +662,9 @@ function apriCreaMobile(){
         >
             Elimina partita
         </button>
-
     `;
 }
 
-// NUOVO: mancava del tutto — è per questo che "Crea partita" da cellulare non faceva nulla
 function creaPartitaMobile() {
   const tipo = document.getElementById("tipoPartitaMobile").value;
   socket.send(JSON.stringify({
@@ -688,19 +679,25 @@ function creaPartitaMobile() {
 }
 
 function apriOnlineMobile(){
-document.getElementById("contenutoMobile").dataset.vista = "online";
-let lista=document.getElementById("listaOnline").innerHTML;
-document.getElementById("contenutoMobile").innerHTML=`
-<h2>👥 Giocatori online</h2>
-${lista}
-`;
-apriMobile();
+
+    apriPopupMobileFullscreen("online");
+
+    let lista = document.getElementById("listaOnline").innerHTML;
+
+    document.getElementById("contenutoMobile").innerHTML = `
+        <h2>👥 Giocatori online</h2>
+        ${lista}
+    `;
+
 }
+
 function apriChatMobile(){
-document.getElementById("contenutoMobile").dataset.vista = "chat";
-nuoviMessaggiMobile = 0;
-aggiornaBadgeChatMobile();
-document.getElementById("contenutoMobile").innerHTML=`
+    apriPopupMobileFullscreen("chat");
+
+    nuoviMessaggiMobile = 0;
+    aggiornaBadgeChatMobile();
+
+    document.getElementById("contenutoMobile").innerHTML = `
 <div style="
 height:100%;
 display:flex;
@@ -806,8 +803,10 @@ function aggiungiEmojiMobile(emoji) {
 }
 
 function apriOpzioniMobile(){
-document.getElementById("contenutoMobile").dataset.vista = "opzioni";
-document.getElementById("contenutoMobile").innerHTML=`
+
+    apriPopupMobileFullscreen("opzioni");
+
+    document.getElementById("contenutoMobile").innerHTML = `
 <h2>Opzioni</h2>
 <div style="
 display:flex;
@@ -869,15 +868,15 @@ function chiudiMobile(){
     const popup = document.getElementById("popupMobile");
     const menu = document.getElementById("menuMobile");
 
-    // Chiude il popup
     popup.classList.remove("aperto");
-
-    // Rimuove la modalità a tutto schermo
     popup.classList.remove("crea-schermo-intero");
 
-    // Fa ricomparire il menu mobile
     menu.style.display = "flex";
+
+    document.getElementById("contenutoMobile").innerHTML = "";
+    document.getElementById("contenutoMobile").dataset.vista = "";
 }
+
 async function verificaSessione() {
   try {
     const risposta = await fetch("https://gioco-oca-server.onrender.com/api/me", { credentials: "include" });
