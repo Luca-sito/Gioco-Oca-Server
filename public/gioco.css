@@ -1,56 +1,25 @@
 * { box-sizing: border-box; }
 html, body {
   margin: 0; padding: 0;
-  min-height: var(--altezza-reale, 100vh);
+  height: var(--altezza-reale, 100vh);
+  overflow: hidden;
   background: #0d1620;
   color: #eee;
   font-family: Arial, sans-serif;
-  overflow-x: hidden;
 }
-body.modalita-desktop html, body.modalita-desktop { overflow: hidden; }
 
-/* ===== SCENA ===== */
 #scena {
-  position: relative;
-  width: 100%;
-  min-height: var(--altezza-reale, 100vh);
+  position: fixed;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding-top: 58px;
-}
-body.mobile-verticale #scena { flex-direction: column; gap: 14px; }
-body.mobile-orizzontale #scena { flex-direction: row; gap: 12px; padding-top: 50px; }
-body.modalita-desktop #scena {
-  flex-direction: row;
-  padding: 0;
-  height: var(--altezza-reale, 100vh);
-  min-height: 0;
   overflow: hidden;
 }
 
-/* ===== TABELLONE: dimensioni SEMPRE calcolate ed applicate da JavaScript
-   (mai da media query) — qui il CSS si limita a definire COME ruota, non
-   QUANTO è grande ===== */
 #area-tabellone {
   position: relative;
-  overflow: hidden;
   flex-shrink: 0;
-  width: 280px;  /* valore di riserva finché JS non calcola quello vero */
-  height: 280px;
-}
-#rotatore-tabellone {
-  position: absolute;
-  top: 50%; left: 50%;
-  width: 100%; height: 100%;
-  transform: translate(-50%, -50%);
-  transform-origin: center center;
-  transition: transform 0.3s ease;
-}
-/* Ruota il tabellone di 90° SOLO quando il telefono è verticale — mai su
-   Computer, mai quando il telefono è orizzontale */
-#area-tabellone.tabellone-ruotato #rotatore-tabellone {
-  transform: translate(-50%, -50%) rotate(90deg);
 }
 #immagine-tabellone {
   width: 100%;
@@ -63,19 +32,11 @@ body.modalita-desktop #scena {
   position: absolute; top: 0; left: 0; width: 100%; height: 100%;
   pointer-events: none;
 }
-
 .pedina {
   position: absolute;
   transform: translate(-50%, -100%);
   transition: left 0.5s ease, top 0.5s ease;
 }
-/* Il disegno interno della pedina si contro-ruota di -90° quando il
-   tabellone è ruotato di +90°, così resta sempre dritto: le due rotazioni
-   si annullano a vicenda, mentre la POSIZIONE (ereditata dal genitore
-   ruotato) resta comunque corretta */
-.pedina-interno { transition: transform 0.3s ease; }
-body.mobile-verticale .pedina-interno { transform: rotate(-90deg); }
-
 .pedina-salta { animation: salto-pedina 0.32s ease; }
 @keyframes salto-pedina {
   0%   { transform: translate(-50%, -100%) scale(1); }
@@ -83,78 +44,60 @@ body.mobile-verticale .pedina-interno { transform: rotate(-90deg); }
   100% { transform: translate(-50%, -100%) scale(1); }
 }
 
-/* ===== DADI: sotto il tabellone se verticale, a destra se orizzontale
-   (colonna invece di riga), sovrapposti al centro-basso su Computer ===== */
 #area-dadi {
+  position: absolute;
+  bottom: 4%;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   gap: 16px;
   cursor: pointer;
   padding: 14px 20px;
-  background: rgba(10,16,22,0.6);
+  background: rgba(10, 16, 22, 0.6);
   border: 1px solid rgba(255,215,0,0.3);
   border-radius: 16px;
   backdrop-filter: blur(3px);
   z-index: 20;
-  flex-shrink: 0;
   transition: opacity 0.2s, background 0.2s;
 }
-body.mobile-orizzontale #area-dadi { flex-direction: column; padding: 16px 12px; }
-body.modalita-desktop #area-dadi { position: absolute; bottom: 6%; left: 50%; transform: translateX(-50%); }
+#area-dadi.dadi-in-popup {
+  position: static !important;
+  transform: none !important;
+  margin: 16px auto 0;
+}
 #area-dadi.disabilitato { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
-#area-dadi:not(.disabilitato):hover { background: rgba(10,16,22,0.85); }
+#area-dadi:not(.disabilitato):hover { background: rgba(10, 16, 22, 0.85); }
 
-.dado-3d { width: 52px; height: 52px; perspective: 600px; }
-body.modalita-desktop .dado-3d { width: 56px; height: 56px; }
-.dado-3d .cubo { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform 1.05s cubic-bezier(0.22,0.85,0.4,1); }
+.dado-3d { width: 54px; height: 54px; perspective: 600px; }
+.dado-3d .cubo { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform 1.05s cubic-bezier(0.22, 0.85, 0.4, 1); }
 .faccia {
-  position: absolute; top: 0; left: 0; width: 52px; height: 52px;
+  position: absolute; top: 0; left: 0; width: 54px; height: 54px;
   background: #fdfdfd; border: 2px solid #ccc; border-radius: 9px;
   box-shadow: inset 0 0 10px rgba(0,0,0,0.08);
-  display: grid; grid-template-columns: repeat(3,1fr); grid-template-rows: repeat(3,1fr); padding: 6px;
+  display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr);
+  padding: 7px;
 }
-body.modalita-desktop .faccia { width: 56px; height: 56px; padding: 7px; }
-.faccia-1 { transform: rotateY(0deg)    translateZ(26px); }
-.faccia-6 { transform: rotateY(180deg)  translateZ(26px); }
-.faccia-3 { transform: rotateX(90deg)   translateZ(26px); }
-.faccia-4 { transform: rotateX(-90deg)  translateZ(26px); }
-.faccia-2 { transform: rotateY(90deg)   translateZ(26px); }
-.faccia-5 { transform: rotateY(-90deg)  translateZ(26px); }
-body.modalita-desktop .faccia-1 { transform: rotateY(0deg)    translateZ(28px); }
-body.modalita-desktop .faccia-6 { transform: rotateY(180deg)  translateZ(28px); }
-body.modalita-desktop .faccia-3 { transform: rotateX(90deg)   translateZ(28px); }
-body.modalita-desktop .faccia-4 { transform: rotateX(-90deg)  translateZ(28px); }
-body.modalita-desktop .faccia-2 { transform: rotateY(90deg)   translateZ(28px); }
-body.modalita-desktop .faccia-5 { transform: rotateY(-90deg)  translateZ(28px); }
-.pip { width: 8px; height: 8px; border-radius: 50%; background: #222; align-self: center; justify-self: center; }
-body.modalita-desktop .pip { width: 9px; height: 9px; }
+.faccia-1 { transform: rotateY(0deg)    translateZ(27px); }
+.faccia-6 { transform: rotateY(180deg)  translateZ(27px); }
+.faccia-3 { transform: rotateX(90deg)   translateZ(27px); }
+.faccia-4 { transform: rotateX(-90deg)  translateZ(27px); }
+.faccia-2 { transform: rotateY(90deg)   translateZ(27px); }
+.faccia-5 { transform: rotateY(-90deg)  translateZ(27px); }
+.pip { width: 9px; height: 9px; border-radius: 50%; background: #222; align-self: center; justify-self: center; }
 .pip-rossa { background: #e53935; }
 
-/* ===== PANNELLO GIOCATORI ===== */
 #pannello-giocatori {
-  position: fixed;
-  top: 10px; left: 10px; right: 74px;
-  z-index: 40;
-  background: rgba(10,16,22,0.85);
-  border: 1px solid rgba(255,215,0,0.3);
-  border-radius: 12px;
-  padding: 10px 14px;
-  backdrop-filter: blur(3px);
+  position: fixed; top: 10px; left: 10px; right: 74px;
+  z-index: 40; background: rgba(10, 16, 22, 0.85);
+  border: 1px solid rgba(255,215,0,0.25); border-radius: 12px;
+  padding: 10px 14px; backdrop-filter: blur(3px);
 }
 #pannello-giocatori.aperto { z-index: 70; }
-body.modalita-desktop #pannello-giocatori {
-  top: 18px; left: 18px; right: auto;
-  min-width: 200px; max-width: 260px;
-  z-index: 20;
-}
+body.modalita-desktop #pannello-giocatori { top: 18px; left: 18px; right: auto; min-width: 200px; max-width: 260px; z-index: 20; }
 #riga-turno { color: #ffd700; font-weight: bold; font-size: 14px; }
-#pannello-giocatori.aperto #riga-turno,
-body.modalita-desktop #riga-turno {
-  padding-bottom: 8px; margin-bottom: 4px;
-  border-bottom: 1px solid rgba(255,255,255,0.15);
-}
+#pannello-giocatori.aperto #riga-turno, body.modalita-desktop #riga-turno { padding-bottom: 8px; margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.15); }
 #lista-giocatori { display: none; max-height: 55vh; overflow-y: auto; }
-#pannello-giocatori.aperto #lista-giocatori,
-body.modalita-desktop #lista-giocatori { display: block; max-height: none; overflow-y: visible; }
+#pannello-giocatori.aperto #lista-giocatori, body.modalita-desktop #lista-giocatori { display: block; max-height: none; overflow-y: visible; }
 
 .giocatore-card { display: flex; align-items: center; gap: 6px; padding: 6px 0; font-size: 13px; }
 .giocatore-card a { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -166,26 +109,19 @@ body.modalita-desktop #lista-giocatori { display: block; max-height: none; overf
   border: 1.5px solid rgba(255,255,255,0.4); object-fit: cover;
 }
 .casella-mini { margin-left: auto; opacity: 0.75; font-size: 12px; flex-shrink: 0; }
-.countdown-turno {
-  font-size: 12px; font-weight: bold; color: #ffd700;
-  background: rgba(255,215,0,0.12); padding: 2px 7px; border-radius: 10px; flex-shrink: 0;
-}
+.countdown-turno { font-size: 12px; font-weight: bold; color: #ffd700; background: rgba(255,215,0,0.12); padding: 2px 7px; border-radius: 10px; flex-shrink: 0; }
 .countdown-turno.countdown-scaduto { color: #ff6b6b; background: rgba(255,107,107,0.15); }
 
 .stato-audio { font-size: 13px; flex-shrink: 0; }
 .stato-audio.attivo { color: #43a047; }
 .stato-audio.in-attesa { opacity: 0.6; }
-.btn-chiama-audio {
-  background: rgba(67,160,71,0.18); border: 1px solid rgba(67,160,71,0.4);
-  color: #43a047; border-radius: 8px; font-size: 12px; padding: 3px 6px; cursor: pointer; flex-shrink: 0;
-}
+.btn-chiama-audio { background: rgba(67,160,71,0.18); border: 1px solid rgba(67,160,71,0.4); color: #43a047; border-radius: 8px; font-size: 12px; padding: 3px 6px; cursor: pointer; flex-shrink: 0; }
 
 #backdrop-giocatori { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 35; }
 #backdrop-giocatori.aperto { display: block; }
 #giocatori-wrapper { position: fixed; bottom: 18px; left: 18px; z-index: 30; }
 body.modalita-desktop #backdrop-giocatori, body.modalita-desktop #giocatori-wrapper { display: none; }
 
-/* ===== Pulsanti tondi ===== */
 #btn-menu, #btn-chat, #btn-giocatori {
   position: relative;
   width: 52px; height: 52px; border-radius: 50%;
@@ -209,6 +145,7 @@ body.modalita-desktop #btn-menu, body.modalita-desktop #btn-chat { width: 60px; 
 }
 #pannello-menu button:hover { background: rgba(255,255,255,0.06); }
 #pannello-menu .voce-pericolo { color: #ff6b6b; }
+body:not(.modalita-desktop) #btn-toggle-fullscreen { display: none; }
 
 .badge-chat-partita {
   position: absolute; top: -4px; right: -4px;
@@ -230,7 +167,7 @@ body.modalita-desktop #messaggi-gioco { top: 18px; max-width: 60vw; }
   padding: 40px; background: rgba(10,16,22,0.55); pointer-events: none;
 }
 #flash-messaggio-gioco.visibile { display: flex; animation: flash-messaggio-anim 2.5s ease forwards; }
-#flash-messaggio-gioco span { font-size: clamp(24px,6vw,54px); font-weight: 900; color: #ffd700; text-shadow: 0 4px 18px rgba(0,0,0,0.7); max-width: 90vw; }
+#flash-messaggio-gioco span { font-size: clamp(24px, 6vw, 54px); font-weight: 900; color: #ffd700; text-shadow: 0 4px 18px rgba(0,0,0,0.7); max-width: 90vw; }
 @keyframes flash-messaggio-anim {
   0%   { opacity: 0; transform: scale(0.85); }
   8%   { opacity: 1; transform: scale(1); }
@@ -238,26 +175,36 @@ body.modalita-desktop #messaggi-gioco { top: 18px; max-width: 60vw; }
   100% { opacity: 0; transform: scale(1.04); }
 }
 
-.popup-ordine-turni {
-  background: #121c26; border: 2px solid #ffd700; border-radius: 14px;
-  padding: 30px; text-align: center; max-width: 480px; width: 92vw; max-height: 82vh; overflow-y: auto;
+.overlay {
+  display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.8); align-items: center; justify-content: center; z-index: 1000;
 }
-.popup-ordine-turni h2 { color: #ffd700; margin-top: 0; }
-.riga-ordine-turno {
+.overlay.aperto { display: flex; }
+.popup-vittoria { background: #121c26; border: 2px solid #ffd700; border-radius: 12px; padding: 40px; text-align: center; }
+.popup-vittoria button { margin-top: 20px; padding: 12px 24px; background: #ffd700; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+
+.popup-determinazione {
+  background: #121c26; border: 2px solid #ffd700; border-radius: 14px;
+  padding: 26px; text-align: center; max-width: 480px; width: 92vw; max-height: 88vh;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.popup-determinazione h2 { color: #ffd700; margin: 0 0 6px; }
+.sottotitolo-determinazione { color: #ccc; font-size: 14px; margin: 0 0 16px; min-height: 20px; }
+#lista-determinazione { overflow-y: auto; flex-shrink: 1; margin-bottom: 4px; }
+.determinazione-riga {
   display: flex; align-items: center; gap: 10px;
   background: rgba(255,255,255,0.04); border-radius: 10px;
   padding: 10px 14px; margin-bottom: 8px; font-size: 14px;
-  opacity: 0; transform: translateY(8px);
-  animation: comparsa-riga-ordine 0.4s ease forwards;
+  transition: background 0.2s;
 }
-@keyframes comparsa-riga-ordine { to { opacity: 1; transform: translateY(0); } }
-.riga-ordine-turno .posizione-turno {
-  width: 26px; height: 26px; border-radius: 50%; background: #ffd700; color: #111;
-  font-weight: 900; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0;
-}
-.riga-ordine-turno .nome-ordine { flex-grow: 1; text-align: left; font-weight: bold; }
-.riga-ordine-turno .punteggio-ordine { color: #ffd700; font-weight: bold; font-size: 15px; }
-.sottotitolo-ordine { color: #999; font-size: 13px; margin-top: 16px; }
+.determinazione-riga-attiva { background: rgba(255,215,0,0.12); border: 1px solid rgba(255,215,0,0.4); }
+.determinazione-nome { flex-grow: 1; text-align: left; font-weight: bold; }
+.determinazione-risultato { color: #ffd700; font-weight: bold; font-size: 15px; }
+.determinazione-in-corso { color: #ffd700; font-weight: bold; font-size: 13px; animation: pulsa-determinazione 1s ease-in-out infinite; }
+.determinazione-attesa { color: #777; font-size: 13px; }
+.determinazione-tag-spareggio { font-size: 14px; }
+@keyframes pulsa-determinazione { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+#slot-dadi-determinazione { flex-shrink: 0; display: flex; justify-content: center; padding-top: 6px; }
 
 #popup-richiesta-audio { position: fixed; top: 70px; left: 50%; transform: translateX(-50%); z-index: 90; width: min(90vw, 320px); }
 #popup-richiesta-audio.nascosto { display: none; }
@@ -283,15 +230,40 @@ body.modalita-desktop #messaggi-gioco { top: 18px; max-width: 60vw; }
 #chat-input { flex-grow: 1; border: none; background: #0d1620; color: #fff; padding: 10px; font-size: 13px; }
 #chat-input-riga button { border: none; background: #ffd700; color: #000; width: 44px; cursor: pointer; font-weight: bold; }
 
-.overlay {
-  display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(0,0,0,0.8); align-items: center; justify-content: center; z-index: 1000;
+#overlayRuotaTelefono {
+  display: none; position: fixed; inset: 0; background: #0d1620; color: #ffd700; z-index: 9999;
+  flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px;
 }
-.overlay.aperto { display: flex; }
-.popup-vittoria { background: #121c26; border: 2px solid #ffd700; border-radius: 12px; padding: 40px; text-align: center; }
-.popup-vittoria button { margin-top: 20px; padding: 12px 24px; background: #ffd700; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+.ruota-icona { font-size: 60px; margin-bottom: 14px; animation: ruota-pulse 1.6s ease-in-out infinite; }
+.ruota-testo { font-size: 18px; font-weight: bold; margin: 0 0 6px; }
+.ruota-sottotesto { font-size: 13px; color: #aaa; margin: 0; max-width: 280px; }
+@keyframes ruota-pulse { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(90deg); } }
+
+body.richiede-rotazione #overlayRuotaTelefono { display: flex; }
+body.richiede-rotazione #scena,
+body.richiede-rotazione #pannello-giocatori,
+body.richiede-rotazione #menu-wrapper,
+body.richiede-rotazione #chat-wrapper,
+body.richiede-rotazione #giocatori-wrapper,
+body.richiede-rotazione #backdrop-giocatori,
+body.richiede-rotazione #messaggi-gioco,
+body.richiede-rotazione #overlay-determinazione,
+body.richiede-rotazione #overlay-vittoria,
+body.richiede-rotazione #popup-richiesta-audio,
+body.richiede-rotazione #flash-messaggio-gioco {
+  display: none !important;
+}
 
 @media (max-width: 360px) {
   #pannello-menu { width: 185px; }
   #popup-richiesta-audio { width: calc(100vw - 24px); }
+  .dado-3d { width: 46px; height: 46px; }
+  .faccia { width: 46px; height: 46px; padding: 5px; }
+  .faccia-1 { transform: rotateY(0deg)   translateZ(23px); }
+  .faccia-6 { transform: rotateY(180deg) translateZ(23px); }
+  .faccia-3 { transform: rotateX(90deg)  translateZ(23px); }
+  .faccia-4 { transform: rotateX(-90deg) translateZ(23px); }
+  .faccia-2 { transform: rotateY(90deg)  translateZ(23px); }
+  .faccia-5 { transform: rotateY(-90deg) translateZ(23px); }
+  .pip { width: 7px; height: 7px; }
 }
