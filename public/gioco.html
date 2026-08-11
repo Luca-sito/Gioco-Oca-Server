@@ -8,13 +8,20 @@
 </head>
 <body>
 
+<div id="overlayRuotaTelefono">
+  <div class="ruota-icona">📱</div>
+  <p class="ruota-testo">Ruota il telefono in orizzontale</p>
+  <p class="ruota-sottotesto">Per continuare a giocare</p>
+</div>
+
 <div id="flash-messaggio-gioco"><span></span></div>
 
-<div id="overlay-ordine-turni" class="overlay">
-  <div class="popup-ordine-turni">
-    <h2>🎲 Si decide chi inizia!</h2>
-    <div id="lista-ordine-turni"></div>
-    <p class="sottotitolo-ordine">La partita comincia tra un istante...</p>
+<div id="overlay-determinazione" class="overlay">
+  <div class="popup-determinazione">
+    <h2>🎲 CHI INIZIA?</h2>
+    <p class="sottotitolo-determinazione" id="sottotitolo-determinazione">I giocatori tirano i dadi uno alla volta per stabilire l'ordine.</p>
+    <div id="lista-determinazione"></div>
+    <div id="slot-dadi-determinazione"></div>
   </div>
 </div>
 
@@ -30,31 +37,28 @@
 
 <div id="scena">
   <div id="area-tabellone">
-    <div id="rotatore-tabellone">
-      <img id="immagine-tabellone" src="https://gioco-oca-server.onrender.com/Immagini/tabellone.png" alt="Tabellone">
-      <div id="contenitore-pedine"></div>
-    </div>
-  </div>
-
-  <div id="area-dadi" class="disabilitato" title="Clicca per tirare">
-    <div id="dado1" class="dado-3d">
-      <div class="cubo">
-        <div class="faccia faccia-1"><span class="pip pip-rossa" style="grid-area:2/2;"></span></div>
-        <div class="faccia faccia-2"><span class="pip" style="grid-area:1/3;"></span><span class="pip" style="grid-area:3/1;"></span></div>
-        <div class="faccia faccia-3"><span class="pip" style="grid-area:1/3;"></span><span class="pip" style="grid-area:2/2;"></span><span class="pip" style="grid-area:3/1;"></span></div>
-        <div class="faccia faccia-4"><span class="pip pip-rossa" style="grid-area:1/1;"></span><span class="pip pip-rossa" style="grid-area:1/3;"></span><span class="pip pip-rossa" style="grid-area:3/1;"></span><span class="pip pip-rossa" style="grid-area:3/3;"></span></div>
-        <div class="faccia faccia-5"><span class="pip" style="grid-area:1/1;"></span><span class="pip" style="grid-area:1/3;"></span><span class="pip" style="grid-area:2/2;"></span><span class="pip" style="grid-area:3/1;"></span><span class="pip" style="grid-area:3/3;"></span></div>
-        <div class="faccia faccia-6"><span class="pip" style="grid-area:1/1;"></span><span class="pip" style="grid-area:2/1;"></span><span class="pip" style="grid-area:3/1;"></span><span class="pip" style="grid-area:1/3;"></span><span class="pip" style="grid-area:2/3;"></span><span class="pip" style="grid-area:3/3;"></span></div>
+    <img id="immagine-tabellone" src="immagini/tabellone.png" alt="Tabellone">
+    <div id="contenitore-pedine"></div>
+    <div id="area-dadi" class="disabilitato" title="Clicca per tirare">
+      <div id="dado1" class="dado-3d">
+        <div class="cubo">
+          <div class="faccia faccia-1"><span class="pip pip-rossa" style="grid-area:2/2;"></span></div>
+          <div class="faccia faccia-2"><span class="pip" style="grid-area:1/3;"></span><span class="pip" style="grid-area:3/1;"></span></div>
+          <div class="faccia faccia-3"><span class="pip" style="grid-area:1/3;"></span><span class="pip" style="grid-area:2/2;"></span><span class="pip" style="grid-area:3/1;"></span></div>
+          <div class="faccia faccia-4"><span class="pip pip-rossa" style="grid-area:1/1;"></span><span class="pip pip-rossa" style="grid-area:1/3;"></span><span class="pip pip-rossa" style="grid-area:3/1;"></span><span class="pip pip-rossa" style="grid-area:3/3;"></span></div>
+          <div class="faccia faccia-5"><span class="pip" style="grid-area:1/1;"></span><span class="pip" style="grid-area:1/3;"></span><span class="pip" style="grid-area:2/2;"></span><span class="pip" style="grid-area:3/1;"></span><span class="pip" style="grid-area:3/3;"></span></div>
+          <div class="faccia faccia-6"><span class="pip" style="grid-area:1/1;"></span><span class="pip" style="grid-area:2/1;"></span><span class="pip" style="grid-area:3/1;"></span><span class="pip" style="grid-area:1/3;"></span><span class="pip" style="grid-area:2/3;"></span><span class="pip" style="grid-area:3/3;"></span></div>
+        </div>
       </div>
-    </div>
-    <div id="dado2" class="dado-3d">
-      <div class="cubo">
-        <div class="faccia faccia-1"><span class="pip pip-rossa" style="grid-area:2/2;"></span></div>
-        <div class="faccia faccia-2"><span class="pip" style="grid-area:1/3;"></span><span class="pip" style="grid-area:3/1;"></span></div>
-        <div class="faccia faccia-3"><span class="pip" style="grid-area:1/3;"></span><span class="pip" style="grid-area:2/2;"></span><span class="pip" style="grid-area:3/1;"></span></div>
-        <div class="faccia faccia-4"><span class="pip pip-rossa" style="grid-area:1/1;"></span><span class="pip pip-rossa" style="grid-area:1/3;"></span><span class="pip pip-rossa" style="grid-area:3/1;"></span><span class="pip pip-rossa" style="grid-area:3/3;"></span></div>
-        <div class="faccia faccia-5"><span class="pip" style="grid-area:1/1;"></span><span class="pip" style="grid-area:1/3;"></span><span class="pip" style="grid-area:2/2;"></span><span class="pip" style="grid-area:3/1;"></span><span class="pip" style="grid-area:3/3;"></span></div>
-        <div class="faccia faccia-6"><span class="pip" style="grid-area:1/1;"></span><span class="pip" style="grid-area:2/1;"></span><span class="pip" style="grid-area:3/1;"></span><span class="pip" style="grid-area:1/3;"></span><span class="pip" style="grid-area:2/3;"></span><span class="pip" style="grid-area:3/3;"></span></div>
+      <div id="dado2" class="dado-3d">
+        <div class="cubo">
+          <div class="faccia faccia-1"><span class="pip pip-rossa" style="grid-area:2/2;"></span></div>
+          <div class="faccia faccia-2"><span class="pip" style="grid-area:1/3;"></span><span class="pip" style="grid-area:3/1;"></span></div>
+          <div class="faccia faccia-3"><span class="pip" style="grid-area:1/3;"></span><span class="pip" style="grid-area:2/2;"></span><span class="pip" style="grid-area:3/1;"></span></div>
+          <div class="faccia faccia-4"><span class="pip pip-rossa" style="grid-area:1/1;"></span><span class="pip pip-rossa" style="grid-area:1/3;"></span><span class="pip pip-rossa" style="grid-area:3/1;"></span><span class="pip pip-rossa" style="grid-area:3/3;"></span></div>
+          <div class="faccia faccia-5"><span class="pip" style="grid-area:1/1;"></span><span class="pip" style="grid-area:1/3;"></span><span class="pip" style="grid-area:2/2;"></span><span class="pip" style="grid-area:3/1;"></span><span class="pip" style="grid-area:3/3;"></span></div>
+          <div class="faccia faccia-6"><span class="pip" style="grid-area:1/1;"></span><span class="pip" style="grid-area:2/1;"></span><span class="pip" style="grid-area:3/1;"></span><span class="pip" style="grid-area:1/3;"></span><span class="pip" style="grid-area:2/3;"></span><span class="pip" style="grid-area:3/3;"></span></div>
+        </div>
       </div>
     </div>
   </div>
