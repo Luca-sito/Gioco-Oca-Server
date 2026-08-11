@@ -36,9 +36,6 @@ let mioTurno = false;
 let turnoAttualeId = null;
 let timerRiconnessione = null;
 
-// NUOVO: stato esplicito di fase — "determinazione" (Chi inizia?) oppure "normale"
-// (partita vera). Il click sui dadi controlla questa variabile per sapere quale
-// messaggio mandare al server.
 let faseAttuale = "normale";
 let possoTirareIoInDeterminazione = false;
 
@@ -97,9 +94,9 @@ function suonaClick(volume, ritardoMs) {
 }
 function suonaTiroDadi() { if (!suoniAttivi) return; for (let i = 0; i < 7; i++) suonaClick(0.1, i * 130); }
 function suonaAtterraggioDadi() { suonaTono(180, 90, "square", 0.14, 0); suonaClick(0.15, 20); }
-function suonaPassoPedina() { suonaTono(520, 55, "sine", 0.09, 0); } // invariato, come richiesto
+function suonaPassoPedina() { suonaTono(520, 55, "sine", 0.09, 0); }
 function suonaTuoTurno() { suonaTono(660, 120, "sine", 0.11, 0); suonaTono(880, 160, "sine", 0.11, 120); }
-function suonaVittoria() { // invariato, come richiesto
+function suonaVittoria() {
   suonaTono(523, 130, "sine", 0.13, 0); suonaTono(659, 130, "sine", 0.13, 130);
   suonaTono(784, 130, "sine", 0.13, 260); suonaTono(1047, 260, "sine", 0.14, 390);
 }
@@ -110,7 +107,7 @@ function toggleSuoni() { impostaSuoni(!suoniAttivi); }
 function impostaSuoni(attivi) { suoniAttivi = attivi; localStorage.setItem("suoniAttivi", attivi ? "on" : "off"); aggiornaTestoBottoneSuoni(); }
 function aggiornaTestoBottoneSuoni() { const b = document.getElementById("btn-toggle-suoni"); if (b) b.textContent = suoniAttivi ? "🔊 Suoni: On" : "🔇 Suoni: Off"; }
 
-// ===== TUTTO SCHERMO (solo Computer — nascosto via CSS su mobile) =====
+// ===== TUTTO SCHERMO (solo Computer) =====
 function toggleFullscreen() {
   if (!document.fullscreenElement && !document.webkitFullscreenElement) {
     const richiesta = document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen;
@@ -132,10 +129,10 @@ function aggiornaTestoBottoneFullscreen() {
 document.addEventListener("fullscreenchange", aggiornaTestoBottoneFullscreen);
 document.addEventListener("webkitfullscreenchange", aggiornaTestoBottoneFullscreen);
 
-// ===== ORIENTAMENTO: rilevamento reale via matchMedia — NIENTE rotazione grafica.
-// In verticale il gioco è semplicemente bloccato da un overlay; in orizzontale il
-// tabellone (già naturalmente più largo che alto) si dimensiona per riempire lo
-// spazio reale disponibile, senza mai scorrere. =====
+// ===== ORIENTAMENTO: rilevamento reale via matchMedia — niente rotazione grafica.
+// In verticale il gioco è bloccato da un overlay; in orizzontale il tabellone (già
+// naturalmente più largo che alto) si dimensiona per riempire lo spazio reale
+// disponibile, senza mai scorrere. =====
 function calcolaEAggiornaOrientamento() {
   const eDesktop = document.body.classList.contains("modalita-desktop");
   const inLandscape = window.matchMedia("(orientation: landscape)").matches;
@@ -150,10 +147,6 @@ function rilevaEImpostaModalitaDesktop() {
   document.body.classList.toggle("modalita-desktop", nonTouch && puntatorePreciso && window.innerWidth >= 1000);
 }
 
-// Un'unica funzione di calcolo layout: il tabellone resta SEMPRE nella sua forma
-// naturale (mai ruotato), dimensionato per stare interamente nello spazio libero
-// reale (larghezza E altezza), con margini piccoli e proporzionali — mai valori
-// fissi legati a un singolo modello di telefono.
 function aggiornaLayoutTabellone() {
   const areaTabellone = document.getElementById("area-tabellone");
   const immagine = document.getElementById("immagine-tabellone");
@@ -193,9 +186,6 @@ function inizializzaGestioneOrientamento() {
   aggiornaLayoutTabellone();
 
   window.addEventListener("resize", gestisciResize);
-  // Su molti browser mobili le dimensioni non sono ancora aggiornate nell'istante
-  // esatto in cui scatta orientationchange: più controlli ravvicinati dopo l'evento
-  // evitano che la schermata resti bloccata sull'overlay anche dopo aver già ruotato.
   window.addEventListener("orientationchange", () => {
     setTimeout(gestisciResize, 50);
     setTimeout(gestisciResize, 300);
@@ -214,9 +204,7 @@ function riposizionaTuttePedine() {
   ultimoStatoGiocatori.forEach(g => { const p = document.getElementById("pedina-" + g.id); if (p) posizionaPedina(p, g.posizione); });
 }
 
-// ===== MESSAGGIO A TUTTO SCHERMO (per gli eventi speciali durante il gioco normale
-// — NON per l'annuncio del primo movimento di "Chi inizia?", che va invece nella
-// striscia in alto, come richiesto) =====
+// ===== MESSAGGIO A TUTTO SCHERMO =====
 let timerFlashMessaggio = null;
 function mostraMessaggioGiocoGrande(testo) {
   if (!testo) return;
@@ -293,8 +281,6 @@ function gestisciStatoDeterminazione(dati) {
 }
 
 function gestisciRisultatoDeterminazione(dati) {
-  // Il lancio è animato per TUTTI gli spettatori, non solo per chi ha tirato: ogni
-  // tiro deve essere visto realmente accadere, non solo "assegnato" in silenzio.
   animaLancioDadi(dati.dado1, dati.dado2, () => {
     const sottotitolo = document.getElementById("sottotitolo-determinazione");
     if (sottotitolo) sottotitolo.textContent = dati.nome + " ha fatto " + dati.valoreDado + (dati.automatico ? " (tempo scaduto)" : "") + "!";
@@ -306,8 +292,6 @@ function gestisciDeterminazioneCompletata(dati) {
   document.getElementById("overlay-determinazione").classList.remove("aperto");
   riportaDadiAllaPartita();
 
-  // Impostato SUBITO, prima dell'animazione: serve a "animaSaltoPedina" per
-  // calcolare correttamente colore/indice del giocatore che si muove
   ultimoStatoGiocatori = dati.giocatori;
 
   document.getElementById("messaggi-gioco").textContent =
@@ -329,9 +313,7 @@ function gestisciDeterminazioneCompletata(dati) {
   });
 }
 
-// ===== COUNTDOWN DI TURNO — con il fix del bug segnalato: il countdown si
-// congela nell'ISTANTE del click locale, senza aspettare la risposta del server
-// (che può richiedere fino a ~1,5s per il vero dado da random.org) =====
+// ===== COUNTDOWN DI TURNO — fix del bug: si congela nell'ISTANTE del click locale =====
 let tempoInizioTurnoAttuale = null, durataMossaMsAttuale = null, intervalCountdown = null, ultimoSecondoAvviso = null;
 let turnoLocalmenteCompletato = false;
 
@@ -776,8 +758,6 @@ document.getElementById("btn-chat").onclick = (e) => {
   if (!pannello.classList.contains("nascosto")) { messaggiChatNonLetti = 0; aggiornaBadgeChatPartita(); }
 };
 
-// Click sui dadi: unico gestore per entrambe le fasi. Ferma SUBITO il countdown
-// visivo locale, prima ancora che il server risponda — è il fix del bug del timer.
 document.getElementById("area-dadi").onclick = () => {
   const possoTirare = faseAttuale === "determinazione" ? possoTirareIoInDeterminazione : mioTurno;
   if (!possoTirare) return;
