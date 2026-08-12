@@ -6,6 +6,7 @@ html,
 body {
     margin: 0;
     padding: 0;
+    width: 100%;
     height: var(--altezza-reale, 100vh);
     overflow: hidden;
     background: #0d1620;
@@ -13,9 +14,16 @@ body {
     font-family: Arial, sans-serif;
 }
 
+body {
+    position: fixed;
+    inset: 0;
+}
+
 #scena {
     position: fixed;
     inset: 0;
+    width: 100%;
+    height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -24,31 +32,28 @@ body {
 
 #area-tabellone {
     position: relative;
-    overflow: hidden;
+    overflow: visible;
     flex-shrink: 0;
 }
 
 #rotatore-tabellone {
     position: absolute;
-    top: 50%;
-    left: 50%;
+    inset: 0;
     width: 100%;
     height: 100%;
-    transform: translate(-50%, -50%);
     transform-origin: center center;
     transition: transform 0.3s ease;
 }
 
 body.tabellone-ruotato #rotatore-tabellone {
-    transform:
-        translate(-50%, -50%)
-        rotate(90deg);
+    transform: none;
 }
 
 #immagine-tabellone {
     width: 100%;
     height: 100%;
     display: block;
+    object-fit: fill;
     border-radius: 14px;
     box-shadow:
         0 10px 40px rgba(0, 0, 0, 0.6);
@@ -56,8 +61,7 @@ body.tabellone-ruotato #rotatore-tabellone {
 
 #contenitore-pedine {
     position: absolute;
-    top: 0;
-    left: 0;
+    inset: 0;
     width: 100%;
     height: 100%;
     pointer-events: none;
@@ -69,6 +73,7 @@ body.tabellone-ruotato #rotatore-tabellone {
     transition:
         left 0.5s ease,
         top 0.5s ease;
+    z-index: 15;
 }
 
 .pedina-interno {
@@ -76,7 +81,7 @@ body.tabellone-ruotato #rotatore-tabellone {
 }
 
 body.tabellone-ruotato .pedina-interno {
-    transform: rotate(-90deg);
+    transform: none;
 }
 
 .pedina-salta {
@@ -103,7 +108,9 @@ body.tabellone-ruotato .pedina-interno {
     }
 }
 
-/* DADI */
+/* =========================================================
+   DADI
+   ========================================================= */
 
 #area-dadi {
     position: absolute;
@@ -111,6 +118,8 @@ body.tabellone-ruotato .pedina-interno {
     left: 50%;
     transform: translateX(-50%);
     display: flex;
+    align-items: center;
+    justify-content: center;
     gap: 16px;
     cursor: pointer;
     padding: 14px 20px;
@@ -118,10 +127,10 @@ body.tabellone-ruotato .pedina-interno {
     border: 1px solid rgba(255, 215, 0, 0.3);
     border-radius: 16px;
     backdrop-filter: blur(3px);
-    z-index: 20;
+    z-index: 100;
     transition:
-        opacity 0.2s,
-        background 0.2s;
+        opacity 0.2s ease,
+        background 0.2s ease;
 }
 
 #area-dadi.dadi-in-popup {
@@ -144,6 +153,7 @@ body.tabellone-ruotato .pedina-interno {
     width: 54px;
     height: 54px;
     perspective: 600px;
+    flex: 0 0 54px;
 }
 
 .dado-3d .cubo {
@@ -222,14 +232,16 @@ body.tabellone-ruotato .pedina-interno {
     background: #e53935;
 }
 
-/* GIOCATORI */
+/* =========================================================
+   PANNELLO GIOCATORI
+   ========================================================= */
 
 #pannello-giocatori {
     position: fixed;
     top: 10px;
     left: 10px;
     right: 74px;
-    z-index: 40;
+    z-index: 200;
     background: rgba(10, 16, 22, 0.85);
     border: 1px solid rgba(255, 215, 0, 0.25);
     border-radius: 12px;
@@ -238,7 +250,7 @@ body.tabellone-ruotato .pedina-interno {
 }
 
 #pannello-giocatori.aperto {
-    z-index: 70;
+    z-index: 500;
 }
 
 body.modalita-desktop #pannello-giocatori {
@@ -247,7 +259,7 @@ body.modalita-desktop #pannello-giocatori {
     right: auto;
     min-width: 200px;
     max-width: 260px;
-    z-index: 20;
+    z-index: 200;
 }
 
 #riga-turno {
@@ -331,12 +343,14 @@ body.modalita-desktop #lista-giocatori {
 
 .countdown-turno.countdown-scaduto {
     color: #ff6b6b;
-    background: rgba(255, 107, 107, 0.15);
+    background:
+        rgba(255, 107, 107, 0.15);
 }
 
 .countdown-turno.countdown-fermo {
     color: #43a047;
-    background: rgba(67, 160, 71, 0.15);
+    background:
+        rgba(67, 160, 71, 0.15);
 }
 
 .stato-audio {
@@ -353,8 +367,10 @@ body.modalita-desktop #lista-giocatori {
 }
 
 .btn-chiama-audio {
-    background: rgba(67, 160, 71, 0.18);
-    border: 1px solid rgba(67, 160, 71, 0.4);
+    background:
+        rgba(67, 160, 71, 0.18);
+    border:
+        1px solid rgba(67, 160, 71, 0.4);
     color: #43a047;
     border-radius: 8px;
     font-size: 12px;
@@ -363,12 +379,16 @@ body.modalita-desktop #lista-giocatori {
     flex-shrink: 0;
 }
 
+/* =========================================================
+   PULSANTE GIOCATORI
+   ========================================================= */
+
 #backdrop-giocatori {
     display: none;
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.5);
-    z-index: 35;
+    z-index: 450;
 }
 
 #backdrop-giocatori.aperto {
@@ -379,7 +399,7 @@ body.modalita-desktop #lista-giocatori {
     position: fixed;
     bottom: 18px;
     left: 18px;
-    z-index: 30;
+    z-index: 300;
 }
 
 body.modalita-desktop #backdrop-giocatori,
@@ -387,7 +407,9 @@ body.modalita-desktop #giocatori-wrapper {
     display: none;
 }
 
-/* MENU */
+/* =========================================================
+   PULSANTI PRINCIPALI
+   ========================================================= */
 
 #btn-menu,
 #btn-chat,
@@ -396,11 +418,18 @@ body.modalita-desktop #giocatori-wrapper {
     width: 52px;
     height: 52px;
     border-radius: 50%;
-    background: rgba(10, 16, 22, 0.85);
-    border: 1px solid rgba(255, 215, 0, 0.3);
+    background:
+        rgba(10, 16, 22, 0.85);
+    border:
+        1px solid rgba(255, 215, 0, 0.3);
     color: #ffd700;
     font-size: 20px;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    margin: 0;
 }
 
 body.modalita-desktop #btn-menu,
@@ -410,11 +439,15 @@ body.modalita-desktop #btn-chat {
     font-size: 18px;
 }
 
+/* =========================================================
+   MENU
+   ========================================================= */
+
 #menu-wrapper {
     position: fixed;
     top: 14px;
     right: 14px;
-    z-index: 45;
+    z-index: 300;
 }
 
 #pannello-menu {
@@ -422,7 +455,8 @@ body.modalita-desktop #btn-chat {
     top: 58px;
     right: 0;
     background: #121c26;
-    border: 1px solid rgba(255, 215, 0, 0.25);
+    border:
+        1px solid rgba(255, 215, 0, 0.25);
     border-radius: 10px;
     overflow: hidden;
     width: 215px;
@@ -449,14 +483,16 @@ body.modalita-desktop #btn-chat {
 }
 
 #pannello-menu button:hover {
-    background: rgba(255, 255, 255, 0.06);
+    background:
+        rgba(255, 255, 255, 0.06);
 }
 
 #pannello-menu .voce-pericolo {
     color: #ff6b6b;
 }
 
-body:not(.modalita-desktop) #btn-toggle-fullscreen {
+body:not(.modalita-desktop)
+#btn-toggle-fullscreen {
     display: none;
 }
 
@@ -469,76 +505,69 @@ body:not(.modalita-desktop) #btn-toggle-fullscreen {
     color: #222;
 }
 
-/* CHAT */
-
-.badge-chat-partita {
-    position: absolute;
-    top: -4px;
-    right: -4px;
-    background: #e53935;
-    color: white;
-    font-size: 10px;
-    font-weight: bold;
-    min-width: 16px;
-    height: 16px;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0 3px;
-}
+/* =========================================================
+   MESSAGGI
+   ========================================================= */
 
 #messaggi-gioco {
     position: fixed;
     top: 62px;
     left: 50%;
     transform: translateX(-50%);
-    background: rgba(10, 16, 22, 0.85);
+    background:
+        rgba(10, 16, 22, 0.85);
     color: #ffd700;
     padding: 8px 18px;
     border-radius: 20px;
     font-size: 13px;
     min-height: 14px;
     text-align: center;
-    z-index: 15;
-    max-width: 82vw;
+    z-index: 250;
+    max-width: 82%;
+    pointer-events: none;
 }
 
 body.modalita-desktop #messaggi-gioco {
     top: 18px;
-    max-width: 60vw;
+    max-width: 60%;
 }
 
-/* FLASH */
+/* =========================================================
+   FLASH
+   ========================================================= */
 
 #flash-messaggio-gioco {
     display: none;
     position: fixed;
     inset: 0;
-    z-index: 500;
+    z-index: 900;
     align-items: center;
     justify-content: center;
     text-align: center;
     padding: 40px;
-    background: rgba(10, 16, 22, 0.55);
+    background:
+        rgba(10, 16, 22, 0.55);
     pointer-events: none;
 }
 
 #flash-messaggio-gioco.visibile {
     display: flex;
-    animation: flash-messaggio-anim 2.5s ease forwards;
+    animation:
+        flash-messaggio-anim 2.5s ease forwards;
 }
 
 #flash-messaggio-gioco span {
-    font-size: clamp(24px, 6vw, 54px);
+    font-size:
+        clamp(24px, 6vw, 54px);
     font-weight: 900;
     color: #ffd700;
     text-shadow:
         0 4px 18px rgba(0, 0, 0, 0.7);
-    max-width: 90vw;
+    max-width: 90%;
 }
 
 @keyframes flash-messaggio-anim {
+
     0% {
         opacity: 0;
         transform: scale(0.85);
@@ -560,16 +589,18 @@ body.modalita-desktop #messaggi-gioco {
     }
 }
 
-/* VITTORIA */
+/* =========================================================
+   OVERLAY / VITTORIA
+   ========================================================= */
 
 .overlay {
     display: none;
     position: fixed;
-    top: 0;
-    left: 0;
+    inset: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.8);
+    background:
+        rgba(0, 0, 0, 0.8);
     align-items: center;
     justify-content: center;
     z-index: 1000;
@@ -597,7 +628,9 @@ body.modalita-desktop #messaggi-gioco {
     cursor: pointer;
 }
 
-/* DETERMINAZIONE */
+/* =========================================================
+   DETERMINAZIONE
+   ========================================================= */
 
 .popup-determinazione {
     background: #121c26;
@@ -635,17 +668,21 @@ body.modalita-desktop #messaggi-gioco {
     display: flex;
     align-items: center;
     gap: 10px;
-    background: rgba(255, 255, 255, 0.04);
+    background:
+        rgba(255, 255, 255, 0.04);
     border-radius: 10px;
     padding: 10px 14px;
     margin-bottom: 8px;
     font-size: 14px;
-    transition: background 0.2s;
+    transition:
+        background 0.2s ease;
 }
 
 .determinazione-riga-attiva {
-    background: rgba(255, 215, 0, 0.12);
-    border: 1px solid rgba(255, 215, 0, 0.4);
+    background:
+        rgba(255, 215, 0, 0.12);
+    border:
+        1px solid rgba(255, 215, 0, 0.4);
 }
 
 .determinazione-riga-finale {
@@ -656,6 +693,7 @@ body.modalita-desktop #messaggi-gioco {
 }
 
 @keyframes comparsa-riga-finale {
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -707,6 +745,7 @@ body.modalita-desktop #messaggi-gioco {
 }
 
 @keyframes pulsa-determinazione {
+
     0%,
     100% {
         opacity: 1;
@@ -724,15 +763,17 @@ body.modalita-desktop #messaggi-gioco {
     padding-top: 6px;
 }
 
-/* AUDIO */
+/* =========================================================
+   RICHIESTA AUDIO
+   ========================================================= */
 
 #popup-richiesta-audio {
     position: fixed;
     top: 70px;
     left: 50%;
     transform: translateX(-50%);
-    z-index: 90;
-    width: min(90vw, 320px);
+    z-index: 950;
+    width: min(90%, 320px);
 }
 
 #popup-richiesta-audio.nascosto {
@@ -753,11 +794,6 @@ body.modalita-desktop #messaggi-gioco {
     margin: 0 0 12px;
     font-size: 14px;
     color: #eee;
-}
-
-.richiest-audio-bottoni {
-    display: flex;
-    gap: 10px;
 }
 
 .richiesta-audio-bottoni {
@@ -784,13 +820,15 @@ body.modalita-desktop #messaggi-gioco {
     color: white;
 }
 
-/* CHAT */
+/* =========================================================
+   CHAT
+   ========================================================= */
 
 #chat-wrapper {
     position: fixed;
     bottom: 18px;
     right: 18px;
-    z-index: 30;
+    z-index: 300;
 }
 
 #pannello-chat {
@@ -800,7 +838,8 @@ body.modalita-desktop #messaggi-gioco {
     width: 280px;
     height: 320px;
     background: #121c26;
-    border: 1px solid rgba(255, 215, 0, 0.25);
+    border:
+        1px solid rgba(255, 215, 0, 0.25);
     border-radius: 12px;
     display: flex;
     flex-direction: column;
@@ -837,7 +876,9 @@ body.modalita-desktop #messaggi-gioco {
 
 #chat-input {
     flex-grow: 1;
+    min-width: 0;
     border: none;
+    outline: none;
     background: #0d1620;
     color: #fff;
     padding: 10px;
@@ -851,23 +892,376 @@ body.modalita-desktop #messaggi-gioco {
     width: 44px;
     cursor: pointer;
     font-weight: bold;
+    flex: 0 0 44px;
 }
 
-/* MOBILE */
+/* =========================================================
+   DESKTOP
+   ========================================================= */
 
-@media (max-width: 360px) {
+@media (min-width: 1000px) {
+
+    #scena {
+        width: 100%;
+        height: 100%;
+        transform: none;
+    }
+
+    #area-tabellone {
+        width: auto;
+        height: auto;
+    }
+
+    #rotatore-tabellone {
+        transform: none !important;
+    }
+}
+
+/* =========================================================
+   SMARTPHONE PORTRAIT
+   LANDSCAPE VIRTUALE
+   ========================================================= */
+
+@media (orientation: portrait) and (max-width: 999px) {
+
+    html,
+    body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+    }
+
+    /*
+     * Il telefono rimane fisicamente verticale.
+     *
+     * L'ambiente interno viene però costruito
+     * con dimensioni landscape:
+     *
+     * width  = altezza fisica
+     * height = larghezza fisica
+     *
+     * e poi viene ruotato di 90°.
+     */
+
+    #scena {
+        position: fixed;
+
+        width: 100vh;
+        height: 100vw;
+
+        top: 50%;
+        left: 50%;
+
+        inset: auto;
+
+        transform:
+            translate(-50%, -50%)
+            rotate(90deg);
+
+        transform-origin: center center;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        overflow: hidden;
+
+        z-index: 1;
+    }
+
+    /*
+     * Il JavaScript continua a poter aggiungere
+     * la classe tabellone-ruotato.
+     *
+     * Qui la annulliamo sul tabellone perché
+     * ora ruotiamo già TUTTA la scena.
+     */
+
+    body.tabellone-ruotato #rotatore-tabellone {
+        transform: none !important;
+    }
+
+    /*
+     * Dimensionamento virtuale del tabellone.
+     *
+     * Il JS può assegnare width/height inline:
+     * questi override fanno sì che il tabellone
+     * continui a rispettare la superficie
+     * landscape virtuale.
+     */
+
+    #area-tabellone {
+        position: relative;
+
+        width:
+            min(
+                calc(100vh - 20px),
+                calc((100vw - 20px) * 1.48)
+            ) !important;
+
+        height:
+            min(
+                calc(100vw - 20px),
+                calc((100vh - 20px) / 1.48)
+            ) !important;
+
+        max-width: none;
+        max-height: none;
+
+        overflow: visible;
+
+        flex-shrink: 0;
+    }
+
+    /*
+     * Tabellone e pedine sono già dentro
+     * #rotatore-tabellone, quindi non devono
+     * essere ruotati individualmente.
+     */
+
+    #rotatore-tabellone {
+        position: absolute;
+        inset: 0;
+
+        width: 100%;
+        height: 100%;
+
+        transform: none !important;
+    }
+
+    #immagine-tabellone {
+        width: 100%;
+        height: 100%;
+        object-fit: fill;
+    }
+
+    #contenitore-pedine {
+        inset: 0;
+    }
+
+    .pedina-interno {
+        transform: none !important;
+    }
+
+    /*
+     * IMPORTANTISSIMO:
+     * nessun pulsante viene ruotato singolarmente.
+     * Fa tutto #scena.
+     */
+
+    #btn-menu,
+    #btn-chat,
+    #btn-giocatori {
+        transform: none !important;
+    }
+
+    /*
+     * I controlli sono posizionati
+     * nella superficie virtuale landscape.
+     */
+
+    #pannello-giocatori {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        right: 74px;
+        z-index: 200;
+    }
+
+    #giocatori-wrapper {
+        position: absolute;
+        left: 18px;
+        bottom: 18px;
+        z-index: 300;
+    }
+
+    #menu-wrapper {
+        position: absolute;
+        top: 14px;
+        right: 14px;
+        z-index: 300;
+    }
+
+    #chat-wrapper {
+        position: absolute;
+        bottom: 18px;
+        right: 18px;
+        z-index: 300;
+    }
+
+    /*
+     * Dadi nella parte inferiore della
+     * superficie landscape virtuale.
+     */
+
+    #area-dadi {
+        position: absolute;
+        left: 50%;
+        bottom: 4%;
+        transform: translateX(-50%);
+        z-index: 300;
+    }
+
+    /*
+     * Chat e menu seguono automaticamente
+     * l'orientamento della scena.
+     */
 
     #pannello-menu {
-        width: 185px;
+        top: 58px;
+        right: 0;
+    }
+
+    #pannello-chat {
+        bottom: 62px;
+        right: 0;
+    }
+
+    /*
+     * Messaggio di gioco centrale.
+     */
+
+    #messaggi-gioco {
+        position: absolute;
+        top: 62px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 250;
+        max-width: 75%;
+    }
+
+    /*
+     * Overlay e popup ruotano insieme
+     * all'intera scena.
+     */
+
+    #flash-messaggio-gioco,
+    #popup-richiesta-audio,
+    #overlay-determinazione,
+    #overlay-vittoria {
+        position: absolute;
+    }
+
+    /*
+     * I popup sono dimensionati sulla
+     * superficie virtuale landscape.
+     */
+
+    .popup-determinazione {
+        width: min(80%, 480px);
+        max-width: 480px;
     }
 
     #popup-richiesta-audio {
-        width: calc(100vw - 24px);
+        top: 50%;
+        left: 50%;
+        transform:
+            translate(-50%, -50%);
+    }
+
+    #overlay-determinazione,
+    #overlay-vittoria {
+        inset: 0;
+        width: 100%;
+        height: 100%;
+    }
+
+    /*
+     * Sicurezza: nessuna vecchia regola
+     * di rotazione individuale rimane attiva.
+     */
+
+    #rotatore-tabellone,
+    #area-dadi,
+    #btn-menu,
+    #btn-chat,
+    #btn-giocatori,
+    .pedina-interno {
+        rotate: none;
+    }
+}
+
+/* =========================================================
+   SMARTPHONE PICCOLI
+   ========================================================= */
+
+@media (orientation: portrait) and (max-width: 600px) {
+
+    #btn-menu,
+    #btn-chat,
+    #btn-giocatori {
+        width: 48px;
+        height: 48px;
+        font-size: 18px;
+    }
+
+    #pannello-menu {
+        width: 205px;
+    }
+
+    #pannello-chat {
+        width: 270px;
+        height: 310px;
+    }
+
+    #pannello-giocatori {
+        padding: 9px 12px;
+    }
+
+    #riga-turno {
+        font-size: 13px;
+    }
+
+    .popup-determinazione {
+        padding: 20px;
+    }
+
+    .popup-determinazione h2 {
+        font-size: 18px;
+    }
+
+    .sottotitolo-determinazione {
+        font-size: 12px;
+    }
+
+    #messaggi-gioco {
+        font-size: 12px;
+        max-width: 72%;
+    }
+}
+
+/* =========================================================
+   SMARTPHONE MOLTO PICCOLI
+   ========================================================= */
+
+@media (orientation: portrait) and (max-width: 380px) {
+
+    #btn-menu,
+    #btn-chat,
+    #btn-giocatori {
+        width: 44px;
+        height: 44px;
+        font-size: 17px;
+    }
+
+    #pannello-menu {
+        width: 190px;
+    }
+
+    #pannello-chat {
+        width: 250px;
+        height: 295px;
+    }
+
+    #area-dadi {
+        gap: 10px;
+        padding: 10px 14px;
     }
 
     .dado-3d {
         width: 46px;
         height: 46px;
+        flex-basis: 46px;
     }
 
     .faccia {
@@ -916,173 +1310,15 @@ body.modalita-desktop #messaggi-gioco {
         width: 7px;
         height: 7px;
     }
-}
 
-/* =========================================================
-   MODALITÀ SMARTPHONE VERTICALE
-   Tabellone ruotato di 90°
-   ========================================================= */
-
-@media (orientation: portrait) and (max-width: 600px) {
-
-    html,
-    body {
-        width: 100%;
-        height: 100%;
-        overflow: hidden;
+    .popup-determinazione {
+        padding: 16px;
     }
 
-    #scena {
-        width: 100vw;
-        height: 100vh;
-        overflow: hidden;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        position: fixed;
-        inset: 0;
-    }
-
-    #area-tabellone {
-        position: absolute;
-        width: 94vh;
-        height: 94vw;
-        max-width: none;
-        max-height: none;
-        top: 50%;
-        left: 50%;
-        transform:
-            translate(-50%, -50%)
-            rotate(90deg);
-        transform-origin: center center;
-        overflow: visible;
-        z-index: 5;
-    }
-
-    #immagine-tabellone {
-        width: 100%;
-        height: 100%;
-        display: block;
-        object-fit: fill;
-        border-radius: 14px;
-    }
-
-    #contenitore-pedine {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        transform: rotate(-90deg);
-        transform-origin: center center;
-        pointer-events: none;
-    }
-
-    #contenitore-pedine .pedina {
-        position: absolute;
-    }
-
-    #area-dadi {
-        position: fixed;
-        left: 50%;
-        bottom: 12px;
-        transform:
-            translateX(-50%)
-            rotate(-90deg);
-        transform-origin: center center;
-        z-index: 50;
-    }
-
-    #pannello-giocatori {
-        z-index: 100;
-        top: 8px;
-        left: 8px;
-        right: 58px;
-        transform: none;
-    }
-
-    #giocatori-wrapper {
-        z-index: 110;
-        left: 10px;
-        bottom: 10px;
-    }
-
-    #menu-wrapper {
-        z-index: 110;
-        top: 10px;
-        right: 10px;
-    }
-
-    #chat-wrapper {
-        z-index: 110;
-        right: 10px;
-        bottom: 10px;
-    }
-
-    #btn-menu,
-    #btn-chat,
-    #btn-giocatori {
-        transform: rotate(-90deg);
-    }
-
-    #pannello-menu,
-    #pannello-chat,
-    #pannello-giocatori {
-        transform: none;
-    }
-
-    #messaggi-gioco {
-        z-index: 120;
-        top: 50%;
-        left: 50%;
-        transform:
-            translate(-50%, -50%)
-            rotate(0deg);
-    }
-
-    #popup-richiesta-audio {
-        z-index: 300;
-        top: 50%;
-        left: 50%;
-        transform:
-            translate(-50%, -50%);
-    }
-
-    #overlay-determinazione,
-    #overlay-vittoria {
-        z-index: 500;
-    }
-
-    .popup-determinazione,
-    .popup-vittoria {
-        transform: rotate(0deg);
+    .popup-determinazione h2 {
+        font-size: 16px;
     }
 }
-
-
-/* =========================================================
-   SMARTPHONE MOLTO PICCOLI
-   ========================================================= */
-
-@media (orientation: portrait) and (max-width: 380px) {
-
-    #area-tabellone {
-        width: 90vh;
-        height: 90vw;
-    }
-
-    #area-dadi {
-        bottom: 8px;
-    }
-
-    #btn-menu,
-    #btn-chat,
-    #btn-giocatori {
-        width: 46px;
-        height: 46px;
-        font-size: 18px;
-    }
-}
-
 
 /* =========================================================
    TELEFONI ESTREMAMENTE PICCOLI
@@ -1090,20 +1326,59 @@ body.modalita-desktop #messaggi-gioco {
 
 @media (orientation: portrait) and (max-width: 330px) {
 
-    #area-tabellone {
-        width: 86vh;
-        height: 86vw;
-    }
-
-    #pannello-giocatori {
-        font-size: 11px;
-    }
-
     #btn-menu,
     #btn-chat,
     #btn-giocatori {
-        width: 42px;
-        height: 42px;
-        font-size: 16px;
+        width: 40px;
+        height: 40px;
+        font-size: 15px;
+    }
+
+    #pannello-menu {
+        width: 180px;
+    }
+
+    #pannello-chat {
+        width: 230px;
+        height: 280px;
+    }
+
+    #pannello-giocatori {
+        left: 8px;
+        right: 58px;
+        padding: 8px 10px;
+    }
+
+    #messaggi-gioco {
+        font-size: 11px;
+        max-width: 70%;
+    }
+
+    .popup-determinazione {
+        width: 80%;
+        padding: 13px;
+    }
+
+    .popup-determinazione h2 {
+        font-size: 14px;
+    }
+
+    .sottotitolo-determinazione {
+        font-size: 10px;
+    }
+}
+
+/* =========================================================
+   ACCESSIBILITÀ
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
     }
 }
