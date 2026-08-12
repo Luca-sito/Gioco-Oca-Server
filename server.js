@@ -551,7 +551,8 @@ app.post("/api/admin/riattiva", richiediAdmin, async (req, res) => {
   res.json({ ok: true });
 });
 
-// ===== DADO VERO DA RANDOM.ORG (timeout ridotto a 1.5s) =====
+// ===== DADO VERO DA RANDOM.ORG (timeout ridotto a 1.5s: prima erano 4s, troppi
+// per una fase come "chi inizia" dove ogni singolo tiro deve sentirsi istantaneo) =====
 function tiraDadoRandomOrg() {
   return new Promise((resolve) => {
     const url = "https://www.random.org/integers/?num=2&min=1&max=6&col=1&base=10&format=plain&rnd=new";
@@ -590,6 +591,10 @@ async function ripristinaPartiteDaFirebase() {
   for (const id in partiteFirebase) {
     const p = partiteFirebase[id];
     if (!stanze[p.stanza]) continue;
+    // Nota: la fase "determinazione_ordine" (i veri tiri di "Chi inizia?") vive solo in
+    // memoria, non è persistita in dettaglio su Firebase — in caso di riavvio del server
+    // la scelta più sicura è far ripartire da capo questa fase per le partite ancora non
+    // "iniziata", piuttosto che rischiare uno stato incoerente
     stanze[p.stanza].partite[id] = {
       ...p,
       maxGiocatori: p.maxGiocatori || (Object.keys(p.giocatori || {}).length || 2),
@@ -724,6 +729,8 @@ async function gestisciScadenzaTurno(partita, nomeStanza) {
   await eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatoreDiTurno, true);
 }
 
+// Il timer del turno successivo riparte SEMPRE prima della trasmissione ai client,
+// così il messaggio porta sempre l'orario di inizio corretto (fix del bug precedente)
 async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, automatico) {
   if (partita.elaborandoTiro) return;
   partita.elaborandoTiro = true;
@@ -820,6 +827,10 @@ async function forzaAbbandonoPerInattivita(partita, nomeStanza, idGiocatore) {
 }
 
 // ===== FASE "CHI INIZIA?" — turni veri, uno alla volta, ripescaggi in caso di parità =====
+
+// Riceve i risultati raccolti finora e l'elenco di chi deve ancora essere ordinato.
+// Se c'è un pareggio (2+ giocatori con lo stesso punteggio più alto TRA quelli non
+// ancora distinti), lo segnala per far ripetere il tiro SOLO a chi è in parità.
 function calcolaOrdineDaiRisultati(risultati, tuttiGliUid) {
   const coppie = tuttiGliUid.map(uid => ({ uid, punteggio: risultati[uid] }));
   coppie.sort((a, b) => b.punteggio - a.punteggio);
@@ -877,142 +888,43 @@ async function gestisciScadenzaDeterminazione(partita, nomeStanza) {
 async function eseguiTiroDeterminazionePerGiocatore(partita, nomeStanza, uid, automatico) {
   if (partita.elaborandoTiro) return;
   partita.elaborandoTiro = true;
-
   try {
     fermaTimerTurno(partita);
-
     const { dado1, dado2 } = await lanciaDueDadiSicuri();
     const valoreDado = dado1 + dado2;
-
-    if (!partita.risultatiDeterminazione) {
-      partita.risultatiDeterminazione = {};
-    }
-
+    if (!partita.risultatiDeterminazione) partita.risultatiDeterminazione = {};
     partita.risultatiDeterminazione[uid] = valoreDado;
     partita.turnoInCorsoDeterminazione = null;
-    partita.tempoInizioTurno = null;
 
     const giocatore = partita.giocatori[uid];
-
-    const messaggio = JSON.stringify({
-      tipo: "risultatoDeterminazione",
-      uid,
-      nome: giocatore ? giocatore.nome : "?",
-      dado1,
-      dado2,
-      valoreDado,
-      automatico: !!automatico
-    });
-
-    Object.values(partita.giocatori).forEach(g => {
-      if (g.socket && g.socket.readyState === WebSocket.OPEN) {
-        g.socket.send(messaggio);
-      }
-    });
-
-    await aggiornaStatoPartita(partita.id, {
-      fase: partita.fase,
-      iniziata: false,
-      giocatori: preparaGiocatoriPerFirebase(partita.giocatori),
-      ordineDeterminazione: partita.ordineDeterminazione,
-      risultatiDeterminazione: partita.risultatiDeterminazione,
-      codaDeterminazione: partita.codaDeterminazione,
-      turnoInCorsoDeterminazione: null,
-      gruppoSpareggioAttuale: partita.gruppoSpareggioAttuale || null,
-      tempoInizioTurno: null
-    });
+    const messaggio = JSON.stringify({ tipo: "risultatoDeterminazione", uid, nome: giocatore ? giocatore.nome : "?", dado1, dado2, valoreDado, automatico: !!automatico });
+    Object.values(partita.giocatori).forEach(g => { if (g.socket && g.socket.readyState === WebSocket.OPEN) g.socket.send(messaggio); });
 
     await avanzaDeterminazione(partita, nomeStanza);
-
   } finally {
     partita.elaborandoTiro = false;
   }
 }
 
-
-async function iniziaFaseDeterminazione(partita, nomeStanza) {
+function iniziaFaseDeterminazione(partita, nomeStanza) {
   partita.fase = "determinazione_ordine";
-  partita.iniziata = false;
-
   partita.ordineDeterminazione = Object.keys(partita.giocatori);
   partita.risultatiDeterminazione = {};
   partita.codaDeterminazione = [...partita.ordineDeterminazione];
   partita.turnoInCorsoDeterminazione = null;
   partita.gruppoSpareggioAttuale = null;
-  partita.tempoInizioTurno = null;
-
-  await aggiornaStatoPartita(partita.id, {
-    fase: partita.fase,
-    iniziata: false,
-    giocatori: preparaGiocatoriPerFirebase(partita.giocatori),
-    ordineDeterminazione: partita.ordineDeterminazione,
-    risultatiDeterminazione: partita.risultatiDeterminazione,
-    codaDeterminazione: partita.codaDeterminazione,
-    turnoInCorsoDeterminazione: null,
-    gruppoSpareggioAttuale: null,
-    tempoInizioTurno: null
-  });
-
-  await avanzaDeterminazione(partita, nomeStanza);
+  avanzaDeterminazione(partita, nomeStanza);
 }
-
 
 async function avanzaDeterminazione(partita, nomeStanza) {
   if (partita.codaDeterminazione.length === 0) {
-    const esito = calcolaOrdineDaiRisultati(
-      partita.risultatiDeterminazione,
-      partita.ordineDeterminazione
-    );
-
+    const esito = calcolaOrdineDaiRisultati(partita.risultatiDeterminazione, partita.ordineDeterminazione);
     if (esito.prossimoGruppoParitario) {
       partita.gruppoSpareggioAttuale = esito.prossimoGruppoParitario;
       partita.codaDeterminazione = [...esito.prossimoGruppoParitario];
-
-      await aggiornaStatoPartita(partita.id, {
-        fase: partita.fase,
-        iniziata: false,
-        giocatori: preparaGiocatoriPerFirebase(partita.giocatori),
-        ordineDeterminazione: partita.ordineDeterminazione,
-        risultatiDeterminazione: partita.risultatiDeterminazione,
-        codaDeterminazione: partita.codaDeterminazione,
-        turnoInCorsoDeterminazione: null,
-        gruppoSpareggioAttuale: partita.gruppoSpareggioAttuale,
-        tempoInizioTurno: null
-      });
-
       await avanzaDeterminazione(partita, nomeStanza);
       return;
     }
-
-    partita.gruppoSpareggioAttuale = null;
-
-    await completaDeterminazione(
-      partita,
-      nomeStanza,
-      esito.ordineFinale
-    );
-
-    return;
-  }
-
-  partita.turnoInCorsoDeterminazione = partita.codaDeterminazione.shift();
-
-  avviaTimerDeterminazione(partita, nomeStanza);
-
-  await aggiornaStatoPartita(partita.id, {
-    fase: partita.fase,
-    iniziata: false,
-    giocatori: preparaGiocatoriPerFirebase(partita.giocatori),
-    ordineDeterminazione: partita.ordineDeterminazione,
-    risultatiDeterminazione: partita.risultatiDeterminazione,
-    codaDeterminazione: partita.codaDeterminazione,
-    turnoInCorsoDeterminazione: partita.turnoInCorsoDeterminazione,
-    gruppoSpareggioAttuale: partita.gruppoSpareggioAttuale || null,
-    tempoInizioTurno: partita.tempoInizioTurno
-  });
-
-  inviaStatoDeterminazione(partita, nomeStanza);
-}
     partita.gruppoSpareggioAttuale = null;
     await completaDeterminazione(partita, nomeStanza, esito.ordineFinale);
     return;
@@ -1049,6 +961,8 @@ async function espelliPerInattivitaDuranteDeterminazione(partita, nomeStanza, ui
   inviaConteggioStanze();
 }
 
+// Il risultato di "chi inizia" del primo classificato NON va perso: diventa la sua
+// prima mossa vera e propria, con tanto di animazione di spostamento sul tabellone.
 async function completaDeterminazione(partita, nomeStanza, ordineFinale) {
   partita.ordineGiocatori = ordineFinale;
   partita.turnoAttuale = 0;
