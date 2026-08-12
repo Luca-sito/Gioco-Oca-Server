@@ -107,18 +107,24 @@ function toggleSuoni() { impostaSuoni(!suoniAttivi); }
 function impostaSuoni(attivi) { suoniAttivi = attivi; localStorage.setItem("suoniAttivi", attivi ? "on" : "off"); aggiornaTestoBottoneSuoni(); }
 function aggiornaTestoBottoneSuoni() { const b = document.getElementById("btn-toggle-suoni"); if (b) b.textContent = suoniAttivi ? "🔊 Suoni: On" : "🔇 Suoni: Off"; }
 
-// ===== TUTTO SCHERMO (solo Computer) =====
+// ===== TUTTO SCHERMO — ora avvolto in try/catch e con più prefissi per browser
+// diversi; la visibilità del bottone dipende da rilevaEImpostaModalitaDesktop qui sotto =====
 function toggleFullscreen() {
-  if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-    const richiesta = document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen;
-    if (!richiesta) { alert("Il tuo browser non supporta lo schermo intero."); return; }
-    const risultato = richiesta.call(document.documentElement);
-    if (risultato && typeof risultato.catch === "function") {
-      risultato.catch(() => { alert("Non è stato possibile attivare lo schermo intero."); });
+  try {
+    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+      const elemento = document.documentElement;
+      const richiesta = elemento.requestFullscreen || elemento.webkitRequestFullscreen || elemento.mozRequestFullScreen || elemento.msRequestFullscreen;
+      if (!richiesta) { alert("Il tuo browser non supporta lo schermo intero."); return; }
+      const risultato = richiesta.call(elemento);
+      if (risultato && typeof risultato.catch === "function") {
+        risultato.catch((err) => { alert("Non è stato possibile attivare lo schermo intero" + (err && err.message ? (": " + err.message) : ".")); });
+      }
+    } else {
+      const esci = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
+      if (esci) esci.call(document);
     }
-  } else {
-    const esci = document.exitFullscreen || document.webkitExitFullscreen;
-    if (esci) esci.call(document);
+  } catch (err) {
+    alert("Errore durante l'attivazione dello schermo intero" + (err && err.message ? (": " + err.message) : "."));
   }
 }
 function aggiornaTestoBottoneFullscreen() {
@@ -129,22 +135,29 @@ function aggiornaTestoBottoneFullscreen() {
 document.addEventListener("fullscreenchange", aggiornaTestoBottoneFullscreen);
 document.addEventListener("webkitfullscreenchange", aggiornaTestoBottoneFullscreen);
 
-// ===== ORIENTAMENTO: rilevamento reale via matchMedia — niente rotazione grafica.
-// In verticale il gioco è bloccato da un overlay; in orizzontale il tabellone (già
-// naturalmente più largo che alto) si dimensiona per riempire lo spazio reale
-// disponibile, senza mai scorrere. =====
+// ===== ORIENTAMENTO: confronto diretto larghezza/altezza (NON matchMedia
+// sull'orientation, che su alcuni browser — Samsung Internet incluso — può
+// comportarsi in modo incoerente). Niente rotazione grafica: in verticale il
+// gioco è bloccato da un overlay; in orizzontale il tabellone si dimensiona per
+// riempire lo spazio reale disponibile. =====
+function eSchermoInLandscape() {
+  const larghezza = window.visualViewport ? window.visualViewport.width : window.innerWidth;
+  const altezza = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+  return larghezza > altezza;
+}
 function calcolaEAggiornaOrientamento() {
   const eDesktop = document.body.classList.contains("modalita-desktop");
-  const inLandscape = window.matchMedia("(orientation: landscape)").matches;
-  document.body.classList.toggle("richiede-rotazione", !eDesktop && !inLandscape);
+  document.body.classList.toggle("richiede-rotazione", !eDesktop && !eSchermoInLandscape());
 
   const altezzaReale = window.visualViewport ? window.visualViewport.height : window.innerHeight;
   document.documentElement.style.setProperty("--altezza-reale", altezzaReale + "px");
 }
+// Non richiede più "niente touch": molti Computer hanno schermo touch ma si usano
+// comunque col mouse — basta un puntatore preciso disponibile più uno schermo largo
 function rilevaEImpostaModalitaDesktop() {
-  const nonTouch = !("ontouchstart" in window) && (navigator.maxTouchPoints || 0) === 0;
   const puntatorePreciso = window.matchMedia && window.matchMedia("(pointer: fine)").matches;
-  document.body.classList.toggle("modalita-desktop", nonTouch && puntatorePreciso && window.innerWidth >= 1000);
+  const schermoAmpio = window.innerWidth >= 1000;
+  document.body.classList.toggle("modalita-desktop", puntatorePreciso && schermoAmpio);
 }
 
 function aggiornaLayoutTabellone() {
@@ -192,6 +205,10 @@ function inizializzaGestioneOrientamento() {
     setTimeout(gestisciResize, 700);
   });
   if (window.visualViewport) window.visualViewport.addEventListener("resize", gestisciResize);
+  // Ridondanza per dispositivi dove orientationchange/resize non bastano da soli
+  if (window.screen && window.screen.orientation && window.screen.orientation.addEventListener) {
+    window.screen.orientation.addEventListener("change", () => { setTimeout(gestisciResize, 50); setTimeout(gestisciResize, 300); });
+  }
 
   if (immagine_pronta()) aggiornaLayoutTabellone();
   else document.getElementById("immagine-tabellone").addEventListener("load", aggiornaLayoutTabellone);
@@ -222,14 +239,19 @@ function mostraMessaggioGiocoGrande(testo) {
 let areaDadiHomeGenitore = null;
 let areaDadiHomeFratelloSuccessivo = null;
 
+// Ora restituisce true SOLO se lo spostamento avviene davvero in questo momento
+// (cioè al primo ingresso nel popup) — serve a chiamare mostraDadi(1,1) una volta
+// sola, mai più dopo: era quello a interrompere l'animazione di ogni tiro successivo.
 function spostaDadiInDeterminazione() {
   const areaDadi = document.getElementById("area-dadi");
   const slot = document.getElementById("slot-dadi-determinazione");
-  if (!areaDadi || !slot || areaDadi.parentNode === slot) return;
+  if (!areaDadi || !slot) return false;
+  if (areaDadi.parentNode === slot) return false;
   areaDadiHomeGenitore = areaDadi.parentNode;
   areaDadiHomeFratelloSuccessivo = areaDadi.nextSibling;
   slot.appendChild(areaDadi);
   areaDadi.classList.add("dadi-in-popup");
+  return true;
 }
 function riportaDadiAllaPartita() {
   const areaDadi = document.getElementById("area-dadi");
@@ -258,7 +280,8 @@ function disegnaListaDeterminazione(giocatori, turnoInCorsoUid, gruppoSpareggio)
 function gestisciStatoDeterminazione(dati) {
   faseAttuale = "determinazione";
   document.getElementById("overlay-determinazione").classList.add("aperto");
-  spostaDadiInDeterminazione();
+  const appenaEntrato = spostaDadiInDeterminazione();
+  if (appenaEntrato) mostraDadi(1, 1);
 
   disegnaListaDeterminazione(dati.giocatori, dati.turnoInCorsoUid, dati.gruppoSpareggioAttuale);
 
@@ -277,7 +300,7 @@ function gestisciStatoDeterminazione(dati) {
   }
 
   if (dati.tempoInizioTurno != null && dati.durataMossaMs != null) avviaCountdownTurno(dati.tempoInizioTurno, dati.durataMossaMs);
-  mostraDadi(1, 1);
+  else if (appenaEntrato) mostraDadi(1, 1);
 }
 
 function gestisciRisultatoDeterminazione(dati) {
@@ -285,6 +308,25 @@ function gestisciRisultatoDeterminazione(dati) {
     const sottotitolo = document.getElementById("sottotitolo-determinazione");
     if (sottotitolo) sottotitolo.textContent = dati.nome + " ha fatto " + dati.valoreDado + (dati.automatico ? " (tempo scaduto)" : "") + "!";
   });
+}
+
+// NUOVO: quando tutti hanno tirato, il server manda prima questo — la classifica
+// finale calcolata, mostrata per un paio di secondi PRIMA che il tabellone si apra
+// — così il calcolo "dal più alto al più basso" si vede accadere, non sembra un
+// salto improvviso su chi ha tirato per ultimo.
+function gestisciOrdineFinaleCalcolato(dati) {
+  const sottotitolo = document.getElementById("sottotitolo-determinazione");
+  if (sottotitolo) sottotitolo.textContent = "Ordine deciso! La partita inizia tra un istante...";
+  const lista = document.getElementById("lista-determinazione");
+  if (!lista) return;
+  lista.innerHTML = dati.ordineGiocatori.map((nome, indice) => {
+    const punteggio = dati.punteggi && dati.punteggi[nome] != null ? dati.punteggi[nome] : "?";
+    return `<div class="determinazione-riga determinazione-riga-finale" style="animation-delay:${indice * 0.12}s;">
+      <span class="determinazione-posizione-finale">${indice + 1}°</span>
+      <span class="determinazione-nome">${nome}</span>
+      <span class="determinazione-risultato">🎲 ${punteggio}</span>
+    </div>`;
+  }).join("");
 }
 
 function gestisciDeterminazioneCompletata(dati) {
@@ -313,7 +355,8 @@ function gestisciDeterminazioneCompletata(dati) {
   });
 }
 
-// ===== COUNTDOWN DI TURNO — fix del bug: si congela nell'ISTANTE del click locale =====
+// ===== COUNTDOWN DI TURNO — ora al click l'interval viene DAVVERO fermato (non solo
+// un flag che ne blocca l'output), e il numero è sostituito da un ✓ inequivocabile =====
 let tempoInizioTurnoAttuale = null, durataMossaMsAttuale = null, intervalCountdown = null, ultimoSecondoAvviso = null;
 let turnoLocalmenteCompletato = false;
 
@@ -325,6 +368,16 @@ function avviaCountdownTurno(tempoInizio, durataMs) {
   if (intervalCountdown) clearInterval(intervalCountdown);
   intervalCountdown = setInterval(aggiornaCountdownTurno, 250);
   aggiornaCountdownTurno();
+}
+function fermaCountdownPerAzioneLocale() {
+  turnoLocalmenteCompletato = true;
+  if (intervalCountdown) { clearInterval(intervalCountdown); intervalCountdown = null; }
+  const el = document.getElementById("countdown-turno");
+  if (el) {
+    el.textContent = "✓";
+    el.classList.remove("countdown-scaduto");
+    el.classList.add("countdown-fermo");
+  }
 }
 function aggiornaCountdownTurno() {
   const el = document.getElementById("countdown-turno");
@@ -587,6 +640,7 @@ function connetti() {
 
     if (dati.tipo === "statoDeterminazione") { gestisciStatoDeterminazione(dati); return; }
     if (dati.tipo === "risultatoDeterminazione") { gestisciRisultatoDeterminazione(dati); return; }
+    if (dati.tipo === "ordineFinaleCalcolato") { gestisciOrdineFinaleCalcolato(dati); return; }
     if (dati.tipo === "determinazioneCompletata") { gestisciDeterminazioneCompletata(dati); return; }
 
     if (dati.tipo === "richiestaAudioRicevuta") { mostraRichiestaAudioRicevuta(dati.mittenteUid, dati.mittenteNome); return; }
@@ -647,8 +701,10 @@ function connetti() {
     if (dati.tipo === "chatPartita") { aggiungiMessaggioChatPartita(dati.nome, dati.testo); return; }
     if (dati.tipo === "errore") {
       alert(dati.messaggio);
-      turnoLocalmenteCompletato = false;
-      if (mioTurno || possoTirareIoInDeterminazione) document.getElementById("area-dadi").classList.remove("disabilitato");
+      if (mioTurno || possoTirareIoInDeterminazione) {
+        document.getElementById("area-dadi").classList.remove("disabilitato");
+        if (tempoInizioTurnoAttuale != null && durataMossaMsAttuale != null) avviaCountdownTurno(tempoInizioTurnoAttuale, durataMossaMsAttuale);
+      }
       return;
     }
   };
@@ -758,11 +814,13 @@ document.getElementById("btn-chat").onclick = (e) => {
   if (!pannello.classList.contains("nascosto")) { messaggiChatNonLetti = 0; aggiornaBadgeChatPartita(); }
 };
 
+// Click sui dadi: unico gestore per entrambe le fasi. Ferma DAVVERO il countdown
+// (interval incluso) nell'istante del click, non solo un flag — fix del bug 3.
 document.getElementById("area-dadi").onclick = () => {
   const possoTirare = faseAttuale === "determinazione" ? possoTirareIoInDeterminazione : mioTurno;
   if (!possoTirare) return;
   if (!socket || socket.readyState !== WebSocket.OPEN) return;
-  turnoLocalmenteCompletato = true;
+  fermaCountdownPerAzioneLocale();
   document.getElementById("area-dadi").classList.add("disabilitato");
   if (faseAttuale === "determinazione") socket.send(JSON.stringify({ tipo: "tiraDeterminazione", partitaId }));
   else socket.send(JSON.stringify({ tipo: "tiraDadi", partitaId }));
