@@ -365,30 +365,56 @@ function aggiornaLayoutTabellone() {
 
 let timerDebounceResize = null;
 function gestisciResize() {
-  calcolaEAggiornaOrientamento();
-  rilevaEImpostaModalitaDesktop();
-  clearTimeout(timerDebounceResize);
-  timerDebounceResize = setTimeout(aggiornaLayoutTabellone, 60);
+    rilevaEImpostaModalitaDesktop();
+    calcolaEAggiornaOrientamento();
+
+    clearTimeout(timerDebounceResize);
+
+    timerDebounceResize =
+        setTimeout(aggiornaLayoutTabellone, 60);
 }
+
 function inizializzaGestioneOrientamento() {
-  calcolaEAggiornaOrientamento();
-  rilevaEImpostaModalitaDesktop();
-  aggiornaLayoutTabellone();
+    rilevaEImpostaModalitaDesktop();
+    calcolaEAggiornaOrientamento();
+    aggiornaLayoutTabellone();
 
-  window.addEventListener("resize", gestisciResize);
-  window.addEventListener("orientationchange", () => {
-    setTimeout(gestisciResize, 50);
-    setTimeout(gestisciResize, 300);
-    setTimeout(gestisciResize, 700);
-  });
-  if (window.visualViewport) window.visualViewport.addEventListener("resize", gestisciResize);
-  // Ridondanza per dispositivi dove orientationchange/resize non bastano da soli
-  if (window.screen && window.screen.orientation && window.screen.orientation.addEventListener) {
-    window.screen.orientation.addEventListener("change", () => { setTimeout(gestisciResize, 50); setTimeout(gestisciResize, 300); });
-  }
+    window.addEventListener("resize", gestisciResize);
 
-  if (immagine_pronta()) aggiornaLayoutTabellone();
-  else document.getElementById("immagine-tabellone").addEventListener("load", aggiornaLayoutTabellone);
+    window.addEventListener("orientationchange", () => {
+        setTimeout(gestisciResize, 50);
+        setTimeout(gestisciResize, 300);
+        setTimeout(gestisciResize, 700);
+    });
+
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener(
+            "resize",
+            gestisciResize
+        );
+    }
+
+    if (
+        window.screen &&
+        window.screen.orientation &&
+        window.screen.orientation.addEventListener
+    ) {
+        window.screen.orientation.addEventListener(
+            "change",
+            () => {
+                setTimeout(gestisciResize, 50);
+                setTimeout(gestisciResize, 300);
+            }
+        );
+    }
+
+    if (immagine_pronta()) {
+        aggiornaLayoutTabellone();
+    } else {
+        document
+            .getElementById("immagine-tabellone")
+            .addEventListener("load", aggiornaLayoutTabellone);
+    }
 }
 function immagine_pronta() {
   const immagine = document.getElementById("immagine-tabellone");
