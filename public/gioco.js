@@ -141,9 +141,29 @@ document.addEventListener("webkitfullscreenchange", aggiornaTestoBottoneFullscre
 // gioco è bloccato da un overlay; in orizzontale il tabellone si dimensiona per
 // riempire lo spazio reale disponibile. =====
 function eSchermoInLandscape() {
-  const larghezza = window.visualViewport ? window.visualViewport.width : window.innerWidth;
-  const altezza = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-  return larghezza > altezza;
+    if (
+        window.screen &&
+        window.screen.orientation &&
+        typeof window.screen.orientation.type === "string"
+    ) {
+        const orientamento = window.screen.orientation.type;
+
+        if (
+            orientamento === "landscape-primary" ||
+            orientamento === "landscape-secondary"
+        ) {
+            return true;
+        }
+
+        if (
+            orientamento === "portrait-primary" ||
+            orientamento === "portrait-secondary"
+        ) {
+            return false;
+        }
+    }
+
+    return window.innerWidth > window.innerHeight;
 }
 function calcolaEAggiornaOrientamento() {
   const eDesktop = document.body.classList.contains("modalita-desktop");
