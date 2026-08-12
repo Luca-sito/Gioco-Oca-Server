@@ -166,11 +166,32 @@ function eSchermoInLandscape() {
     return window.innerWidth > window.innerHeight;
 }
 function calcolaEAggiornaOrientamento() {
-  const eDesktop = document.body.classList.contains("modalita-desktop");
-  document.body.classList.toggle("richiede-rotazione", !eDesktop && !eSchermoInLandscape());
 
-  const altezzaReale = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-  document.documentElement.style.setProperty("--altezza-reale", altezzaReale + "px");
+    const eDesktop =
+        document.body.classList.contains("modalita-desktop");
+
+    const eLandscape =
+        eSchermoInLandscape();
+
+    // Il messaggio "Ruota il telefono" non serve più:
+    // su smartphone il gioco funziona anche in verticale.
+    document.body.classList.remove("richiede-rotazione");
+
+    // Su smartphone verticale ruotiamo il tabellone di 90°.
+    document.body.classList.toggle(
+        "tabellone-ruotato",
+        !eDesktop && !eLandscape
+    );
+
+    const altezzaReale =
+        window.visualViewport
+            ? window.visualViewport.height
+            : window.innerHeight;
+
+    document.documentElement.style.setProperty(
+        "--altezza-reale",
+        altezzaReale + "px"
+    );
 }
 // Non richiede più "niente touch": molti Computer hanno schermo touch ma si usano
 // comunque col mouse — basta un puntatore preciso disponibile più uno schermo largo
@@ -181,18 +202,28 @@ function rilevaEImpostaModalitaDesktop() {
 }
 
 function aggiornaLayoutTabellone() {
-    const areaTabellone = document.getElementById("area-tabellone");
-    const immagine = document.getElementById("immagine-tabellone");
+
+    const areaTabellone =
+        document.getElementById("area-tabellone");
+
+    const immagine =
+        document.getElementById("immagine-tabellone");
 
     if (!areaTabellone || !immagine) return;
+
 
     const rapportoNaturale =
         (immagine.naturalWidth && immagine.naturalHeight)
             ? immagine.naturalWidth / immagine.naturalHeight
             : 1.48;
 
+
     const eDesktop =
         document.body.classList.contains("modalita-desktop");
+
+    const eLandscape =
+        eSchermoInLandscape();
+
 
     const larghezzaFinestra =
         window.visualViewport
@@ -204,12 +235,17 @@ function aggiornaLayoutTabellone() {
             ? window.visualViewport.height
             : window.innerHeight;
 
+
     let Wc;
     let Hc;
 
+
+    // =====================================================
+    // DESKTOP
+    // =====================================================
+
     if (eDesktop) {
 
-        // DESKTOP: mantiene il comportamento attuale
         const margineOrizzontale =
             Math.max(16, larghezzaFinestra * 0.03);
 
@@ -217,10 +253,12 @@ function aggiornaLayoutTabellone() {
             Math.max(16, altezzaReale * 0.03);
 
         const larghezzaDisponibile =
-            larghezzaFinestra - margineOrizzontale * 2;
+            larghezzaFinestra -
+            margineOrizzontale * 2;
 
         const altezzaDisponibile =
-            altezzaReale - margineVerticale * 2;
+            altezzaReale -
+            margineVerticale * 2;
 
         Wc = Math.max(
             120,
@@ -232,21 +270,26 @@ function aggiornaLayoutTabellone() {
 
         Hc = Wc / rapportoNaturale;
 
-    } else {
+    }
 
-        // SMARTPHONE:
-        // il tabellone deve stare completamente nello spazio disponibile
+
+    // =====================================================
+    // SMARTPHONE ORIZZONTALE
+    // =====================================================
+
+    else if (eLandscape) {
+
         const margineOrizzontale = 8;
         const margineVerticale = 8;
 
         const larghezzaDisponibile =
-            larghezzaFinestra - margineOrizzontale * 2;
+            larghezzaFinestra -
+            margineOrizzontale * 2;
 
         const altezzaDisponibile =
-            altezzaReale - margineVerticale * 2;
+            altezzaReale -
+            margineVerticale * 2;
 
-        // Calcola la dimensione massima possibile rispettando
-        // contemporaneamente larghezza e altezza dello schermo.
         Wc = Math.min(
             larghezzaDisponibile,
             altezzaDisponibile * rapportoNaturale
@@ -254,15 +297,68 @@ function aggiornaLayoutTabellone() {
 
         Hc = Wc / rapportoNaturale;
 
-        // Sicurezza: mai più grande dello spazio verticale disponibile
-        if (Hc > altezzaDisponibile) {
-            Hc = altezzaDisponibile;
-            Wc = Hc * rapportoNaturale;
-        }
     }
 
-    areaTabellone.style.width = Wc + "px";
-    areaTabellone.style.height = Hc + "px";
+
+    // =====================================================
+    // SMARTPHONE VERTICALE
+    // TABELLONE RUOTATO DI 90°
+    // =====================================================
+
+    else {
+
+        /*
+         * Dopo la rotazione:
+         *
+         * larghezza visiva = Hc
+         * altezza visiva   = Wc
+         *
+         * Quindi calcoliamo il tabellone "sdraiato"
+         * in modo che la sua altezza visiva occupi
+         * praticamente tutta la larghezza del telefono.
+         */
+
+        const margine = 8;
+
+        const spazioOrizzontale =
+            larghezzaFinestra - margine * 2;
+
+        const spazioVerticale =
+            altezzaReale - margine * 2;
+
+
+        // Dopo la rotazione, Hc diventa la larghezza
+        // visiva del tabellone.
+        Hc = spazioOrizzontale;
+
+
+        // Mantiene perfettamente le proporzioni
+        // originali dell'immagine.
+        Wc = Hc * rapportoNaturale;
+
+
+        /*
+         * Controllo di sicurezza:
+         * il tabellone ruotato non deve superare
+         * l'altezza disponibile dello smartphone.
+         */
+
+        if (Wc > spazioVerticale) {
+
+            Wc = spazioVerticale;
+
+            Hc = Wc / rapportoNaturale;
+        }
+
+    }
+
+
+    areaTabellone.style.width =
+        Wc + "px";
+
+    areaTabellone.style.height =
+        Hc + "px";
+
 
     riposizionaTuttePedine();
 }
