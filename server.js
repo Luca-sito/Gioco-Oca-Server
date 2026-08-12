@@ -631,9 +631,21 @@ function calcolaMovimento(posizioneAttuale, valoreDado) {
   if (nuovaPosizione === CASELLA_TIRA_ANCORA) { tiraAncora = true; messaggi.push("Sali sul ponte! Tira ancora i dadi."); }
   if (CASELLE_AVANZA_ANCORA.includes(nuovaPosizione)) {
     messaggi.push("Avanzi dello stesso numero di caselle!");
+
     const r = calcolaMovimento(nuovaPosizione, valoreDado);
-    return { nuovaPosizione: r.nuovaPosizione, percorso: percorso.concat(r.percorso), messaggi: messaggi.concat(r.messaggi), turniDaSaltare: r.turniDaSaltare, vittoria: r.vittoria, tiraAncora: r.tiraAncora };
-  }
+
+    return {
+        nuovaPosizione: r.nuovaPosizione,
+        percorso: percorso.concat(r.percorso),
+        messaggi: messaggi.concat(r.messaggi),
+        turniDaSaltare: r.turniDaSaltare,
+        vittoria: r.vittoria,
+
+        // L'avanzamento automatico NON concede da solo
+        // un altro tiro manuale.
+        tiraAncora: false
+    };
+}
   if (CASELLE_SALTA_TRE_TURNI.includes(nuovaPosizione)) { turniDaSaltare = 3; messaggi.push("Rimani fermo per 3 turni!"); }
   if (CASELLE_SALTA_UN_TURNO.includes(nuovaPosizione)) { turniDaSaltare = 1; messaggi.push("Salti un turno!"); }
   if (CASELLE_TORNA_A[nuovaPosizione] !== undefined) { const cf = CASELLE_TORNA_A[nuovaPosizione]; messaggi.push(`Torni alla casella ${cf}!`); percorso.push(cf); nuovaPosizione = cf; }
