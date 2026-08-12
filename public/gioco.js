@@ -181,29 +181,90 @@ function rilevaEImpostaModalitaDesktop() {
 }
 
 function aggiornaLayoutTabellone() {
-  const areaTabellone = document.getElementById("area-tabellone");
-  const immagine = document.getElementById("immagine-tabellone");
-  if (!areaTabellone || !immagine) return;
+    const areaTabellone = document.getElementById("area-tabellone");
+    const immagine = document.getElementById("immagine-tabellone");
 
-  const rapportoNaturale = (immagine.naturalWidth && immagine.naturalHeight) ? immagine.naturalWidth / immagine.naturalHeight : 1.48;
+    if (!areaTabellone || !immagine) return;
 
-  const eDesktop = document.body.classList.contains("modalita-desktop");
-  const larghezzaFinestra = window.innerWidth;
-  const altezzaReale = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    const rapportoNaturale =
+        (immagine.naturalWidth && immagine.naturalHeight)
+            ? immagine.naturalWidth / immagine.naturalHeight
+            : 1.48;
 
-  const margineOrizzontale = Math.max(16, larghezzaFinestra * 0.03);
-  const margineVerticale = eDesktop ? Math.max(16, altezzaReale * 0.03) : Math.max(56, altezzaReale * 0.11);
+    const eDesktop =
+        document.body.classList.contains("modalita-desktop");
 
-  const larghezzaDisponibile = larghezzaFinestra - margineOrizzontale * 2;
-  const altezzaDisponibile = altezzaReale - margineVerticale * 2;
+    const larghezzaFinestra =
+        window.visualViewport
+            ? window.visualViewport.width
+            : window.innerWidth;
 
-  const Wc = Math.max(120, Math.min(larghezzaDisponibile, altezzaDisponibile * rapportoNaturale));
-  const Hc = Wc / rapportoNaturale;
+    const altezzaReale =
+        window.visualViewport
+            ? window.visualViewport.height
+            : window.innerHeight;
 
-  areaTabellone.style.width = Wc + "px";
-  areaTabellone.style.height = Hc + "px";
+    let Wc;
+    let Hc;
 
-  riposizionaTuttePedine();
+    if (eDesktop) {
+
+        // DESKTOP: mantiene il comportamento attuale
+        const margineOrizzontale =
+            Math.max(16, larghezzaFinestra * 0.03);
+
+        const margineVerticale =
+            Math.max(16, altezzaReale * 0.03);
+
+        const larghezzaDisponibile =
+            larghezzaFinestra - margineOrizzontale * 2;
+
+        const altezzaDisponibile =
+            altezzaReale - margineVerticale * 2;
+
+        Wc = Math.max(
+            120,
+            Math.min(
+                larghezzaDisponibile,
+                altezzaDisponibile * rapportoNaturale
+            )
+        );
+
+        Hc = Wc / rapportoNaturale;
+
+    } else {
+
+        // SMARTPHONE:
+        // il tabellone deve stare completamente nello spazio disponibile
+        const margineOrizzontale = 8;
+        const margineVerticale = 8;
+
+        const larghezzaDisponibile =
+            larghezzaFinestra - margineOrizzontale * 2;
+
+        const altezzaDisponibile =
+            altezzaReale - margineVerticale * 2;
+
+        // Calcola la dimensione massima possibile rispettando
+        // contemporaneamente larghezza e altezza dello schermo.
+        Wc = Math.min(
+            larghezzaDisponibile,
+            altezzaDisponibile * rapportoNaturale
+        );
+
+        Hc = Wc / rapportoNaturale;
+
+        // Sicurezza: mai più grande dello spazio verticale disponibile
+        if (Hc > altezzaDisponibile) {
+            Hc = altezzaDisponibile;
+            Wc = Hc * rapportoNaturale;
+        }
+    }
+
+    areaTabellone.style.width = Wc + "px";
+    areaTabellone.style.height = Hc + "px";
+
+    riposizionaTuttePedine();
 }
 
 let timerDebounceResize = null;
