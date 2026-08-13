@@ -1,1139 +1,2599 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Opzioni Account - Giochi Società</title>
-
-<style>
-:root {
-    --bg-main: #080d14;
-    --bg-secondary: #0e1622;
-    --panel: rgba(18, 27, 40, 0.88);
-    --panel-hover: rgba(27, 40, 57, 0.96);
-    --border: rgba(255, 255, 255, 0.08);
-    --border-hover: rgba(255, 215, 0, 0.35);
-
-    --gold: #ffd700;
-    --gold-light: #ffe66d;
-    --gold-dark: #d6ad00;
-
-    --text-main: #f5f7fa;
-    --text-secondary: #a6b0bd;
-    --text-muted: #6f7a88;
-
-    --green: #43e08c;
-    --red: #ff6565;
-
-    --shadow: 0 25px 80px rgba(0,0,0,.45);
-    --radius-xl: 24px;
-    --radius-lg: 18px;
-    --radius-md: 14px;
-}
-
-* {
-    box-sizing: border-box;
-}
-
-html {
-    scroll-behavior: smooth;
-}
-
-body {
-    margin: 0;
-    min-height: 100vh;
-    font-family: Inter, Arial, Helvetica, sans-serif;
-    color: var(--text-main);
-    background:
-        radial-gradient(circle at 15% 10%, rgba(255, 215, 0, .07), transparent 28%),
-        radial-gradient(circle at 85% 90%, rgba(40, 120, 255, .07), transparent 30%),
-        linear-gradient(145deg, #070b11 0%, #0b111a 45%, #080d14 100%);
-    overflow-x: hidden;
-}
-
-/* ========================================
-   DECORAZIONE SFONDO
-======================================== */
-
-.sfondo-luce {
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    z-index: 0;
-    overflow: hidden;
-}
-
-.sfondo-luce::before,
-.sfondo-luce::after {
-    content: "";
-    position: absolute;
-    border-radius: 50%;
-    filter: blur(90px);
-    opacity: .18;
-}
-
-.sfondo-luce::before {
-    width: 340px;
-    height: 340px;
-    top: -120px;
-    left: -100px;
-    background: #ffd700;
-}
-
-.sfondo-luce::after {
-    width: 420px;
-    height: 420px;
-    right: -160px;
-    bottom: -180px;
-    background: #1769ff;
-}
-
-/* ========================================
-   CONTENITORE
-======================================== */
-
-.contenitore {
-    position: relative;
-    z-index: 1;
-
-    width: min(920px, calc(100% - 32px));
-    margin: 0 auto;
-
-    padding: 55px 0 70px;
-}
-
-/* ========================================
-   HEADER
-======================================== */
+    <meta charset="UTF-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Account | Giochi Società</title>
+
+    <style>
+        :root {
+            --bg: #070b11;
+            --bg-soft: #0c121b;
+            --panel: #101822;
+            --panel-2: #141e2a;
+            --panel-3: #182332;
+
+            --border: rgba(255, 255, 255, 0.075);
+            --border-strong: rgba(255, 215, 0, 0.20);
+
+            --gold: #ffd21c;
+            --gold-strong: #ffdf4d;
+            --gold-dark: #a47d00;
+
+            --white: #f4f7fb;
+            --text: #d8dee7;
+            --muted: #8994a4;
+            --muted-2: #5e6978;
+
+            --green: #43dd8a;
+            --red: #ff6a6a;
+            --blue: #65a8ff;
+            --purple: #ab82ff;
+
+            --sidebar-width: 268px;
+            --topbar-height: 78px;
+
+            --shadow-xl:
+                0 30px 90px rgba(0, 0, 0, 0.45);
+
+            --shadow-lg:
+                0 18px 45px rgba(0, 0, 0, 0.30);
+
+            --radius-xl: 24px;
+            --radius-lg: 18px;
+            --radius-md: 14px;
+            --radius-sm: 10px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+
+            color: var(--white);
+
+            font-family:
+                Inter,
+                ui-sans-serif,
+                -apple-system,
+                BlinkMacSystemFont,
+                "Segoe UI",
+                Roboto,
+                Arial,
+                sans-serif;
+
+            background:
+                radial-gradient(
+                    circle at 78% 10%,
+                    rgba(255, 210, 28, 0.07),
+                    transparent 26%
+                ),
+                radial-gradient(
+                    circle at 25% 90%,
+                    rgba(68, 126, 255, 0.06),
+                    transparent 25%
+                ),
+                linear-gradient(
+                    135deg,
+                    #060a10 0%,
+                    #091019 48%,
+                    #070c13 100%
+                );
+
+            overflow-x: hidden;
+        }
+
+        button,
+        a {
+            font: inherit;
+        }
+
+        button {
+            border: 0;
+        }
 
-.header-account {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 24px;
+        a {
+            color: inherit;
+        }
 
-    margin-bottom: 28px;
-}
+        /* ==========================================================
+           SFONDO
+        ========================================================== */
 
-.logo-area {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-}
+        .ambient {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
 
-.logo-icona {
-    width: 52px;
-    height: 52px;
+        .ambient::before,
+        .ambient::after {
+            content: "";
+            position: absolute;
 
-    display: flex;
-    align-items: center;
-    justify-content: center;
+            border-radius: 50%;
+            filter: blur(120px);
 
-    border-radius: 16px;
+            opacity: 0.13;
+        }
 
-    background: linear-gradient(
-        145deg,
-        rgba(255, 215, 0, .18),
-        rgba(255, 215, 0, .05)
-    );
+        .ambient::before {
+            width: 430px;
+            height: 430px;
 
-    border: 1px solid rgba(255, 215, 0, .22);
+            top: -170px;
+            right: 4%;
 
-    font-size: 25px;
+            background: var(--gold);
+        }
 
-    box-shadow:
-        inset 0 1px 0 rgba(255,255,255,.08),
-        0 10px 30px rgba(0,0,0,.25);
-}
+        .ambient::after {
+            width: 420px;
+            height: 420px;
 
-.logo-testo small {
-    display: block;
-    color: var(--text-muted);
-    font-size: 12px;
-    margin-bottom: 2px;
-    letter-spacing: .4px;
-}
+            bottom: -220px;
+            left: -120px;
 
-.logo-testo strong {
-    display: block;
-    font-size: 16px;
-    letter-spacing: .2px;
-}
+            background: #276eff;
+        }
 
-.badge-stato {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+        /* ==========================================================
+           LAYOUT
+        ========================================================== */
 
-    padding: 9px 14px;
+        .app {
+            position: relative;
+            z-index: 1;
 
-    border-radius: 999px;
+            display: flex;
+            min-height: 100vh;
+        }
 
-    background: rgba(67, 224, 140, .08);
-    border: 1px solid rgba(67, 224, 140, .2);
+        /* ==========================================================
+           SIDEBAR
+        ========================================================== */
 
-    color: #9ff2c4;
-    font-size: 13px;
-    font-weight: 600;
+        .sidebar {
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
 
-    white-space: nowrap;
-}
+            width: var(--sidebar-width);
 
-.badge-punto {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--green);
+            display: flex;
+            flex-direction: column;
 
-    box-shadow: 0 0 12px rgba(67, 224, 140, .8);
-}
+            padding: 22px 16px;
 
-/* ========================================
-   PANNELLO PRINCIPALE
-======================================== */
+            background:
+                linear-gradient(
+                    180deg,
+                    rgba(12, 18, 27, 0.98),
+                    rgba(7, 11, 17, 0.98)
+                );
 
-.scatola {
-    position: relative;
+            border-right: 1px solid var(--border);
 
-    background:
-        linear-gradient(
-            145deg,
-            rgba(24, 35, 50, .94),
-            rgba(12, 19, 29, .96)
-        );
+            z-index: 50;
+        }
 
-    border: 1px solid var(--border);
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
 
-    border-radius: var(--radius-xl);
+            padding: 5px 10px 27px;
+        }
 
-    padding: 38px;
+        .brand-icon {
+            width: 43px;
+            height: 43px;
 
-    box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            justify-content: center;
 
-    overflow: hidden;
-}
+            border-radius: 13px;
 
-.scatola::before {
-    content: "";
-    position: absolute;
+            background:
+                linear-gradient(
+                    145deg,
+                    #ffe875,
+                    #d3a900
+                );
 
-    left: 0;
-    right: 0;
-    top: 0;
+            color: #15120a;
 
-    height: 1px;
+            font-size: 19px;
+            font-weight: 900;
 
-    background: linear-gradient(
-        90deg,
-        transparent,
-        rgba(255,215,0,.5),
-        transparent
-    );
+            box-shadow:
+                0 10px 30px rgba(255, 210, 28, 0.15);
+        }
 
-    opacity: .8;
-}
+        .brand-text strong {
+            display: block;
 
-/* ========================================
-   TITOLO
-======================================== */
+            color: var(--white);
 
-.testata {
-    text-align: center;
-    margin-bottom: 34px;
-}
+            font-size: 14px;
+            font-weight: 800;
+            letter-spacing: 0.2px;
+        }
 
-.testata h1 {
-    margin: 0;
+        .brand-text span {
+            display: block;
 
-    font-size: clamp(28px, 5vw, 40px);
-    line-height: 1.15;
+            margin-top: 2px;
 
-    letter-spacing: -.8px;
+            color: var(--muted-2);
 
-    background: linear-gradient(
-        135deg,
-        #fff,
-        #ffe66d 60%,
-        #ffd700
-    );
+            font-size: 10px;
+            font-weight: 700;
 
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-}
+            letter-spacing: 1.3px;
+            text-transform: uppercase;
+        }
 
-.testata p {
-    margin: 11px 0 0;
+        .sidebar-label {
+            margin: 10px 10px 9px;
 
-    color: var(--text-secondary);
+            color: var(--muted-2);
 
-    font-size: 15px;
-}
+            font-size: 10px;
+            font-weight: 800;
 
-/* ========================================
-   PROFILO
-======================================== */
+            letter-spacing: 1.3px;
+            text-transform: uppercase;
+        }
 
-.profilo {
-    display: flex;
-    align-items: center;
-    gap: 16px;
+        .menu {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
 
-    padding: 18px 20px;
-    margin-bottom: 30px;
+        .menu-button {
+            position: relative;
 
-    border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            gap: 12px;
 
-    background:
-        linear-gradient(
-            135deg,
-            rgba(255,255,255,.045),
-            rgba(255,255,255,.018)
-        );
+            width: 100%;
 
-    border: 1px solid rgba(255,255,255,.07);
-}
+            padding: 12px 12px;
 
-.avatar-generico {
-    width: 58px;
-    height: 58px;
+            border-radius: 11px;
 
-    flex-shrink: 0;
+            background: transparent;
 
-    display: flex;
-    align-items: center;
-    justify-content: center;
+            color: var(--muted);
 
-    border-radius: 50%;
+            cursor: pointer;
 
-    background:
-        linear-gradient(
-            135deg,
-            #ffd700,
-            #9a7800
-        );
+            text-align: left;
 
-    color: #141414;
+            transition:
+                background 0.18s ease,
+                color 0.18s ease,
+                transform 0.18s ease;
+        }
 
-    font-size: 24px;
-    font-weight: 800;
+        .menu-button:hover {
+            background: rgba(255, 255, 255, 0.045);
+            color: var(--text);
+        }
 
-    box-shadow:
-        0 7px 25px rgba(255,215,0,.18);
-}
+        .menu-button.active {
+            background:
+                linear-gradient(
+                    90deg,
+                    rgba(255, 210, 28, 0.13),
+                    rgba(255, 210, 28, 0.035)
+                );
 
-.profilo-testo {
-    min-width: 0;
-}
+            color: var(--white);
+        }
 
-.profilo-label {
-    font-size: 12px;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: .8px;
-    margin-bottom: 3px;
-}
+        .menu-button.active::before {
+            content: "";
 
-#benvenuto {
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--text-main);
-    word-break: break-word;
-}
+            position: absolute;
 
-/* ========================================
-   GRIGLIA OPZIONI
-======================================== */
+            left: -16px;
+            top: 7px;
+            bottom: 7px;
 
-.griglia-opzioni {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 16px;
-}
+            width: 3px;
 
-.opzione {
-    position: relative;
+            border-radius: 0 4px 4px 0;
 
-    display: flex;
-    align-items: center;
-    gap: 17px;
+            background: var(--gold);
+            box-shadow: 0 0 18px rgba(255, 210, 28, 0.45);
+        }
 
-    width: 100%;
-    min-height: 126px;
+        .menu-icon {
+            width: 21px;
+            min-width: 21px;
 
-    padding: 21px;
+            text-align: center;
 
-    text-align: left;
+            font-size: 17px;
+        }
 
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
+        .menu-text {
+            font-size: 13px;
+            font-weight: 650;
+        }
 
-    background:
-        linear-gradient(
-            145deg,
-            rgba(38, 52, 69, .72),
-            rgba(23, 34, 48, .78)
-        );
+        .sidebar-spacer {
+            flex: 1;
+        }
 
-    color: inherit;
+        .sidebar-account {
+            padding: 13px;
 
-    cursor: pointer;
+            border-radius: 15px;
 
-    transition:
-        transform .2s ease,
-        border-color .2s ease,
-        background .2s ease,
-        box-shadow .2s ease;
-}
+            background:
+                linear-gradient(
+                    145deg,
+                    rgba(255,255,255,0.045),
+                    rgba(255,255,255,0.018)
+                );
 
-.opzione:hover {
-    transform: translateY(-4px);
+            border: 1px solid var(--border);
+        }
 
-    background:
-        linear-gradient(
-            145deg,
-            rgba(48, 63, 82, .88),
-            rgba(25, 38, 53, .92)
-        );
+        .sidebar-account-inner {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
 
-    border-color: var(--border-hover);
+        .sidebar-avatar {
+            width: 36px;
+            height: 36px;
 
-    box-shadow:
-        0 16px 35px rgba(0,0,0,.25);
-}
+            display: flex;
+            align-items: center;
+            justify-content: center;
 
-.opzione:active {
-    transform: translateY(-1px) scale(.995);
-}
+            overflow: hidden;
 
-.opzione:focus-visible {
-    outline: 2px solid var(--gold);
-    outline-offset: 3px;
-}
+            border-radius: 50%;
 
-.opzione-icon {
-    width: 56px;
-    height: 56px;
+            background:
+                linear-gradient(
+                    145deg,
+                    #ffe36b,
+                    #b58a00
+                );
 
-    flex-shrink: 0;
+            color: #14120b;
 
-    display: flex;
-    align-items: center;
-    justify-content: center;
+            font-size: 13px;
+            font-weight: 900;
+        }
 
-    border-radius: 16px;
+        .sidebar-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
 
-    background:
-        linear-gradient(
-            145deg,
-            rgba(255,215,0,.14),
-            rgba(255,215,0,.04)
-        );
+        .sidebar-account-text {
+            min-width: 0;
+            flex: 1;
+        }
 
-    border: 1px solid rgba(255,215,0,.13);
+        .sidebar-account-label {
+            color: var(--muted-2);
 
-    font-size: 25px;
-}
+            font-size: 9px;
+            font-weight: 800;
 
-.opzione-contenuto {
-    min-width: 0;
-    flex: 1;
-}
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+        }
 
-.opzione-numero {
-    display: block;
+        .sidebar-account-name {
+            margin-top: 2px;
 
-    margin-bottom: 4px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
 
-    color: var(--gold);
-    font-size: 11px;
-    font-weight: 800;
+            color: var(--white);
 
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
+            font-size: 12px;
+            font-weight: 700;
+        }
 
-.opzione-titolo {
-    display: block;
+        .online-dot {
+            width: 7px;
+            height: 7px;
 
-    font-size: 17px;
-    font-weight: 700;
+            flex-shrink: 0;
 
-    margin-bottom: 5px;
-}
+            border-radius: 50%;
 
-.opzione-descrizione {
-    display: block;
+            background: var(--green);
 
-    color: var(--text-secondary);
+            box-shadow:
+                0 0 10px rgba(67, 221, 138, 0.75);
+        }
 
-    font-size: 13px;
-    line-height: 1.45;
-}
+        /* ==========================================================
+           MAIN
+        ========================================================== */
 
-.freccia {
-    color: #667483;
-    font-size: 22px;
+        .main {
+            width: calc(100% - var(--sidebar-width));
+            margin-left: var(--sidebar-width);
 
-    transition:
-        transform .2s ease,
-        color .2s ease;
-}
+            min-height: 100vh;
+        }
 
-.opzione:hover .freccia {
-    color: var(--gold);
-    transform: translateX(4px);
-}
+        /* ==========================================================
+           TOPBAR
+        ========================================================== */
 
-/* ========================================
-   SEZIONE SICUREZZA
-======================================== */
+        .topbar {
+            position: sticky;
+            top: 0;
 
-.sicurezza-nota {
-    margin-top: 18px;
+            height: var(--topbar-height);
 
-    display: flex;
-    gap: 12px;
-    align-items: flex-start;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
 
-    padding: 14px 16px;
+            padding: 0 34px;
 
-    border-radius: 13px;
+            background:
+                rgba(7, 11, 17, 0.74);
 
-    background: rgba(255,255,255,.025);
-    border: 1px solid rgba(255,255,255,.05);
+            backdrop-filter: blur(22px);
+            -webkit-backdrop-filter: blur(22px);
 
-    color: var(--text-muted);
+            border-bottom: 1px solid var(--border);
 
-    font-size: 12px;
-    line-height: 1.5;
-}
+            z-index: 30;
+        }
 
-.sicurezza-nota strong {
-    color: var(--text-secondary);
-}
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 9px;
 
-/* ========================================
-   ERRORE
-======================================== */
+            color: var(--muted);
 
-.errore {
-    display: none;
+            font-size: 12px;
+            font-weight: 600;
+        }
 
-    margin-top: 20px;
+        .breadcrumb-current {
+            color: var(--white);
+        }
 
-    padding: 14px 16px;
+        .breadcrumb-separator {
+            color: var(--muted-2);
+        }
 
-    border-radius: 12px;
+        .top-actions {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+        }
 
-    background: rgba(255, 101, 101, .08);
-    border: 1px solid rgba(255, 101, 101, .2);
+        .top-action {
+            width: 38px;
+            height: 38px;
 
-    color: #ff9c9c;
+            display: flex;
+            align-items: center;
+            justify-content: center;
 
-    font-size: 14px;
-    text-align: center;
-}
+            border-radius: 11px;
 
-/* ========================================
-   FOOTER
-======================================== */
+            background: rgba(255,255,255,0.025);
+            border: 1px solid var(--border);
 
-.footer {
-    display: flex;
-    justify-content: center;
+            color: var(--muted);
 
-    margin-top: 28px;
-}
+            cursor: pointer;
 
-.link-home {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
+            transition:
+                0.18s ease;
+        }
 
-    padding: 13px 20px;
+        .top-action:hover {
+            background: rgba(255,255,255,0.065);
+            color: var(--white);
+        }
 
-    border-radius: 12px;
+        .top-profile {
+            display: flex;
+            align-items: center;
+            gap: 10px;
 
-    text-decoration: none;
+            margin-left: 4px;
 
-    color: var(--text-secondary);
+            padding-left: 12px;
 
-    background: rgba(255,255,255,.035);
-    border: 1px solid rgba(255,255,255,.07);
+            border-left: 1px solid var(--border);
+        }
 
-    font-size: 13px;
-    font-weight: 600;
+        .top-avatar {
+            width: 35px;
+            height: 35px;
 
-    transition:
-        .2s ease;
-}
+            display: flex;
+            align-items: center;
+            justify-content: center;
 
-.link-home:hover {
-    color: var(--text-main);
+            overflow: hidden;
 
-    background: rgba(255,255,255,.07);
+            border-radius: 50%;
 
-    border-color: rgba(255,255,255,.14);
+            background:
+                linear-gradient(
+                    145deg,
+                    #ffe36b,
+                    #b58a00
+                );
 
-    transform: translateY(-2px);
-}
+            color: #14120b;
 
-/* ========================================
-   LOADING
-======================================== */
+            font-size: 12px;
+            font-weight: 900;
+        }
 
-.loading-dot {
-    display: inline-block;
+        .top-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
 
-    width: 7px;
-    height: 7px;
+        .top-profile-name {
+            max-width: 150px;
 
-    margin-left: 4px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
 
-    border-radius: 50%;
+            color: var(--text);
 
-    background: var(--gold);
+            font-size: 12px;
+            font-weight: 700;
+        }
 
-    animation: lampeggio 1s infinite ease-in-out;
-}
+        /* ==========================================================
+           CONTENT
+        ========================================================== */
 
-@keyframes lampeggio {
-    0%,100% {
-        opacity: .25;
-        transform: scale(.8);
-    }
+        .content {
+            max-width: 1250px;
 
-    50% {
-        opacity: 1;
-        transform: scale(1);
-    }
-}
+            margin: 0 auto;
 
-/* ========================================
-   RESPONSIVE
-======================================== */
+            padding: 37px 34px 55px;
+        }
 
-@media (max-width: 760px) {
+        .page-header {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 20px;
 
-    .contenitore {
-        width: min(100% - 20px, 620px);
-        padding: 22px 0 45px;
-    }
+            margin-bottom: 28px;
+        }
 
-    .header-account {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 14px;
-    }
+        .page-kicker {
+            margin-bottom: 8px;
 
-    .scatola {
-        padding: 24px 17px;
-        border-radius: 20px;
-    }
+            color: var(--gold);
 
-    .griglia-opzioni {
-        grid-template-columns: 1fr;
-    }
+            font-size: 10px;
+            font-weight: 850;
 
-    .opzione {
-        min-height: 110px;
-        padding: 17px;
-    }
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+        }
 
-    .testata {
-        margin-bottom: 25px;
-    }
-}
+        .page-title {
+            margin: 0;
 
-@media (max-width: 430px) {
+            color: var(--white);
 
-    .logo-area {
-        gap: 11px;
-    }
+            font-size: clamp(28px, 3.2vw, 40px);
+            line-height: 1.08;
 
-    .logo-icona {
-        width: 46px;
-        height: 46px;
-        border-radius: 14px;
-    }
+            letter-spacing: -1.1px;
+        }
 
-    .profilo {
-        padding: 15px;
-    }
+        .page-description {
+            max-width: 650px;
 
-    .avatar-generico {
-        width: 50px;
-        height: 50px;
-    }
+            margin: 10px 0 0;
 
-    .opzione {
-        gap: 13px;
-    }
+            color: var(--muted);
 
-    .opzione-icon {
-        width: 48px;
-        height: 48px;
-        border-radius: 14px;
-        font-size: 21px;
-    }
+            font-size: 14px;
+            line-height: 1.55;
+        }
 
-    .opzione-titolo {
-        font-size: 16px;
-    }
+        .home-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 9px;
 
-    .opzione-descrizione {
-        font-size: 12px;
-    }
+            padding: 11px 14px;
 
-    .freccia {
-        font-size: 18px;
-    }
-}
-</style>
+            border-radius: 11px;
+
+            text-decoration: none;
+
+            background: rgba(255,255,255,0.035);
+            border: 1px solid var(--border);
+
+            color: var(--text);
+
+            font-size: 12px;
+            font-weight: 700;
+
+            transition: 0.18s ease;
+        }
+
+        .home-button:hover {
+            background: rgba(255,255,255,0.07);
+            border-color: rgba(255,255,255,0.13);
+            transform: translateY(-1px);
+        }
+
+        /* ==========================================================
+           HERO ACCOUNT
+        ========================================================== */
+
+        .account-hero {
+            position: relative;
+
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+
+            align-items: center;
+
+            gap: 28px;
+
+            padding: 28px 29px;
+
+            border-radius: var(--radius-xl);
+
+            background:
+                radial-gradient(
+                    circle at 90% 0%,
+                    rgba(255,210,28,0.10),
+                    transparent 32%
+                ),
+                linear-gradient(
+                    145deg,
+                    rgba(22,32,45,0.97),
+                    rgba(13,21,31,0.98)
+                );
+
+            border: 1px solid var(--border);
+
+            box-shadow: var(--shadow-lg);
+
+            overflow: hidden;
+        }
+
+        .account-hero::after {
+            content: "";
+
+            position: absolute;
+
+            left: 0;
+            right: 0;
+            top: 0;
+
+            height: 1px;
+
+            background:
+                linear-gradient(
+                    90deg,
+                    transparent,
+                    rgba(255,210,28,0.42),
+                    transparent
+                );
+        }
+
+        .account-person {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+
+            min-width: 0;
+        }
+
+        .main-avatar {
+            position: relative;
+
+            width: 78px;
+            height: 78px;
+
+            flex-shrink: 0;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            overflow: hidden;
+
+            border-radius: 23px;
+
+            background:
+                linear-gradient(
+                    145deg,
+                    #ffe875,
+                    #b88d00
+                );
+
+            color: #19150a;
+
+            font-size: 28px;
+            font-weight: 900;
+
+            box-shadow:
+                0 16px 35px rgba(0,0,0,0.28);
+        }
+
+        .main-avatar::after {
+            content: "";
+
+            position: absolute;
+            inset: 0;
+
+            border-radius: inherit;
+
+            border: 1px solid rgba(255,255,255,0.18);
+        }
+
+        .main-avatar img {
+            width: 100%;
+            height: 100%;
+
+            object-fit: cover;
+
+            display: block;
+        }
+
+        .account-info {
+            min-width: 0;
+        }
+
+        .account-label {
+            margin-bottom: 5px;
+
+            color: var(--muted);
+
+            font-size: 10px;
+            font-weight: 850;
+
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+        }
+
+        .account-name {
+            margin: 0;
+
+            overflow: hidden;
+            text-overflow: ellipsis;
+
+            color: var(--white);
+
+            font-size: clamp(22px, 3vw, 29px);
+            font-weight: 800;
+
+            letter-spacing: -0.5px;
+        }
+
+        .account-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+
+            margin-top: 10px;
+
+            padding: 6px 10px;
+
+            border-radius: 999px;
+
+            background: rgba(67,221,138,0.07);
+            border: 1px solid rgba(67,221,138,0.15);
+
+            color: #8aeab6;
+
+            font-size: 10px;
+            font-weight: 800;
+
+            letter-spacing: 0.45px;
+            text-transform: uppercase;
+        }
+
+        .status-dot {
+            width: 7px;
+            height: 7px;
+
+            border-radius: 50%;
+
+            background: var(--green);
+
+            box-shadow:
+                0 0 10px rgba(67,221,138,0.65);
+        }
+
+        .account-actions {
+            display: flex;
+            gap: 9px;
+        }
+
+        .hero-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+
+            min-height: 42px;
+
+            padding: 0 15px;
+
+            border-radius: 11px;
+
+            cursor: pointer;
+
+            font-size: 12px;
+            font-weight: 750;
+
+            transition: 0.18s ease;
+        }
+
+        .hero-button.primary {
+            background:
+                linear-gradient(
+                    135deg,
+                    var(--gold-strong),
+                    #e6b700
+                );
+
+            color: #151209;
+
+            box-shadow:
+                0 10px 25px rgba(255,210,28,0.12);
+        }
+
+        .hero-button.primary:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.04);
+        }
+
+        .hero-button.secondary {
+            background: rgba(255,255,255,0.035);
+            border: 1px solid var(--border);
+
+            color: var(--text);
+        }
+
+        .hero-button.secondary:hover {
+            background: rgba(255,255,255,0.07);
+        }
+
+        /* ==========================================================
+           SECTION HEADER
+        ========================================================== */
+
+        .section-heading {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+
+            gap: 16px;
+
+            margin: 34px 0 15px;
+        }
+
+        .section-title {
+            margin: 0;
+
+            color: var(--white);
+
+            font-size: 16px;
+            font-weight: 800;
+        }
+
+        .section-caption {
+            margin-top: 4px;
+
+            color: var(--muted-2);
+
+            font-size: 11px;
+        }
+
+        /* ==========================================================
+           SETTINGS GRID
+        ========================================================== */
+
+        .settings-grid {
+            display: grid;
+
+            grid-template-columns:
+                repeat(2, minmax(0, 1fr));
+
+            gap: 15px;
+        }
+
+        .setting-card {
+            position: relative;
+
+            display: flex;
+            align-items: center;
+
+            min-height: 138px;
+
+            padding: 20px;
+
+            border-radius: var(--radius-lg);
+
+            background:
+                linear-gradient(
+                    145deg,
+                    rgba(19,29,41,0.94),
+                    rgba(13,21,31,0.98)
+                );
+
+            border: 1px solid var(--border);
+
+            cursor: pointer;
+
+            text-decoration: none;
+
+            overflow: hidden;
+
+            transition:
+                transform 0.2s ease,
+                border-color 0.2s ease,
+                background 0.2s ease,
+                box-shadow 0.2s ease;
+        }
+
+        .setting-card::before {
+            content: "";
+
+            position: absolute;
+
+            left: -40px;
+            bottom: -80px;
+
+            width: 170px;
+            height: 140px;
+
+            border-radius: 50%;
+
+            background: var(--accent);
+
+            filter: blur(65px);
+
+            opacity: 0;
+
+            transition: opacity 0.25s ease;
+        }
+
+        .setting-card:hover {
+            transform: translateY(-4px);
+
+            border-color:
+                color-mix(
+                    in srgb,
+                    var(--accent) 28%,
+                    transparent
+                );
+
+            background:
+                linear-gradient(
+                    145deg,
+                    rgba(25,37,52,0.97),
+                    rgba(14,23,34,0.99)
+                );
+
+            box-shadow:
+                0 20px 45px rgba(0,0,0,0.28);
+        }
+
+        .setting-card:hover::before {
+            opacity: 0.085;
+        }
+
+        .setting-icon {
+            position: relative;
+            z-index: 1;
+
+            width: 56px;
+            height: 56px;
+
+            flex-shrink: 0;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            margin-right: 17px;
+
+            border-radius: 16px;
+
+            background:
+                linear-gradient(
+                    145deg,
+                    color-mix(
+                        in srgb,
+                        var(--accent) 15%,
+                        transparent
+                    ),
+                    rgba(255,255,255,0.025)
+                );
+
+            border:
+                1px solid
+                color-mix(
+                    in srgb,
+                    var(--accent) 17%,
+                    transparent
+                );
+
+            color: var(--accent);
+
+            font-size: 23px;
+        }
+
+        .setting-content {
+            position: relative;
+            z-index: 1;
+
+            min-width: 0;
+            flex: 1;
+        }
+
+        .setting-tag {
+            display: inline-flex;
+
+            margin-bottom: 7px;
+
+            color: var(--accent);
+
+            font-size: 9px;
+            font-weight: 850;
+
+            letter-spacing: 1.1px;
+            text-transform: uppercase;
+        }
+
+        .setting-title {
+            display: block;
+
+            margin-bottom: 5px;
+
+            color: var(--white);
+
+            font-size: 15px;
+            font-weight: 800;
+        }
+
+        .setting-description {
+            display: block;
+
+            color: var(--muted);
+
+            font-size: 12px;
+            line-height: 1.45;
+        }
+
+        .setting-arrow {
+            position: relative;
+            z-index: 1;
+
+            flex-shrink: 0;
+
+            margin-left: 12px;
+
+            color: var(--muted-2);
+
+            font-size: 21px;
+
+            transition:
+                color 0.18s ease,
+                transform 0.18s ease;
+        }
+
+        .setting-card:hover .setting-arrow {
+            color: var(--accent);
+            transform: translateX(4px);
+        }
+
+        /* ==========================================================
+           INFO GRID
+        ========================================================== */
+
+        .info-grid {
+            display: grid;
+
+            grid-template-columns:
+                1.3fr
+                0.7fr;
+
+            gap: 15px;
+        }
+
+        .info-card {
+            padding: 20px;
+
+            border-radius: var(--radius-lg);
+
+            background:
+                linear-gradient(
+                    145deg,
+                    rgba(16,25,36,0.90),
+                    rgba(11,18,27,0.96)
+                );
+
+            border: 1px solid var(--border);
+        }
+
+        .info-card-title {
+            margin-bottom: 16px;
+
+            color: var(--white);
+
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        .info-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            gap: 20px;
+
+            padding: 11px 0;
+
+            border-bottom: 1px solid rgba(255,255,255,0.045);
+        }
+
+        .info-row:last-child {
+            border-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .info-row:first-child {
+            padding-top: 0;
+        }
+
+        .info-label {
+            color: var(--muted);
+
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .info-value {
+            color: var(--text);
+
+            font-size: 11px;
+            font-weight: 700;
+
+            text-align: right;
+        }
+
+        .security-status {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .security-icon {
+            width: 40px;
+            height: 40px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            flex-shrink: 0;
+
+            border-radius: 12px;
+
+            background: rgba(67,221,138,0.07);
+            border: 1px solid rgba(67,221,138,0.13);
+
+            font-size: 17px;
+        }
+
+        .security-text strong {
+            display: block;
+
+            margin-bottom: 5px;
+
+            color: var(--white);
+
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .security-text span {
+            display: block;
+
+            color: var(--muted);
+
+            font-size: 11px;
+            line-height: 1.45;
+        }
+
+        .security-badge {
+            display: inline-flex;
+
+            margin-top: 12px;
+
+            padding: 6px 9px;
+
+            border-radius: 999px;
+
+            background: rgba(67,221,138,0.07);
+            border: 1px solid rgba(67,221,138,0.14);
+
+            color: #8decb8;
+
+            font-size: 9px;
+            font-weight: 850;
+
+            letter-spacing: 0.7px;
+            text-transform: uppercase;
+        }
+
+        /* ==========================================================
+           ERROR
+        ========================================================== */
+
+        .error-box {
+            display: none;
+
+            margin-top: 18px;
+
+            padding: 13px 15px;
+
+            border-radius: 12px;
+
+            background:
+                rgba(255,106,106,0.06);
+
+            border:
+                1px solid
+                rgba(255,106,106,0.17);
+
+            color: #ff9d9d;
+
+            font-size: 12px;
+            line-height: 1.45;
+        }
+
+        /* ==========================================================
+           LOADING
+        ========================================================== */
+
+        .loading-line {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+
+            color: var(--muted);
+        }
+
+        .loading-spinner {
+            width: 13px;
+            height: 13px;
+
+            border-radius: 50%;
+
+            border:
+                2px solid
+                rgba(255,255,255,0.08);
+
+            border-top-color: var(--gold);
+
+            animation:
+                spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* ==========================================================
+           FOOTER
+        ========================================================== */
+
+        .footer {
+            margin-top: 30px;
+
+            padding-top: 20px;
+
+            border-top: 1px solid var(--border);
+
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            gap: 16px;
+
+            color: var(--muted-2);
+
+            font-size: 10px;
+        }
+
+        .footer-brand {
+            font-weight: 800;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+        }
+
+        /* ==========================================================
+           MOBILE HEADER
+        ========================================================== */
+
+        .mobile-topbar {
+            display: none;
+        }
+
+        /* ==========================================================
+           RESPONSIVE
+        ========================================================== */
+
+        @media (max-width: 1080px) {
+            .settings-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 820px) {
+            :root {
+                --sidebar-width: 0px;
+            }
+
+            .sidebar {
+                display: none;
+            }
+
+            .main {
+                width: 100%;
+                margin-left: 0;
+            }
+
+            .mobile-topbar {
+                position: sticky;
+                top: 0;
+
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+
+                height: 64px;
+
+                padding: 0 17px;
+
+                background:
+                    rgba(7,11,17,0.84);
+
+                backdrop-filter: blur(20px);
+                -webkit-backdrop-filter: blur(20px);
+
+                border-bottom: 1px solid var(--border);
+
+                z-index: 40;
+            }
+
+            .mobile-brand {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+
+            .mobile-brand-icon {
+                width: 35px;
+                height: 35px;
+
+                display: flex;
+                align-items: center;
+                justify-content: center;
+
+                border-radius: 10px;
+
+                background:
+                    linear-gradient(
+                        145deg,
+                        #ffe56b,
+                        #c19800
+                    );
+
+                color: #15120b;
+
+                font-size: 15px;
+                font-weight: 900;
+            }
+
+            .mobile-brand-text {
+                font-size: 12px;
+                font-weight: 800;
+            }
+
+            .mobile-account-icon {
+                width: 35px;
+                height: 35px;
+
+                display: flex;
+                align-items: center;
+                justify-content: center;
+
+                overflow: hidden;
+
+                border-radius: 50%;
+
+                background:
+                    linear-gradient(
+                        145deg,
+                        #ffe36b,
+                        #b58a00
+                    );
+
+                color: #15120b;
+
+                font-size: 11px;
+                font-weight: 900;
+            }
+
+            .mobile-account-icon img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            }
+
+            .topbar {
+                display: none;
+            }
+
+            .content {
+                padding: 27px 17px 45px;
+            }
+        }
+
+        @media (max-width: 650px) {
+            .page-header {
+                display: block;
+            }
+
+            .home-button {
+                margin-top: 18px;
+            }
+
+            .account-hero {
+                grid-template-columns: 1fr;
+                padding: 21px;
+            }
+
+            .account-actions {
+                width: 100%;
+            }
+
+            .hero-button {
+                flex: 1;
+            }
+
+            .settings-grid {
+                gap: 12px;
+            }
+
+            .setting-card {
+                min-height: 122px;
+                padding: 16px;
+            }
+
+            .setting-icon {
+                width: 48px;
+                height: 48px;
+
+                margin-right: 13px;
+
+                border-radius: 13px;
+
+                font-size: 20px;
+            }
+
+            .setting-title {
+                font-size: 14px;
+            }
+
+            .setting-description {
+                font-size: 11px;
+            }
+
+            .main-avatar {
+                width: 68px;
+                height: 68px;
+                border-radius: 20px;
+            }
+
+            .footer {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+
+        @media (max-width: 430px) {
+            .account-person {
+                align-items: flex-start;
+            }
+
+            .account-actions {
+                flex-direction: column;
+            }
+
+            .hero-button {
+                width: 100%;
+            }
+
+            .setting-arrow {
+                display: none;
+            }
+
+            .setting-description {
+                max-width: 250px;
+            }
+        }
+
+        /* ==========================================================
+           ACCESSIBILITY
+        ========================================================== */
+
+        .menu-button:focus-visible,
+        .setting-card:focus-visible,
+        .hero-button:focus-visible,
+        .top-action:focus-visible,
+        .home-button:focus-visible {
+            outline: 2px solid var(--gold);
+            outline-offset: 3px;
+        }
+
+        /* ==========================================================
+           REDUCED MOTION
+        ========================================================== */
+
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                scroll-behavior: auto !important;
+                transition: none !important;
+                animation: none !important;
+            }
+        }
+    </style>
 </head>
 
 <body>
 
-<div class="sfondo-luce"></div>
+    <div class="ambient"></div>
 
-<div class="contenitore">
+    <div class="app">
 
-    <!-- HEADER -->
-    <div class="header-account">
+        <!-- ======================================================
+             SIDEBAR DESKTOP
+        ====================================================== -->
 
-        <div class="logo-area">
+        <aside class="sidebar">
 
-            <div class="logo-icona">
-                ⚙️
+            <div class="brand">
+                <div class="brand-icon">
+                    🎮
+                </div>
+
+                <div class="brand-text">
+                    <strong>Giochi Società</strong>
+                    <span>Gaming Platform</span>
+                </div>
             </div>
 
-            <div class="logo-testo">
-                <small>GIOCHI SOCIETÀ</small>
-                <strong>Area Account</strong>
+            <div class="sidebar-label">
+                Account
             </div>
 
-        </div>
+            <nav class="menu">
 
-        <div class="badge-stato">
-            <span class="badge-punto"></span>
-            Account connesso
-        </div>
+                <button
+                    type="button"
+                    class="menu-button active"
+                    onclick="mostraPaginaAccount()"
+                >
+                    <span class="menu-icon">⚙️</span>
+                    <span class="menu-text">Impostazioni account</span>
+                </button>
+
+                <button
+                    type="button"
+                    class="menu-button"
+                    onclick="apriAvatar()"
+                >
+                    <span class="menu-icon">🖼️</span>
+                    <span class="menu-text">Avatar</span>
+                </button>
+
+                <button
+                    type="button"
+                    class="menu-button"
+                    onclick="apriProfilo()"
+                >
+                    <span class="menu-icon">👤</span>
+                    <span class="menu-text">Profilo</span>
+                </button>
+
+                <button
+                    type="button"
+                    class="menu-button"
+                    onclick="apriMessaggi()"
+                >
+                    <span class="menu-icon">💬</span>
+                    <span class="menu-text">Messaggi privati</span>
+                </button>
+
+            </nav>
+
+            <div class="sidebar-label">
+                Sicurezza
+            </div>
+
+            <nav class="menu">
+
+                <button
+                    type="button"
+                    class="menu-button"
+                    onclick="apriSicurezza()"
+                >
+                    <span class="menu-icon">🔒</span>
+                    <span class="menu-text">Sicurezza</span>
+                </button>
+
+            </nav>
+
+            <div class="sidebar-spacer"></div>
+
+            <div class="sidebar-account">
+
+                <div class="sidebar-account-inner">
+
+                    <div
+                        class="sidebar-avatar"
+                        id="sidebarAvatar"
+                    >
+                        ?
+                    </div>
+
+                    <div class="sidebar-account-text">
+
+                        <div class="sidebar-account-label">
+                            Connesso
+                        </div>
+
+                        <div
+                            class="sidebar-account-name"
+                            id="sidebarNickname"
+                        >
+                            Caricamento...
+                        </div>
+
+                    </div>
+
+                    <span class="online-dot"></span>
+
+                </div>
+
+            </div>
+
+        </aside>
+
+        <!-- ======================================================
+             AREA PRINCIPALE
+        ====================================================== -->
+
+        <main class="main">
+
+            <!-- MOBILE TOPBAR -->
+
+            <div class="mobile-topbar">
+
+                <div class="mobile-brand">
+
+                    <div class="mobile-brand-icon">
+                        🎮
+                    </div>
+
+                    <div class="mobile-brand-text">
+                        Giochi Società
+                    </div>
+
+                </div>
+
+                <div
+                    class="mobile-account-icon"
+                    id="mobileAvatar"
+                >
+                    ?
+                </div>
+
+            </div>
+
+
+            <!-- DESKTOP TOPBAR -->
+
+            <header class="topbar">
+
+                <div class="breadcrumb">
+
+                    <span>Giochi Società</span>
+
+                    <span class="breadcrumb-separator">
+                        /
+                    </span>
+
+                    <span class="breadcrumb-current">
+                        Account
+                    </span>
+
+                </div>
+
+                <div class="top-actions">
+
+                    <button
+                        type="button"
+                        class="top-action"
+                        title="Home"
+                        onclick="tornaHome()"
+                    >
+                        ⌂
+                    </button>
+
+                    <div class="top-profile">
+
+                        <div
+                            class="top-avatar"
+                            id="topAvatar"
+                        >
+                            ?
+                        </div>
+
+                        <div
+                            class="top-profile-name"
+                            id="topNickname"
+                        >
+                            Caricamento...
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </header>
+
+
+            <!-- CONTENUTO -->
+
+            <div class="content">
+
+                <!-- PAGE HEADER -->
+
+                <div class="page-header">
+
+                    <div>
+
+                        <div class="page-kicker">
+                            Area personale
+                        </div>
+
+                        <h1 class="page-title">
+                            Impostazioni account
+                        </h1>
+
+                        <p class="page-description">
+                            Gestisci il tuo profilo, il tuo avatar,
+                            i messaggi e le impostazioni di sicurezza
+                            del tuo account.
+                        </p>
+
+                    </div>
+
+                    <a
+                        href="https://solfriniluca1.wixstudio.com/giochisocieta"
+                        class="home-button"
+                    >
+                        ← Torna alla home
+                    </a>
+
+                </div>
+
+
+                <!-- ACCOUNT HERO -->
+
+                <section class="account-hero">
+
+                    <div class="account-person">
+
+                        <div
+                            class="main-avatar"
+                            id="mainAvatar"
+                        >
+                            ?
+                        </div>
+
+                        <div class="account-info">
+
+                            <div class="account-label">
+                                Account attualmente connesso
+                            </div>
+
+                            <h2
+                                class="account-name"
+                                id="mainNickname"
+                            >
+                                <span class="loading-line">
+                                    <span class="loading-spinner"></span>
+                                    Caricamento account...
+                                </span>
+                            </h2>
+
+                            <div class="account-status">
+
+                                <span class="status-dot"></span>
+
+                                Account attivo
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="account-actions">
+
+                        <button
+                            type="button"
+                            class="hero-button primary"
+                            onclick="apriProfilo()"
+                        >
+                            👤 Modifica profilo
+                        </button>
+
+                        <button
+                            type="button"
+                            class="hero-button secondary"
+                            onclick="apriAvatar()"
+                        >
+                            🖼️ Avatar
+                        </button>
+
+                    </div>
+
+                </section>
+
+
+                <!-- IMPOSTAZIONI -->
+
+                <div class="section-heading">
+
+                    <div>
+                        <h2 class="section-title">
+                            Gestione account
+                        </h2>
+
+                        <div class="section-caption">
+                            Personalizza la tua esperienza su Giochi Società
+                        </div>
+                    </div>
+
+                </div>
+
+
+                <div class="settings-grid">
+
+                    <!-- AVATAR -->
+
+                    <a
+                        href="https://gioco-oca-server.onrender.com/avatar.html"
+                        class="setting-card"
+                        style="--accent: #ffce2a;"
+                    >
+
+                        <div class="setting-icon">
+                            🖼️
+                        </div>
+
+                        <div class="setting-content">
+
+                            <span class="setting-tag">
+                                Personalizzazione
+                            </span>
+
+                            <span class="setting-title">
+                                Avatar
+                            </span>
+
+                            <span class="setting-description">
+                                Cambia l'immagine che rappresenta
+                                il tuo account.
+                            </span>
+
+                        </div>
+
+                        <span class="setting-arrow">
+                            ›
+                        </span>
+
+                    </a>
+
+
+                    <!-- PROFILO -->
+
+                    <a
+                        href="https://gioco-oca-server.onrender.com/profilo.html"
+                        class="setting-card"
+                        style="--accent: #65a8ff;"
+                    >
+
+                        <div class="setting-icon">
+                            👤
+                        </div>
+
+                        <div class="setting-content">
+
+                            <span class="setting-tag">
+                                Informazioni
+                            </span>
+
+                            <span class="setting-title">
+                                Modifica profilo
+                            </span>
+
+                            <span class="setting-description">
+                                Aggiorna nickname e informazioni
+                                associate al tuo account.
+                            </span>
+
+                        </div>
+
+                        <span class="setting-arrow">
+                            ›
+                        </span>
+
+                    </a>
+
+
+                    <!-- MESSAGGI -->
+
+                    <a
+                        href="https://gioco-oca-server.onrender.com/messaggi-privati.html"
+                        class="setting-card"
+                        style="--accent: #ab82ff;"
+                    >
+
+                        <div class="setting-icon">
+                            💬
+                        </div>
+
+                        <div class="setting-content">
+
+                            <span class="setting-tag">
+                                Comunicazione
+                            </span>
+
+                            <span class="setting-title">
+                                Messaggi privati
+                            </span>
+
+                            <span class="setting-description">
+                                Invia e ricevi messaggi dagli
+                                altri giocatori.
+                            </span>
+
+                        </div>
+
+                        <span class="setting-arrow">
+                            ›
+                        </span>
+
+                    </a>
+
+
+                    <!-- SICUREZZA -->
+
+                    <button
+                        type="button"
+                        class="setting-card"
+                        style="--accent: #43dd8a;"
+                        onclick="apriSicurezza()"
+                    >
+
+                        <div class="setting-icon">
+                            🔒
+                        </div>
+
+                        <div class="setting-content">
+
+                            <span class="setting-tag">
+                                Protezione
+                            </span>
+
+                            <span class="setting-title">
+                                Sicurezza
+                            </span>
+
+                            <span class="setting-description">
+                                Gestisci password e impostazioni
+                                di sicurezza del tuo account.
+                            </span>
+
+                        </div>
+
+                        <span class="setting-arrow">
+                            ›
+                        </span>
+
+                    </button>
+
+                </div>
+
+
+                <!-- INFORMAZIONI ACCOUNT -->
+
+                <div class="section-heading">
+
+                    <div>
+                        <h2 class="section-title">
+                            Informazioni account
+                        </h2>
+
+                        <div class="section-caption">
+                            Stato e informazioni disponibili dal server
+                        </div>
+                    </div>
+
+                </div>
+
+
+                <div class="info-grid">
+
+                    <div class="info-card">
+
+                        <div class="info-card-title">
+                            Stato account
+                        </div>
+
+                        <div class="info-row">
+
+                            <span class="info-label">
+                                Nickname
+                            </span>
+
+                            <strong
+                                class="info-value"
+                                id="infoNickname"
+                            >
+                                —
+                            </strong>
+
+                        </div>
+
+                        <div class="info-row">
+
+                            <span class="info-label">
+                                Stato
+                            </span>
+
+                            <strong
+                                class="info-value"
+                                style="color: var(--green);"
+                            >
+                                Connesso
+                            </strong>
+
+                        </div>
+
+                        <div class="info-row">
+
+                            <span class="info-label">
+                                Sessione
+                            </span>
+
+                            <strong
+                                class="info-value"
+                            >
+                                Attiva
+                            </strong>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="info-card">
+
+                        <div class="info-card-title">
+                            Protezione
+                        </div>
+
+                        <div class="security-status">
+
+                            <div class="security-icon">
+                                🛡️
+                            </div>
+
+                            <div class="security-text">
+
+                                <strong>
+                                    Account autenticato
+                                </strong>
+
+                                <span>
+                                    Questa pagina è accessibile
+                                    all'utente attualmente
+                                    autenticato.
+                                </span>
+
+                            </div>
+
+                        </div>
+
+                        <div class="security-badge">
+                            ✓ Sessione verificata
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- ERROR -->
+
+                <div
+                    class="error-box"
+                    id="errorBox"
+                    role="alert"
+                ></div>
+
+
+                <!-- FOOTER -->
+
+                <footer class="footer">
+
+                    <span class="footer-brand">
+                        Giochi Società
+                    </span>
+
+                    <span>
+                        Area account
+                    </span>
+
+                </footer>
+
+            </div>
+
+        </main>
 
     </div>
 
-    <!-- PANNELLO -->
-    <div class="scatola">
 
-        <!-- TESTATA -->
-        <div class="testata">
+    <script>
+        /* =========================================================
+           CONFIGURAZIONE
+        ========================================================= */
 
-            <h1>Opzioni Account</h1>
+        const SERVER_URL =
+            "https://gioco-oca-server.onrender.com";
 
-            <p>
-                Personalizza e gestisci il tuo account
-            </p>
+        const HOME_URL =
+            "https://solfriniluca1.wixstudio.com/giochisocieta";
 
-        </div>
+        const LOGIN_URL =
+            SERVER_URL + "/login.html";
 
-        <!-- PROFILO -->
-        <div class="profilo">
+        const AVATAR_URL =
+            SERVER_URL + "/avatar.html";
 
-            <div class="avatar-generico" id="avatarIniziale">
-                ?
-            </div>
+        const PROFILO_URL =
+            SERVER_URL + "/profilo.html";
 
-            <div class="profilo-testo">
+        const MESSAGGI_URL =
+            SERVER_URL + "/messaggi-privati.html";
 
-                <div class="profilo-label">
-                    Account attualmente connesso
-                </div>
 
-                <div id="benvenuto">
-                    Caricamento account
-                    <span class="loading-dot"></span>
-                </div>
+        /* =========================================================
+           ELEMENTI
+        ========================================================= */
 
-            </div>
+        const mainNickname =
+            document.getElementById("mainNickname");
 
-        </div>
+        const topNickname =
+            document.getElementById("topNickname");
 
-        <!-- OPZIONI -->
-        <div class="griglia-opzioni">
+        const sidebarNickname =
+            document.getElementById("sidebarNickname");
 
-            <!-- AVATAR -->
-            <button
-                type="button"
-                class="opzione"
-                onclick="apriAvatar()"
-            >
+        const infoNickname =
+            document.getElementById("infoNickname");
 
-                <div class="opzione-icon">
-                    🖼️
-                </div>
 
-                <div class="opzione-contenuto">
+        const mainAvatar =
+            document.getElementById("mainAvatar");
 
-                    <span class="opzione-numero">
-                        Opzione 01
-                    </span>
+        const topAvatar =
+            document.getElementById("topAvatar");
 
-                    <span class="opzione-titolo">
-                        Avatar
-                    </span>
+        const sidebarAvatar =
+            document.getElementById("sidebarAvatar");
 
-                    <span class="opzione-descrizione">
-                        Cambia la tua immagine profilo
-                        e scegli il tuo avatar.
-                    </span>
+        const mobileAvatar =
+            document.getElementById("mobileAvatar");
 
-                </div>
 
-                <div class="freccia">
-                    ›
-                </div>
+        const errorBox =
+            document.getElementById("errorBox");
 
-            </button>
 
+        /* =========================================================
+           UTILITÀ
+        ========================================================= */
 
-            <!-- PROFILO -->
-            <button
-                type="button"
-                class="opzione"
-                onclick="apriProfilo()"
-            >
+        function mostraErrore(messaggio) {
 
-                <div class="opzione-icon">
-                    👤
-                </div>
+            errorBox.textContent =
+                messaggio;
 
-                <div class="opzione-contenuto">
+            errorBox.style.display =
+                "block";
+        }
 
-                    <span class="opzione-numero">
-                        Opzione 02
-                    </span>
 
-                    <span class="opzione-titolo">
-                        Modifica profilo
-                    </span>
+        function nascondiErrore() {
 
-                    <span class="opzione-descrizione">
-                        Modifica nickname e
-                        informazioni del tuo account.
-                    </span>
+            errorBox.textContent =
+                "";
 
-                </div>
+            errorBox.style.display =
+                "none";
+        }
 
-                <div class="freccia">
-                    ›
-                </div>
 
-            </button>
+        function primoCarattere(nickname) {
 
+            const valore =
+                String(nickname || "").trim();
 
-            <!-- MESSAGGI -->
-            <button
-                type="button"
-                class="opzione"
-                onclick="apriMessaggi()"
-            >
+            return valore
+                ? valore.charAt(0).toUpperCase()
+                : "?";
+        }
 
-                <div class="opzione-icon">
-                    💬
-                </div>
 
-                <div class="opzione-contenuto">
-
-                    <span class="opzione-numero">
-                        Opzione 03
-                    </span>
-
-                    <span class="opzione-titolo">
-                        Messaggi privati
-                    </span>
-
-                    <span class="opzione-descrizione">
-                        Leggi e invia messaggi privati
-                        agli altri giocatori.
-                    </span>
-
-                </div>
-
-                <div class="freccia">
-                    ›
-                </div>
-
-            </button>
-
-
-            <!-- SICUREZZA -->
-            <button
-                type="button"
-                class="opzione"
-                onclick="apriSicurezza()"
-            >
-
-                <div class="opzione-icon">
-                    🔒
-                </div>
-
-                <div class="opzione-contenuto">
-
-                    <span class="opzione-numero">
-                        Opzione 04
-                    </span>
-
-                    <span class="opzione-titolo">
-                        Sicurezza
-                    </span>
-
-                    <span class="opzione-descrizione">
-                        Gestisci password e impostazioni
-                        di sicurezza dell'account.
-                    </span>
-
-                </div>
-
-                <div class="freccia">
-                    ›
-                </div>
-
-            </button>
-
-        </div>
-
-
-        <!-- NOTA -->
-        <div class="sicurezza-nota">
-
-            <div>🛡️</div>
-
-            <div>
-                <strong>Protezione account</strong><br>
-                Le impostazioni dell'account sono accessibili
-                esclusivamente agli utenti autenticati.
-            </div>
-
-        </div>
-
-
-        <!-- ERRORE -->
-        <div
-            class="errore"
-            id="errore"
-        ></div>
-
-    </div>
-
-
-    <!-- FOOTER -->
-    <div class="footer">
-
-        <a
-            href="https://solfriniluca1.wixstudio.com/giochisocieta"
-            class="link-home"
-        >
-            ← Torna a Giochi Società
-        </a>
-
-    </div>
-
-</div>
-
-
-<script>
-
-/* ==================================================
-   CONFIGURAZIONE
-================================================== */
-
-const SERVER_URL =
-    "https://gioco-oca-server.onrender.com";
-
-const LOGIN_URL =
-    SERVER_URL + "/login.html";
-
-const AVATAR_URL =
-    SERVER_URL + "/avatar.html";
-
-const PROFILO_URL =
-    SERVER_URL + "/profilo.html";
-
-const MESSAGGI_URL =
-    SERVER_URL + "/messaggi-privati.html";
-
-
-/* ==================================================
-   ELEMENTI
-================================================== */
-
-const elementoBenvenuto =
-    document.getElementById("benvenuto");
-
-const elementoErrore =
-    document.getElementById("errore");
-
-const elementoAvatar =
-    document.getElementById("avatarIniziale");
-
-
-/* ==================================================
-   FUNZIONE ERRORE
-================================================== */
-
-function mostraErrore(messaggio) {
-
-    elementoErrore.textContent = messaggio;
-    elementoErrore.style.display = "block";
-
-}
-
-
-/* ==================================================
-   CONTROLLO ACCOUNT
-================================================== */
-
-async function controllaAccount() {
-
-    try {
-
-        const risposta = await fetch(
-            SERVER_URL + "/api/me",
-            {
-                method: "GET",
-                credentials: "include",
-                headers: {
-                    "Accept": "application/json"
+        /*
+         * Cerca un eventuale URL avatar nei possibili
+         * campi normalmente utilizzati dal backend.
+         *
+         * Se il tuo /api/me restituisce uno di questi,
+         * l'immagine viene mostrata automaticamente.
+         */
+        function trovaAvatar(dati) {
+
+            if (!dati || typeof dati !== "object") {
+                return null;
+            }
+
+            const possibiliCampi = [
+                "avatar",
+                "avatarUrl",
+                "avatar_url",
+                "profileImage",
+                "profile_image",
+                "immagineProfilo",
+                "immagine_profilo",
+                "image",
+                "imageUrl",
+                "foto",
+                "photo"
+            ];
+
+            for (const campo of possibiliCampi) {
+
+                const valore =
+                    dati[campo];
+
+                if (
+                    typeof valore === "string" &&
+                    valore.trim() !== ""
+                ) {
+
+                    return valore.trim();
                 }
             }
-        );
 
-
-        /*
-         * Se il server ci dice che l'utente
-         * non è autenticato, lo rimandiamo
-         * realmente alla pagina login.
-         */
-        if (!risposta.ok) {
-
-            window.location.href = LOGIN_URL;
-
-            return;
+            return null;
         }
 
 
-        const dati = await risposta.json();
+        function impostaAvatar(elemento, nickname, avatarUrl) {
+
+            if (!elemento) {
+                return;
+            }
+
+            const iniziale =
+                primoCarattere(nickname);
+
+
+            if (avatarUrl) {
+
+                const img =
+                    document.createElement("img");
+
+                img.alt =
+                    "Avatar di " + nickname;
+
+                img.src =
+                    avatarUrl;
+
+                img.onload = () => {
+
+                    elemento.textContent = "";
+                    elemento.appendChild(img);
+
+                };
+
+                img.onerror = () => {
+
+                    elemento.textContent =
+                        iniziale;
+                };
+
+            } else {
+
+                elemento.textContent =
+                    iniziale;
+            }
+        }
+
+
+        /* =========================================================
+           CONTROLLO ACCOUNT
+        ========================================================= */
+
+        async function controllaAccount() {
+
+            nascondiErrore();
+
+            try {
+
+                const risposta =
+                    await fetch(
+                        SERVER_URL + "/api/me",
+                        {
+                            method: "GET",
+
+                            credentials: "include",
+
+                            headers: {
+                                "Accept":
+                                    "application/json"
+                            },
+
+                            cache: "no-store"
+                        }
+                    );
+
+
+                /*
+                 * L'utente non è autenticato.
+                 * Non mostriamo una dashboard falsa:
+                 * lo riportiamo realmente al login.
+                 */
+                if (!risposta.ok) {
+
+                    window.location.href =
+                        LOGIN_URL;
+
+                    return;
+                }
+
+
+                const dati =
+                    await risposta.json();
+
+
+                /*
+                 * Il backend deve fornire il nickname.
+                 */
+                if (
+                    !dati ||
+                    typeof dati.nickname !== "string" ||
+                    !dati.nickname.trim()
+                ) {
+
+                    mostraErrore(
+                        "Il server non ha restituito un nickname valido."
+                    );
+
+                    return;
+                }
+
+
+                const nickname =
+                    dati.nickname.trim();
+
+
+                /*
+                 * Mostra nickname ovunque.
+                 */
+                mainNickname.textContent =
+                    nickname;
+
+                topNickname.textContent =
+                    nickname;
+
+                sidebarNickname.textContent =
+                    nickname;
+
+                infoNickname.textContent =
+                    nickname;
+
+
+                /*
+                 * Trova eventuale avatar reale.
+                 */
+                const avatarUrl =
+                    trovaAvatar(dati);
+
+
+                /*
+                 * Mostra avatar / iniziale
+                 * in tutte le aree della dashboard.
+                 */
+                impostaAvatar(
+                    mainAvatar,
+                    nickname,
+                    avatarUrl
+                );
+
+                impostaAvatar(
+                    topAvatar,
+                    nickname,
+                    avatarUrl
+                );
+
+                impostaAvatar(
+                    sidebarAvatar,
+                    nickname,
+                    avatarUrl
+                );
+
+                impostaAvatar(
+                    mobileAvatar,
+                    nickname,
+                    avatarUrl
+                );
+
+            }
+
+            catch (errore) {
+
+                console.error(
+                    "Errore caricamento account:",
+                    errore
+                );
+
+                mostraErrore(
+                    "Impossibile collegarsi al server. " +
+                    "Controlla la connessione e riprova."
+                );
+            }
+        }
+
+
+        /* =========================================================
+           NAVIGAZIONE
+        ========================================================= */
+
+        function apriAvatar() {
+
+            window.location.href =
+                AVATAR_URL;
+        }
+
+
+        function apriProfilo() {
+
+            window.location.href =
+                PROFILO_URL;
+        }
+
+
+        function apriMessaggi() {
+
+            window.location.href =
+                MESSAGGI_URL;
+        }
+
+
+        function tornaHome() {
+
+            window.location.href =
+                HOME_URL;
+        }
+
+
+        function mostraPaginaAccount() {
+
+            window.scrollTo({
+                top: 0,
+                behavior: "smooth"
+            });
+        }
 
 
         /*
-         * Controllo di sicurezza:
-         * verifichiamo che il server abbia
-         * effettivamente restituito un nickname.
+         * Manteniamo il comportamento del tuo codice attuale:
+         * finché la sezione sicurezza non ha un endpoint/pagina
+         * reale, non inventiamo un collegamento inesistente.
          */
-        if (!dati || !dati.nickname) {
+        function apriSicurezza() {
 
-            mostraErrore(
-                "Impossibile recuperare i dati dell'account."
+            alert(
+                "La sezione Sicurezza è attualmente in sviluppo."
             );
-
-            return;
         }
 
 
-        const nickname =
-            String(dati.nickname);
+        /* =========================================================
+           AVVIO
+        ========================================================= */
 
-
-        /*
-         * Mostra nickname
-         */
-        elementoBenvenuto.textContent =
-            nickname;
-
-
-        /*
-         * Prima lettera del nickname
-         * come avatar temporaneo.
-         */
-        const primaLettera =
-            nickname
-                .trim()
-                .charAt(0)
-                .toUpperCase();
-
-
-        if (primaLettera) {
-
-            elementoAvatar.textContent =
-                primaLettera;
-
-        }
-
-    }
-
-    catch (errore) {
-
-        console.error(
-            "Errore controllo account:",
-            errore
-        );
-
-
-        mostraErrore(
-            "Impossibile collegarsi al server. Controlla la connessione e riprova."
-        );
-
-    }
-}
-
-
-/* ==================================================
-   NAVIGAZIONE
-================================================== */
-
-function apriAvatar() {
-
-    window.location.href = AVATAR_URL;
-
-}
-
-
-function apriProfilo() {
-
-    window.location.href = PROFILO_URL;
-
-}
-
-
-function apriMessaggi() {
-
-    window.location.href = MESSAGGI_URL;
-
-}
-
-
-function apriSicurezza() {
-
-    /*
-     * Per ora la sezione sicurezza non esiste.
-     * Manteniamo quindi un messaggio senza
-     * rompere la pagina.
-     */
-    alert(
-        "La sezione Sicurezza è attualmente in sviluppo."
-    );
-
-}
-
-
-/* ==================================================
-   AVVIO
-================================================== */
-
-controllaAccount();
-
-</script>
+        controllaAccount();
+    </script>
 
 </body>
 </html>
