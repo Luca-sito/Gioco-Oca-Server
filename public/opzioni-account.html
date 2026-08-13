@@ -2,77 +2,1137 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Opzioni Account - Giochi Società</title>
+
 <style>
-* { box-sizing:border-box; }
-body { margin:0; background:#101820; color:#e8e8e8; font-family:Arial,sans-serif; }
-.contenitore { max-width:600px; margin:auto; padding:40px 24px 80px; }
-.scatola { background:#1e2a38; border:1px solid #333; border-radius:14px; padding:30px; }
-h1 { color:#ffd700; text-align:center; margin-top:0; }
-.sottotitolo { text-align:center; color:#999; margin-bottom:30px; }
-.opzione { background:#263746; border-radius:12px; padding:18px; margin-bottom:15px; cursor:pointer; transition:0.2s; }
-.opzione:hover { background:#34495e; transform:scale(1.02); }
-.numero { color:#ffd700; font-weight:bold; font-size:20px; }
-.titolo { font-size:18px; font-weight:bold; }
-.descrizione { color:#aaa; font-size:14px; margin-top:5px; }
-.link-home { display:inline-block; margin-top:25px; padding:10px 20px; background:#ffd700; color:#111; text-decoration:none; border-radius:8px; font-weight:bold; }
-.link-home:hover { background:#ffaa00; }
-.errore { text-align:center; color:#ff6b6b; }
-</style>
-</head>
-<body>
+:root {
+    --bg-main: #080d14;
+    --bg-secondary: #0e1622;
+    --panel: rgba(18, 27, 40, 0.88);
+    --panel-hover: rgba(27, 40, 57, 0.96);
+    --border: rgba(255, 255, 255, 0.08);
+    --border-hover: rgba(255, 215, 0, 0.35);
 
-<div class="contenitore">
-  <div class="scatola">
+    --gold: #ffd700;
+    --gold-light: #ffe66d;
+    --gold-dark: #d6ad00;
 
-    <h1>⚙️ Opzioni Account</h1>
-    <div class="sottotitolo" id="benvenuto">Caricamento account...</div>
+    --text-main: #f5f7fa;
+    --text-secondary: #a6b0bd;
+    --text-muted: #6f7a88;
 
-    <div class="opzione" onclick="apriAvatar()">
-      <div><span class="numero">1.</span><span class="titolo">🖼️ Avatar</span></div>
-      <div class="descrizione">Cambia immagine profilo e scegli il tuo avatar</div>
-    </div>
+    --green: #43e08c;
+    --red: #ff6565;
 
-    <div class="opzione" onclick="apriProfilo()">
-      <div><span class="numero">2.</span><span class="titolo">👤 Modifica profilo</span></div>
-      <div class="descrizione">Modifica nickname e informazioni account</div>
-    </div>
-
-    <div class="opzione" onclick="apriMessaggi()">
-      <div><span class="numero">3.</span><span class="titolo">💬 Messaggi privati</span></div>
-      <div class="descrizione">Scrivi e leggi i messaggi privati con altri giocatori</div>
-    </div>
-
-    <div class="opzione" onclick="apriSicurezza()">
-      <div><span class="numero">4.</span><span class="titolo">🔒 Sicurezza</span></div>
-      <div class="descrizione">Gestisci password e sicurezza account</div>
-    </div>
-
-    <div class="errore" id="errore"></div>
-
-    <a href="https://solfriniluca1.wixstudio.com/giochisocieta" class="link-home">← Torna alla home</a>
-
-  </div>
-</div>
-
-<script>
-async function controllaAccount(){
-  try{
-    const risposta = await fetch("https://gioco-oca-server.onrender.com/api/me", { credentials:"include" });
-    if(!risposta.ok){ window.location.href = "https://gioco-oca-server.onrender.com/login.html"; return; }
-    const dati = await risposta.json();
-    document.getElementById("benvenuto").textContent = "Account di: " + dati.nickname;
-  }catch(e){
-    document.getElementById("errore").textContent = "Errore caricamento account";
-  }
+    --shadow: 0 25px 80px rgba(0,0,0,.45);
+    --radius-xl: 24px;
+    --radius-lg: 18px;
+    --radius-md: 14px;
 }
 
-function apriAvatar(){ window.location.href = "https://gioco-oca-server.onrender.com/avatar.html"; }
-function apriProfilo(){ window.location.href = "https://gioco-oca-server.onrender.com/profilo.html"; }
-function apriMessaggi(){ window.location.href = "https://gioco-oca-server.onrender.com/messaggi-privati.html"; }
-function apriSicurezza(){ alert("Sezione sicurezza in sviluppo."); }
+* {
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: Inter, Arial, Helvetica, sans-serif;
+    color: var(--text-main);
+    background:
+        radial-gradient(circle at 15% 10%, rgba(255, 215, 0, .07), transparent 28%),
+        radial-gradient(circle at 85% 90%, rgba(40, 120, 255, .07), transparent 30%),
+        linear-gradient(145deg, #070b11 0%, #0b111a 45%, #080d14 100%);
+    overflow-x: hidden;
+}
+
+/* ========================================
+   DECORAZIONE SFONDO
+======================================== */
+
+.sfondo-luce {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+}
+
+.sfondo-luce::before,
+.sfondo-luce::after {
+    content: "";
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(90px);
+    opacity: .18;
+}
+
+.sfondo-luce::before {
+    width: 340px;
+    height: 340px;
+    top: -120px;
+    left: -100px;
+    background: #ffd700;
+}
+
+.sfondo-luce::after {
+    width: 420px;
+    height: 420px;
+    right: -160px;
+    bottom: -180px;
+    background: #1769ff;
+}
+
+/* ========================================
+   CONTENITORE
+======================================== */
+
+.contenitore {
+    position: relative;
+    z-index: 1;
+
+    width: min(920px, calc(100% - 32px));
+    margin: 0 auto;
+
+    padding: 55px 0 70px;
+}
+
+/* ========================================
+   HEADER
+======================================== */
+
+.header-account {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+
+    margin-bottom: 28px;
+}
+
+.logo-area {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.logo-icona {
+    width: 52px;
+    height: 52px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 16px;
+
+    background: linear-gradient(
+        145deg,
+        rgba(255, 215, 0, .18),
+        rgba(255, 215, 0, .05)
+    );
+
+    border: 1px solid rgba(255, 215, 0, .22);
+
+    font-size: 25px;
+
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.08),
+        0 10px 30px rgba(0,0,0,.25);
+}
+
+.logo-testo small {
+    display: block;
+    color: var(--text-muted);
+    font-size: 12px;
+    margin-bottom: 2px;
+    letter-spacing: .4px;
+}
+
+.logo-testo strong {
+    display: block;
+    font-size: 16px;
+    letter-spacing: .2px;
+}
+
+.badge-stato {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    padding: 9px 14px;
+
+    border-radius: 999px;
+
+    background: rgba(67, 224, 140, .08);
+    border: 1px solid rgba(67, 224, 140, .2);
+
+    color: #9ff2c4;
+    font-size: 13px;
+    font-weight: 600;
+
+    white-space: nowrap;
+}
+
+.badge-punto {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+
+    box-shadow: 0 0 12px rgba(67, 224, 140, .8);
+}
+
+/* ========================================
+   PANNELLO PRINCIPALE
+======================================== */
+
+.scatola {
+    position: relative;
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(24, 35, 50, .94),
+            rgba(12, 19, 29, .96)
+        );
+
+    border: 1px solid var(--border);
+
+    border-radius: var(--radius-xl);
+
+    padding: 38px;
+
+    box-shadow: var(--shadow);
+
+    overflow: hidden;
+}
+
+.scatola::before {
+    content: "";
+    position: absolute;
+
+    left: 0;
+    right: 0;
+    top: 0;
+
+    height: 1px;
+
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255,215,0,.5),
+        transparent
+    );
+
+    opacity: .8;
+}
+
+/* ========================================
+   TITOLO
+======================================== */
+
+.testata {
+    text-align: center;
+    margin-bottom: 34px;
+}
+
+.testata h1 {
+    margin: 0;
+
+    font-size: clamp(28px, 5vw, 40px);
+    line-height: 1.15;
+
+    letter-spacing: -.8px;
+
+    background: linear-gradient(
+        135deg,
+        #fff,
+        #ffe66d 60%,
+        #ffd700
+    );
+
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.testata p {
+    margin: 11px 0 0;
+
+    color: var(--text-secondary);
+
+    font-size: 15px;
+}
+
+/* ========================================
+   PROFILO
+======================================== */
+
+.profilo {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+
+    padding: 18px 20px;
+    margin-bottom: 30px;
+
+    border-radius: var(--radius-lg);
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(255,255,255,.045),
+            rgba(255,255,255,.018)
+        );
+
+    border: 1px solid rgba(255,255,255,.07);
+}
+
+.avatar-generico {
+    width: 58px;
+    height: 58px;
+
+    flex-shrink: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 50%;
+
+    background:
+        linear-gradient(
+            135deg,
+            #ffd700,
+            #9a7800
+        );
+
+    color: #141414;
+
+    font-size: 24px;
+    font-weight: 800;
+
+    box-shadow:
+        0 7px 25px rgba(255,215,0,.18);
+}
+
+.profilo-testo {
+    min-width: 0;
+}
+
+.profilo-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: .8px;
+    margin-bottom: 3px;
+}
+
+#benvenuto {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-main);
+    word-break: break-word;
+}
+
+/* ========================================
+   GRIGLIA OPZIONI
+======================================== */
+
+.griglia-opzioni {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.opzione {
+    position: relative;
+
+    display: flex;
+    align-items: center;
+    gap: 17px;
+
+    width: 100%;
+    min-height: 126px;
+
+    padding: 21px;
+
+    text-align: left;
+
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(38, 52, 69, .72),
+            rgba(23, 34, 48, .78)
+        );
+
+    color: inherit;
+
+    cursor: pointer;
+
+    transition:
+        transform .2s ease,
+        border-color .2s ease,
+        background .2s ease,
+        box-shadow .2s ease;
+}
+
+.opzione:hover {
+    transform: translateY(-4px);
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(48, 63, 82, .88),
+            rgba(25, 38, 53, .92)
+        );
+
+    border-color: var(--border-hover);
+
+    box-shadow:
+        0 16px 35px rgba(0,0,0,.25);
+}
+
+.opzione:active {
+    transform: translateY(-1px) scale(.995);
+}
+
+.opzione:focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 3px;
+}
+
+.opzione-icon {
+    width: 56px;
+    height: 56px;
+
+    flex-shrink: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 16px;
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(255,215,0,.14),
+            rgba(255,215,0,.04)
+        );
+
+    border: 1px solid rgba(255,215,0,.13);
+
+    font-size: 25px;
+}
+
+.opzione-contenuto {
+    min-width: 0;
+    flex: 1;
+}
+
+.opzione-numero {
+    display: block;
+
+    margin-bottom: 4px;
+
+    color: var(--gold);
+    font-size: 11px;
+    font-weight: 800;
+
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.opzione-titolo {
+    display: block;
+
+    font-size: 17px;
+    font-weight: 700;
+
+    margin-bottom: 5px;
+}
+
+.opzione-descrizione {
+    display: block;
+
+    color: var(--text-secondary);
+
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+.freccia {
+    color: #667483;
+    font-size: 22px;
+
+    transition:
+        transform .2s ease,
+        color .2s ease;
+}
+
+.opzione:hover .freccia {
+    color: var(--gold);
+    transform: translateX(4px);
+}
+
+/* ========================================
+   SEZIONE SICUREZZA
+======================================== */
+
+.sicurezza-nota {
+    margin-top: 18px;
+
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+
+    padding: 14px 16px;
+
+    border-radius: 13px;
+
+    background: rgba(255,255,255,.025);
+    border: 1px solid rgba(255,255,255,.05);
+
+    color: var(--text-muted);
+
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.sicurezza-nota strong {
+    color: var(--text-secondary);
+}
+
+/* ========================================
+   ERRORE
+======================================== */
+
+.errore {
+    display: none;
+
+    margin-top: 20px;
+
+    padding: 14px 16px;
+
+    border-radius: 12px;
+
+    background: rgba(255, 101, 101, .08);
+    border: 1px solid rgba(255, 101, 101, .2);
+
+    color: #ff9c9c;
+
+    font-size: 14px;
+    text-align: center;
+}
+
+/* ========================================
+   FOOTER
+======================================== */
+
+.footer {
+    display: flex;
+    justify-content: center;
+
+    margin-top: 28px;
+}
+
+.link-home {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+
+    padding: 13px 20px;
+
+    border-radius: 12px;
+
+    text-decoration: none;
+
+    color: var(--text-secondary);
+
+    background: rgba(255,255,255,.035);
+    border: 1px solid rgba(255,255,255,.07);
+
+    font-size: 13px;
+    font-weight: 600;
+
+    transition:
+        .2s ease;
+}
+
+.link-home:hover {
+    color: var(--text-main);
+
+    background: rgba(255,255,255,.07);
+
+    border-color: rgba(255,255,255,.14);
+
+    transform: translateY(-2px);
+}
+
+/* ========================================
+   LOADING
+======================================== */
+
+.loading-dot {
+    display: inline-block;
+
+    width: 7px;
+    height: 7px;
+
+    margin-left: 4px;
+
+    border-radius: 50%;
+
+    background: var(--gold);
+
+    animation: lampeggio 1s infinite ease-in-out;
+}
+
+@keyframes lampeggio {
+    0%,100% {
+        opacity: .25;
+        transform: scale(.8);
+    }
+
+    50% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* ========================================
+   RESPONSIVE
+======================================== */
+
+@media (max-width: 760px) {
+
+    .contenitore {
+        width: min(100% - 20px, 620px);
+        padding: 22px 0 45px;
+    }
+
+    .header-account {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 14px;
+    }
+
+    .scatola {
+        padding: 24px 17px;
+        border-radius: 20px;
+    }
+
+    .griglia-opzioni {
+        grid-template-columns: 1fr;
+    }
+
+    .opzione {
+        min-height: 110px;
+        padding: 17px;
+    }
+
+    .testata {
+        margin-bottom: 25px;
+    }
+}
+
+@media (max-width: 430px) {
+
+    .logo-area {
+        gap: 11px;
+    }
+
+    .logo-icona {
+        width: 46px;
+        height: 46px;
+        border-radius: 14px;
+    }
+
+    .profilo {
+        padding: 15px;
+    }
+
+    .avatar-generico {
+        width: 50px;
+        height: 50px;
+    }
+
+    .opzione {
+        gap: 13px;
+    }
+
+    .opzione-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 14px;
+        font-size: 21px;
+    }
+
+    .opzione-titolo {
+        font-size: 16px;
+    }
+
+    .opzione-descrizione {
+        font-size: 12px;
+    }
+
+    .freccia {
+        font-size: 18px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="sfondo-luce"></div>
+
+<div class="contenitore">
+
+    <!-- HEADER -->
+    <div class="header-account">
+
+        <div class="logo-area">
+
+            <div class="logo-icona">
+                ⚙️
+            </div>
+
+            <div class="logo-testo">
+                <small>GIOCHI SOCIETÀ</small>
+                <strong>Area Account</strong>
+            </div>
+
+        </div>
+
+        <div class="badge-stato">
+            <span class="badge-punto"></span>
+            Account connesso
+        </div>
+
+    </div>
+
+    <!-- PANNELLO -->
+    <div class="scatola">
+
+        <!-- TESTATA -->
+        <div class="testata">
+
+            <h1>Opzioni Account</h1>
+
+            <p>
+                Personalizza e gestisci il tuo account
+            </p>
+
+        </div>
+
+        <!-- PROFILO -->
+        <div class="profilo">
+
+            <div class="avatar-generico" id="avatarIniziale">
+                ?
+            </div>
+
+            <div class="profilo-testo">
+
+                <div class="profilo-label">
+                    Account attualmente connesso
+                </div>
+
+                <div id="benvenuto">
+                    Caricamento account
+                    <span class="loading-dot"></span>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- OPZIONI -->
+        <div class="griglia-opzioni">
+
+            <!-- AVATAR -->
+            <button
+                type="button"
+                class="opzione"
+                onclick="apriAvatar()"
+            >
+
+                <div class="opzione-icon">
+                    🖼️
+                </div>
+
+                <div class="opzione-contenuto">
+
+                    <span class="opzione-numero">
+                        Opzione 01
+                    </span>
+
+                    <span class="opzione-titolo">
+                        Avatar
+                    </span>
+
+                    <span class="opzione-descrizione">
+                        Cambia la tua immagine profilo
+                        e scegli il tuo avatar.
+                    </span>
+
+                </div>
+
+                <div class="freccia">
+                    ›
+                </div>
+
+            </button>
+
+
+            <!-- PROFILO -->
+            <button
+                type="button"
+                class="opzione"
+                onclick="apriProfilo()"
+            >
+
+                <div class="opzione-icon">
+                    👤
+                </div>
+
+                <div class="opzione-contenuto">
+
+                    <span class="opzione-numero">
+                        Opzione 02
+                    </span>
+
+                    <span class="opzione-titolo">
+                        Modifica profilo
+                    </span>
+
+                    <span class="opzione-descrizione">
+                        Modifica nickname e
+                        informazioni del tuo account.
+                    </span>
+
+                </div>
+
+                <div class="freccia">
+                    ›
+                </div>
+
+            </button>
+
+
+            <!-- MESSAGGI -->
+            <button
+                type="button"
+                class="opzione"
+                onclick="apriMessaggi()"
+            >
+
+                <div class="opzione-icon">
+                    💬
+                </div>
+
+                <div class="opzione-contenuto">
+
+                    <span class="opzione-numero">
+                        Opzione 03
+                    </span>
+
+                    <span class="opzione-titolo">
+                        Messaggi privati
+                    </span>
+
+                    <span class="opzione-descrizione">
+                        Leggi e invia messaggi privati
+                        agli altri giocatori.
+                    </span>
+
+                </div>
+
+                <div class="freccia">
+                    ›
+                </div>
+
+            </button>
+
+
+            <!-- SICUREZZA -->
+            <button
+                type="button"
+                class="opzione"
+                onclick="apriSicurezza()"
+            >
+
+                <div class="opzione-icon">
+                    🔒
+                </div>
+
+                <div class="opzione-contenuto">
+
+                    <span class="opzione-numero">
+                        Opzione 04
+                    </span>
+
+                    <span class="opzione-titolo">
+                        Sicurezza
+                    </span>
+
+                    <span class="opzione-descrizione">
+                        Gestisci password e impostazioni
+                        di sicurezza dell'account.
+                    </span>
+
+                </div>
+
+                <div class="freccia">
+                    ›
+                </div>
+
+            </button>
+
+        </div>
+
+
+        <!-- NOTA -->
+        <div class="sicurezza-nota">
+
+            <div>🛡️</div>
+
+            <div>
+                <strong>Protezione account</strong><br>
+                Le impostazioni dell'account sono accessibili
+                esclusivamente agli utenti autenticati.
+            </div>
+
+        </div>
+
+
+        <!-- ERRORE -->
+        <div
+            class="errore"
+            id="errore"
+        ></div>
+
+    </div>
+
+
+    <!-- FOOTER -->
+    <div class="footer">
+
+        <a
+            href="https://solfriniluca1.wixstudio.com/giochisocieta"
+            class="link-home"
+        >
+            ← Torna a Giochi Società
+        </a>
+
+    </div>
+
+</div>
+
+
+<script>
+
+/* ==================================================
+   CONFIGURAZIONE
+================================================== */
+
+const SERVER_URL =
+    "https://gioco-oca-server.onrender.com";
+
+const LOGIN_URL =
+    SERVER_URL + "/login.html";
+
+const AVATAR_URL =
+    SERVER_URL + "/avatar.html";
+
+const PROFILO_URL =
+    SERVER_URL + "/profilo.html";
+
+const MESSAGGI_URL =
+    SERVER_URL + "/messaggi-privati.html";
+
+
+/* ==================================================
+   ELEMENTI
+================================================== */
+
+const elementoBenvenuto =
+    document.getElementById("benvenuto");
+
+const elementoErrore =
+    document.getElementById("errore");
+
+const elementoAvatar =
+    document.getElementById("avatarIniziale");
+
+
+/* ==================================================
+   FUNZIONE ERRORE
+================================================== */
+
+function mostraErrore(messaggio) {
+
+    elementoErrore.textContent = messaggio;
+    elementoErrore.style.display = "block";
+
+}
+
+
+/* ==================================================
+   CONTROLLO ACCOUNT
+================================================== */
+
+async function controllaAccount() {
+
+    try {
+
+        const risposta = await fetch(
+            SERVER_URL + "/api/me",
+            {
+                method: "GET",
+                credentials: "include",
+                headers: {
+                    "Accept": "application/json"
+                }
+            }
+        );
+
+
+        /*
+         * Se il server ci dice che l'utente
+         * non è autenticato, lo rimandiamo
+         * realmente alla pagina login.
+         */
+        if (!risposta.ok) {
+
+            window.location.href = LOGIN_URL;
+
+            return;
+        }
+
+
+        const dati = await risposta.json();
+
+
+        /*
+         * Controllo di sicurezza:
+         * verifichiamo che il server abbia
+         * effettivamente restituito un nickname.
+         */
+        if (!dati || !dati.nickname) {
+
+            mostraErrore(
+                "Impossibile recuperare i dati dell'account."
+            );
+
+            return;
+        }
+
+
+        const nickname =
+            String(dati.nickname);
+
+
+        /*
+         * Mostra nickname
+         */
+        elementoBenvenuto.textContent =
+            nickname;
+
+
+        /*
+         * Prima lettera del nickname
+         * come avatar temporaneo.
+         */
+        const primaLettera =
+            nickname
+                .trim()
+                .charAt(0)
+                .toUpperCase();
+
+
+        if (primaLettera) {
+
+            elementoAvatar.textContent =
+                primaLettera;
+
+        }
+
+    }
+
+    catch (errore) {
+
+        console.error(
+            "Errore controllo account:",
+            errore
+        );
+
+
+        mostraErrore(
+            "Impossibile collegarsi al server. Controlla la connessione e riprova."
+        );
+
+    }
+}
+
+
+/* ==================================================
+   NAVIGAZIONE
+================================================== */
+
+function apriAvatar() {
+
+    window.location.href = AVATAR_URL;
+
+}
+
+
+function apriProfilo() {
+
+    window.location.href = PROFILO_URL;
+
+}
+
+
+function apriMessaggi() {
+
+    window.location.href = MESSAGGI_URL;
+
+}
+
+
+function apriSicurezza() {
+
+    /*
+     * Per ora la sezione sicurezza non esiste.
+     * Manteniamo quindi un messaggio senza
+     * rompere la pagina.
+     */
+    alert(
+        "La sezione Sicurezza è attualmente in sviluppo."
+    );
+
+}
+
+
+/* ==================================================
+   AVVIO
+================================================== */
 
 controllaAccount();
+
 </script>
 
 </body>
