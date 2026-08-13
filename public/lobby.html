@@ -303,54 +303,66 @@ z-index:1000;
 .btn-mobile span{
     color:#111111 !important;
 }
-/* POPUP */
+/* POPUP MOBILE: SEMPRE VERO FULLSCREEN */
 .popup-mobile{
-    position:fixed;
-    top:0;
-    left:0;
-    width:100vw;
-    height:100vh;
-
-    margin:0;
-    padding:20px;
-
-    background:#ffffff;
-
-    border:none;
-    border-radius:0;
-    box-shadow:none;
-
-    z-index:99999;
-
+    position:fixed !important;
+    inset:0 !important;
+    width:100vw !important;
+    height:100vh !important;
+    height:100dvh !important;
+    max-width:none !important;
+    max-height:none !important;
+    margin:0 !important;
+    padding:0 !important;
+    background:#fff !important;
+    border:none !important;
+    border-radius:0 !important;
+    box-shadow:none !important;
+    z-index:99999 !important;
     overflow-y:auto;
     overflow-x:hidden;
-
     display:none;
 }
 
 .popup-mobile.aperto{
     display:block;
 }
+
 .popup-mobile.crea-schermo-intero{
-    position:fixed;
+    position:fixed !important;
+    inset:0 !important;
+    width:100vw !important;
+    height:100vh !important;
+    height:100dvh !important;
+    max-width:none !important;
+    max-height:none !important;
+    margin:0 !important;
+    padding:0 !important;
+    border-radius:0 !important;
+    border:none !important;
+    box-shadow:none !important;
+    z-index:99999 !important;
+}
 
-    top:0;
-    left:0;
-    right:0;
-    bottom:0;
+/* Il contenuto occupa tutta la schermata */
+#contenutoMobile{
+    min-height:100%;
+    padding:20px;
+    box-sizing:border-box;
+}
 
-    width:100vw;
-    height:100vh;
+/* CREA TAVOLO: fascia nera completa in alto, da bordo a bordo */
+#contenutoMobile[data-vista="crea"]{
+    padding:0 20px 20px;
+}
 
-    max-width:none;
-    max-height:none;
-
-    margin:0;
-    border-radius:0;
-    border:none;
-    box-shadow:none;
-
-    z-index:99999;
+#contenutoMobile[data-vista="crea"] > h2{
+    margin:0 -20px 20px !important;
+    padding:16px 20px !important;
+    width:calc(100% + 40px);
+    background:#111 !important;
+    color:#fff !important;
+    text-align:center;
 }
 .chiudi-mobile{
     position:absolute;
@@ -376,7 +388,20 @@ z-index:1000;
   #menuMobile{ height:64px; }
   .btn-mobile{ width:50px; height:50px; font-size:19px; }
   .btn-mobile span{ font-size:8px; }
-  .popup-mobile{ top:6%; left:3%; width:94%; height:86%; padding:12px; }
+
+  /* Nessun ridimensionamento del popup */
+  .popup-mobile,
+  .popup-mobile.crea-schermo-intero{
+    top:0 !important;
+    left:0 !important;
+    right:0 !important;
+    bottom:0 !important;
+    width:100vw !important;
+    height:100vh !important;
+    height:100dvh !important;
+    padding:0 !important;
+  }
+
   .scheda-partita{ padding:10px; }
   .info-partita{ font-size:13px; line-height:1.6; }
   .mini-giocatore{ font-size:12px; padding:5px; }
@@ -386,7 +411,20 @@ z-index:1000;
   .btn-mobile{ width:46px; height:46px; font-size:17px; }
   .btn-mobile span{ display:none; }
   #menuMobile{ height:58px; gap:2px; }
-  .popup-mobile{ top:4%; left:2%; width:96%; height:90%; padding:10px; }
+
+  /* Anche sui telefoni più piccoli resta vero fullscreen */
+  .popup-mobile,
+  .popup-mobile.crea-schermo-intero{
+    top:0 !important;
+    left:0 !important;
+    right:0 !important;
+    bottom:0 !important;
+    width:100vw !important;
+    height:100vh !important;
+    height:100dvh !important;
+    padding:0 !important;
+  }
+
   h2{ font-size:14px; padding:7px; }
 }
 </style>
@@ -563,6 +601,8 @@ function rilevaTipoDispositivoClient() {
 
 // ===== MENU MOBILE =====
 function apriCreaMobile(){
+const popup = document.getElementById("popupMobile");
+popup.classList.add("crea-schermo-intero");
 document.getElementById("contenutoMobile").dataset.vista = "crea";
 document.getElementById("contenutoMobile").innerHTML=`
 <h2 style="margin-bottom:15px;">
@@ -646,6 +686,8 @@ function mostraBottoneRiprendiPartita(info) {
 }
 
 function apriOnlineMobile(){
+const popup = document.getElementById("popupMobile");
+popup.classList.remove("crea-schermo-intero");
 document.getElementById("contenutoMobile").dataset.vista = "online";
 let lista=document.getElementById("listaOnline").innerHTML;
 document.getElementById("contenutoMobile").innerHTML=`
@@ -655,6 +697,8 @@ ${lista}
 apriMobile();
 }
 function apriChatMobile(){
+const popup = document.getElementById("popupMobile");
+popup.classList.remove("crea-schermo-intero");
 document.getElementById("contenutoMobile").dataset.vista = "chat";
 nuoviMessaggiMobile = 0;
 aggiornaBadgeChatMobile();
@@ -762,6 +806,8 @@ function aggiungiEmojiMobile(emoji) {
 }
 
 function apriOpzioniMobile(){
+const popup = document.getElementById("popupMobile");
+popup.classList.remove("crea-schermo-intero");
 document.getElementById("contenutoMobile").dataset.vista = "opzioni";
 document.getElementById("contenutoMobile").innerHTML=`
 <h2>⚙️ Opzioni</h2>
@@ -799,7 +845,8 @@ margin:0;
 apriMobile();
 }
 function apriMobile(){
-document.getElementById("popupMobile").classList.add("aperto");
+const popup = document.getElementById("popupMobile");
+popup.classList.add("aperto");
 }
 function cambiaTema(){
 const tema=document.getElementById("temaMobile").value;
@@ -821,7 +868,8 @@ e.style.color="#111";
 localStorage.setItem("tema",tema);
 }
 function chiudiMobile(){
-document.getElementById("popupMobile").classList.remove("aperto");
+const popup = document.getElementById("popupMobile");
+popup.classList.remove("aperto", "crea-schermo-intero");
 document.getElementById("contenutoMobile").dataset.vista = "";
 }
 async function verificaSessione() {
