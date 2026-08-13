@@ -551,8 +551,7 @@ app.post("/api/admin/riattiva", richiediAdmin, async (req, res) => {
   res.json({ ok: true });
 });
 
-// ===== DADO VERO DA RANDOM.ORG (timeout ridotto a 1.5s: prima erano 4s, troppi
-// per una fase come "chi inizia" dove ogni singolo tiro deve sentirsi istantaneo) =====
+// ===== DADO VERO DA RANDOM.ORG (timeout 1.5s) =====
 function tiraDadoRandomOrg() {
   return new Promise((resolve) => {
     const url = "https://www.random.org/integers/?num=2&min=1&max=6&col=1&base=10&format=plain&rnd=new";
@@ -591,10 +590,6 @@ async function ripristinaPartiteDaFirebase() {
   for (const id in partiteFirebase) {
     const p = partiteFirebase[id];
     if (!stanze[p.stanza]) continue;
-    // Nota: la fase "determinazione_ordine" (i veri tiri di "Chi inizia?") vive solo in
-    // memoria, non è persistita in dettaglio su Firebase — in caso di riavvio del server
-    // la scelta più sicura è far ripartire da capo questa fase per le partite ancora non
-    // "iniziata", piuttosto che rischiare uno stato incoerente
     stanze[p.stanza].partite[id] = {
       ...p,
       maxGiocatori: p.maxGiocatori || (Object.keys(p.giocatori || {}).length || 2),
@@ -656,6 +651,18 @@ function trovaPartita(partitaId) {
   return null;
 }
 
+// NUOVO: cerca una partita ancora attiva (in determinazione o in corso) di cui
+// questo uid fa parte, in QUALSIASI stanza — usato dal bottone "Riprendi partita"
+function trovaPartitaAttivaPerUid(uid) {
+  for (const nomeStanza in stanze) {
+    for (const pid in stanze[nomeStanza].partite) {
+      const p = stanze[nomeStanza].partite[pid];
+      if (p.giocatori[uid]) return { partitaId: pid, stanza: nomeStanza };
+    }
+  }
+  return null;
+}
+
 function calcolaUidInPartita(nomeStanza) {
   const uidInPartita = new Set();
   if (!stanze[nomeStanza]) return uidInPartita;
@@ -690,8 +697,14 @@ function inviaConteggioStanze() {
   for (const nome in stanze) {
     const valori = Object.values(stanze[nome].giocatoriOnline);
     const uidInPartita = calcolaUidInPartita(nome);
-    conteggi[nome] = valori.length;
-    giocatoriPerStanza[nome] = valori.map(g => ({ uid: g.uid, nickname: g.nickname, avatar: g.avatar || null, tipoDispositivo: g.tipoDispositivo || "computer", stato: uidInPartita.has(g.uid) ? "partita" : "lobby" }));
+    // Deduplica per uid: se la stessa persona ha più connessioni aperte nella
+    // stessa stanza (es. una scheda lobby.html rimasta aperta in background
+    // insieme a gioco.html), viene mostrata una volta sola
+    const vistiUid = new Map();
+    valori.forEach(g => vistiUid.set(g.uid, g));
+    const valoriUnici = Array.from(vistiUid.values());
+    conteggi[nome] = valoriUnici.length;
+    giocatoriPerStanza[nome] = valoriUnici.map(g => ({ uid: g.uid, nickname: g.nickname, avatar: g.avatar || null, tipoDispositivo: g.tipoDispositivo || "computer", stato: uidInPartita.has(g.uid) ? "partita" : "lobby" }));
   }
   const messaggio = JSON.stringify({ tipo: "conteggioStanze", stanze: conteggi, giocatori: giocatoriPerStanza });
   wss.clients.forEach(client => { if (client.readyState === WebSocket.OPEN) client.send(messaggio); });
@@ -729,8 +742,6 @@ async function gestisciScadenzaTurno(partita, nomeStanza) {
   await eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatoreDiTurno, true);
 }
 
-// Il timer del turno successivo riparte SEMPRE prima della trasmissione ai client,
-// così il messaggio porta sempre l'orario di inizio corretto (fix del bug precedente)
 async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, automatico) {
   if (partita.elaborandoTiro) return;
   partita.elaborandoTiro = true;
@@ -827,10 +838,6 @@ async function forzaAbbandonoPerInattivita(partita, nomeStanza, idGiocatore) {
 }
 
 // ===== FASE "CHI INIZIA?" — turni veri, uno alla volta, ripescaggi in caso di parità =====
-
-// Riceve i risultati raccolti finora e l'elenco di chi deve ancora essere ordinato.
-// Se c'è un pareggio (2+ giocatori con lo stesso punteggio più alto TRA quelli non
-// ancora distinti), lo segnala per far ripetere il tiro SOLO a chi è in parità.
 function calcolaOrdineDaiRisultati(risultati, tuttiGliUid) {
   const coppie = tuttiGliUid.map(uid => ({ uid, punteggio: risultati[uid] }));
   coppie.sort((a, b) => b.punteggio - a.punteggio);
@@ -885,6 +892,11 @@ async function gestisciScadenzaDeterminazione(partita, nomeStanza) {
   await eseguiTiroDeterminazionePerGiocatore(partita, nomeStanza, uid, true);
 }
 
+// FIX: prima, il calcolo/annuncio dell'ordine finale partiva praticamente nello
+// stesso istante dell'ultimo tiro — l'animazione del dado (poco più di un
+// secondo) veniva così scavalcata dalla schermata "ordine deciso" prima ancora
+// di completarsi. Ora si aspetta che il tiro sia davvero visibile prima di
+// avanzare (vale per ogni tiro, non solo l'ultimo — il ritmo generale migliora).
 async function eseguiTiroDeterminazionePerGiocatore(partita, nomeStanza, uid, automatico) {
   if (partita.elaborandoTiro) return;
   partita.elaborandoTiro = true;
@@ -900,7 +912,7 @@ async function eseguiTiroDeterminazionePerGiocatore(partita, nomeStanza, uid, au
     const messaggio = JSON.stringify({ tipo: "risultatoDeterminazione", uid, nome: giocatore ? giocatore.nome : "?", dado1, dado2, valoreDado, automatico: !!automatico });
     Object.values(partita.giocatori).forEach(g => { if (g.socket && g.socket.readyState === WebSocket.OPEN) g.socket.send(messaggio); });
 
-    await avanzaDeterminazione(partita, nomeStanza);
+    setTimeout(() => { avanzaDeterminazione(partita, nomeStanza); }, 1600);
   } finally {
     partita.elaborandoTiro = false;
   }
@@ -926,7 +938,14 @@ async function avanzaDeterminazione(partita, nomeStanza) {
       return;
     }
     partita.gruppoSpareggioAttuale = null;
-    await completaDeterminazione(partita, nomeStanza, esito.ordineFinale);
+
+    const nomiOrdineFinale = esito.ordineFinale.map(uid => partita.giocatori[uid].nome);
+    const punteggiOrdineFinale = {};
+    esito.ordineFinale.forEach(uid => { punteggiOrdineFinale[partita.giocatori[uid].nome] = partita.risultatiDeterminazione[uid]; });
+    const messaggioOrdine = JSON.stringify({ tipo: "ordineFinaleCalcolato", ordineGiocatori: nomiOrdineFinale, punteggi: punteggiOrdineFinale });
+    Object.values(partita.giocatori).forEach(g => { if (g.socket && g.socket.readyState === WebSocket.OPEN) g.socket.send(messaggioOrdine); });
+
+    setTimeout(() => { completaDeterminazione(partita, nomeStanza, esito.ordineFinale); }, 2600);
     return;
   }
   partita.turnoInCorsoDeterminazione = partita.codaDeterminazione.shift();
@@ -961,8 +980,6 @@ async function espelliPerInattivitaDuranteDeterminazione(partita, nomeStanza, ui
   inviaConteggioStanze();
 }
 
-// Il risultato di "chi inizia" del primo classificato NON va perso: diventa la sua
-// prima mossa vera e propria, con tanto di animazione di spostamento sul tabellone.
 async function completaDeterminazione(partita, nomeStanza, ordineFinale) {
   partita.ordineGiocatori = ordineFinale;
   partita.turnoAttuale = 0;
@@ -1095,6 +1112,9 @@ wss.on("connection", (socket, request) => {
         inviaConteggioStanze();
         inviaAllaStanza(stanzaAttuale, { tipo: "online", numero: Object.keys(stanze[stanzaAttuale].giocatoriOnline).length });
         inviaListaPartite(stanzaAttuale);
+        // NUOVO: segnala al client se ha una partita in corso da poter riprendere,
+        // per mostrare il bottone "Riprendi partita"
+        socket.send(JSON.stringify({ tipo: "statoPartitaPersonale", partitaAttiva: trovaPartitaAttivaPerUid(uid) }));
         return;
       }
 
@@ -1109,6 +1129,13 @@ wss.on("connection", (socket, request) => {
         if (db) { try { const u = (await db.ref("utenti/" + uid).once("value")).val(); if (u) mioGiocatore.avatar = u.avatar || null; } catch (e) {} }
         mioGiocatore.socket = socket;
         nickname = mioGiocatore.nome; mioAvatar = mioGiocatore.avatar || null;
+
+        // FIX: senza questo, chi è in partita risultava assente dall'elenco
+        // "online in questa stanza" — la connessione di gioco.html è diversa da
+        // quella di lobby.html e va registrata qui allo stesso modo di entraLobby
+        if (!stanze[stanzaAttuale]) stanze[stanzaAttuale] = { giocatoriOnline: {}, partite: {} };
+        stanze[stanzaAttuale].giocatoriOnline[socketId] = { uid, nickname, avatar: mioAvatar, tipoDispositivo };
+        inviaConteggioStanze();
 
         if (partita.fase === "determinazione_ordine") {
           socket.send(JSON.stringify({
