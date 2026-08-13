@@ -631,21 +631,9 @@ function calcolaMovimento(posizioneAttuale, valoreDado) {
   if (nuovaPosizione === CASELLA_TIRA_ANCORA) { tiraAncora = true; messaggi.push("Sali sul ponte! Tira ancora i dadi."); }
   if (CASELLE_AVANZA_ANCORA.includes(nuovaPosizione)) {
     messaggi.push("Avanzi dello stesso numero di caselle!");
-
     const r = calcolaMovimento(nuovaPosizione, valoreDado);
-
-    return {
-        nuovaPosizione: r.nuovaPosizione,
-        percorso: percorso.concat(r.percorso),
-        messaggi: messaggi.concat(r.messaggi),
-        turniDaSaltare: r.turniDaSaltare,
-        vittoria: r.vittoria,
-
-        // L'avanzamento automatico NON concede da solo
-        // un altro tiro manuale.
-        tiraAncora: false
-    };
-}
+    return { nuovaPosizione: r.nuovaPosizione, percorso: percorso.concat(r.percorso), messaggi: messaggi.concat(r.messaggi), turniDaSaltare: r.turniDaSaltare, vittoria: r.vittoria, tiraAncora: r.tiraAncora };
+  }
   if (CASELLE_SALTA_TRE_TURNI.includes(nuovaPosizione)) { turniDaSaltare = 3; messaggi.push("Rimani fermo per 3 turni!"); }
   if (CASELLE_SALTA_UN_TURNO.includes(nuovaPosizione)) { turniDaSaltare = 1; messaggi.push("Salti un turno!"); }
   if (CASELLE_TORNA_A[nuovaPosizione] !== undefined) { const cf = CASELLE_TORNA_A[nuovaPosizione]; messaggi.push(`Torni alla casella ${cf}!`); percorso.push(cf); nuovaPosizione = cf; }
@@ -744,98 +732,50 @@ async function gestisciScadenzaTurno(partita, nomeStanza) {
 // Il timer del turno successivo riparte SEMPRE prima della trasmissione ai client,
 // così il messaggio porta sempre l'orario di inizio corretto (fix del bug precedente)
 async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, automatico) {
-    if (partita.elaborandoTiro) return;
+  if (partita.elaborandoTiro) return;
+  partita.elaborandoTiro = true;
+  fermaTimerTurno(partita);
 
-    partita.elaborandoTiro = true;
-    fermaTimerTurno(partita);
+  try {
+    const { dado1, dado2 } = await lanciaDueDadiSicuri();
+    const valoreDado = dado1 + dado2;
+    const giocatore = partita.giocatori[idGiocatore];
+    if (!giocatore) return;
 
-    try {
-        const { dado1, dado2 } = await lanciaDueDadiSicuri();
-        const valoreDado = dado1 + dado2;
+    const risultato = calcolaMovimento(giocatore.posizione, valoreDado);
+    giocatore.posizione = risultato.nuovaPosizione;
+    if (risultato.turniDaSaltare > 0) giocatore.turniSaltati = risultato.turniDaSaltare;
+    if (!risultato.tiraAncora && !risultato.vittoria) passaAlProssimoTurno(partita);
 
-        const giocatore = partita.giocatori[idGiocatore];
-        if (!giocatore) return;
+    const statoGiocatori = costruisciStatoGiocatori(partita);
+    const idProssimo = partita.ordineGiocatori[partita.turnoAttuale];
+    const messaggiFinali = automatico ? ["⏱️ Tempo scaduto: mossa automatica."].concat(risultato.messaggi) : risultato.messaggi;
 
-        const risultato = calcolaMovimento(
-            giocatore.posizione,
-            valoreDado
-        );
+    if (!risultato.vittoria) avviaTimerTurno(partita, nomeStanza);
 
-        giocatore.posizione = risultato.nuovaPosizione;
+    Object.values(partita.giocatori).forEach(g => {
+      if (g.socket && g.socket.readyState === WebSocket.OPEN) {
+        g.socket.send(JSON.stringify({
+          tipo: "aggiornamentoPartita", giocatori: statoGiocatori, dado1, dado2, valoreDado,
+          percorso: risultato.percorso, idGiocatoreCheHaTirato: idGiocatore, automatico: !!automatico,
+          messaggi: messaggiFinali, turnoDiId: idProssimo,
+          tempoInizioTurno: partita.tempoInizioTurno, durataMossaMs: millisecondiMossa(partita),
+          vittoria: risultato.vittoria, vincitore: risultato.vittoria ? giocatore.nome : null
+        }));
+      }
+    });
 
-        if (risultato.turniDaSaltare > 0) {
-            giocatore.turniSaltati = risultato.turniDaSaltare;
-        }
-
-        if (!risultato.tiraAncora && !risultato.vittoria) {
-            passaAlProssimoTurno(partita);
-        }
-
-        const statoGiocatori = costruisciStatoGiocatori(partita);
-        const idProssimo =
-            partita.ordineGiocatori[partita.turnoAttuale];
-
-        const messaggiFinali = automatico
-            ? ["⏱️ Tempo scaduto: mossa automatica."]
-                .concat(risultato.messaggi)
-            : risultato.messaggi;
-
-        if (!risultato.vittoria) {
-            avviaTimerTurno(partita, nomeStanza);
-        }
-
-        Object.values(partita.giocatori).forEach(g => {
-            if (g.socket && g.socket.readyState === WebSocket.OPEN) {
-                g.socket.send(JSON.stringify({
-                    tipo: "aggiornamentoPartita",
-                    giocatori: statoGiocatori,
-                    dado1,
-                    dado2,
-                    valoreDado,
-                    percorso: risultato.percorso,
-                    idGiocatoreCheHaTirato: idGiocatore,
-                    automatico: !!automatico,
-                    messaggi: messaggiFinali,
-                    turnoDiId: idProssimo,
-                    tempoInizioTurno: partita.tempoInizioTurno,
-                    durataMossaMs: millisecondiMossa(partita),
-                    vittoria: risultato.vittoria,
-                    vincitore: risultato.vittoria
-                        ? giocatore.nome
-                        : null
-                }));
-            }
-        });
-
-        if (risultato.vittoria) {
-            await concludiPartita(
-                partita,
-                idGiocatore,
-                nomeStanza,
-                null
-            );
-
-            await rimuoviPartita(
-                nomeStanza,
-                partita.id
-            );
-
-            inviaListaPartite(nomeStanza);
-            inviaConteggioStanze();
-        } else {
-            await aggiornaStatoPartita(partita.id, {
-                giocatori: preparaGiocatoriPerFirebase(
-                    partita.giocatori
-                ),
-                ordineGiocatori: partita.ordineGiocatori,
-                turnoAttuale: partita.turnoAttuale,
-                iniziata: partita.iniziata
-            });
-        }
-
-    } finally {
-        partita.elaborandoTiro = false;
+    if (risultato.vittoria) {
+      await concludiPartita(partita, idGiocatore, nomeStanza, null);
+      await rimuoviPartita(nomeStanza, partita.id);
+      inviaListaPartite(nomeStanza);
+      inviaConteggioStanze();
+    } else {
+      await aggiornaStatoPartita(partita.id, { giocatori: preparaGiocatoriPerFirebase(partita.giocatori), ordineGiocatori: partita.ordineGiocatori, turnoAttuale: partita.turnoAttuale, iniziata: partita.iniziata });
     }
+  } finally {
+    partita.elaborandoTiro = false;
+  }
 }
 
 async function forzaAbbandonoPerInattivita(partita, nomeStanza, idGiocatore) {
@@ -1102,26 +1042,6 @@ wss.on("connection", (socket, request) => {
   const datiTokenIniziali = verificaToken(tokenDalCookie);
   let uid = datiTokenIniziali ? datiTokenIniziali.uid : null;
 
-  function registraPresenzaNellaStanza(nomeStanza) {
-  if (!nomeStanza || !uid) return;
-
-  if (!stanze[nomeStanza]) {
-    stanze[nomeStanza] = {
-      giocatoriOnline: {},
-      partite: {}
-    };
-  }
-
-  stanzaAttuale = nomeStanza;
-
-  stanze[nomeStanza].giocatoriOnline[socketId] = {
-    uid,
-    nickname,
-    avatar: mioAvatar,
-    tipoDispositivo
-  };
-}
-
   socket.on("message", async (message) => {
     try {
       let dati;
@@ -1183,20 +1103,12 @@ wss.on("connection", (socket, request) => {
         const trovato = trovaPartita(dati.partitaId);
         if (!trovato) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Partita non trovata." })); return; }
         const { partita, nomeStanza } = trovato;
-const mioGiocatore = partita.giocatori[uid];
-
-if (!mioGiocatore) {
-  socket.send(JSON.stringify({
-    tipo: "errore",
-    messaggio: "Non fai parte di questa partita."
-  }));
-  return;
-}
+        stanzaAttuale = nomeStanza;
+        const mioGiocatore = partita.giocatori[uid];
+        if (!mioGiocatore) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Non fai parte di questa partita." })); return; }
         if (db) { try { const u = (await db.ref("utenti/" + uid).once("value")).val(); if (u) mioGiocatore.avatar = u.avatar || null; } catch (e) {} }
         mioGiocatore.socket = socket;
         nickname = mioGiocatore.nome; mioAvatar = mioGiocatore.avatar || null;
-        registraPresenzaNellaStanza(nomeStanza);
-        inviaConteggioStanze();
 
         if (partita.fase === "determinazione_ordine") {
           socket.send(JSON.stringify({
