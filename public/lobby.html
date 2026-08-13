@@ -606,7 +606,7 @@ popup.classList.add("crea-schermo-intero");
 document.getElementById("contenutoMobile").dataset.vista = "crea";
 document.getElementById("contenutoMobile").innerHTML=`
 <h2 style="margin-bottom:15px;">
-🪑 Crea tavolo
+CREA TAVOLO
 </h2>
 <p>Numero giocatori</p>
 
@@ -646,7 +646,7 @@ margin-top:20px;
 background:#ffc400;
 color:#000;
 ">
-🪑 Crea partita
+Crea partita
 </button>
 ${partitaAttivaDaRiprendere ? `<button onclick="riprendiPartitaAttiva()" style="background:#43a047;color:white;margin-top:10px;">▶️ Riprendi partita</button>` : ""}
 <button onclick="eliminaPartita()" 
@@ -655,7 +655,7 @@ background:#dc3545;
 color:white;
 margin-top:10px;
 ">
-🗑 Elimina partita
+Elimina partita
 </button>
 `;
 apriMobile();
@@ -691,7 +691,7 @@ popup.classList.remove("crea-schermo-intero");
 document.getElementById("contenutoMobile").dataset.vista = "online";
 let lista=document.getElementById("listaOnline").innerHTML;
 document.getElementById("contenutoMobile").innerHTML=`
-<h2>👥 Giocatori online</h2>
+<h2>GIOCATORI ONLINE</h2>
 ${lista}
 `;
 apriMobile();
@@ -711,7 +711,7 @@ flex-direction:column;
 <h2 style="
 margin-bottom:10px;
 ">
-💬 Chat
+CHAT
 </h2>
 <div id="chatMobile" style="flex:1; overflow-y:auto;">
 ${document.getElementById("chat").innerHTML}
@@ -810,7 +810,7 @@ const popup = document.getElementById("popupMobile");
 popup.classList.remove("crea-schermo-intero");
 document.getElementById("contenutoMobile").dataset.vista = "opzioni";
 document.getElementById("contenutoMobile").innerHTML=`
-<h2>⚙️ Opzioni</h2>
+<h2>OPZIONI</h2>
 <div style="
 display:flex;
 align-items:center;
