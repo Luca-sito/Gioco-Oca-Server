@@ -1102,6 +1102,26 @@ wss.on("connection", (socket, request) => {
   const datiTokenIniziali = verificaToken(tokenDalCookie);
   let uid = datiTokenIniziali ? datiTokenIniziali.uid : null;
 
+  function registraPresenzaNellaStanza(nomeStanza) {
+  if (!nomeStanza || !uid) return;
+
+  if (!stanze[nomeStanza]) {
+    stanze[nomeStanza] = {
+      giocatoriOnline: {},
+      partite: {}
+    };
+  }
+
+  stanzaAttuale = nomeStanza;
+
+  stanze[nomeStanza].giocatoriOnline[socketId] = {
+    uid,
+    nickname,
+    avatar: mioAvatar,
+    tipoDispositivo
+  };
+}
+
   socket.on("message", async (message) => {
     try {
       let dati;
