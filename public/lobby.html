@@ -1518,6 +1518,20 @@ body.tema-scuro #contenutoMobile[data-vista="opzioni"]{
 body.tema-scuro .giocatore-online{
     border-color:#444;
 }
+
+/* =========================================================
+   NASCONDI PULSANTE EMOJI SOLO SU CELLULARE
+========================================================= */
+
+@media (max-width:600px){
+
+    /* Nasconde il pulsante che apre gli emoji */
+    button[onclick="apriEmoji()"]{
+        display:none !important;
+    }
+
+}
+   
 </style>
  
 </style>
