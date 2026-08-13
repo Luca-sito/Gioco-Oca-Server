@@ -1183,12 +1183,20 @@ wss.on("connection", (socket, request) => {
         const trovato = trovaPartita(dati.partitaId);
         if (!trovato) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Partita non trovata." })); return; }
         const { partita, nomeStanza } = trovato;
-        stanzaAttuale = nomeStanza;
-        const mioGiocatore = partita.giocatori[uid];
-        if (!mioGiocatore) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Non fai parte di questa partita." })); return; }
+const mioGiocatore = partita.giocatori[uid];
+
+if (!mioGiocatore) {
+  socket.send(JSON.stringify({
+    tipo: "errore",
+    messaggio: "Non fai parte di questa partita."
+  }));
+  return;
+}
         if (db) { try { const u = (await db.ref("utenti/" + uid).once("value")).val(); if (u) mioGiocatore.avatar = u.avatar || null; } catch (e) {} }
         mioGiocatore.socket = socket;
         nickname = mioGiocatore.nome; mioAvatar = mioGiocatore.avatar || null;
+        registraPresenzaNellaStanza(nomeStanza);
+        inviaConteggioStanze();
 
         if (partita.fase === "determinazione_ordine") {
           socket.send(JSON.stringify({
