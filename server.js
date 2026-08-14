@@ -1109,16 +1109,6 @@ async function completaDeterminazione(partita, nomeStanza, ordineFinale) {
   inviaConteggioStanze();
 }
 
-  if (risultatoMovimento.vittoria) {
-    await concludiPartita(partita, primoUid, nomeStanza, null);
-    await rimuoviPartita(nomeStanza, partita.id);
-    inviaListaPartite(nomeStanza);
-  } else {
-    await salvaPartita({ ...partita, stanza: nomeStanza });
-  }
-  inviaConteggioStanze();
-}
-
 async function avviaPartitaAutomaticamente(partita) {
   const trovato = trovaPartita(partita.id);
   const nomeStanza = trovato ? trovato.nomeStanza : partita.stanza;
