@@ -17,10 +17,27 @@ html, body {
   overflow: hidden;
 }
 
+#mondo-ruotato {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0;
+
+  overflow: visible;
+}
+
 #area-tabellone {
   position: relative;
   flex-shrink: 0;
+  margin: 0 auto;
+  isolation: isolate;
 }
+
+
 #immagine-tabellone {
   width: 100%;
   height: 100%;
