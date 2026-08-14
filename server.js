@@ -778,13 +778,35 @@ function rilevaTipoDispositivo(userAgent) {
 }
 
 // ===== TIMER DI TURNO (gioco normale) =====
-function millisecondiMossa(partita) { return (parseInt(partita.tempo) || 30) * 1000; }
-function fermaTimerTurno(partita) { if (partita.timerTurno) { clearTimeout(partita.timerTurno); partita.timerTurno = null; } }
-function avviaTimerTurno(partita, nomeStanza) {
+function millisecondiMossa(partita) {
+  const secondi = parseInt(partita.tempo, 10);
+  return (Number.isFinite(secondi) && secondi > 0 ? secondi : 30) * 1000;
+}
+
+function fermaTimerTurno(partita) {
+  if (partita.timerTurno) {
+    clearTimeout(partita.timerTurno);
+    partita.timerTurno = null;
+  }
+
+  // Invalida anche eventuali callback già programmati.
+  partita.tokenTimerTurno = (partita.tokenTimerTurno || 0) + 1;
+}
+
+function avviaTimerTurno(partita, nomeStanza, ritardoMs = 0) {
   fermaTimerTurno(partita);
+
   if (!partita.iniziata) return;
-  partita.tempoInizioTurno = Date.now();
-  partita.timerTurno = setTimeout(() => { gestisciScadenzaTurno(partita, nomeStanza); }, millisecondiMossa(partita));
+
+  const token = partita.tokenTimerTurno;
+
+  partita.tempoInizioTurno = Date.now() + ritardoMs;
+
+  partita.timerTurno = setTimeout(() => {
+    if (token !== partita.tokenTimerTurno) return;
+    partita.timerTurno = null;
+    gestisciScadenzaTurno(partita, nomeStanza);
+  }, millisecondiMossa(partita) + ritardoMs);
 }
 async function gestisciScadenzaTurno(partita, nomeStanza) {
   if (!partita.iniziata) return;
@@ -798,37 +820,141 @@ async function gestisciScadenzaTurno(partita, nomeStanza) {
 
 async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, automatico) {
   if (partita.elaborandoTiro) return;
+
   partita.elaborandoTiro = true;
   fermaTimerTurno(partita);
 
   try {
     const { dado1, dado2 } = await lanciaDueDadiSicuri();
     const valoreDado = dado1 + dado2;
+
     const giocatore = partita.giocatori[idGiocatore];
     if (!giocatore) return;
 
-    const risultato = calcolaMovimento(giocatore.posizione, valoreDado);
+    const risultato = calcolaMovimento(
+      giocatore.posizione,
+      valoreDado
+    );
+
     giocatore.posizione = risultato.nuovaPosizione;
-    if (risultato.turniDaSaltare > 0) giocatore.turniSaltati = risultato.turniDaSaltare;
-    if (!risultato.tiraAncora && !risultato.vittoria) passaAlProssimoTurno(partita);
+
+    if (risultato.turniDaSaltare > 0) {
+      giocatore.turniSaltati = risultato.turniDaSaltare;
+    }
+
+    // Se non ha ottenuto un tiro extra e non ha vinto,
+    // si passa al prossimo giocatore.
+    if (!risultato.tiraAncora && !risultato.vittoria) {
+      passaAlProssimoTurno(partita);
+    }
 
     const statoGiocatori = costruisciStatoGiocatori(partita);
-    const idProssimo = partita.ordineGiocatori[partita.turnoAttuale];
-    const messaggiFinali = automatico ? ["⏱️ Tempo scaduto: mossa automatica."].concat(risultato.messaggi) : risultato.messaggi;
+    const idProssimo =
+      partita.ordineGiocatori[partita.turnoAttuale];
 
-    if (!risultato.vittoria) avviaTimerTurno(partita, nomeStanza);
+    const messaggiFinali = automatico
+      ? ["⏱️ Tempo scaduto: mossa automatica."].concat(
+          risultato.messaggi
+        )
+      : risultato.messaggi;
+
+    /*
+     * Se il giocatore ha vinto non esiste un nuovo turno.
+     */
+    if (risultato.vittoria) {
+      Object.values(partita.giocatori).forEach(g => {
+        if (g.socket && g.socket.readyState === WebSocket.OPEN) {
+          g.socket.send(JSON.stringify({
+            tipo: "aggiornamentoPartita",
+            giocatori: statoGiocatori,
+            dado1,
+            dado2,
+            valoreDado,
+            percorso: risultato.percorso,
+            idGiocatoreCheHaTirato: idGiocatore,
+            automatico: !!automatico,
+            messaggi: messaggiFinali,
+            turnoDiId: null,
+            tempoInizioTurno: null,
+            durataMossaMs: 0,
+            vittoria: true,
+            vincitore: giocatore.nome
+          }));
+        }
+      });
+
+      await concludiPartita(
+        partita,
+        idGiocatore,
+        nomeStanza,
+        null
+      );
+
+      await rimuoviPartita(
+        nomeStanza,
+        partita.id
+      );
+
+      inviaListaPartite(nomeStanza);
+      inviaConteggioStanze();
+
+      return;
+    }
+
+    /*
+     * Il nuovo turno parte SOLO quando stiamo per comunicare
+     * al client che il risultato precedente è completo.
+     *
+     * 1200 ms corrispondono circa all'animazione dei dadi
+     * presente nel gioco.js.
+     */
+    const ritardoNuovoTurno = 1200;
+
+    avviaTimerTurno(
+      partita,
+      nomeStanza,
+      ritardoNuovoTurno
+    );
+
+    const tempoInizioNuovoTurno = partita.tempoInizioTurno;
 
     Object.values(partita.giocatori).forEach(g => {
       if (g.socket && g.socket.readyState === WebSocket.OPEN) {
         g.socket.send(JSON.stringify({
-          tipo: "aggiornamentoPartita", giocatori: statoGiocatori, dado1, dado2, valoreDado,
-          percorso: risultato.percorso, idGiocatoreCheHaTirato: idGiocatore, automatico: !!automatico,
-          messaggi: messaggiFinali, turnoDiId: idProssimo,
-          tempoInizioTurno: partita.tempoInizioTurno, durataMossaMs: millisecondiMossa(partita),
-          vittoria: risultato.vittoria, vincitore: risultato.vittoria ? giocatore.nome : null
+          tipo: "aggiornamentoPartita",
+          giocatori: statoGiocatori,
+          dado1,
+          dado2,
+          valoreDado,
+          percorso: risultato.percorso,
+          idGiocatoreCheHaTirato: idGiocatore,
+          automatico: !!automatico,
+          messaggi: messaggiFinali,
+          turnoDiId: idProssimo,
+
+          tempoInizioTurno: tempoInizioNuovoTurno,
+          durataMossaMs: millisecondiMossa(partita),
+
+          vittoria: false,
+          vincitore: null
         }));
       }
     });
+
+    await aggiornaStatoPartita(
+      partita.id,
+      {
+        giocatori: preparaGiocatoriPerFirebase(partita.giocatori),
+        ordineGiocatori: partita.ordineGiocatori,
+        turnoAttuale: partita.turnoAttuale,
+        iniziata: partita.iniziata
+      }
+    );
+
+  } finally {
+    partita.elaborandoTiro = false;
+  }
+}
 
     if (risultato.vittoria) {
       await concludiPartita(partita, idGiocatore, nomeStanza, null);
