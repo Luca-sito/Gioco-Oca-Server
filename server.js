@@ -668,12 +668,49 @@ function calcolaMovimento(posizioneAttuale, valoreDado) {
 }
 
 function passaAlProssimoTurno(partita) {
-  let tentativi = 0;
-  do {
-    partita.turnoAttuale = (partita.turnoAttuale + 1) % partita.ordineGiocatori.length;
-    const giocatoreProssimo = partita.giocatori[partita.ordineGiocatori[partita.turnoAttuale]];
-    if ((giocatoreProssimo.turniSaltati || 0) > 0) { giocatoreProssimo.turniSaltati--; tentativi++; } else break;
-  } while (tentativi < partita.ordineGiocatori.length);
+  const numeroGiocatori = partita.ordineGiocatori.length;
+
+  if (numeroGiocatori <= 1) return;
+
+  const indiceDiPartenza = partita.turnoAttuale;
+
+  // Cerchiamo il primo giocatore successivo che NON deve saltare il turno.
+  for (let i = 1; i < numeroGiocatori; i++) {
+    const indice = (indiceDiPartenza + i) % numeroGiocatori;
+    const idGiocatore = partita.ordineGiocatori[indice];
+    const giocatore = partita.giocatori[idGiocatore];
+
+    if (!giocatore) continue;
+
+    // Questo giocatore deve saltare il turno:
+    // consumiamo UN turno saltato e continuiamo a cercare.
+    if ((giocatore.turniSaltati || 0) > 0) {
+      giocatore.turniSaltati--;
+      continue;
+    }
+
+    // Trovato il prossimo giocatore che può giocare.
+    partita.turnoAttuale = indice;
+    return;
+  }
+
+  /*
+   * Se arriviamo qui significa che tutti gli altri giocatori
+   * avevano un turno da saltare e quindi li abbiamo consumati.
+   *
+   * In questo caso non esiste un altro giocatore disponibile:
+   * il turno torna correttamente al giocatore di partenza.
+   *
+   * Questo NON è un "tira ancora" della casella 6:
+   * è semplicemente la conseguenza dei turni saltati degli altri.
+   */
+  partita.turnoAttuale = indiceDiPartenza;
+}
+
+  // Tutti i giocatori successivi hanno consumato un turno saltato.
+  // Non si deve dare un secondo tiro al giocatore precedente:
+  // il turno passa comunque al giocatore successivo.
+  partita.turnoAttuale = (indiceDiPartenza + 1) % numeroGiocatori;
 }
 
 function trovaPartita(partitaId) {
