@@ -591,15 +591,22 @@ async function ripristinaPartiteDaFirebase() {
     const p = partiteFirebase[id];
     if (!stanze[p.stanza]) continue;
     stanze[p.stanza].partite[id] = {
-      ...p,
-      maxGiocatori: p.maxGiocatori || (Object.keys(p.giocatori || {}).length || 2),
-      chatAttiva: p.chatAttiva !== false,
-      giocatori: p.giocatori || {}, ordineGiocatori: p.ordineGiocatori || [], turnoAttuale: p.turnoAttuale || 0,
-      iniziata: p.iniziata !== false, iniziataIl: p.iniziataIl || null, elaborandoTiro: false, invitati: {},
-      timerTurno: null, tempoInizioTurno: null, punteggiOrdineIniziale: p.punteggiOrdineIniziale || null,
-      coppieAudioApprovate: new Set(),
-      fase: p.iniziata ? "in_corso" : "determinazione_ordine"
-    };
+  ...p,
+  maxGiocatori: p.maxGiocatori || (Object.keys(p.giocatori || {}).length || 2),
+  chatAttiva: p.chatAttiva !== false,
+  giocatori: p.giocatori || {},
+  ordineGiocatori: p.ordineGiocatori || [],
+  turnoAttuale: p.turnoAttuale || 0,
+  iniziata: p.iniziata !== false,
+  iniziataIl: p.iniziataIl || null,
+  elaborandoTiro: false,
+  invitati: {},
+  timerTurno: null,
+  tempoInizioTurno: null,
+  punteggiOrdineIniziale: p.punteggiOrdineIniziale || null,
+  coppieAudioApprovate: new Set(),
+  fase: p.iniziata !== false ? "in_corso" : "determinazione_ordine"
+};
     const partitaRipristinata = stanze[p.stanza].partite[id];
     if (partitaRipristinata.iniziata) {
       avviaTimerTurno(partitaRipristinata, p.stanza);
