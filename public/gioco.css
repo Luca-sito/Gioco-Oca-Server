@@ -292,21 +292,23 @@ body.richiede-rotazione #flash-messaggio-gioco {
 @media (max-width: 999px) {
 
     body.tabellone-ruotato #area-tabellone {
-
         position: fixed;
 
         left: 50%;
         top: 50%;
 
-        transform: translate(-50%, -50%) rotate(90deg);
+        width: 100vh;
+        height: 100vw;
 
+        transform: translate(-50%, -50%) rotate(90deg);
         transform-origin: center center;
 
         margin: 0;
-
-        /* Evita che il tabellone venga ridimensionato
-           dal layout della pagina */
         flex-shrink: 0;
+
+        /* sfrutta tutta l'altezza del telefono */
+        max-width: none;
+        max-height: none;
     }
 
 }
