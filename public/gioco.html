@@ -1,1500 +1,217 @@
 <!DOCTYPE html>
 <html lang="it">
-
 <head>
-
 <meta charset="UTF-8">
-
-<meta
-  name="viewport"
-  content="width=device-width, initial-scale=1.0, viewport-fit=cover"
->
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Gioco dell'Oca - GIOCHI SOCIETA</title>
-
 <link rel="stylesheet" href="gioco.css">
-
 </head>
-
 <body>
 
-<!-- =========================================================
-     CARICAMENTO PARTITA
-     ========================================================= -->
-
-<div
-  id="overlay-caricamento"
-  aria-live="polite"
-  aria-atomic="true"
->
-
+<div id="overlay-caricamento" aria-live="polite" aria-atomic="true">
   <div id="caricamento-box">
-
-    <div id="caricamento-logo">
-      GIOCHI SOCIETA
-    </div>
-
-    <div
-      id="caricamento-spinner"
-      aria-hidden="true"
-    ></div>
-
-    <div id="caricamento-testo">
-      Caricamento grafica
-    </div>
-
+    <div id="caricamento-logo">GIOCHI SOCIETA</div>
+    <div id="caricamento-spinner" aria-hidden="true"></div>
+    <div id="caricamento-testo">Caricamento grafica</div>
   </div>
-
 </div>
 
-
-<!-- =========================================================
-     NOTIFICHE
-     ========================================================= -->
+<div id="banner-disconnesso" class="nascosto">🔴 Connessione persa — riconnessione in corso...</div>
 
 <div id="contenitore-notifiche-gioco"></div>
 
-
-<!-- =========================================================
-     SCENA DEL GIOCO
-     ========================================================= -->
-
 <div id="scena">
-
   <div id="mondo-ruotato">
 
-    <!-- =====================================================
-         MESSAGGIO GRANDE
-         ===================================================== -->
+    <div id="flash-messaggio-gioco"><span></span></div>
 
-    <div id="flash-messaggio-gioco">
-      <span></span>
-    </div>
-
-
-    <!-- =====================================================
-         DETERMINAZIONE CHI INIZIA
-         ===================================================== -->
-
-    <div
-      id="overlay-determinazione"
-      class="overlay"
-    >
-
+    <div id="overlay-determinazione" class="overlay">
       <div class="popup-determinazione">
-
-        <h2>
-          🎲 CHI INIZIA?
-        </h2>
-
-        <p
-          class="sottotitolo-determinazione"
-          id="sottotitolo-determinazione"
-        >
-          I giocatori tirano i dadi uno alla volta per stabilire l'ordine.
-        </p>
-
+        <h2>🎲 CHI INIZIA?</h2>
+        <p class="sottotitolo-determinazione" id="sottotitolo-determinazione">I giocatori tirano i dadi uno alla volta per stabilire l'ordine.</p>
         <div id="lista-determinazione"></div>
-
         <div id="slot-dadi-determinazione"></div>
-
       </div>
-
     </div>
 
-
-    <!-- =====================================================
-         RICHIESTA AUDIO
-         ===================================================== -->
-
-    <div
-      id="popup-richiesta-audio"
-      class="nascosto"
-    >
-
+    <div id="popup-richiesta-audio" class="nascosto">
       <div class="popup-richiesta-audio-box">
-
         <p id="testo-richiesta-audio"></p>
-
         <div class="richiesta-audio-bottoni">
-
-          <button
-            type="button"
-            class="btn-rifiuta-audio"
-            onclick="rispondiRichiestaAudioRicevuta(false)"
-          >
-            Rifiuta
-          </button>
-
-          <button
-            type="button"
-            class="btn-accetta-audio"
-            onclick="rispondiRichiestaAudioRicevuta(true)"
-          >
-            Accetta
-          </button>
-
+          <button type="button" class="btn-rifiuta-audio" onclick="rispondiRichiestaAudioRicevuta(false)">Rifiuta</button>
+          <button type="button" class="btn-accetta-audio" onclick="rispondiRichiestaAudioRicevuta(true)">Accetta</button>
         </div>
-
       </div>
-
     </div>
-
-
-    <!-- =====================================================
-         TABELLONE
-         ===================================================== -->
 
     <div id="area-tabellone">
-
-      <img
-        id="immagine-tabellone"
-        src="https://gioco-oca-server.onrender.com/Immagini/tabellone.png"
-        alt="Tabellone del Gioco dell'Oca"
-        draggable="false"
-        decoding="async"
-      >
-
+      <img id="immagine-tabellone" src="immagini/tabellone.png" alt="Tabellone del Gioco dell'Oca" draggable="false" decoding="async">
       <div id="contenitore-pedine"></div>
-
-
-      <!-- ===================================================
-           DADI
-           =================================================== -->
-
-      <div
-        id="area-dadi"
-        class="disabilitato"
-        title="Clicca per tirare"
-        role="button"
-        aria-label="Tira i dadi"
-        tabindex="0"
-      >
-
-        <!-- DADO 1 -->
-
-        <div
-          id="dado1"
-          class="dado-3d"
-        >
-
+      <div id="area-dadi" class="disabilitato" title="Clicca per tirare" role="button" aria-label="Tira i dadi" tabindex="0">
+        <div id="dado1" class="dado-3d">
           <div class="cubo">
-
-            <div
-              class="faccia faccia-1"
-            >
-              <span
-                class="pip pip-rossa"
-                style="grid-area:2/2;"
-              ></span>
-            </div>
-
-            <div
-              class="faccia faccia-2"
-            >
-              <span
-                class="pip"
-                style="grid-area:1/3;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:3/1;"
-              ></span>
-            </div>
-
-            <div
-              class="faccia faccia-3"
-            >
-              <span
-                class="pip"
-                style="grid-area:1/3;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:2/2;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:3/1;"
-              ></span>
-            </div>
-
-            <div
-              class="faccia faccia-4"
-            >
-              <span
-                class="pip pip-rossa"
-                style="grid-area:1/1;"
-              ></span>
-
-              <span
-                class="pip pip-rossa"
-                style="grid-area:1/3;"
-              ></span>
-
-              <span
-                class="pip pip-rossa"
-                style="grid-area:3/1;"
-              ></span>
-
-              <span
-                class="pip pip-rossa"
-                style="grid-area:3/3;"
-              ></span>
-            </div>
-
-            <div
-              class="faccia faccia-5"
-            >
-              <span
-                class="pip"
-                style="grid-area:1/1;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:1/3;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:2/2;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:3/1;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:3/3;"
-              ></span>
-            </div>
-
-            <div
-              class="faccia faccia-6"
-            >
-              <span
-                class="pip"
-                style="grid-area:1/1;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:2/1;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:3/1;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:1/3;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:2/3;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:3/3;"
-              ></span>
-            </div>
-
+            <div class="faccia faccia-1"><span class="pip pip-rossa" style="grid-area:2/2;"></span></div>
+            <div class="faccia faccia-2"><span class="pip" style="grid-area:1/3;"></span><span class="pip" style="grid-area:3/1;"></span></div>
+            <div class="faccia faccia-3"><span class="pip" style="grid-area:1/3;"></span><span class="pip" style="grid-area:2/2;"></span><span class="pip" style="grid-area:3/1;"></span></div>
+            <div class="faccia faccia-4"><span class="pip pip-rossa" style="grid-area:1/1;"></span><span class="pip pip-rossa" style="grid-area:1/3;"></span><span class="pip pip-rossa" style="grid-area:3/1;"></span><span class="pip pip-rossa" style="grid-area:3/3;"></span></div>
+            <div class="faccia faccia-5"><span class="pip" style="grid-area:1/1;"></span><span class="pip" style="grid-area:1/3;"></span><span class="pip" style="grid-area:2/2;"></span><span class="pip" style="grid-area:3/1;"></span><span class="pip" style="grid-area:3/3;"></span></div>
+            <div class="faccia faccia-6"><span class="pip" style="grid-area:1/1;"></span><span class="pip" style="grid-area:2/1;"></span><span class="pip" style="grid-area:3/1;"></span><span class="pip" style="grid-area:1/3;"></span><span class="pip" style="grid-area:2/3;"></span><span class="pip" style="grid-area:3/3;"></span></div>
           </div>
-
         </div>
-
-
-        <!-- DADO 2 -->
-
-        <div
-          id="dado2"
-          class="dado-3d"
-        >
-
+        <div id="dado2" class="dado-3d">
           <div class="cubo">
-
-            <div
-              class="faccia faccia-1"
-            >
-              <span
-                class="pip pip-rossa"
-                style="grid-area:2/2;"
-              ></span>
-            </div>
-
-            <div
-              class="faccia faccia-2"
-            >
-              <span
-                class="pip"
-                style="grid-area:1/3;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:3/1;"
-              ></span>
-            </div>
-
-            <div
-              class="faccia faccia-3"
-            >
-              <span
-                class="pip"
-                style="grid-area:1/3;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:2/2;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:3/1;"
-              ></span>
-            </div>
-
-            <div
-              class="faccia faccia-4"
-            >
-              <span
-                class="pip pip-rossa"
-                style="grid-area:1/1;"
-              ></span>
-
-              <span
-                class="pip pip-rossa"
-                style="grid-area:1/3;"
-              ></span>
-
-              <span
-                class="pip pip-rossa"
-                style="grid-area:3/1;"
-              ></span>
-
-              <span
-                class="pip pip-rossa"
-                style="grid-area:3/3;"
-              ></span>
-            </div>
-
-            <div
-              class="faccia faccia-5"
-            >
-              <span
-                class="pip"
-                style="grid-area:1/1;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:1/3;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:2/2;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:3/1;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:3/3;"
-              ></span>
-            </div>
-
-            <div
-              class="faccia faccia-6"
-            >
-              <span
-                class="pip"
-                style="grid-area:1/1;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:2/1;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:3/1;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:1/3;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:2/3;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:3/3;"
-              ></span>
-            </div>
-
+            <div class="faccia faccia-1"><span class="pip pip-rossa" style="grid-area:2/2;"></span></div>
+            <div class="faccia faccia-2"><span class="pip" style="grid-area:1/3;"></span><span class="pip" style="grid-area:3/1;"></span></div>
+            <div class="faccia faccia-3"><span class="pip" style="grid-area:1/3;"></span><span class="pip" style="grid-area:2/2;"></span><span class="pip" style="grid-area:3/1;"></span></div>
+            <div class="faccia faccia-4"><span class="pip pip-rossa" style="grid-area:1/1;"></span><span class="pip pip-rossa" style="grid-area:1/3;"></span><span class="pip pip-rossa" style="grid-area:3/1;"></span><span class="pip pip-rossa" style="grid-area:3/3;"></span></div>
+            <div class="faccia faccia-5"><span class="pip" style="grid-area:1/1;"></span><span class="pip" style="grid-area:1/3;"></span><span class="pip" style="grid-area:2/2;"></span><span class="pip" style="grid-area:3/1;"></span><span class="pip" style="grid-area:3/3;"></span></div>
+            <div class="faccia faccia-6"><span class="pip" style="grid-area:1/1;"></span><span class="pip" style="grid-area:2/1;"></span><span class="pip" style="grid-area:3/1;"></span><span class="pip" style="grid-area:1/3;"></span><span class="pip" style="grid-area:2/3;"></span><span class="pip" style="grid-area:3/3;"></span></div>
           </div>
-
         </div>
-
       </div>
-
     </div>
-
-
-    <!-- =====================================================
-         PANNELLO GIOCATORI
-         ===================================================== -->
 
     <div id="pannello-giocatori">
-
-      <div id="riga-turno">
-        Caricamento...
-      </div>
-
+      <div id="riga-turno">Caricamento...</div>
       <div id="lista-giocatori"></div>
-
     </div>
-
-
-    <!-- =====================================================
-         PULSANTE GIOCATORI
-         ===================================================== -->
 
     <div id="giocatori-wrapper">
-
-      <button
-        id="btn-giocatori"
-        type="button"
-        title="Giocatori"
-        aria-label="Apri giocatori"
-      >
-        👤
-      </button>
-
+      <button id="btn-giocatori" type="button" title="Giocatori" aria-label="Apri giocatori">👤</button>
     </div>
-
-
-    <!-- =====================================================
-         MENU
-         ===================================================== -->
 
     <div id="menu-wrapper">
-
-      <button
-        id="btn-menu"
-        type="button"
-        title="Menu"
-        aria-label="Apri menu"
-      >
-        ☰
-      </button>
-
-      <div
-        id="pannello-menu"
-        class="nascosto"
-      >
-
-        <button
-          type="button"
-          onclick="apriProfilo()"
-        >
-          👤 Profilo
-        </button>
-
-        <button
-          type="button"
-          onclick="apriImpostazioni()"
-        >
-          ⚙️ Impostazioni
-        </button>
-
-        <button
-          id="btn-toggle-suoni"
-          type="button"
-          onclick="toggleSuoni()"
-        >
-          🔊 Suoni: On
-        </button>
-
-        <button
-          id="btn-toggle-fullscreen"
-          type="button"
-          onclick="toggleFullscreen()"
-        >
-          ⛶ Tutto schermo
-        </button>
-
-        <button
-          id="btn-toggle-microfono"
-          type="button"
-          onclick="toggleMicrofono()"
-        >
-          🎤 Microfono: Off
-        </button>
-
-        <button
-          class="voce-pericolo"
-          type="button"
-          onclick="abbandonaPartita()"
-        >
-          🚪 Abbandona partita
-        </button>
-
+      <button id="btn-menu" type="button" title="Menu" aria-label="Apri menu">☰</button>
+      <div id="pannello-menu" class="nascosto">
+        <button type="button" onclick="apriProfilo()">👤 Profilo</button>
+        <button type="button" onclick="apriImpostazioni()">⚙️ Impostazioni</button>
+        <button id="btn-toggle-suoni" type="button" onclick="toggleSuoni()">🔊 Suoni: On</button>
+        <button id="btn-toggle-fullscreen" type="button" onclick="toggleFullscreen()">⛶ Tutto schermo</button>
+        <button id="btn-toggle-microfono" type="button" onclick="toggleMicrofono()">🎤 Microfono: Off</button>
+        <button class="voce-pericolo" type="button" onclick="abbandonaPartita()">🚪 Abbandona partita</button>
       </div>
-
     </div>
-
-
-    <!-- =====================================================
-         MESSAGGI
-         ===================================================== -->
 
     <div id="messaggi-gioco"></div>
 
-
-    <!-- =====================================================
-         VITTORIA
-         ===================================================== -->
-
-    <div
-      id="overlay-vittoria"
-      class="overlay"
-    >
-
+    <div id="overlay-vittoria" class="overlay">
       <div class="popup-vittoria">
-
         <h2 id="testo-vincitore"></h2>
-
-        <button
-          type="button"
-          onclick="tornaAllaLobby()"
-        >
-          Torna alla Lobby
-        </button>
-
+        <button type="button" onclick="tornaAllaLobby()">Torna alla Lobby</button>
       </div>
-
     </div>
 
   </div>
-
-
-  <!-- =======================================================
-       BACKDROP GIOCATORI
-       ======================================================= -->
 
   <div id="backdrop-giocatori"></div>
 
-
-  <!-- =======================================================
-       CHAT
-       ======================================================= -->
-
+  <!-- Il pulsante chat resta SEMPRE fuori dal mondo ruotato, come richiesto -->
   <div id="chat-wrapper">
-
-    <button
-      id="btn-chat"
-      type="button"
-      title="Apri chat"
-      aria-label="Apri chat"
-    >
-
-      💬
-
-      <span
-        id="badge-chat-partita"
-        class="badge-chat-partita"
-        style="display:none;"
-      >
-        0
-      </span>
-
-    </button>
-
-
-    <div
-      id="pannello-chat"
-      class="nascosto"
-    >
-
+    <button id="btn-chat" type="button" title="Apri chat" aria-label="Apri chat">💬<span id="badge-chat-partita" class="badge-chat-partita" style="display:none;">0</span></button>
+    <div id="pannello-chat" class="nascosto">
       <div id="chat-messaggi"></div>
-
       <div id="chat-input-riga">
-
-        <input
-          id="chat-input"
-          type="text"
-          placeholder="Scrivi un messaggio"
-          autocomplete="off"
-          maxlength="500"
-        >
-
-        <button
-          type="button"
-          onclick="inviaChatPartita()"
-          aria-label="Invia messaggio"
-        >
-          ➤
-        </button>
-
+        <input id="chat-input" type="text" placeholder="Scrivi un messaggio" autocomplete="off" maxlength="500">
+        <button type="button" onclick="inviaChatPartita()" aria-label="Invia messaggio">➤</button>
       </div>
-
     </div>
-
   </div>
-
 </div>
-
-
-<!-- =========================================================
-     OVERLAY ROTAZIONE TELEFONO
-     ========================================================= -->
-
-<div id="overlayRuotaTelefono">
-
-  <div
-    class="ruota-icona"
-    aria-hidden="true"
-  >
-    📱
-  </div>
-
-  <p class="ruota-testo">
-    Ruota il telefono
-  </p>
-
-  <p class="ruota-sottotesto">
-    Attendi qualche secondo mentre il gioco adatta automaticamente il tabellone.
-  </p>
-
-</div>
-
-
-<!-- =========================================================
-     STILE DEL SOLO CARICAMENTO
-     ========================================================= -->
-
-<style>
-
-#overlay-caricamento {
-
-  position: fixed;
-
-  inset: 0;
-
-  z-index: 999999;
-
-  display: flex;
-
-  align-items: center;
-
-  justify-content: center;
-
-  background:
-    rgba(115, 115, 115, 0.56);
-
-  backdrop-filter:
-    grayscale(1)
-    saturate(0)
-    brightness(0.76);
-
-  -webkit-backdrop-filter:
-    grayscale(1)
-    saturate(0)
-    brightness(0.76);
-
-  cursor: wait;
-
-  transition:
-    opacity 0.45s ease,
-    visibility 0.45s ease;
-
-}
-
-
-#overlay-caricamento::before {
-
-  content: "";
-
-  position: absolute;
-
-  inset: 0;
-
-  background:
-    rgba(80, 80, 80, 0.12);
-
-  pointer-events: none;
-
-}
-
-
-#caricamento-box {
-
-  position: relative;
-
-  z-index: 2;
-
-  width: min(
-    360px,
-    calc(100vw - 34px)
-  );
-
-  min-height: 185px;
-
-  padding:
-    28px 25px 30px;
-
-  box-sizing: border-box;
-
-  display: flex;
-
-  flex-direction: column;
-
-  align-items: center;
-
-  justify-content: center;
-
-  text-align: center;
-
-  background:
-    rgba(248, 248, 248, 0.98);
-
-  border:
-    1px solid rgba(0, 0, 0, 0.10);
-
-  border-radius: 16px;
-
-  box-shadow:
-    0 18px 55px
-    rgba(0, 0, 0, 0.28);
-
-}
-
-
-#caricamento-logo {
-
-  margin-bottom: 24px;
-
-  font-family:
-    Arial,
-    Helvetica,
-    sans-serif;
-
-  font-size: 16px;
-
-  line-height: 1;
-
-  font-weight: 900;
-
-  letter-spacing:
-    0.09em;
-
-  color:
-    #222;
-
-}
-
-
-#caricamento-spinner {
-
-  width: 43px;
-
-  height: 43px;
-
-  margin-bottom: 22px;
-
-  box-sizing: border-box;
-
-  border-radius: 50%;
-
-  border:
-    4px solid
-    rgba(0, 0, 0, 0.10);
-
-  border-top-color:
-    #222;
-
-  animation:
-    caricamento-rotazione
-    0.8s
-    linear
-    infinite;
-
-}
-
-
-#caricamento-testo {
-
-  min-height: 21px;
-
-  font-family:
-    Arial,
-    Helvetica,
-    sans-serif;
-
-  font-size: 17px;
-
-  line-height: 1.3;
-
-  font-weight: 600;
-
-  color:
-    #333;
-
-}
-
-
-@keyframes caricamento-rotazione {
-
-  from {
-    transform: rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg);
-  }
-
-}
-
-
-#overlay-caricamento.caricamento-finito {
-
-  opacity: 0;
-
-  visibility: hidden;
-
-  pointer-events: none;
-
-}
-
-
-body.caricamento-in-corso #scena,
-body.caricamento-in-corso #contenitore-notifiche-gioco {
-
-  filter:
-    grayscale(1)
-    saturate(0)
-    brightness(0.72);
-
-}
-
-
-body.caricamento-in-corso #scena *,
-body.caricamento-in-corso #contenitore-notifiche-gioco * {
-
-  pointer-events: none !important;
-
-}
-
-
-@media (max-width: 500px) {
-
-  #caricamento-box {
-
-    width:
-      calc(100vw - 28px);
-
-    min-height:
-      170px;
-
-    padding:
-      25px 20px 27px;
-
-    border-radius:
-      14px;
-
-  }
-
-
-  #caricamento-logo {
-
-    font-size:
-      14px;
-
-    margin-bottom:
-      21px;
-
-  }
-
-
-  #caricamento-spinner {
-
-    width:
-      39px;
-
-    height:
-      39px;
-
-    margin-bottom:
-      19px;
-
-  }
-
-
-  #caricamento-testo {
-
-    font-size:
-      16px;
-
-  }
-
-}
-
-</style>
-
-
-<!-- =========================================================
-     GESTIONE REALE DEL CARICAMENTO
-     ========================================================= -->
 
 <script>
-
 (function () {
-
   "use strict";
+  document.body.classList.add("caricamento-in-corso");
+  const overlay = document.getElementById("overlay-caricamento");
+  const testo = document.getElementById("caricamento-testo");
+  const immagine = document.getElementById("immagine-tabellone");
 
-
-  document.body.classList.add(
-    "caricamento-in-corso"
-  );
-
-
-  const overlay =
-    document.getElementById(
-      "overlay-caricamento"
-    );
-
-  const testo =
-    document.getElementById(
-      "caricamento-testo"
-    );
-
-  const immagine =
-    document.getElementById(
-      "immagine-tabellone"
-    );
-
-
-  function cambiaTesto(t) {
-
-    if (!testo) return;
-
-    testo.textContent = t;
-
-  }
-
+  function cambiaTesto(t) { if (testo) testo.textContent = t; }
 
   function attendiImmagine() {
-
-    return new Promise(
-      function (resolve) {
-
-        if (
-          immagine &&
-          immagine.complete &&
-          immagine.naturalWidth > 0
-        ) {
-
-          if (
-            typeof immagine.decode ===
-            "function"
-          ) {
-
-            immagine.decode()
-              .catch(function () {})
-              .finally(resolve);
-
-          } else {
-
-            resolve();
-
-          }
-
-          return;
-
-        }
-
-
-        if (!immagine) {
-
-          resolve();
-
-          return;
-
-        }
-
-
-        let terminata = false;
-
-
-        function completa() {
-
-          if (terminata) return;
-
-          terminata = true;
-
-          resolve();
-
-        }
-
-
-        immagine.addEventListener(
-          "load",
-          function () {
-
-            if (
-              typeof immagine.decode ===
-              "function"
-            ) {
-
-              immagine.decode()
-                .catch(function () {})
-                .finally(completa);
-
-            } else {
-
-              completa();
-
-            }
-
-          },
-          { once: true }
-        );
-
-
-        immagine.addEventListener(
-          "error",
-          function () {
-
-            /*
-             * Non blocchiamo per sempre la pagina.
-             * Il server verrà controllato nella fase successiva.
-             */
-
-            completa();
-
-          },
-          { once: true }
-        );
-
+    return new Promise(function (resolve) {
+      if (immagine && immagine.complete && immagine.naturalWidth > 0) {
+        if (typeof immagine.decode === "function") immagine.decode().catch(function () {}).finally(resolve);
+        else resolve();
+        return;
       }
-    );
-
+      if (!immagine) { resolve(); return; }
+      let terminata = false;
+      function completa() { if (terminata) return; terminata = true; resolve(); }
+      immagine.addEventListener("load", function () {
+        if (typeof immagine.decode === "function") immagine.decode().catch(function () {}).finally(completa);
+        else completa();
+      }, { once: true });
+      immagine.addEventListener("error", function () { completa(); }, { once: true });
+    });
   }
-
 
   async function preparaGrafica() {
-
-    cambiaTesto(
-      "Caricamento grafica"
-    );
-
+    cambiaTesto("Caricamento grafica");
     await attendiImmagine();
-
-    /*
-     * Diamo al browser un ciclo di rendering
-     * per completare il layout del tabellone.
-     */
-
-    await new Promise(
-      function (resolve) {
-
-        requestAnimationFrame(
-          function () {
-
-            requestAnimationFrame(
-              resolve
-            );
-
-          }
-        );
-
-      }
-    );
-
+    await new Promise(function (resolve) { requestAnimationFrame(function () { requestAnimationFrame(resolve); }); });
   }
-
 
   async function preparaSuoni() {
-
-    cambiaTesto(
-      "Caricamento suoni"
-    );
-
-
-    /*
-     * Il tuo gioco non utilizza file audio .mp3:
-     * crea i suoni direttamente tramite Web Audio API.
-     *
-     * Qui prepariamo realmente il sistema audio
-     * usato da gioco.js.
-     */
-
+    cambiaTesto("Caricamento suoni");
     try {
-
-      const C =
-        window.AudioContext ||
-        window.webkitAudioContext;
-
-
+      const C = window.AudioContext || window.webkitAudioContext;
       if (C) {
-
-        const ctx =
-          new C();
-
-
-        /*
-         * Alcuni browser partono con l'AudioContext
-         * in stato "suspended". È normale e non deve
-         * impedire l'avvio della partita.
-         */
-
-        if (
-          ctx.state === "suspended"
-        ) {
-
-          try {
-
-            await ctx.resume();
-
-          } catch (e) {
-
-            /*
-             * Il browser può impedire resume()
-             * senza gesto dell'utente.
-             * I suoni del tuo gioco verranno comunque
-             * attivati quando sarà possibile.
-             */
-
-          }
-
-        }
-
-
-        try {
-
-          await ctx.close();
-
-        } catch (e) {}
-
+        const ctx = new C();
+        if (ctx.state === "suspended") { try { await ctx.resume(); } catch (e) {} }
+        try { await ctx.close(); } catch (e) {}
       }
-
-    } catch (e) {
-
-      /*
-       * Browser senza Web Audio API:
-       * il gioco può comunque funzionare.
-       */
-
-    }
-
-
-    /*
-     * Aspettiamo un frame affinché il browser
-     * completi la preparazione del contesto pagina.
-     */
-
-    await new Promise(
-      function (resolve) {
-
-        requestAnimationFrame(
-          resolve
-        );
-
-      }
-    );
-
+    } catch (e) {}
+    await new Promise(function (resolve) { requestAnimationFrame(resolve); });
   }
-
 
   async function preparaServer() {
-
-    cambiaTesto(
-      "Caricamento Server"
-    );
-
-
-    /*
-     * Verifica reale del server.
-     *
-     * /api/me è già utilizzato da gioco.js,
-     * quindi controlliamo esattamente quella
-     * stessa risorsa.
-     */
-
+    cambiaTesto("Caricamento Server");
     try {
-
-      const risposta =
-        await fetch(
-          "https://gioco-oca-server.onrender.com/api/me",
-          {
-            method: "GET",
-            credentials: "include",
-            cache: "no-store"
-          }
-        );
-
-
-      /*
-       * 401 è comunque una risposta del server:
-       * significa che il server è online ma l'utente
-       * non è autenticato.
-       *
-       * Il vero controllo di autenticazione verrà
-       * poi effettuato da gioco.js.
-       */
-
-      if (
-        risposta.status >= 500
-      ) {
-
-        throw new Error(
-          "Server non disponibile"
-        );
-
-      }
-
+      const risposta = await fetch("https://gioco-oca-server.onrender.com/api/me", { method: "GET", credentials: "include", cache: "no-store" });
+      if (risposta.status >= 500) throw new Error("Server non disponibile");
     } catch (e) {
-
-      /*
-       * Fallback: controlliamo direttamente una
-       * risorsa statica del server.
-       */
-
       try {
-
-        const controllo =
-          await fetch(
-            "https://gioco-oca-server.onrender.com/Immagini/tabellone.png?check=" +
-            Date.now(),
-            {
-              method: "GET",
-              cache: "no-store"
-            }
-          );
-
-
-        if (!controllo.ok) {
-
-          throw new Error(
-            "Server non raggiungibile"
-          );
-
-        }
-
+        const controllo = await fetch("https://gioco-oca-server.onrender.com/immagini/tabellone.png?check=" + Date.now(), { method: "GET", cache: "no-store" });
+        if (!controllo.ok) throw new Error("Server non raggiungibile");
       } catch (erroreFinale) {
-
-        /*
-         * Non nascondiamo il problema fingendo
-         * che il server sia pronto.
-         */
-
-        cambiaTesto(
-          "Caricamento Server"
-        );
-
-        /*
-         * Lasciamo comunque partire gioco.js:
-         * sarà lui a gestire l'eventuale mancata
-         * autenticazione o riconnessione.
-         */
-
+        cambiaTesto("Caricamento Server");
       }
-
     }
-
   }
 
-
-  async function avvia() {
-
+  async function avviaCaricamento() {
     try {
-
-      /*
-       * FASE 1
-       */
-
       await preparaGrafica();
-
-
-      /*
-       * FASE 2
-       */
-
       await preparaSuoni();
-
-
-      /*
-       * FASE 3
-       */
-
       await preparaServer();
+      cambiaTesto("Avvio partita");
+      await new Promise(function (resolve) { requestAnimationFrame(resolve); });
 
-
-      /*
-       * Tutto il caricamento preliminare è terminato.
-       *
-       * Ora parte il vero gioco.js.
-       */
-
-      cambiaTesto(
-        "Avvio partita"
-      );
-
-
-      await new Promise(
-        function (resolve) {
-
-          requestAnimationFrame(
-            resolve
-          );
-
-        }
-      );
-
-
-      /*
-       * Carichiamo gioco.js soltanto adesso.
-       */
-
-      const script =
-        document.createElement(
-          "script"
-        );
-
-
-      script.src =
-        "gioco.js";
-
-
-      script.onload =
-        function () {
-
-          /*
-           * Lasciamo al gioco un attimo
-           * per inizializzare il layout,
-           * WebSocket e tabellone.
-           */
-
-          requestAnimationFrame(
-            function () {
-
-              requestAnimationFrame(
-                function () {
-
-                  document.body.classList.remove(
-                    "caricamento-in-corso"
-                  );
-
-
-                  overlay.classList.add(
-                    "caricamento-finito"
-                  );
-
-
-                  setTimeout(
-                    function () {
-
-                      if (overlay) {
-                        overlay.remove();
-                      }
-
-                    },
-                    500
-                  );
-
-                }
-              );
-
-            }
-          );
-
-        };
-
-
-      script.onerror =
-        function () {
-
-          cambiaTesto(
-            "Errore nel caricamento della partita"
-          );
-
-          console.error(
-            "Impossibile caricare gioco.js"
-          );
-
-        };
-
-
-      document.body.appendChild(
-        script
-      );
-
+      const script = document.createElement("script");
+      script.src = "gioco.js";
+      script.onload = function () {
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () {
+            document.body.classList.remove("caricamento-in-corso");
+            overlay.classList.add("caricamento-finito");
+            setTimeout(function () { if (overlay) overlay.remove(); }, 500);
+          });
+        });
+      };
+      script.onerror = function () {
+        cambiaTesto("Errore nel caricamento della partita");
+        console.error("Impossibile caricare gioco.js");
+      };
+      document.body.appendChild(script);
     } catch (errore) {
-
-      console.error(
-        "Errore durante il caricamento:",
-        errore
-      );
-
-      /*
-       * In caso di errore grave mostriamo
-       * comunque il gioco per permettere a
-       * gioco.js di gestire il problema.
-       */
-
-      document.body.classList.remove(
-        "caricamento-in-corso"
-      );
-
-      if (overlay) {
-
-        overlay.classList.add(
-          "caricamento-finito"
-        );
-
-        setTimeout(
-          function () {
-
-            overlay.remove();
-
-          },
-          500
-        );
-
-      }
-
+      console.error("Errore durante il caricamento:", errore);
+      document.body.classList.remove("caricamento-in-corso");
+      if (overlay) { overlay.classList.add("caricamento-finito"); setTimeout(function () { overlay.remove(); }, 500); }
     }
-
   }
-
-
-  avvia();
-
+  avviaCaricamento();
 })();
-
 </script>
-
 </body>
-
 </html>
