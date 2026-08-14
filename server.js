@@ -956,19 +956,6 @@ async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, auto
   }
 }
 
-    if (risultato.vittoria) {
-      await concludiPartita(partita, idGiocatore, nomeStanza, null);
-      await rimuoviPartita(nomeStanza, partita.id);
-      inviaListaPartite(nomeStanza);
-      inviaConteggioStanze();
-    } else {
-      await aggiornaStatoPartita(partita.id, { giocatori: preparaGiocatoriPerFirebase(partita.giocatori), ordineGiocatori: partita.ordineGiocatori, turnoAttuale: partita.turnoAttuale, iniziata: partita.iniziata });
-    }
-  } finally {
-    partita.elaborandoTiro = false;
-  }
-}
-
 async function forzaAbbandonoPerInattivita(partita, nomeStanza, idGiocatore) {
   fermaTimerTurno(partita);
   if (!partita.giocatori[idGiocatore]) return;
