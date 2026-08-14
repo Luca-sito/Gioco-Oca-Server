@@ -297,7 +297,7 @@ body.richiede-rotazione #flash-messaggio-gioco {
         left: 50%;
         top: 50%;
 
-        width: 100vh;
+        width: 110vh;
         height: 100vw;
 
         transform: translate(-50%, -50%) rotate(90deg);
@@ -306,7 +306,6 @@ body.richiede-rotazione #flash-messaggio-gioco {
         margin: 0;
         flex-shrink: 0;
 
-        /* sfrutta tutta l'altezza del telefono */
         max-width: none;
         max-height: none;
     }
