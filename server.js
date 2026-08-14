@@ -1048,8 +1048,18 @@ function inviaStatoDeterminazione(partita, nomeStanza) {
 
 function avviaTimerDeterminazione(partita, nomeStanza) {
   fermaTimerTurno(partita);
+
   partita.tempoInizioTurno = Date.now();
-  partita.timerTurno = setTimeout(() => { gestisciScadenzaDeterminazione(partita, nomeStanza); }, millisecondiMossa(partita));
+
+  const token = partita.tokenTimerTurno;
+
+  partita.timerTurno = setTimeout(() => {
+    if (token !== partita.tokenTimerTurno) return;
+
+    partita.timerTurno = null;
+
+    gestisciScadenzaDeterminazione(partita, nomeStanza);
+  }, millisecondiMossa(partita));
 }
 
 async function gestisciScadenzaDeterminazione(partita, nomeStanza) {
