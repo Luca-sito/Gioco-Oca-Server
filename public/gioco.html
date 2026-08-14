@@ -22,7 +22,7 @@
        originale non contieneva il sistema di caricamento.
        ===================================================== */
 
-    #overlay-caricamento {
+#overlay-caricamento {
   position: fixed;
   inset: 0;
   z-index: 10000;
@@ -31,12 +31,20 @@
   align-items: center;
   justify-content: center;
 
-  background: #ffffff;
-  color: #111111;
+  padding:
+    max(20px, env(safe-area-inset-top))
+    max(20px, env(safe-area-inset-right))
+    max(20px, env(safe-area-inset-bottom))
+    max(20px, env(safe-area-inset-left));
+
+  background: rgba(255, 255, 255, 0.34);
+
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 
   transition:
-    opacity 0.4s ease,
-    visibility 0.4s ease;
+    opacity 0.45s ease,
+    visibility 0.45s ease;
 }
 
 #overlay-caricamento.caricamento-finito {
@@ -46,17 +54,22 @@
 }
 
 #caricamento-box {
-  width: min(90vw, 420px);
+  width: min(88vw, 390px);
 
-  padding: 30px 26px;
+  padding: 30px 28px;
+
+  background: #ffffff;
+
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 18px;
 
   text-align: center;
 
-  background: #ffffff;
-  border: none;
-  border-radius: 18px;
+  box-shadow:
+    0 20px 55px rgba(0, 0, 0, 0.20),
+    0 3px 12px rgba(0, 0, 0, 0.08);
 
-  box-shadow: none;
+  animation: comparsa-caricamento 0.3s ease;
 }
 
 #caricamento-logo {
@@ -64,9 +77,9 @@
 
   color: #111111;
 
-  font-size: clamp(22px, 5vw, 32px);
+  font-size: clamp(21px, 4vw, 30px);
   font-weight: 900;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.07em;
 }
 
 #caricamento-spinner {
@@ -77,10 +90,11 @@
 
   border-radius: 50%;
 
-  border: 3px solid #e5e5e5;
-  border-top-color: #111111;
+  border: 3px solid #e7e7e7;
+  border-top-color: #222222;
 
-  animation: caricamento-spin 0.85s linear infinite;
+  animation:
+    caricamento-spin 0.85s linear infinite;
 }
 
 #caricamento-testo {
@@ -95,6 +109,18 @@
 @keyframes caricamento-spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+@keyframes comparsa-caricamento {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 
