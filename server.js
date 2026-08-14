@@ -674,7 +674,7 @@ function passaAlProssimoTurno(partita) {
 
   const indiceDiPartenza = partita.turnoAttuale;
 
-  // Cerchiamo il primo giocatore successivo che NON deve saltare il turno.
+  // Cerca il primo giocatore successivo che non deve saltare il turno.
   for (let i = 1; i < numeroGiocatori; i++) {
     const indice = (indiceDiPartenza + i) % numeroGiocatori;
     const idGiocatore = partita.ordineGiocatori[indice];
@@ -682,35 +682,20 @@ function passaAlProssimoTurno(partita) {
 
     if (!giocatore) continue;
 
-    // Questo giocatore deve saltare il turno:
-    // consumiamo UN turno saltato e continuiamo a cercare.
+    // Se deve saltare, consuma un turno saltato e passa al prossimo.
     if ((giocatore.turniSaltati || 0) > 0) {
       giocatore.turniSaltati--;
       continue;
     }
 
-    // Trovato il prossimo giocatore che può giocare.
+    // Questo è il prossimo giocatore che può giocare.
     partita.turnoAttuale = indice;
     return;
   }
 
-  /*
-   * Se arriviamo qui significa che tutti gli altri giocatori
-   * avevano un turno da saltare e quindi li abbiamo consumati.
-   *
-   * In questo caso non esiste un altro giocatore disponibile:
-   * il turno torna correttamente al giocatore di partenza.
-   *
-   * Questo NON è un "tira ancora" della casella 6:
-   * è semplicemente la conseguenza dei turni saltati degli altri.
-   */
+  // Tutti gli altri giocatori hanno consumato un turno saltato.
+  // Il turno torna al giocatore di partenza.
   partita.turnoAttuale = indiceDiPartenza;
-}
-
-  // Tutti i giocatori successivi hanno consumato un turno saltato.
-  // Non si deve dare un secondo tiro al giocatore precedente:
-  // il turno passa comunque al giocatore successivo.
-  partita.turnoAttuale = (indiceDiPartenza + 1) % numeroGiocatori;
 }
 
 function trovaPartita(partitaId) {
