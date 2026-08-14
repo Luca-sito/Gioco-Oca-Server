@@ -1057,41 +1057,72 @@ async function completaDeterminazione(partita, nomeStanza, ordineFinale) {
   partita.iniziataIl = Date.now();
   partita.elaborandoTiro = false;
 
+  // I punteggi ottenuti in "Chi inizia?" servono SOLO
+  // per stabilire l'ordine di gioco.
   const punteggiPerNome = {};
-  ordineFinale.forEach(uid => { punteggiPerNome[partita.giocatori[uid].nome] = partita.risultatiDeterminazione[uid]; });
+  ordineFinale.forEach(uid => {
+    punteggiPerNome[partita.giocatori[uid].nome] =
+      partita.risultatiDeterminazione[uid];
+  });
+
   partita.punteggiOrdineIniziale = punteggiPerNome;
 
   const primoUid = ordineFinale[0];
-  const primoValore = partita.risultatiDeterminazione[primoUid];
   const primoGiocatore = partita.giocatori[primoUid];
 
-  const risultatoMovimento = calcolaMovimento(primoGiocatore.posizione, primoValore);
-  primoGiocatore.posizione = risultatoMovimento.nuovaPosizione;
-  if (risultatoMovimento.turniDaSaltare > 0) primoGiocatore.turniSaltati = risultatoMovimento.turniDaSaltare;
-  if (!risultatoMovimento.tiraAncora && !risultatoMovimento.vittoria) passaAlProssimoTurno(partita);
-
-  const nomiInOrdine = ordineFinale.map(id => partita.giocatori[id].nome);
+  // IMPORTANTE:
+  // Il primo giocatore NON si muove usando il punteggio
+  // ottenuto durante "Chi inizia?".
+  // La partita vera parte con un NUOVO tiro di dadi.
   const statoGiocatori = costruisciStatoGiocatori(partita);
-  const idProssimo = partita.ordineGiocatori[partita.turnoAttuale];
+  const idPrimoTurno = partita.ordineGiocatori[partita.turnoAttuale];
 
-  if (!risultatoMovimento.vittoria) avviaTimerTurno(partita, nomeStanza);
+  // Parte il timer del primo vero turno.
+  avviaTimerTurno(partita, nomeStanza);
 
   Object.values(partita.giocatori).forEach(g => {
     if (g.socket && g.socket.readyState === WebSocket.OPEN) {
       g.socket.send(JSON.stringify({
         tipo: "determinazioneCompletata",
-        ordineGiocatori: nomiInOrdine,
+
+        ordineGiocatori: ordineFinale.map(id =>
+          partita.giocatori[id].nome
+        ),
+
         punteggiOrdineIniziale: punteggiPerNome,
-        primoMovimento: { idGiocatore: primoUid, nomeGiocatore: primoGiocatore.nome, valoreDado: primoValore, percorso: risultatoMovimento.percorso, messaggi: risultatoMovimento.messaggi },
+
+        // Nessun movimento durante la fine della determinazione.
+        // Il client chiuderà il popup e mostrerà semplicemente
+        // che il primo giocatore deve tirare.
+        primoMovimento: {
+          idGiocatore: primoUid,
+          nomeGiocatore: primoGiocatore.nome,
+          valoreDado: 0,
+          percorso: [],
+          messaggi: [
+            "Ordine deciso!",
+            primoGiocatore.nome + " inizia la partita: tira i dadi!"
+          ]
+        },
+
         giocatori: statoGiocatori,
-        turnoDiId: idProssimo,
+        turnoDiId: idPrimoTurno,
         tempoInizioTurno: partita.tempoInizioTurno,
         durataMossaMs: millisecondiMossa(partita),
-        vittoria: risultatoMovimento.vittoria,
-        vincitore: risultatoMovimento.vittoria ? primoGiocatore.nome : null
+
+        vittoria: false,
+        vincitore: null
       }));
     }
   });
+
+  await salvaPartita({
+    ...partita,
+    stanza: nomeStanza
+  });
+
+  inviaConteggioStanze();
+}
 
   if (risultatoMovimento.vittoria) {
     await concludiPartita(partita, primoUid, nomeStanza, null);
