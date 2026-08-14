@@ -24,103 +24,80 @@
        ===================================================== */
 
     #overlay-caricamento {
-      position: fixed;
-      inset: 0;
-      z-index: 10000;
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
 
-      display: flex;
-      align-items: center;
-      justify-content: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
-      padding:
-        max(24px, env(safe-area-inset-top))
-        max(24px, env(safe-area-inset-right))
-        max(24px, env(safe-area-inset-bottom))
-        max(24px, env(safe-area-inset-left));
+  background: #ffffff;
+  color: #111111;
 
-      background:
-        radial-gradient(
-          circle at center,
-          rgba(22, 40, 54, 0.98),
-          rgba(4, 10, 16, 1)
-        );
+  transition:
+    opacity 0.4s ease,
+    visibility 0.4s ease;
+}
 
-      color: #f4f7fa;
+#overlay-caricamento.caricamento-finito {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
 
-      transition:
-        opacity 0.45s ease,
-        visibility 0.45s ease;
-    }
+#caricamento-box {
+  width: min(90vw, 420px);
 
-    #overlay-caricamento.caricamento-finito {
-      opacity: 0;
-      visibility: hidden;
-      pointer-events: none;
-    }
+  padding: 30px 26px;
 
-    #caricamento-box {
-      width: min(90vw, 420px);
+  text-align: center;
 
-      padding: 30px 26px;
+  background: #ffffff;
+  border: none;
+  border-radius: 18px;
 
-      text-align: center;
+  box-shadow: none;
+}
 
-      background:
-        linear-gradient(
-          180deg,
-          rgba(18, 33, 46, 0.97),
-          rgba(8, 17, 25, 0.98)
-        );
+#caricamento-logo {
+  margin-bottom: 22px;
 
-      border: 1px solid rgba(232, 185, 79, 0.28);
-      border-radius: 20px;
+  color: #111111;
 
-      box-shadow:
-        0 28px 70px rgba(0, 0, 0, 0.5),
-        inset 0 1px 0 rgba(255,255,255,0.04);
-    }
+  font-size: clamp(22px, 5vw, 32px);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
 
-    #caricamento-logo {
-      margin-bottom: 22px;
+#caricamento-spinner {
+  width: 42px;
+  height: 42px;
 
-      color: #ffd970;
+  margin: 0 auto 18px;
 
-      font-size: clamp(22px, 5vw, 32px);
-      font-weight: 900;
-      letter-spacing: 0.08em;
-    }
+  border-radius: 50%;
 
-    #caricamento-spinner {
-      width: 42px;
-      height: 42px;
+  border: 3px solid #e5e5e5;
+  border-top-color: #111111;
 
-      margin: 0 auto 18px;
+  animation: caricamento-spin 0.85s linear infinite;
+}
 
-      border-radius: 50%;
+#caricamento-testo {
+  min-height: 20px;
 
-      border:
-        3px solid rgba(255,255,255,0.10);
+  color: #666666;
 
-      border-top-color: #ffd970;
+  font-size: 13px;
+  font-weight: 600;
+}
 
-      animation:
-        caricamento-spin 0.85s linear infinite;
-    }
-
-    #caricamento-testo {
-      min-height: 20px;
-
-      color: #aab6c2;
-
-      font-size: 13px;
-      font-weight: 600;
-    }
-
-    @keyframes caricamento-spin {
-      to {
-        transform: rotate(360deg);
-      }
-    }
+@keyframes caricamento-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 
     /* =====================================================
        BANNER DISCONNESSIONE
