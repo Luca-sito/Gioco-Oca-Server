@@ -587,26 +587,84 @@ let stanze = { BAR: { giocatoriOnline: {}, partite: {} }, PUB: { giocatoriOnline
 
 async function ripristinaPartiteDaFirebase() {
   const partiteFirebase = await caricaPartite();
+
   for (const id in partiteFirebase) {
     const p = partiteFirebase[id];
+
     if (!stanze[p.stanza]) continue;
+
     stanze[p.stanza].partite[id] = {
-  ...p,
-  maxGiocatori: p.maxGiocatori || (Object.keys(p.giocatori || {}).length || 2),
-  chatAttiva: p.chatAttiva !== false,
-  giocatori: p.giocatori || {},
-  ordineGiocatori: p.ordineGiocatori || [],
-  turnoAttuale: p.turnoAttuale || 0,
-  iniziata: p.iniziata !== false,
-  iniziataIl: p.iniziataIl || null,
-  elaborandoTiro: false,
-  invitati: {},
-  timerTurno: null,
-  tempoInizioTurno: null,
-  punteggiOrdineIniziale: p.punteggiOrdineIniziale || null,
-  coppieAudioApprovate: new Set(),
-  fase: p.iniziata !== false ? "in_corso" : "determinazione_ordine"
-};
+      ...p,
+
+      maxGiocatori:
+        p.maxGiocatori ||
+        (Object.keys(p.giocatori || {}).length || 2),
+
+      chatAttiva: p.chatAttiva !== false,
+
+      giocatori: p.giocatori || {},
+      ordineGiocatori: p.ordineGiocatori || [],
+      turnoAttuale: p.turnoAttuale || 0,
+
+      iniziata: p.iniziata === true,
+      iniziataIl: p.iniziataIl || null,
+
+      elaborandoTiro: false,
+      invitati: {},
+
+      timerTurno: null,
+      tempoInizioTurno: null,
+
+      punteggiOrdineIniziale:
+        p.punteggiOrdineIniziale || null,
+
+      coppieAudioApprovate: new Set(),
+
+      fase:
+        p.fase ||
+        (p.iniziata === true
+          ? "in_corso"
+          : "attesa_giocatori")
+    };
+
+    const partitaRipristinata =
+      stanze[p.stanza].partite[id];
+
+    if (partitaRipristinata.iniziata) {
+
+      partitaRipristinata.fase = "in_corso";
+
+      avviaTimerTurno(
+        partitaRipristinata,
+        p.stanza
+      );
+
+    } else if (
+      partitaRipristinata.fase === "determinazione_ordine"
+    ) {
+
+      iniziaFaseDeterminazione(
+        partitaRipristinata,
+        p.stanza
+      );
+
+    } else if (
+      Object.keys(partitaRipristinata.giocatori).length ===
+      partitaRipristinata.maxGiocatori
+    ) {
+
+      iniziaFaseDeterminazione(
+        partitaRipristinata,
+        p.stanza
+      );
+    }
+  }
+
+  console.log(
+    "Partite ripristinate da Firebase:",
+    Object.keys(partiteFirebase).length
+  );
+}
     const partitaRipristinata = stanze[p.stanza].partite[id];
     if (partitaRipristinata.iniziata) {
       avviaTimerTurno(partitaRipristinata, p.stanza);
