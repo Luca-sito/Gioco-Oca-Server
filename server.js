@@ -1044,11 +1044,25 @@ async function completaDeterminazione(partita, nomeStanza, ordineFinale) {
 async function avviaPartitaAutomaticamente(partita) {
   const trovato = trovaPartita(partita.id);
   const nomeStanza = trovato ? trovato.nomeStanza : partita.stanza;
-  await salvaPartita({ ...partita, stanza: nomeStanza });
-  Object.values(partita.giocatori).forEach(g => {
-    if (g.socket && g.socket.readyState === WebSocket.OPEN) g.socket.send(JSON.stringify({ tipo: "partitaAvviata", partitaId: partita.id }));
-  });
+
   iniziaFaseDeterminazione(partita, nomeStanza);
+
+  await salvaPartita({
+    ...partita,
+    stanza: nomeStanza,
+    fase: partita.fase,
+    iniziata: partita.iniziata
+  });
+
+  Object.values(partita.giocatori).forEach(g => {
+    if (g.socket && g.socket.readyState === WebSocket.OPEN) {
+      g.socket.send(JSON.stringify({
+        tipo: "partitaAvviata",
+        partitaId: partita.id
+      }));
+    }
+  });
+
   inviaConteggioStanze();
 }
 
