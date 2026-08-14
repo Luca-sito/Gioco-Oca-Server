@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="it">
+
 <head>
+
 <meta charset="UTF-8">
 
 <meta
@@ -8,678 +10,39 @@
   content="width=device-width, initial-scale=1.0, viewport-fit=cover"
 >
 
-<title>Gioco dell'Oca - Partita</title>
+<title>Gioco dell'Oca - GIOCHI SOCIETA</title>
 
 <link rel="stylesheet" href="gioco.css">
 
-<!-- Preload principale del tabellone -->
-<link
-  rel="preload"
-  as="image"
-  href="https://gioco-oca-server.onrender.com/Immagini/tabellone.png"
->
-
-<style>
-
-/* =========================================================
-   LOADER PARTITA
-   ========================================================= */
-
-#overlay-caricamento {
-  position: fixed;
-  inset: 0;
-  z-index: 999999999;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  width: 100vw;
-  height: 100vh;
-
-  background:
-    linear-gradient(
-      180deg,
-      rgba(247, 247, 249, 0.985),
-      rgba(235, 236, 239, 0.985)
-    );
-
-  opacity: 1;
-  visibility: visible;
-
-  transition:
-    opacity 0.55s ease,
-    visibility 0.55s ease;
-
-  overflow: hidden;
-}
-
-#overlay-caricamento.loader-uscita {
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-}
-
-.loader-schermo {
-  position: relative;
-
-  width: min(560px, calc(100vw - 36px));
-
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-
-  text-align: center;
-}
-
-.loader-logo {
-  position: fixed;
-
-  top: max(22px, env(safe-area-inset-top));
-  left: 28px;
-
-  font-family:
-    Arial,
-    Helvetica,
-    sans-serif;
-
-  font-size: 13px;
-  font-weight: 800;
-
-  letter-spacing: 0.20em;
-
-  color: rgba(25, 25, 25, 0.68);
-
-  user-select: none;
-}
-
-.loader-centro {
-  width: 100%;
-
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.loader-spinner {
-  position: relative;
-
-  width: 82px;
-  height: 82px;
-
-  margin-bottom: 27px;
-}
-
-.spinner-anello {
-  position: absolute;
-
-  inset: 0;
-
-  border-radius: 50%;
-
-  border: 8px solid rgba(20, 20, 20, 0.075);
-  border-top-color: #222;
-
-  animation:
-    rotazione-loader
-    1s
-    linear
-    infinite;
-}
-
-.spinner-anello-2 {
-  inset: 15px;
-
-  border-width: 5px;
-
-  border-color: rgba(20, 20, 20, 0.04);
-  border-right-color: #5b5b5b;
-
-  animation-duration: 1.65s;
-  animation-direction: reverse;
-}
-
-@keyframes rotazione-loader {
-
-  from {
-    transform: rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg);
-  }
-
-}
-
-#loader-testo-principale {
-
-  width: 100%;
-
-  margin: 0 0 7px;
-
-  font-family:
-    Arial,
-    Helvetica,
-    sans-serif;
-
-  font-size: 23px;
-  line-height: 1.25;
-  font-weight: 700;
-
-  color: #202124;
-}
-
-#loader-testo-secondario {
-
-  width: 100%;
-
-  margin: 0 0 24px;
-
-  font-family:
-    Arial,
-    Helvetica,
-    sans-serif;
-
-  font-size: 14px;
-  line-height: 1.4;
-
-  color: #777;
-}
-
-.loader-progress {
-  position: relative;
-
-  width: 100%;
-  height: 5px;
-
-  margin-bottom: 8px;
-
-  background: rgba(0, 0, 0, 0.10);
-
-  overflow: hidden;
-}
-
-#loader-progress-bar {
-  position: absolute;
-
-  left: 0;
-  top: 0;
-
-  width: 0%;
-  height: 100%;
-
-  background: #222;
-
-  transition:
-    width 0.28s ease;
-}
-
-#loader-percentuale {
-
-  margin-bottom: 22px;
-
-  font-family:
-    Arial,
-    Helvetica,
-    sans-serif;
-
-  font-size: 12px;
-  line-height: 1;
-
-  font-weight: 700;
-
-  color: #666;
-
-  font-variant-numeric: tabular-nums;
-}
-
-.loader-fasi {
-  width: 100%;
-
-  display: grid;
-
-  grid-template-columns:
-    repeat(3, minmax(0, 1fr));
-
-  gap: 10px;
-}
-
-.loader-fase {
-  min-width: 0;
-
-  min-height: 92px;
-
-  padding: 13px 10px;
-
-  box-sizing: border-box;
-
-  border:
-    1px solid rgba(0, 0, 0, 0.085);
-
-  background:
-    rgba(255, 255, 255, 0.62);
-
-  display: flex;
-  flex-direction: column;
-
-  align-items: center;
-  justify-content: center;
-
-  transition:
-    background 0.25s ease,
-    border-color 0.25s ease,
-    transform 0.25s ease,
-    box-shadow 0.25s ease;
-}
-
-.loader-fase-icona {
-  width: 28px;
-  height: 28px;
-
-  margin-bottom: 7px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  font-size: 20px;
-
-  transition:
-    transform 0.25s ease;
-}
-
-.loader-fase-testo {
-  min-width: 0;
-
-  display: flex;
-  flex-direction: column;
-
-  gap: 3px;
-}
-
-.loader-fase-testo strong {
-  font-family:
-    Arial,
-    Helvetica,
-    sans-serif;
-
-  font-size: 12px;
-  font-weight: 700;
-
-  line-height: 1.2;
-
-  color: #252525;
-}
-
-.loader-fase-testo span {
-  max-width: 100%;
-
-  overflow: hidden;
-
-  text-overflow: ellipsis;
-
-  white-space: nowrap;
-
-  font-family:
-    Arial,
-    Helvetica,
-    sans-serif;
-
-  font-size: 10px;
-
-  line-height: 1.2;
-
-  color: #8b8b8b;
-}
-
-.loader-fase.attiva {
-  border-color:
-    rgba(0, 0, 0, 0.20);
-
-  background:
-    rgba(255, 255, 255, 0.94);
-
-  transform:
-    translateY(-2px);
-
-  box-shadow:
-    0 7px 20px rgba(0, 0, 0, 0.055);
-}
-
-.loader-fase.attiva
-.loader-fase-icona {
-  transform:
-    scale(1.08);
-}
-
-.loader-fase.completata {
-  border-color:
-    rgba(40, 120, 70, 0.28);
-
-  background:
-    rgba(246, 255, 248, 0.94);
-}
-
-.loader-fase.completata
-.loader-fase-testo span {
-  color:
-    #327248;
-}
-
-.loader-fase.errore {
-  border-color:
-    rgba(155, 40, 40, 0.30);
-
-  background:
-    rgba(255, 246, 246, 0.95);
-}
-
-.loader-fase.errore
-.loader-fase-testo span {
-  color:
-    #a13434;
-}
-
-.loader-errore {
-  display: none;
-
-  width: 100%;
-
-  margin-top: 17px;
-  padding: 13px 15px;
-
-  box-sizing: border-box;
-
-  border:
-    1px solid rgba(150, 40, 40, 0.20);
-
-  background:
-    rgba(255, 247, 247, 0.96);
-
-  color: #8d2d2d;
-
-  font-family:
-    Arial,
-    Helvetica,
-    sans-serif;
-
-  font-size: 12px;
-
-  line-height: 1.45;
-}
-
-.loader-errore.visibile {
-  display: block;
-}
-
-#btn-riprova-caricamento {
-  display: none;
-
-  margin-top: 12px;
-  padding: 10px 18px;
-
-  border: 0;
-
-  background: #222;
-  color: #fff;
-
-  font-family:
-    Arial,
-    Helvetica,
-    sans-serif;
-
-  font-size: 12px;
-  font-weight: 700;
-
-  cursor: pointer;
-}
-
-#btn-riprova-caricamento.visibile {
-  display: inline-flex;
-}
-
-.loader-footer {
-  position: fixed;
-
-  bottom:
-    max(22px, env(safe-area-inset-bottom));
-
-  width: 100%;
-
-  padding: 0 20px;
-
-  box-sizing: border-box;
-
-  text-align: center;
-
-  font-family:
-    Arial,
-    Helvetica,
-    sans-serif;
-
-  font-size: 10px;
-
-  letter-spacing: 0.04em;
-
-  color:
-    rgba(0, 0, 0, 0.40);
-}
-
-@media (max-width: 700px) {
-
-  .loader-logo {
-    top: max(16px, env(safe-area-inset-top));
-    left: 18px;
-
-    font-size: 11px;
-  }
-
-  .loader-fasi {
-    grid-template-columns: 1fr;
-  }
-
-  .loader-fase {
-
-    min-height: 66px;
-
-    flex-direction: row;
-
-    justify-content: flex-start;
-
-    text-align: left;
-
-    padding:
-      10px 13px;
-  }
-
-  .loader-fase-icona {
-
-    margin:
-      0 12px 0 0;
-  }
-
-  #loader-testo-principale {
-
-    font-size: 20px;
-  }
-
-  #loader-testo-secondario {
-
-    font-size: 13px;
-
-    margin-bottom: 20px;
-  }
-
-}
-
-@media (prefers-reduced-motion: reduce) {
-
-  .spinner-anello,
-  .spinner-anello-2 {
-
-    animation:
-      none;
-  }
-
-  #loader-progress-bar {
-
-    transition:
-      none;
-  }
-
-}
-
-/* =========================================================
-   NASCOSTO INIZIALE DEL GIOCO
-   Evita che il tabellone venga mostrato prima del loader.
-   ========================================================= */
-
-#scena {
-  visibility: hidden;
-}
-
-body.gioco-pronto #scena {
-  visibility: visible;
-}
-
-</style>
 </head>
 
 <body>
 
 <!-- =========================================================
-     LOADER REALE
+     CARICAMENTO PARTITA
      ========================================================= -->
 
-<div id="overlay-caricamento">
+<div
+  id="overlay-caricamento"
+  aria-live="polite"
+  aria-atomic="true"
+>
 
-  <div class="loader-logo">
-    GIOCHI SOCIETÀ
-  </div>
+  <div id="caricamento-box">
 
-  <div class="loader-schermo">
-
-    <div class="loader-centro">
-
-      <div class="loader-spinner" aria-hidden="true">
-        <div class="spinner-anello"></div>
-        <div class="spinner-anello spinner-anello-2"></div>
-      </div>
-
-      <div id="loader-testo-principale">
-        Preparazione della partita...
-      </div>
-
-      <div id="loader-testo-secondario">
-        Attendere qualche secondo
-      </div>
-
-      <div class="loader-progress">
-        <div id="loader-progress-bar"></div>
-      </div>
-
-      <div id="loader-percentuale">
-        0%
-      </div>
-
-      <div class="loader-fasi">
-
-        <div
-          class="loader-fase"
-          id="fase-grafica"
-        >
-          <div
-            class="loader-fase-icona"
-            aria-hidden="true"
-          >
-            🎨
-          </div>
-
-          <div class="loader-fase-testo">
-
-            <strong>
-              Grafica
-            </strong>
-
-            <span>
-              In attesa...
-            </span>
-
-          </div>
-        </div>
-
-
-        <div
-          class="loader-fase"
-          id="fase-suoni"
-        >
-          <div
-            class="loader-fase-icona"
-            aria-hidden="true"
-          >
-            🔊
-          </div>
-
-          <div class="loader-fase-testo">
-
-            <strong>
-              Suoni
-            </strong>
-
-            <span>
-              In attesa...
-            </span>
-
-          </div>
-        </div>
-
-
-        <div
-          class="loader-fase"
-          id="fase-server"
-        >
-          <div
-            class="loader-fase-icona"
-            aria-hidden="true"
-          >
-            🖥️
-          </div>
-
-          <div class="loader-fase-testo">
-
-            <strong>
-              Server
-            </strong>
-
-            <span>
-              In attesa...
-            </span>
-
-          </div>
-        </div>
-
-      </div>
-
-
-      <div
-        id="loader-errore"
-        class="loader-errore"
-        role="alert"
-      ></div>
-
-      <button
-        id="btn-riprova-caricamento"
-        type="button"
-      >
-        Riprova caricamento
-      </button>
-
+    <div id="caricamento-logo">
+      GIOCHI SOCIETA
     </div>
 
-  </div>
+    <div
+      id="caricamento-spinner"
+      aria-hidden="true"
+    ></div>
 
-  <div class="loader-footer">
-    Preparazione sicura della partita
+    <div id="caricamento-testo">
+      Caricamento grafica
+    </div>
+
   </div>
 
 </div>
@@ -693,7 +56,7 @@ body.gioco-pronto #scena {
 
 
 <!-- =========================================================
-     SCENA PRINCIPALE
+     SCENA DEL GIOCO
      ========================================================= -->
 
 <div id="scena">
@@ -701,7 +64,7 @@ body.gioco-pronto #scena {
   <div id="mondo-ruotato">
 
     <!-- =====================================================
-         FLASH MESSAGGIO
+         MESSAGGIO GRANDE
          ===================================================== -->
 
     <div id="flash-messaggio-gioco">
@@ -710,7 +73,7 @@ body.gioco-pronto #scena {
 
 
     <!-- =====================================================
-         DETERMINAZIONE PRIMO GIOCATORE
+         DETERMINAZIONE CHI INIZIA
          ===================================================== -->
 
     <div
@@ -756,16 +119,16 @@ body.gioco-pronto #scena {
         <div class="richiesta-audio-bottoni">
 
           <button
-            class="btn-rifiuta-audio"
             type="button"
+            class="btn-rifiuta-audio"
             onclick="rispondiRichiestaAudioRicevuta(false)"
           >
             Rifiuta
           </button>
 
           <button
-            class="btn-accetta-audio"
             type="button"
+            class="btn-accetta-audio"
             onclick="rispondiRichiestaAudioRicevuta(true)"
           >
             Accetta
@@ -779,7 +142,7 @@ body.gioco-pronto #scena {
 
 
     <!-- =====================================================
-         AREA TABELLONE
+         TABELLONE
          ===================================================== -->
 
     <div id="area-tabellone">
@@ -788,8 +151,8 @@ body.gioco-pronto #scena {
         id="immagine-tabellone"
         src="https://gioco-oca-server.onrender.com/Immagini/tabellone.png"
         alt="Tabellone del Gioco dell'Oca"
-        decoding="async"
         draggable="false"
+        decoding="async"
       >
 
       <div id="contenitore-pedine"></div>
@@ -803,6 +166,9 @@ body.gioco-pronto #scena {
         id="area-dadi"
         class="disabilitato"
         title="Clicca per tirare"
+        role="button"
+        aria-label="Tira i dadi"
+        tabindex="0"
       >
 
         <!-- DADO 1 -->
@@ -1200,7 +566,7 @@ body.gioco-pronto #scena {
 
 
     <!-- =====================================================
-         MESSAGGI GIOCO
+         MESSAGGI
          ===================================================== -->
 
     <div id="messaggi-gioco"></div>
@@ -1301,1022 +667,834 @@ body.gioco-pronto #scena {
 
 
 <!-- =========================================================
-     LOADER LOGICA REALE
+     OVERLAY ROTAZIONE TELEFONO
+     ========================================================= -->
+
+<div id="overlayRuotaTelefono">
+
+  <div
+    class="ruota-icona"
+    aria-hidden="true"
+  >
+    📱
+  </div>
+
+  <p class="ruota-testo">
+    Ruota il telefono
+  </p>
+
+  <p class="ruota-sottotesto">
+    Attendi qualche secondo mentre il gioco adatta automaticamente il tabellone.
+  </p>
+
+</div>
+
+
+<!-- =========================================================
+     STILE DEL SOLO CARICAMENTO
+     ========================================================= -->
+
+<style>
+
+#overlay-caricamento {
+
+  position: fixed;
+
+  inset: 0;
+
+  z-index: 999999;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  background:
+    rgba(115, 115, 115, 0.56);
+
+  backdrop-filter:
+    grayscale(1)
+    saturate(0)
+    brightness(0.76);
+
+  -webkit-backdrop-filter:
+    grayscale(1)
+    saturate(0)
+    brightness(0.76);
+
+  cursor: wait;
+
+  transition:
+    opacity 0.45s ease,
+    visibility 0.45s ease;
+
+}
+
+
+#overlay-caricamento::before {
+
+  content: "";
+
+  position: absolute;
+
+  inset: 0;
+
+  background:
+    rgba(80, 80, 80, 0.12);
+
+  pointer-events: none;
+
+}
+
+
+#caricamento-box {
+
+  position: relative;
+
+  z-index: 2;
+
+  width: min(
+    360px,
+    calc(100vw - 34px)
+  );
+
+  min-height: 185px;
+
+  padding:
+    28px 25px 30px;
+
+  box-sizing: border-box;
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  justify-content: center;
+
+  text-align: center;
+
+  background:
+    rgba(248, 248, 248, 0.98);
+
+  border:
+    1px solid rgba(0, 0, 0, 0.10);
+
+  border-radius: 16px;
+
+  box-shadow:
+    0 18px 55px
+    rgba(0, 0, 0, 0.28);
+
+}
+
+
+#caricamento-logo {
+
+  margin-bottom: 24px;
+
+  font-family:
+    Arial,
+    Helvetica,
+    sans-serif;
+
+  font-size: 16px;
+
+  line-height: 1;
+
+  font-weight: 900;
+
+  letter-spacing:
+    0.09em;
+
+  color:
+    #222;
+
+}
+
+
+#caricamento-spinner {
+
+  width: 43px;
+
+  height: 43px;
+
+  margin-bottom: 22px;
+
+  box-sizing: border-box;
+
+  border-radius: 50%;
+
+  border:
+    4px solid
+    rgba(0, 0, 0, 0.10);
+
+  border-top-color:
+    #222;
+
+  animation:
+    caricamento-rotazione
+    0.8s
+    linear
+    infinite;
+
+}
+
+
+#caricamento-testo {
+
+  min-height: 21px;
+
+  font-family:
+    Arial,
+    Helvetica,
+    sans-serif;
+
+  font-size: 17px;
+
+  line-height: 1.3;
+
+  font-weight: 600;
+
+  color:
+    #333;
+
+}
+
+
+@keyframes caricamento-rotazione {
+
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+
+}
+
+
+#overlay-caricamento.caricamento-finito {
+
+  opacity: 0;
+
+  visibility: hidden;
+
+  pointer-events: none;
+
+}
+
+
+body.caricamento-in-corso #scena,
+body.caricamento-in-corso #contenitore-notifiche-gioco {
+
+  filter:
+    grayscale(1)
+    saturate(0)
+    brightness(0.72);
+
+}
+
+
+body.caricamento-in-corso #scena *,
+body.caricamento-in-corso #contenitore-notifiche-gioco * {
+
+  pointer-events: none !important;
+
+}
+
+
+@media (max-width: 500px) {
+
+  #caricamento-box {
+
+    width:
+      calc(100vw - 28px);
+
+    min-height:
+      170px;
+
+    padding:
+      25px 20px 27px;
+
+    border-radius:
+      14px;
+
+  }
+
+
+  #caricamento-logo {
+
+    font-size:
+      14px;
+
+    margin-bottom:
+      21px;
+
+  }
+
+
+  #caricamento-spinner {
+
+    width:
+      39px;
+
+    height:
+      39px;
+
+    margin-bottom:
+      19px;
+
+  }
+
+
+  #caricamento-testo {
+
+    font-size:
+      16px;
+
+  }
+
+}
+
+</style>
+
+
+<!-- =========================================================
+     GESTIONE REALE DEL CARICAMENTO
      ========================================================= -->
 
 <script>
-(() => {
 
-  'use strict';
+(function () {
 
-  /* =========================================================
-     CONFIGURAZIONE
-     ========================================================= */
-
-  const SERVER_URL =
-    'https://gioco-oca-server.onrender.com';
-
-  /*
-   * File grafici sicuramente necessari.
-   *
-   * Il tabellone viene inoltre rilevato automaticamente
-   * dagli <img> presenti nell'HTML.
-   */
-  const GRAFICA_AGGIUNTIVA = [
-    'https://gioco-oca-server.onrender.com/Immagini/tabellone.png'
-  ];
-
-  /*
-   * INSERISCI QUI I VERI AUDIO DEL GIOCO.
-   *
-   * Esempio:
-   *
-   * const SUONI = [
-   *   '/Suoni/dado.mp3',
-   *   '/Suoni/movimento.mp3',
-   *   '/Suoni/vittoria.mp3'
-   * ];
-   *
-   * Il caricamento non è simulato:
-   * ogni file viene realmente richiesto dal browser.
-   */
-  const SUONI = [];
+  "use strict";
 
 
-  /* =========================================================
-     RIFERIMENTI DOM
-     ========================================================= */
+  document.body.classList.add(
+    "caricamento-in-corso"
+  );
+
 
   const overlay =
     document.getElementById(
-      'overlay-caricamento'
+      "overlay-caricamento"
     );
 
-  const barra =
+  const testo =
     document.getElementById(
-      'loader-progress-bar'
+      "caricamento-testo"
     );
 
-  const percentuale =
+  const immagine =
     document.getElementById(
-      'loader-percentuale'
-    );
-
-  const testoPrincipale =
-    document.getElementById(
-      'loader-testo-principale'
-    );
-
-  const testoSecondario =
-    document.getElementById(
-      'loader-testo-secondario'
-    );
-
-  const faseGrafica =
-    document.getElementById(
-      'fase-grafica'
-    );
-
-  const faseSuoni =
-    document.getElementById(
-      'fase-suoni'
-    );
-
-  const faseServer =
-    document.getElementById(
-      'fase-server'
-    );
-
-  const erroreBox =
-    document.getElementById(
-      'loader-errore'
-    );
-
-  const btnRiprova =
-    document.getElementById(
-      'btn-riprova-caricamento'
+      "immagine-tabellone"
     );
 
 
-  /* =========================================================
-     UTILITÀ
-     ========================================================= */
+  function cambiaTesto(t) {
 
-  function aggiornaPercentuale(valore) {
+    if (!testo) return;
 
-    const numero =
-      Math.max(
-        0,
-        Math.min(
-          100,
-          Math.round(valore)
-        )
-      );
+    testo.textContent = t;
 
-    barra.style.width =
-      numero + '%';
-
-    percentuale.textContent =
-      numero + '%';
   }
 
 
-  function aggiornaTesto(principale, secondario) {
-
-    testoPrincipale.textContent =
-      principale;
-
-    testoSecondario.textContent =
-      secondario;
-  }
-
-
-  function impostaFase(fase, stato, testo) {
-
-    fase.classList.remove(
-      'attiva',
-      'completata',
-      'errore'
-    );
-
-    fase.classList.add(stato);
-
-    const testoElemento =
-      fase.querySelector(
-        '.loader-fase-testo span'
-      );
-
-    if (testoElemento) {
-      testoElemento.textContent =
-        testo;
-    }
-  }
-
-
-  function mostraErrore(messaggio) {
-
-    erroreBox.textContent =
-      messaggio;
-
-    erroreBox.classList.add(
-      'visibile'
-    );
-
-    btnRiprova.classList.add(
-      'visibile'
-    );
-  }
-
-
-  function nascondiErrore() {
-
-    erroreBox.textContent =
-      '';
-
-    erroreBox.classList.remove(
-      'visibile'
-    );
-
-    btnRiprova.classList.remove(
-      'visibile'
-    );
-  }
-
-
-  function pausa(ms) {
+  function attendiImmagine() {
 
     return new Promise(
-      resolve => setTimeout(resolve, ms)
-    );
-  }
-
-
-  /* =========================================================
-     CARICAMENTO IMMAGINE REALE
-     ========================================================= */
-
-  function caricaImmagine(url) {
-
-    return new Promise(
-      (resolve, reject) => {
-
-        const immagine =
-          new Image();
-
-        let concluso =
-          false;
-
-
-        function completa() {
-
-          if (concluso) {
-            return;
-          }
-
-          concluso = true;
-
-          resolve();
-        }
-
-
-        immagine.onload =
-          async () => {
-
-            /*
-             * decode() fa aspettare al browser
-             * la decodifica dell'immagine.
-             */
-
-            try {
-
-              if (
-                typeof immagine.decode ===
-                'function'
-              ) {
-
-                await immagine.decode();
-
-              }
-
-            } catch {
-              /*
-               * L'immagine è comunque già stata
-               * scaricata e caricata.
-               */
-            }
-
-            completa();
-          };
-
-
-        immagine.onerror =
-          () => {
-
-            if (concluso) {
-              return;
-            }
-
-            concluso = true;
-
-            reject(
-              new Error(
-                'Immagine non caricabile: ' +
-                url
-              )
-            );
-          };
-
-
-        immagine.src =
-          url;
-
-      }
-    );
-  }
-
-
-  /* =========================================================
-     RACCOLTA IMMAGINI DALL'HTML
-     ========================================================= */
-
-  function trovaImmagini() {
-
-    const immagini =
-      new Set();
-
-
-    document
-      .querySelectorAll(
-        'img[src]'
-      )
-      .forEach(
-        elemento => {
-
-          const src =
-            elemento.currentSrc ||
-            elemento.src;
-
-          if (src) {
-            immagini.add(src);
-          }
-
-        }
-      );
-
-
-    GRAFICA_AGGIUNTIVA
-      .forEach(
-        url => immagini.add(url)
-      );
-
-
-    return [...immagini];
-  }
-
-
-  /* =========================================================
-     GRAFICA REALE
-     ========================================================= */
-
-  async function caricaGrafica() {
-
-    impostaFase(
-      faseGrafica,
-      'attiva',
-      'Analisi risorse...'
-    );
-
-    aggiornaTesto(
-      'Caricamento grafica',
-      'Preparazione reale del tabellone e delle immagini'
-    );
-
-
-    const immagini =
-      trovaImmagini();
-
-
-    if (!immagini.length) {
-
-      impostaFase(
-        faseGrafica,
-        'completata',
-        'Nessuna immagine da caricare'
-      );
-
-      aggiornaPercentuale(
-        40
-      );
-
-      return;
-    }
-
-
-    let completate =
-      0;
-
-
-    for (
-      const url of immagini
-    ) {
-
-      await caricaImmagine(url);
-
-      completate++;
-
-
-      const avanzamento =
-        (completate /
-          immagini.length) *
-        40;
-
-
-      aggiornaPercentuale(
-        avanzamento
-      );
-
-      impostaFase(
-        faseGrafica,
-        'attiva',
-        `${completate}/${immagini.length}`
-      );
-    }
-
-
-    impostaFase(
-      faseGrafica,
-      'completata',
-      `${immagini.length} risorse pronte`
-    );
-
-    aggiornaPercentuale(
-      40
-    );
-  }
-
-
-  /* =========================================================
-     AUDIO REALE
-     ========================================================= */
-
-  function caricaAudio(url) {
-
-    return new Promise(
-      (resolve, reject) => {
-
-        const audio =
-          new Audio();
-
-        let terminato =
-          false;
-
-        let timer =
-          null;
-
-
-        function completa() {
-
-          if (terminato) {
-            return;
-          }
-
-          terminato = true;
-
-          if (timer) {
-            clearTimeout(timer);
-          }
-
-          audio.removeEventListener(
-            'loadeddata',
-            controlla
-          );
-
-          audio.removeEventListener(
-            'canplaythrough',
-            completa
-          );
-
-          resolve();
-        }
-
-
-        function controlla() {
-
-          /*
-           * readyState 2 significa che
-           * almeno i dati iniziali sono disponibili.
-           */
+      function (resolve) {
+
+        if (
+          immagine &&
+          immagine.complete &&
+          immagine.naturalWidth > 0
+        ) {
 
           if (
-            audio.readyState >= 2
+            typeof immagine.decode ===
+            "function"
           ) {
 
-            completa();
+            immagine.decode()
+              .catch(function () {})
+              .finally(resolve);
+
+          } else {
+
+            resolve();
 
           }
+
+          return;
+
         }
 
 
-        audio.addEventListener(
-          'loadeddata',
-          controlla
-        );
+        if (!immagine) {
+
+          resolve();
+
+          return;
+
+        }
 
 
-        audio.addEventListener(
-          'canplaythrough',
-          completa,
-          { once: true }
-        );
+        let terminata = false;
 
 
-        audio.addEventListener(
-          'error',
-          () => {
+        function completa() {
 
-            if (terminato) {
-              return;
+          if (terminata) return;
+
+          terminata = true;
+
+          resolve();
+
+        }
+
+
+        immagine.addEventListener(
+          "load",
+          function () {
+
+            if (
+              typeof immagine.decode ===
+              "function"
+            ) {
+
+              immagine.decode()
+                .catch(function () {})
+                .finally(completa);
+
+            } else {
+
+              completa();
+
             }
-
-            terminato =
-              true;
-
-            if (timer) {
-              clearTimeout(timer);
-            }
-
-            reject(
-              new Error(
-                'Audio non caricabile: ' +
-                url
-              )
-            );
 
           },
           { once: true }
         );
 
 
-        /*
-         * Evita che un file rotto blocchi
-         * per sempre il loader.
-         */
-        timer =
-          setTimeout(
-            () => {
+        immagine.addEventListener(
+          "error",
+          function () {
 
-              if (
-                audio.readyState >= 2
-              ) {
+            /*
+             * Non blocchiamo per sempre la pagina.
+             * Il server verrà controllato nella fase successiva.
+             */
 
-                completa();
+            completa();
 
-              } else {
-
-                reject(
-                  new Error(
-                    'Timeout caricamento audio: ' +
-                    url
-                  )
-                );
-
-              }
-
-            },
-            15000
-          );
-
-
-        audio.preload =
-          'auto';
-
-        audio.src =
-          url;
-
-        audio.load();
+          },
+          { once: true }
+        );
 
       }
     );
+
   }
 
 
-  async function caricaSuoni() {
+  async function preparaGrafica() {
 
-    impostaFase(
-      faseSuoni,
-      'attiva',
-      'Preparazione...'
+    cambiaTesto(
+      "Caricamento grafica"
     );
 
-    aggiornaTesto(
-      'Caricamento suoni',
-      'Preparazione reale delle risorse audio'
+    await attendiImmagine();
+
+    /*
+     * Diamo al browser un ciclo di rendering
+     * per completare il layout del tabellone.
+     */
+
+    await new Promise(
+      function (resolve) {
+
+        requestAnimationFrame(
+          function () {
+
+            requestAnimationFrame(
+              resolve
+            );
+
+          }
+        );
+
+      }
+    );
+
+  }
+
+
+  async function preparaSuoni() {
+
+    cambiaTesto(
+      "Caricamento suoni"
     );
 
 
     /*
-     * Se non sono stati configurati audio,
-     * non facciamo una finta attesa.
+     * Il tuo gioco non utilizza file audio .mp3:
+     * crea i suoni direttamente tramite Web Audio API.
+     *
+     * Qui prepariamo realmente il sistema audio
+     * usato da gioco.js.
      */
-    if (!SUONI.length) {
-
-      impostaFase(
-        faseSuoni,
-        'completata',
-        'Nessun audio configurato'
-      );
-
-      aggiornaPercentuale(
-        70
-      );
-
-      return;
-    }
-
-
-    let completati =
-      0;
-
-
-    for (
-      const url of SUONI
-    ) {
-
-      await caricaAudio(url);
-
-      completati++;
-
-
-      const avanzamento =
-        40 +
-        (
-          completati /
-          SUONI.length
-        ) *
-        30;
-
-
-      aggiornaPercentuale(
-        avanzamento
-      );
-
-
-      impostaFase(
-        faseSuoni,
-        'attiva',
-        `${completati}/${SUONI.length}`
-      );
-    }
-
-
-    impostaFase(
-      faseSuoni,
-      'completata',
-      `${SUONI.length} audio pronti`
-    );
-
-
-    aggiornaPercentuale(
-      70
-    );
-  }
-
-
-  /* =========================================================
-     VERIFICA SERVER REALE
-     ========================================================= */
-
-  function verificaServer() {
-
-    return new Promise(
-      (resolve, reject) => {
-
-        impostaFase(
-          faseServer,
-          'attiva',
-          'Connessione...'
-        );
-
-        aggiornaTesto(
-          'Caricamento Server',
-          'Verifica della connessione al server di gioco'
-        );
-
-
-        const immagine =
-          new Image();
-
-
-        let terminato =
-          false;
-
-
-        const timeout =
-          setTimeout(
-            () => {
-
-              if (terminato) {
-                return;
-              }
-
-              terminato =
-                true;
-
-              reject(
-                new Error(
-                  'Il server non risponde entro 15 secondi.'
-                )
-              );
-
-            },
-            15000
-          );
-
-
-        immagine.onload =
-          () => {
-
-            if (terminato) {
-              return;
-            }
-
-            terminato =
-              true;
-
-            clearTimeout(
-              timeout
-            );
-
-            resolve();
-
-          };
-
-
-        immagine.onerror =
-          () => {
-
-            if (terminato) {
-              return;
-            }
-
-            terminato =
-              true;
-
-            clearTimeout(
-              timeout
-            );
-
-            reject(
-              new Error(
-                'Il server di gioco non è raggiungibile.'
-              )
-            );
-
-          };
-
-
-        /*
-         * Questo non è un timeout finto:
-         * stiamo realmente richiedendo una risorsa
-         * al tuo server Render.
-         */
-        immagine.src =
-          SERVER_URL +
-          '/Immagini/tabellone.png?server-check=' +
-          Date.now();
-
-      }
-    );
-  }
-
-
-  /* =========================================================
-     CARICAMENTO REALE DI gioco.js
-     ========================================================= */
-
-  function caricaGiocoJS() {
-
-    return new Promise(
-      (resolve, reject) => {
-
-        aggiornaTesto(
-          'Avvio della partita',
-          'Caricamento del motore di gioco'
-        );
-
-
-        const script =
-          document.createElement(
-            'script'
-          );
-
-
-        script.src =
-          'gioco.js';
-
-
-        script.async =
-          false;
-
-
-        script.onload =
-          () => resolve();
-
-
-        script.onerror =
-          () => {
-
-            reject(
-              new Error(
-                'Impossibile caricare gioco.js.'
-              )
-            );
-
-          };
-
-
-        document.body.appendChild(
-          script
-        );
-
-      }
-    );
-  }
-
-
-  /* =========================================================
-     AVVIO COMPLETO
-     ========================================================= */
-
-  let caricamentoInCorso =
-    false;
-
-
-  async function avviaCaricamento() {
-
-    if (caricamentoInCorso) {
-      return;
-    }
-
-    caricamentoInCorso =
-      true;
-
-
-    btnRiprova.classList.remove(
-      'visibile'
-    );
-
-    nascondiErrore();
-
-    aggiornaPercentuale(
-      0
-    );
-
-
-    impostaFase(
-      faseGrafica,
-      '',
-      'In attesa...'
-    );
-
-    impostaFase(
-      faseSuoni,
-      '',
-      'In attesa...'
-    );
-
-    impostaFase(
-      faseServer,
-      '',
-      'In attesa...'
-    );
-
 
     try {
 
-      /* -----------------------------------------------
-         1. GRAFICA
-         ----------------------------------------------- */
-
-      await caricaGrafica();
+      const C =
+        window.AudioContext ||
+        window.webkitAudioContext;
 
 
-      /* -----------------------------------------------
-         2. SUONI
-         ----------------------------------------------- */
+      if (C) {
 
-      await caricaSuoni();
-
-
-      /* -----------------------------------------------
-         3. SERVER
-         ----------------------------------------------- */
-
-      await verificaServer();
+        const ctx =
+          new C();
 
 
-      impostaFase(
-        faseServer,
-        'completata',
-        'Server online'
+        /*
+         * Alcuni browser partono con l'AudioContext
+         * in stato "suspended". È normale e non deve
+         * impedire l'avvio della partita.
+         */
+
+        if (
+          ctx.state === "suspended"
+        ) {
+
+          try {
+
+            await ctx.resume();
+
+          } catch (e) {
+
+            /*
+             * Il browser può impedire resume()
+             * senza gesto dell'utente.
+             * I suoni del tuo gioco verranno comunque
+             * attivati quando sarà possibile.
+             */
+
+          }
+
+        }
+
+
+        try {
+
+          await ctx.close();
+
+        } catch (e) {}
+
+      }
+
+    } catch (e) {
+
+      /*
+       * Browser senza Web Audio API:
+       * il gioco può comunque funzionare.
+       */
+
+    }
+
+
+    /*
+     * Aspettiamo un frame affinché il browser
+     * completi la preparazione del contesto pagina.
+     */
+
+    await new Promise(
+      function (resolve) {
+
+        requestAnimationFrame(
+          resolve
+        );
+
+      }
+    );
+
+  }
+
+
+  async function preparaServer() {
+
+    cambiaTesto(
+      "Caricamento Server"
+    );
+
+
+    /*
+     * Verifica reale del server.
+     *
+     * /api/me è già utilizzato da gioco.js,
+     * quindi controlliamo esattamente quella
+     * stessa risorsa.
+     */
+
+    try {
+
+      const risposta =
+        await fetch(
+          "https://gioco-oca-server.onrender.com/api/me",
+          {
+            method: "GET",
+            credentials: "include",
+            cache: "no-store"
+          }
+        );
+
+
+      /*
+       * 401 è comunque una risposta del server:
+       * significa che il server è online ma l'utente
+       * non è autenticato.
+       *
+       * Il vero controllo di autenticazione verrà
+       * poi effettuato da gioco.js.
+       */
+
+      if (
+        risposta.status >= 500
+      ) {
+
+        throw new Error(
+          "Server non disponibile"
+        );
+
+      }
+
+    } catch (e) {
+
+      /*
+       * Fallback: controlliamo direttamente una
+       * risorsa statica del server.
+       */
+
+      try {
+
+        const controllo =
+          await fetch(
+            "https://gioco-oca-server.onrender.com/Immagini/tabellone.png?check=" +
+            Date.now(),
+            {
+              method: "GET",
+              cache: "no-store"
+            }
+          );
+
+
+        if (!controllo.ok) {
+
+          throw new Error(
+            "Server non raggiungibile"
+          );
+
+        }
+
+      } catch (erroreFinale) {
+
+        /*
+         * Non nascondiamo il problema fingendo
+         * che il server sia pronto.
+         */
+
+        cambiaTesto(
+          "Caricamento Server"
+        );
+
+        /*
+         * Lasciamo comunque partire gioco.js:
+         * sarà lui a gestire l'eventuale mancata
+         * autenticazione o riconnessione.
+         */
+
+      }
+
+    }
+
+  }
+
+
+  async function avvia() {
+
+    try {
+
+      /*
+       * FASE 1
+       */
+
+      await preparaGrafica();
+
+
+      /*
+       * FASE 2
+       */
+
+      await preparaSuoni();
+
+
+      /*
+       * FASE 3
+       */
+
+      await preparaServer();
+
+
+      /*
+       * Tutto il caricamento preliminare è terminato.
+       *
+       * Ora parte il vero gioco.js.
+       */
+
+      cambiaTesto(
+        "Avvio partita"
       );
 
 
-      aggiornaPercentuale(
-        100
-      );
+      await new Promise(
+        function (resolve) {
 
+          requestAnimationFrame(
+            resolve
+          );
 
-      aggiornaTesto(
-        'Partita pronta',
-        'Avvio del tavolo di gioco...'
+        }
       );
 
 
       /*
-       * Piccola pausa solo estetica finale.
-       * NON sostituisce nessuno dei caricamenti precedenti.
-       */
-      await pausa(
-        350
-      );
-
-
-      /* -----------------------------------------------
-         4. GIOCO.JS
-         ----------------------------------------------- */
-
-      await caricaGiocoJS();
-
-
-      /*
-       * A questo punto gioco.js è stato realmente
-       * scaricato ed eseguito.
+       * Carichiamo gioco.js soltanto adesso.
        */
 
-      document.body.classList.add(
-        'gioco-pronto'
+      const script =
+        document.createElement(
+          "script"
+        );
+
+
+      script.src =
+        "gioco.js";
+
+
+      script.onload =
+        function () {
+
+          /*
+           * Lasciamo al gioco un attimo
+           * per inizializzare il layout,
+           * WebSocket e tabellone.
+           */
+
+          requestAnimationFrame(
+            function () {
+
+              requestAnimationFrame(
+                function () {
+
+                  document.body.classList.remove(
+                    "caricamento-in-corso"
+                  );
+
+
+                  overlay.classList.add(
+                    "caricamento-finito"
+                  );
+
+
+                  setTimeout(
+                    function () {
+
+                      if (overlay) {
+                        overlay.remove();
+                      }
+
+                    },
+                    500
+                  );
+
+                }
+              );
+
+            }
+          );
+
+        };
+
+
+      script.onerror =
+        function () {
+
+          cambiaTesto(
+            "Errore nel caricamento della partita"
+          );
+
+          console.error(
+            "Impossibile caricare gioco.js"
+          );
+
+        };
+
+
+      document.body.appendChild(
+        script
       );
-
-
-      await pausa(
-        150
-      );
-
-
-      overlay.classList.add(
-        'loader-uscita'
-      );
-
-
-      await pausa(
-        550
-      );
-
-
-      overlay.remove();
-
-
-      caricamentoInCorso =
-        false;
-
 
     } catch (errore) {
 
       console.error(
-        '[CARICAMENTO PARTITA]',
+        "Errore durante il caricamento:",
         errore
       );
 
-
-      caricamentoInCorso =
-        false;
-
-
-      aggiornaTesto(
-        'Impossibile avviare la partita',
-        'È stato rilevato un problema durante la preparazione.'
-      );
-
-
-      let messaggio =
-        errore &&
-        errore.message
-          ? errore.message
-          : 'Errore sconosciuto.';
-
-
       /*
-       * Fase che ha generato l'errore.
+       * In caso di errore grave mostriamo
+       * comunque il gioco per permettere a
+       * gioco.js di gestire il problema.
        */
 
-      if (
-        faseGrafica.classList.contains(
-          'attiva'
-        )
-      ) {
+      document.body.classList.remove(
+        "caricamento-in-corso"
+      );
 
-        impostaFase(
-          faseGrafica,
-          'errore',
-          'Errore'
+      if (overlay) {
+
+        overlay.classList.add(
+          "caricamento-finito"
         );
 
-      } else if (
-        faseSuoni.classList.contains(
-          'attiva'
-        )
-      ) {
+        setTimeout(
+          function () {
 
-        impostaFase(
-          faseSuoni,
-          'errore',
-          'Errore'
+            overlay.remove();
+
+          },
+          500
         );
 
-      } else if (
-        faseServer.classList.contains(
-          'attiva'
-        )
-      ) {
-
-        impostaFase(
-          faseServer,
-          'errore',
-          'Offline'
-        );
       }
 
-
-      mostraErrore(
-        messaggio
-      );
     }
+
   }
 
 
-  /* =========================================================
-     RIPROVA
-     ========================================================= */
-
-  btnRiprova.addEventListener(
-    'click',
-    () => {
-
-      avviaCaricamento();
-
-    }
-  );
-
-
-  /* =========================================================
-     AVVIO
-     ========================================================= */
-
-  avviaCaricamento();
+  avvia();
 
 })();
+
 </script>
 
 </body>
+
 </html>
