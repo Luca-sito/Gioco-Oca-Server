@@ -1,2322 +1,1402 @@
+```html
 <!DOCTYPE html>
 <html lang="it">
 <head>
-<meta charset="UTF-8">
+  <meta charset="UTF-8">
 
-<meta
-  name="viewport"
-  content="width=device-width, initial-scale=1.0, viewport-fit=cover"
->
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+  >
 
-<title>Gioco dell'Oca - Partita</title>
+  <meta name="theme-color" content="#071018">
+  <meta name="color-scheme" content="dark">
 
-<link rel="stylesheet" href="gioco.css">
+  <title>Gioco dell'Oca - GIOCHI SOCIETA</title>
 
-<!-- Preload principale del tabellone -->
-<link
-  rel="preload"
-  as="image"
-  href="https://gioco-oca-server.onrender.com/Immagini/tabellone.png"
->
+  <link rel="stylesheet" href="gioco.css">
 
-<style>
+  <style>
+    /* =====================================================
+       CARICAMENTO
+       Questi stili restano qui perché il tuo gioco.css
+       originale non contieneva il sistema di caricamento.
+       ===================================================== */
 
-/* =========================================================
-   LOADER PARTITA
-   ========================================================= */
+    #overlay-caricamento {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
 
-#overlay-caricamento {
-  position: fixed;
-  inset: 0;
-  z-index: 999999999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
 
-  display: flex;
-  align-items: center;
-  justify-content: center;
+      padding:
+        max(24px, env(safe-area-inset-top))
+        max(24px, env(safe-area-inset-right))
+        max(24px, env(safe-area-inset-bottom))
+        max(24px, env(safe-area-inset-left));
 
-  width: 100vw;
-  height: 100vh;
+      background:
+        radial-gradient(
+          circle at center,
+          rgba(22, 40, 54, 0.98),
+          rgba(4, 10, 16, 1)
+        );
 
-  background:
-    linear-gradient(
-      180deg,
-      rgba(247, 247, 249, 0.985),
-      rgba(235, 236, 239, 0.985)
-    );
+      color: #f4f7fa;
 
-  opacity: 1;
-  visibility: visible;
+      transition:
+        opacity 0.45s ease,
+        visibility 0.45s ease;
+    }
 
-  transition:
-    opacity 0.55s ease,
-    visibility 0.55s ease;
+    #overlay-caricamento.caricamento-finito {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
 
-  overflow: hidden;
-}
+    #caricamento-box {
+      width: min(90vw, 420px);
 
-#overlay-caricamento.loader-uscita {
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-}
+      padding: 30px 26px;
 
-.loader-schermo {
-  position: relative;
+      text-align: center;
 
-  width: min(560px, calc(100vw - 36px));
+      background:
+        linear-gradient(
+          180deg,
+          rgba(18, 33, 46, 0.97),
+          rgba(8, 17, 25, 0.98)
+        );
 
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+      border: 1px solid rgba(232, 185, 79, 0.28);
+      border-radius: 20px;
 
-  text-align: center;
-}
+      box-shadow:
+        0 28px 70px rgba(0, 0, 0, 0.5),
+        inset 0 1px 0 rgba(255,255,255,0.04);
+    }
 
-.loader-logo {
-  position: fixed;
+    #caricamento-logo {
+      margin-bottom: 22px;
 
-  top: max(22px, env(safe-area-inset-top));
-  left: 28px;
+      color: #ffd970;
 
-  font-family:
-    Arial,
-    Helvetica,
-    sans-serif;
+      font-size: clamp(22px, 5vw, 32px);
+      font-weight: 900;
+      letter-spacing: 0.08em;
+    }
 
-  font-size: 13px;
-  font-weight: 800;
+    #caricamento-spinner {
+      width: 42px;
+      height: 42px;
 
-  letter-spacing: 0.20em;
+      margin: 0 auto 18px;
 
-  color: rgba(25, 25, 25, 0.68);
+      border-radius: 50%;
 
-  user-select: none;
-}
+      border:
+        3px solid rgba(255,255,255,0.10);
 
-.loader-centro {
-  width: 100%;
+      border-top-color: #ffd970;
 
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
+      animation:
+        caricamento-spin 0.85s linear infinite;
+    }
 
-.loader-spinner {
-  position: relative;
+    #caricamento-testo {
+      min-height: 20px;
 
-  width: 82px;
-  height: 82px;
+      color: #aab6c2;
 
-  margin-bottom: 27px;
-}
+      font-size: 13px;
+      font-weight: 600;
+    }
 
-.spinner-anello {
-  position: absolute;
+    @keyframes caricamento-spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
 
-  inset: 0;
+    /* =====================================================
+       BANNER DISCONNESSIONE
+       ===================================================== */
 
-  border-radius: 50%;
+    #banner-disconnesso {
+      position: fixed;
+      top: max(10px, env(safe-area-inset-top));
+      left: 50%;
+      transform: translateX(-50%);
 
-  border: 8px solid rgba(20, 20, 20, 0.075);
-  border-top-color: #222;
+      z-index: 9000;
 
-  animation:
-    rotazione-loader
-    1s
-    linear
-    infinite;
-}
+      max-width: calc(100vw - 24px);
 
-.spinner-anello-2 {
-  inset: 15px;
+      padding: 9px 14px;
 
-  border-width: 5px;
+      background:
+        linear-gradient(
+          180deg,
+          rgba(75, 25, 29, 0.97),
+          rgba(48, 17, 21, 0.97)
+        );
 
-  border-color: rgba(20, 20, 20, 0.04);
-  border-right-color: #5b5b5b;
+      border:
+        1px solid rgba(239, 100, 100, 0.35);
 
-  animation-duration: 1.65s;
-  animation-direction: reverse;
-}
+      border-radius: 999px;
 
-@keyframes rotazione-loader {
+      color: #ffd6d6;
 
-  from {
-    transform: rotate(0deg);
-  }
+      font-size: 12px;
+      font-weight: 800;
 
-  to {
-    transform: rotate(360deg);
-  }
+      text-align: center;
 
-}
+      box-shadow:
+        0 10px 30px rgba(0,0,0,0.35);
+    }
 
-#loader-testo-principale {
+    #banner-disconnesso.nascosto {
+      display: none;
+    }
 
-  width: 100%;
+    /* =====================================================
+       NOTIFICHE
+       ===================================================== */
 
-  margin: 0 0 7px;
+    #contenitore-notifiche-gioco {
+      position: fixed;
 
-  font-family:
-    Arial,
-    Helvetica,
-    sans-serif;
+      top:
+        max(16px, env(safe-area-inset-top));
 
-  font-size: 23px;
-  line-height: 1.25;
-  font-weight: 700;
+      right:
+        max(16px, env(safe-area-inset-right));
 
-  color: #202124;
-}
+      z-index: 9500;
 
-#loader-testo-secondario {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
 
-  width: 100%;
+      width: min(90vw, 360px);
 
-  margin: 0 0 24px;
+      pointer-events: none;
+    }
 
-  font-family:
-    Arial,
-    Helvetica,
-    sans-serif;
+    .notifica-toast-gioco {
+      padding: 11px 14px;
 
-  font-size: 14px;
-  line-height: 1.4;
+      background:
+        linear-gradient(
+          180deg,
+          rgba(18, 33, 46, 0.98),
+          rgba(7, 16, 24, 0.98)
+        );
 
-  color: #777;
-}
+      border:
+        1px solid rgba(255,255,255,0.09);
 
-.loader-progress {
-  position: relative;
+      border-left:
+        3px solid #e8b94f;
 
-  width: 100%;
-  height: 5px;
+      border-radius: 11px;
 
-  margin-bottom: 8px;
+      color: #f4f7fa;
 
-  background: rgba(0, 0, 0, 0.10);
+      font-size: 12px;
+      line-height: 1.35;
 
-  overflow: hidden;
-}
+      box-shadow:
+        0 12px 30px rgba(0,0,0,0.38);
 
-#loader-progress-bar {
-  position: absolute;
+      animation:
+        notifica-entrata 0.25s ease;
+    }
 
-  left: 0;
-  top: 0;
+    @keyframes notifica-entrata {
+      from {
+        opacity: 0;
+        transform: translateY(-8px);
+      }
 
-  width: 0%;
-  height: 100%;
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
 
-  background: #222;
+    /* =====================================================
+       ACCESSIBILITÀ
+       ===================================================== */
 
-  transition:
-    width 0.28s ease;
-}
+    #area-dadi:focus-visible,
+    #btn-menu:focus-visible,
+    #btn-chat:focus-visible,
+    #btn-giocatori:focus-visible,
+    #pannello-menu button:focus-visible,
+    button:focus-visible,
+    input:focus-visible {
+      outline: 2px solid #ffd970;
+      outline-offset: 3px;
+    }
 
-#loader-percentuale {
-
-  margin-bottom: 22px;
-
-  font-family:
-    Arial,
-    Helvetica,
-    sans-serif;
-
-  font-size: 12px;
-  line-height: 1;
-
-  font-weight: 700;
-
-  color: #666;
-
-  font-variant-numeric: tabular-nums;
-}
-
-.loader-fasi {
-  width: 100%;
-
-  display: grid;
-
-  grid-template-columns:
-    repeat(3, minmax(0, 1fr));
-
-  gap: 10px;
-}
-
-.loader-fase {
-  min-width: 0;
-
-  min-height: 92px;
-
-  padding: 13px 10px;
-
-  box-sizing: border-box;
-
-  border:
-    1px solid rgba(0, 0, 0, 0.085);
-
-  background:
-    rgba(255, 255, 255, 0.62);
-
-  display: flex;
-  flex-direction: column;
-
-  align-items: center;
-  justify-content: center;
-
-  transition:
-    background 0.25s ease,
-    border-color 0.25s ease,
-    transform 0.25s ease,
-    box-shadow 0.25s ease;
-}
-
-.loader-fase-icona {
-  width: 28px;
-  height: 28px;
-
-  margin-bottom: 7px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  font-size: 20px;
-
-  transition:
-    transform 0.25s ease;
-}
-
-.loader-fase-testo {
-  min-width: 0;
-
-  display: flex;
-  flex-direction: column;
-
-  gap: 3px;
-}
-
-.loader-fase-testo strong {
-  font-family:
-    Arial,
-    Helvetica,
-    sans-serif;
-
-  font-size: 12px;
-  font-weight: 700;
-
-  line-height: 1.2;
-
-  color: #252525;
-}
-
-.loader-fase-testo span {
-  max-width: 100%;
-
-  overflow: hidden;
-
-  text-overflow: ellipsis;
-
-  white-space: nowrap;
-
-  font-family:
-    Arial,
-    Helvetica,
-    sans-serif;
-
-  font-size: 10px;
-
-  line-height: 1.2;
-
-  color: #8b8b8b;
-}
-
-.loader-fase.attiva {
-  border-color:
-    rgba(0, 0, 0, 0.20);
-
-  background:
-    rgba(255, 255, 255, 0.94);
-
-  transform:
-    translateY(-2px);
-
-  box-shadow:
-    0 7px 20px rgba(0, 0, 0, 0.055);
-}
-
-.loader-fase.attiva
-.loader-fase-icona {
-  transform:
-    scale(1.08);
-}
-
-.loader-fase.completata {
-  border-color:
-    rgba(40, 120, 70, 0.28);
-
-  background:
-    rgba(246, 255, 248, 0.94);
-}
-
-.loader-fase.completata
-.loader-fase-testo span {
-  color:
-    #327248;
-}
-
-.loader-fase.errore {
-  border-color:
-    rgba(155, 40, 40, 0.30);
-
-  background:
-    rgba(255, 246, 246, 0.95);
-}
-
-.loader-fase.errore
-.loader-fase-testo span {
-  color:
-    #a13434;
-}
-
-.loader-errore {
-  display: none;
-
-  width: 100%;
-
-  margin-top: 17px;
-  padding: 13px 15px;
-
-  box-sizing: border-box;
-
-  border:
-    1px solid rgba(150, 40, 40, 0.20);
-
-  background:
-    rgba(255, 247, 247, 0.96);
-
-  color: #8d2d2d;
-
-  font-family:
-    Arial,
-    Helvetica,
-    sans-serif;
-
-  font-size: 12px;
-
-  line-height: 1.45;
-}
-
-.loader-errore.visibile {
-  display: block;
-}
-
-#btn-riprova-caricamento {
-  display: none;
-
-  margin-top: 12px;
-  padding: 10px 18px;
-
-  border: 0;
-
-  background: #222;
-  color: #fff;
-
-  font-family:
-    Arial,
-    Helvetica,
-    sans-serif;
-
-  font-size: 12px;
-  font-weight: 700;
-
-  cursor: pointer;
-}
-
-#btn-riprova-caricamento.visibile {
-  display: inline-flex;
-}
-
-.loader-footer {
-  position: fixed;
-
-  bottom:
-    max(22px, env(safe-area-inset-bottom));
-
-  width: 100%;
-
-  padding: 0 20px;
-
-  box-sizing: border-box;
-
-  text-align: center;
-
-  font-family:
-    Arial,
-    Helvetica,
-    sans-serif;
-
-  font-size: 10px;
-
-  letter-spacing: 0.04em;
-
-  color:
-    rgba(0, 0, 0, 0.40);
-}
-
-@media (max-width: 700px) {
-
-  .loader-logo {
-    top: max(16px, env(safe-area-inset-top));
-    left: 18px;
-
-    font-size: 11px;
-  }
-
-  .loader-fasi {
-    grid-template-columns: 1fr;
-  }
-
-  .loader-fase {
-
-    min-height: 66px;
-
-    flex-direction: row;
-
-    justify-content: flex-start;
-
-    text-align: left;
-
-    padding:
-      10px 13px;
-  }
-
-  .loader-fase-icona {
-
-    margin:
-      0 12px 0 0;
-  }
-
-  #loader-testo-principale {
-
-    font-size: 20px;
-  }
-
-  #loader-testo-secondario {
-
-    font-size: 13px;
-
-    margin-bottom: 20px;
-  }
-
-}
-
-@media (prefers-reduced-motion: reduce) {
-
-  .spinner-anello,
-  .spinner-anello-2 {
-
-    animation:
-      none;
-  }
-
-  #loader-progress-bar {
-
-    transition:
-      none;
-  }
-
-}
-
-/* =========================================================
-   NASCOSTO INIZIALE DEL GIOCO
-   Evita che il tabellone venga mostrato prima del loader.
-   ========================================================= */
-
-#scena {
-  visibility: hidden;
-}
-
-body.gioco-pronto #scena {
-  visibility: visible;
-}
-
-</style>
+    @media (prefers-reduced-motion: reduce) {
+      #overlay-caricamento,
+      #caricamento-spinner,
+      .notifica-toast-gioco {
+        animation: none !important;
+        transition: none !important;
+      }
+    }
+  </style>
 </head>
 
 <body>
 
-<!-- =========================================================
-     LOADER REALE
-     ========================================================= -->
+  <!-- =====================================================
+       OVERLAY CARICAMENTO
+       ===================================================== -->
 
-<div id="overlay-caricamento">
-
-  <div class="loader-logo">
-    GIOCHI SOCIETÀ
-  </div>
-
-  <div class="loader-schermo">
-
-    <div class="loader-centro">
-
-      <div class="loader-spinner" aria-hidden="true">
-        <div class="spinner-anello"></div>
-        <div class="spinner-anello spinner-anello-2"></div>
-      </div>
-
-      <div id="loader-testo-principale">
-        Preparazione della partita...
-      </div>
-
-      <div id="loader-testo-secondario">
-        Attendere qualche secondo
-      </div>
-
-      <div class="loader-progress">
-        <div id="loader-progress-bar"></div>
-      </div>
-
-      <div id="loader-percentuale">
-        0%
-      </div>
-
-      <div class="loader-fasi">
-
-        <div
-          class="loader-fase"
-          id="fase-grafica"
-        >
-          <div
-            class="loader-fase-icona"
-            aria-hidden="true"
-          >
-            🎨
-          </div>
-
-          <div class="loader-fase-testo">
-
-            <strong>
-              Grafica
-            </strong>
-
-            <span>
-              In attesa...
-            </span>
-
-          </div>
-        </div>
-
-
-        <div
-          class="loader-fase"
-          id="fase-suoni"
-        >
-          <div
-            class="loader-fase-icona"
-            aria-hidden="true"
-          >
-            🔊
-          </div>
-
-          <div class="loader-fase-testo">
-
-            <strong>
-              Suoni
-            </strong>
-
-            <span>
-              In attesa...
-            </span>
-
-          </div>
-        </div>
-
-
-        <div
-          class="loader-fase"
-          id="fase-server"
-        >
-          <div
-            class="loader-fase-icona"
-            aria-hidden="true"
-          >
-            🖥️
-          </div>
-
-          <div class="loader-fase-testo">
-
-            <strong>
-              Server
-            </strong>
-
-            <span>
-              In attesa...
-            </span>
-
-          </div>
-        </div>
-
-      </div>
-
+  <div
+    id="overlay-caricamento"
+    aria-live="polite"
+    aria-atomic="true"
+    role="status"
+  >
+    <div id="caricamento-box">
+      <div id="caricamento-logo">GIOCHI SOCIETA</div>
 
       <div
-        id="loader-errore"
-        class="loader-errore"
-        role="alert"
+        id="caricamento-spinner"
+        aria-hidden="true"
       ></div>
 
-      <button
-        id="btn-riprova-caricamento"
-        type="button"
-      >
-        Riprova caricamento
-      </button>
-
+      <div id="caricamento-testo">
+        Caricamento grafica
+      </div>
     </div>
-
   </div>
 
-  <div class="loader-footer">
-    Preparazione sicura della partita
+  <!-- =====================================================
+       CONNESSIONE
+       ===================================================== -->
+
+  <div
+    id="banner-disconnesso"
+    class="nascosto"
+    role="status"
+    aria-live="assertive"
+  >
+    🔴 Connessione persa — riconnessione in corso...
   </div>
 
-</div>
+  <!-- =====================================================
+       NOTIFICHE
+       ===================================================== -->
 
+  <div
+    id="contenitore-notifiche-gioco"
+    aria-live="polite"
+    aria-atomic="false"
+  ></div>
 
-<!-- =========================================================
-     NOTIFICHE
-     ========================================================= -->
+  <!-- =====================================================
+       SCENA PRINCIPALE
+       ===================================================== -->
 
-<div id="contenitore-notifiche-gioco"></div>
+  <main id="scena">
 
+    <div id="mondo-ruotato">
 
-<!-- =========================================================
-     SCENA PRINCIPALE
-     ========================================================= -->
-
-<div id="scena">
-
-  <div id="mondo-ruotato">
-
-    <!-- =====================================================
-         FLASH MESSAGGIO
-         ===================================================== -->
-
-    <div id="flash-messaggio-gioco">
-      <span></span>
-    </div>
-
-
-    <!-- =====================================================
-         DETERMINAZIONE PRIMO GIOCATORE
-         ===================================================== -->
-
-    <div
-      id="overlay-determinazione"
-      class="overlay"
-    >
-
-      <div class="popup-determinazione">
-
-        <h2>
-          🎲 CHI INIZIA?
-        </h2>
-
-        <p
-          class="sottotitolo-determinazione"
-          id="sottotitolo-determinazione"
-        >
-          I giocatori tirano i dadi uno alla volta per stabilire l'ordine.
-        </p>
-
-        <div id="lista-determinazione"></div>
-
-        <div id="slot-dadi-determinazione"></div>
-
-      </div>
-
-    </div>
-
-
-    <!-- =====================================================
-         RICHIESTA AUDIO
-         ===================================================== -->
-
-    <div
-      id="popup-richiesta-audio"
-      class="nascosto"
-    >
-
-      <div class="popup-richiesta-audio-box">
-
-        <p id="testo-richiesta-audio"></p>
-
-        <div class="richiesta-audio-bottoni">
-
-          <button
-            class="btn-rifiuta-audio"
-            type="button"
-            onclick="rispondiRichiestaAudioRicevuta(false)"
-          >
-            Rifiuta
-          </button>
-
-          <button
-            class="btn-accetta-audio"
-            type="button"
-            onclick="rispondiRichiestaAudioRicevuta(true)"
-          >
-            Accetta
-          </button>
-
-        </div>
-
-      </div>
-
-    </div>
-
-
-    <!-- =====================================================
-         AREA TABELLONE
-         ===================================================== -->
-
-    <div id="area-tabellone">
-
-      <img
-        id="immagine-tabellone"
-        src="https://gioco-oca-server.onrender.com/Immagini/tabellone.png"
-        alt="Tabellone del Gioco dell'Oca"
-        decoding="async"
-        draggable="false"
-      >
-
-      <div id="contenitore-pedine"></div>
-
-
-      <!-- ===================================================
-           DADI
-           =================================================== -->
+      <!-- =================================================
+           MESSAGGIO FLASH
+           ================================================= -->
 
       <div
-        id="area-dadi"
-        class="disabilitato"
-        title="Clicca per tirare"
+        id="flash-messaggio-gioco"
+        aria-live="assertive"
+        aria-atomic="true"
       >
-
-        <!-- DADO 1 -->
-
-        <div
-          id="dado1"
-          class="dado-3d"
-        >
-
-          <div class="cubo">
-
-            <div
-              class="faccia faccia-1"
-            >
-              <span
-                class="pip pip-rossa"
-                style="grid-area:2/2;"
-              ></span>
-            </div>
-
-            <div
-              class="faccia faccia-2"
-            >
-              <span
-                class="pip"
-                style="grid-area:1/3;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:3/1;"
-              ></span>
-            </div>
-
-            <div
-              class="faccia faccia-3"
-            >
-              <span
-                class="pip"
-                style="grid-area:1/3;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:2/2;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:3/1;"
-              ></span>
-            </div>
-
-            <div
-              class="faccia faccia-4"
-            >
-              <span
-                class="pip pip-rossa"
-                style="grid-area:1/1;"
-              ></span>
-
-              <span
-                class="pip pip-rossa"
-                style="grid-area:1/3;"
-              ></span>
-
-              <span
-                class="pip pip-rossa"
-                style="grid-area:3/1;"
-              ></span>
-
-              <span
-                class="pip pip-rossa"
-                style="grid-area:3/3;"
-              ></span>
-            </div>
-
-            <div
-              class="faccia faccia-5"
-            >
-              <span
-                class="pip"
-                style="grid-area:1/1;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:1/3;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:2/2;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:3/1;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:3/3;"
-              ></span>
-            </div>
-
-            <div
-              class="faccia faccia-6"
-            >
-              <span
-                class="pip"
-                style="grid-area:1/1;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:2/1;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:3/1;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:1/3;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:2/3;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:3/3;"
-              ></span>
-            </div>
-
-          </div>
-
-        </div>
-
-
-        <!-- DADO 2 -->
-
-        <div
-          id="dado2"
-          class="dado-3d"
-        >
-
-          <div class="cubo">
-
-            <div
-              class="faccia faccia-1"
-            >
-              <span
-                class="pip pip-rossa"
-                style="grid-area:2/2;"
-              ></span>
-            </div>
-
-            <div
-              class="faccia faccia-2"
-            >
-              <span
-                class="pip"
-                style="grid-area:1/3;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:3/1;"
-              ></span>
-            </div>
-
-            <div
-              class="faccia faccia-3"
-            >
-              <span
-                class="pip"
-                style="grid-area:1/3;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:2/2;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:3/1;"
-              ></span>
-            </div>
-
-            <div
-              class="faccia faccia-4"
-            >
-              <span
-                class="pip pip-rossa"
-                style="grid-area:1/1;"
-              ></span>
-
-              <span
-                class="pip pip-rossa"
-                style="grid-area:1/3;"
-              ></span>
-
-              <span
-                class="pip pip-rossa"
-                style="grid-area:3/1;"
-              ></span>
-
-              <span
-                class="pip pip-rossa"
-                style="grid-area:3/3;"
-              ></span>
-            </div>
-
-            <div
-              class="faccia faccia-5"
-            >
-              <span
-                class="pip"
-                style="grid-area:1/1;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:1/3;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:2/2;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:3/1;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:3/3;"
-              ></span>
-            </div>
-
-            <div
-              class="faccia faccia-6"
-            >
-              <span
-                class="pip"
-                style="grid-area:1/1;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:2/1;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:3/1;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:1/3;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:2/3;"
-              ></span>
-
-              <span
-                class="pip"
-                style="grid-area:3/3;"
-              ></span>
-            </div>
-
-          </div>
-
-        </div>
-
+        <span></span>
       </div>
 
-    </div>
-
-
-    <!-- =====================================================
-         PANNELLO GIOCATORI
-         ===================================================== -->
-
-    <div id="pannello-giocatori">
-
-      <div id="riga-turno">
-        Caricamento...
-      </div>
-
-      <div id="lista-giocatori"></div>
-
-    </div>
-
-
-    <!-- =====================================================
-         PULSANTE GIOCATORI
-         ===================================================== -->
-
-    <div id="giocatori-wrapper">
-
-      <button
-        id="btn-giocatori"
-        type="button"
-        title="Giocatori"
-        aria-label="Apri giocatori"
-      >
-        👤
-      </button>
-
-    </div>
-
-
-    <!-- =====================================================
-         MENU
-         ===================================================== -->
-
-    <div id="menu-wrapper">
-
-      <button
-        id="btn-menu"
-        type="button"
-        title="Menu"
-        aria-label="Apri menu"
-      >
-        ☰
-      </button>
+      <!-- =================================================
+           DETERMINAZIONE ORDINE
+           ================================================= -->
 
       <div
-        id="pannello-menu"
+        id="overlay-determinazione"
+        class="overlay"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="titolo-determinazione"
+      >
+        <div class="popup-determinazione">
+
+          <h2 id="titolo-determinazione">
+            🎲 CHI INIZIA?
+          </h2>
+
+          <p
+            class="sottotitolo-determinazione"
+            id="sottotitolo-determinazione"
+          >
+            I giocatori tirano i dadi uno alla volta per stabilire l'ordine.
+          </p>
+
+          <div id="lista-determinazione"></div>
+
+          <div id="slot-dadi-determinazione"></div>
+
+        </div>
+      </div>
+
+      <!-- =================================================
+           RICHIESTA AUDIO
+           ================================================= -->
+
+      <div
+        id="popup-richiesta-audio"
         class="nascosto"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="testo-richiesta-audio"
+      >
+        <div class="popup-richiesta-audio-box">
+
+          <p id="testo-richiesta-audio"></p>
+
+          <div class="richiesta-audio-bottoni">
+
+            <button
+              type="button"
+              class="btn-rifiuta-audio"
+              onclick="rispondiRichiestaAudioRicevuta(false)"
+            >
+              Rifiuta
+            </button>
+
+            <button
+              type="button"
+              class="btn-accetta-audio"
+              onclick="rispondiRichiestaAudioRicevuta(true)"
+            >
+              Accetta
+            </button>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- =================================================
+           TABELLONE
+           ================================================= -->
+
+      <section id="area-tabellone" aria-label="Tabellone di gioco">
+
+        <img
+          id="immagine-tabellone"
+          src="immagini/tabellone.png"
+          alt="Tabellone del Gioco dell'Oca"
+          draggable="false"
+          decoding="async"
+          fetchpriority="high"
+        >
+
+        <div
+          id="contenitore-pedine"
+          aria-hidden="true"
+        ></div>
+
+        <!-- =================================================
+             DADI
+             ================================================= -->
+
+        <div
+          id="area-dadi"
+          class="disabilitato"
+          title="Clicca per tirare"
+          role="button"
+          aria-label="Tira i dadi"
+          aria-disabled="true"
+          tabindex="0"
+        >
+
+          <!-- DADO 1 -->
+
+          <div
+            id="dado1"
+            class="dado-3d"
+            aria-hidden="true"
+          >
+            <div class="cubo">
+
+              <div class="faccia faccia-1">
+                <span
+                  class="pip pip-rossa"
+                  style="grid-area:2/2;"
+                ></span>
+              </div>
+
+              <div class="faccia faccia-2">
+                <span
+                  class="pip"
+                  style="grid-area:1/3;"
+                ></span>
+                <span
+                  class="pip"
+                  style="grid-area:3/1;"
+                ></span>
+              </div>
+
+              <div class="faccia faccia-3">
+                <span
+                  class="pip"
+                  style="grid-area:1/3;"
+                ></span>
+                <span
+                  class="pip"
+                  style="grid-area:2/2;"
+                ></span>
+                <span
+                  class="pip"
+                  style="grid-area:3/1;"
+                ></span>
+              </div>
+
+              <div class="faccia faccia-4">
+                <span
+                  class="pip pip-rossa"
+                  style="grid-area:1/1;"
+                ></span>
+                <span
+                  class="pip pip-rossa"
+                  style="grid-area:1/3;"
+                ></span>
+                <span
+                  class="pip pip-rossa"
+                  style="grid-area:3/1;"
+                ></span>
+                <span
+                  class="pip pip-rossa"
+                  style="grid-area:3/3;"
+                ></span>
+              </div>
+
+              <div class="faccia faccia-5">
+                <span
+                  class="pip"
+                  style="grid-area:1/1;"
+                ></span>
+                <span
+                  class="pip"
+                  style="grid-area:1/3;"
+                ></span>
+                <span
+                  class="pip"
+                  style="grid-area:2/2;"
+                ></span>
+                <span
+                  class="pip"
+                  style="grid-area:3/1;"
+                ></span>
+                <span
+                  class="pip"
+                  style="grid-area:3/3;"
+                ></span>
+              </div>
+
+              <div class="faccia faccia-6">
+                <span
+                  class="pip"
+                  style="grid-area:1/1;"
+                ></span>
+                <span
+                  class="pip"
+                  style="grid-area:2/1;"
+                ></span>
+                <span
+                  class="pip"
+                  style="grid-area:3/1;"
+                ></span>
+                <span
+                  class="pip"
+                  style="grid-area:1/3;"
+                ></span>
+                <span
+                  class="pip"
+                  style="grid-area:2/3;"
+                ></span>
+                <span
+                  class="pip"
+                  style="grid-area:3/3;"
+                ></span>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- DADO 2 -->
+
+          <div
+            id="dado2"
+            class="dado-3d"
+            aria-hidden="true"
+          >
+            <div class="cubo">
+
+              <div class="faccia faccia-1">
+                <span
+                  class="pip pip-rossa"
+                  style="grid-area:2/2;"
+                ></span>
+              </div>
+
+              <div class="faccia faccia-2">
+                <span
+                  class="pip"
+                  style="grid-area:1/3;"
+                ></span>
+                <span
+                  class="pip"
+                  style="grid-area:3/1;"
+                ></span>
+              </div>
+
+              <div class="faccia faccia-3">
+                <span
+                  class="pip"
+                  style="grid-area:1/3;"
+                ></span>
+                <span
+                  class="pip"
+                  style="grid-area:2/2;"
+                ></span>
+                <span
+                  class="pip"
+                  style="grid-area:3/1;"
+                ></span>
+              </div>
+
+              <div class="faccia faccia-4">
+                <span
+                  class="pip pip-rossa"
+                  style="grid-area:1/1;"
+                ></span>
+                <span
+                  class="pip pip-rossa"
+                  style="grid-area:1/3;"
+                ></span>
+                <span
+                  class="pip pip-rossa"
+                  style="grid-area:3/1;"
+                ></span>
+                <span
+                  class="pip pip-rossa"
+                  style="grid-area:3/3;"
+                ></span>
+              </div>
+
+              <div class="faccia faccia-5">
+                <span
+                  class="pip"
+                  style="grid-area:1/1;"
+                ></span>
+                <span
+                  class="pip"
+                  style="grid-area:1/3;"
+                ></span>
+                <span
+                  class="pip"
+                  style="grid-area:2/2;"
+                ></span>
+                <span
+                  class="pip"
+                  style="grid-area:3/1;"
+                ></span>
+                <span
+                  class="pip"
+                  style="grid-area:3/3;"
+                ></span>
+              </div>
+
+              <div class="faccia faccia-6">
+                <span
+                  class="pip"
+                  style="grid-area:1/1;"
+                ></span>
+                <span
+                  class="pip"
+                  style="grid-area:2/1;"
+                ></span>
+                <span
+                  class="pip"
+                  style="grid-area:3/1;"
+                ></span>
+                <span
+                  class="pip"
+                  style="grid-area:1/3;"
+                ></span>
+                <span
+                  class="pip"
+                  style="grid-area:2/3;"
+                ></span>
+                <span
+                  class="pip"
+                  style="grid-area:3/3;"
+                ></span>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- =================================================
+           GIOCATORI
+           ================================================= -->
+
+      <aside
+        id="pannello-giocatori"
+        aria-label="Giocatori della partita"
       >
 
-        <button
-          type="button"
-          onclick="apriProfilo()"
-        >
-          👤 Profilo
-        </button>
+        <div id="riga-turno">
+          Caricamento...
+        </div>
 
-        <button
-          type="button"
-          onclick="apriImpostazioni()"
-        >
-          ⚙️ Impostazioni
-        </button>
+        <div id="lista-giocatori"></div>
 
-        <button
-          id="btn-toggle-suoni"
-          type="button"
-          onclick="toggleSuoni()"
-        >
-          🔊 Suoni: On
-        </button>
+      </aside>
 
+      <div id="giocatori-wrapper">
         <button
-          id="btn-toggle-fullscreen"
+          id="btn-giocatori"
           type="button"
-          onclick="toggleFullscreen()"
+          title="Giocatori"
+          aria-label="Apri giocatori"
+          aria-controls="pannello-giocatori"
         >
-          ⛶ Tutto schermo
+          👤
         </button>
-
-        <button
-          id="btn-toggle-microfono"
-          type="button"
-          onclick="toggleMicrofono()"
-        >
-          🎤 Microfono: Off
-        </button>
-
-        <button
-          class="voce-pericolo"
-          type="button"
-          onclick="abbandonaPartita()"
-        >
-          🚪 Abbandona partita
-        </button>
-
       </div>
 
-    </div>
+      <!-- =================================================
+           MENU
+           ================================================= -->
 
-
-    <!-- =====================================================
-         MESSAGGI GIOCO
-         ===================================================== -->
-
-    <div id="messaggi-gioco"></div>
-
-
-    <!-- =====================================================
-         VITTORIA
-         ===================================================== -->
-
-    <div
-      id="overlay-vittoria"
-      class="overlay"
-    >
-
-      <div class="popup-vittoria">
-
-        <h2 id="testo-vincitore"></h2>
+      <div id="menu-wrapper">
 
         <button
+          id="btn-menu"
           type="button"
-          onclick="tornaAllaLobby()"
+          title="Menu"
+          aria-label="Apri menu"
+          aria-controls="pannello-menu"
+          aria-expanded="false"
         >
-          Torna alla Lobby
+          ☰
         </button>
 
+        <div
+          id="pannello-menu"
+          class="nascosto"
+          role="menu"
+        >
+
+          <button
+            type="button"
+            role="menuitem"
+            onclick="apriProfilo()"
+          >
+            👤 Profilo
+          </button>
+
+          <button
+            type="button"
+            role="menuitem"
+            onclick="apriImpostazioni()"
+          >
+            ⚙️ Impostazioni
+          </button>
+
+          <button
+            id="btn-toggle-suoni"
+            type="button"
+            role="menuitem"
+            onclick="toggleSuoni()"
+          >
+            🔊 Suoni: On
+          </button>
+
+          <button
+            id="btn-toggle-fullscreen"
+            type="button"
+            role="menuitem"
+            onclick="toggleFullscreen()"
+          >
+            ⛶ Tutto schermo
+          </button>
+
+          <button
+            id="btn-toggle-microfono"
+            type="button"
+            role="menuitem"
+            onclick="toggleMicrofono()"
+          >
+            🎤 Microfono: Off
+          </button>
+
+          <button
+            class="voce-pericolo"
+            type="button"
+            role="menuitem"
+            onclick="abbandonaPartita()"
+          >
+            🚪 Abbandona partita
+          </button>
+
+        </div>
       </div>
 
-    </div>
+      <!-- =================================================
+           MESSAGGI
+           ================================================= -->
 
-  </div>
+      <div
+        id="messaggi-gioco"
+        aria-live="polite"
+        aria-atomic="true"
+      ></div>
 
+      <!-- =================================================
+           VITTORIA
+           ================================================= -->
 
-  <!-- =======================================================
-       BACKDROP GIOCATORI
-       ======================================================= -->
-
-  <div id="backdrop-giocatori"></div>
-
-
-  <!-- =======================================================
-       CHAT
-       ======================================================= -->
-
-  <div id="chat-wrapper">
-
-    <button
-      id="btn-chat"
-      type="button"
-      title="Apri chat"
-      aria-label="Apri chat"
-    >
-
-      💬
-
-      <span
-        id="badge-chat-partita"
-        class="badge-chat-partita"
-        style="display:none;"
+      <div
+        id="overlay-vittoria"
+        class="overlay"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="testo-vincitore"
       >
-        0
-      </span>
 
-    </button>
+        <div class="popup-vittoria">
 
+          <h2 id="testo-vincitore"></h2>
 
-    <div
-      id="pannello-chat"
-      class="nascosto"
-    >
+          <button
+            type="button"
+            onclick="tornaAllaLobby()"
+          >
+            Torna alla Lobby
+          </button>
 
-      <div id="chat-messaggi"></div>
-
-      <div id="chat-input-riga">
-
-        <input
-          id="chat-input"
-          type="text"
-          placeholder="Scrivi un messaggio"
-          autocomplete="off"
-          maxlength="500"
-        >
-
-        <button
-          type="button"
-          onclick="inviaChatPartita()"
-          aria-label="Invia messaggio"
-        >
-          ➤
-        </button>
-
+        </div>
       </div>
 
     </div>
 
+    <!-- =====================================================
+         BACKDROP GIOCATORI
+         ===================================================== -->
+
+    <div id="backdrop-giocatori"></div>
+
+    <!-- =====================================================
+         CHAT
+         ===================================================== -->
+
+    <div id="chat-wrapper">
+
+      <button
+        id="btn-chat"
+        type="button"
+        title="Apri chat"
+        aria-label="Apri chat"
+        aria-controls="pannello-chat"
+        aria-expanded="false"
+      >
+        💬
+
+        <span
+          id="badge-chat-partita"
+          class="badge-chat-partita"
+          style="display:none;"
+          aria-hidden="true"
+        >
+          0
+        </span>
+      </button>
+
+      <div
+        id="pannello-chat"
+        class="nascosto"
+        role="region"
+        aria-label="Chat della partita"
+      >
+
+        <div
+          id="chat-messaggi"
+          aria-live="polite"
+          aria-atomic="false"
+        ></div>
+
+        <div id="chat-input-riga">
+
+          <input
+            id="chat-input"
+            type="text"
+            placeholder="Scrivi un messaggio"
+            autocomplete="off"
+            maxlength="500"
+            aria-label="Messaggio chat"
+          >
+
+          <button
+            type="button"
+            onclick="inviaChatPartita()"
+            aria-label="Invia messaggio"
+            title="Invia messaggio"
+          >
+            ➤
+          </button>
+
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- =====================================================
+       ROTAZIONE TELEFONO
+       ===================================================== -->
+
+  <div
+    id="overlayRuotaTelefono"
+    aria-live="assertive"
+    aria-atomic="true"
+  >
+    <div
+      class="ruota-icona"
+      aria-hidden="true"
+    >
+      ↻
+    </div>
+
+    <p class="ruota-testo">
+      Ruota il dispositivo
+    </p>
+
+    <p class="ruota-sottotesto">
+      Il gioco è ottimizzato per questa modalità di visualizzazione.
+    </p>
   </div>
 
-</div>
+  <!-- =====================================================
+       CARICAMENTO GIOCO.JS
+       ===================================================== -->
 
+  <script>
+    (() => {
+      "use strict";
 
-<!-- =========================================================
-     LOADER LOGICA REALE
-     ========================================================= -->
+      const overlay =
+        document.getElementById("overlay-caricamento");
 
-<script>
-(() => {
+      const testo =
+        document.getElementById("caricamento-testo");
 
-  'use strict';
+      const immagine =
+        document.getElementById("immagine-tabellone");
 
-  /* =========================================================
-     CONFIGURAZIONE
-     ========================================================= */
+      let caricamentoCompletato = false;
 
-  const SERVER_URL =
-    'https://gioco-oca-server.onrender.com';
-
-  /*
-   * File grafici sicuramente necessari.
-   *
-   * Il tabellone viene inoltre rilevato automaticamente
-   * dagli <img> presenti nell'HTML.
-   */
-  const GRAFICA_AGGIUNTIVA = [
-    'https://gioco-oca-server.onrender.com/Immagini/tabellone.png'
-  ];
-
-  /*
-   * INSERISCI QUI I VERI AUDIO DEL GIOCO.
-   *
-   * Esempio:
-   *
-   * const SUONI = [
-   *   '/Suoni/dado.mp3',
-   *   '/Suoni/movimento.mp3',
-   *   '/Suoni/vittoria.mp3'
-   * ];
-   *
-   * Il caricamento non è simulato:
-   * ogni file viene realmente richiesto dal browser.
-   */
-  const SUONI = [];
-
-
-  /* =========================================================
-     RIFERIMENTI DOM
-     ========================================================= */
-
-  const overlay =
-    document.getElementById(
-      'overlay-caricamento'
-    );
-
-  const barra =
-    document.getElementById(
-      'loader-progress-bar'
-    );
-
-  const percentuale =
-    document.getElementById(
-      'loader-percentuale'
-    );
-
-  const testoPrincipale =
-    document.getElementById(
-      'loader-testo-principale'
-    );
-
-  const testoSecondario =
-    document.getElementById(
-      'loader-testo-secondario'
-    );
-
-  const faseGrafica =
-    document.getElementById(
-      'fase-grafica'
-    );
-
-  const faseSuoni =
-    document.getElementById(
-      'fase-suoni'
-    );
-
-  const faseServer =
-    document.getElementById(
-      'fase-server'
-    );
-
-  const erroreBox =
-    document.getElementById(
-      'loader-errore'
-    );
-
-  const btnRiprova =
-    document.getElementById(
-      'btn-riprova-caricamento'
-    );
-
-
-  /* =========================================================
-     UTILITÀ
-     ========================================================= */
-
-  function aggiornaPercentuale(valore) {
-
-    const numero =
-      Math.max(
-        0,
-        Math.min(
-          100,
-          Math.round(valore)
-        )
-      );
-
-    barra.style.width =
-      numero + '%';
-
-    percentuale.textContent =
-      numero + '%';
-  }
-
-
-  function aggiornaTesto(principale, secondario) {
-
-    testoPrincipale.textContent =
-      principale;
-
-    testoSecondario.textContent =
-      secondario;
-  }
-
-
-  function impostaFase(fase, stato, testo) {
-
-    fase.classList.remove(
-      'attiva',
-      'completata',
-      'errore'
-    );
-
-    fase.classList.add(stato);
-
-    const testoElemento =
-      fase.querySelector(
-        '.loader-fase-testo span'
-      );
-
-    if (testoElemento) {
-      testoElemento.textContent =
-        testo;
-    }
-  }
-
-
-  function mostraErrore(messaggio) {
-
-    erroreBox.textContent =
-      messaggio;
-
-    erroreBox.classList.add(
-      'visibile'
-    );
-
-    btnRiprova.classList.add(
-      'visibile'
-    );
-  }
-
-
-  function nascondiErrore() {
-
-    erroreBox.textContent =
-      '';
-
-    erroreBox.classList.remove(
-      'visibile'
-    );
-
-    btnRiprova.classList.remove(
-      'visibile'
-    );
-  }
-
-
-  function pausa(ms) {
-
-    return new Promise(
-      resolve => setTimeout(resolve, ms)
-    );
-  }
-
-
-  /* =========================================================
-     CARICAMENTO IMMAGINE REALE
-     ========================================================= */
-
-  function caricaImmagine(url) {
-
-    return new Promise(
-      (resolve, reject) => {
-
-        const immagine =
-          new Image();
-
-        let concluso =
-          false;
-
-
-        function completa() {
-
-          if (concluso) {
-            return;
-          }
-
-          concluso = true;
-
-          resolve();
+      function cambiaTesto(messaggio) {
+        if (testo) {
+          testo.textContent = messaggio;
         }
-
-
-        immagine.onload =
-          async () => {
-
-            /*
-             * decode() fa aspettare al browser
-             * la decodifica dell'immagine.
-             */
-
-            try {
-
-              if (
-                typeof immagine.decode ===
-                'function'
-              ) {
-
-                await immagine.decode();
-
-              }
-
-            } catch {
-              /*
-               * L'immagine è comunque già stata
-               * scaricata e caricata.
-               */
-            }
-
-            completa();
-          };
-
-
-        immagine.onerror =
-          () => {
-
-            if (concluso) {
-              return;
-            }
-
-            concluso = true;
-
-            reject(
-              new Error(
-                'Immagine non caricabile: ' +
-                url
-              )
-            );
-          };
-
-
-        immagine.src =
-          url;
-
       }
-    );
-  }
 
+      function attendiFrame() {
+        return new Promise((resolve) => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(resolve);
+          });
+        });
+      }
 
-  /* =========================================================
-     RACCOLTA IMMAGINI DALL'HTML
-     ========================================================= */
+      function attendiImmagine() {
+        return new Promise((resolve) => {
 
-  function trovaImmagini() {
-
-    const immagini =
-      new Set();
-
-
-    document
-      .querySelectorAll(
-        'img[src]'
-      )
-      .forEach(
-        elemento => {
-
-          const src =
-            elemento.currentSrc ||
-            elemento.src;
-
-          if (src) {
-            immagini.add(src);
-          }
-
-        }
-      );
-
-
-    GRAFICA_AGGIUNTIVA
-      .forEach(
-        url => immagini.add(url)
-      );
-
-
-    return [...immagini];
-  }
-
-
-  /* =========================================================
-     GRAFICA REALE
-     ========================================================= */
-
-  async function caricaGrafica() {
-
-    impostaFase(
-      faseGrafica,
-      'attiva',
-      'Analisi risorse...'
-    );
-
-    aggiornaTesto(
-      'Caricamento grafica',
-      'Preparazione reale del tabellone e delle immagini'
-    );
-
-
-    const immagini =
-      trovaImmagini();
-
-
-    if (!immagini.length) {
-
-      impostaFase(
-        faseGrafica,
-        'completata',
-        'Nessuna immagine da caricare'
-      );
-
-      aggiornaPercentuale(
-        40
-      );
-
-      return;
-    }
-
-
-    let completate =
-      0;
-
-
-    for (
-      const url of immagini
-    ) {
-
-      await caricaImmagine(url);
-
-      completate++;
-
-
-      const avanzamento =
-        (completate /
-          immagini.length) *
-        40;
-
-
-      aggiornaPercentuale(
-        avanzamento
-      );
-
-      impostaFase(
-        faseGrafica,
-        'attiva',
-        `${completate}/${immagini.length}`
-      );
-    }
-
-
-    impostaFase(
-      faseGrafica,
-      'completata',
-      `${immagini.length} risorse pronte`
-    );
-
-    aggiornaPercentuale(
-      40
-    );
-  }
-
-
-  /* =========================================================
-     AUDIO REALE
-     ========================================================= */
-
-  function caricaAudio(url) {
-
-    return new Promise(
-      (resolve, reject) => {
-
-        const audio =
-          new Audio();
-
-        let terminato =
-          false;
-
-        let timer =
-          null;
-
-
-        function completa() {
-
-          if (terminato) {
+          if (!immagine) {
+            resolve();
             return;
           }
-
-          terminato = true;
-
-          if (timer) {
-            clearTimeout(timer);
-          }
-
-          audio.removeEventListener(
-            'loadeddata',
-            controlla
-          );
-
-          audio.removeEventListener(
-            'canplaythrough',
-            completa
-          );
-
-          resolve();
-        }
-
-
-        function controlla() {
-
-          /*
-           * readyState 2 significa che
-           * almeno i dati iniziali sono disponibili.
-           */
 
           if (
-            audio.readyState >= 2
+            immagine.complete &&
+            immagine.naturalWidth > 0
           ) {
+            if (
+              typeof immagine.decode === "function"
+            ) {
+              immagine.decode()
+                .catch(() => {})
+                .finally(resolve);
+            } else {
+              resolve();
+            }
 
-            completa();
-
+            return;
           }
-        }
 
+          let completata = false;
 
-        audio.addEventListener(
-          'loadeddata',
-          controlla
-        );
+          const completa = () => {
+            if (completata) return;
 
+            completata = true;
+            resolve();
+          };
 
-        audio.addEventListener(
-          'canplaythrough',
-          completa,
-          { once: true }
-        );
-
-
-        audio.addEventListener(
-          'error',
-          () => {
-
-            if (terminato) {
-              return;
-            }
-
-            terminato =
-              true;
-
-            if (timer) {
-              clearTimeout(timer);
-            }
-
-            reject(
-              new Error(
-                'Audio non caricabile: ' +
-                url
-              )
-            );
-
-          },
-          { once: true }
-        );
-
-
-        /*
-         * Evita che un file rotto blocchi
-         * per sempre il loader.
-         */
-        timer =
-          setTimeout(
+          immagine.addEventListener(
+            "load",
             () => {
 
               if (
-                audio.readyState >= 2
+                typeof immagine.decode === "function"
               ) {
-
-                completa();
-
+                immagine.decode()
+                  .catch(() => {})
+                  .finally(completa);
               } else {
-
-                reject(
-                  new Error(
-                    'Timeout caricamento audio: ' +
-                    url
-                  )
-                );
-
+                completa();
               }
 
             },
-            15000
+            { once: true }
           );
 
+          immagine.addEventListener(
+            "error",
+            completa,
+            { once: true }
+          );
 
-        audio.preload =
-          'auto';
-
-        audio.src =
-          url;
-
-        audio.load();
-
+          /*
+           * Fallback di sicurezza: se l'immagine resta
+           * appesa per qualche motivo, non blocchiamo
+           * indefinitamente il caricamento del gioco.
+           */
+          setTimeout(completa, 8000);
+        });
       }
-    );
-  }
 
+      async function preparaGrafica() {
+        cambiaTesto("Caricamento grafica");
 
-  async function caricaSuoni() {
+        await attendiImmagine();
+        await attendiFrame();
+      }
 
-    impostaFase(
-      faseSuoni,
-      'attiva',
-      'Preparazione...'
-    );
+      async function preparaSuoni() {
+        /*
+         * Non inizializziamo qui AudioContext.
+         * I browser possono bloccarlo prima di un gesto
+         * dell'utente. Il tuo gioco.js lo inizializza
+         * correttamente al primo utilizzo.
+         */
+        cambiaTesto("Preparazione audio");
 
-    aggiornaTesto(
-      'Caricamento suoni',
-      'Preparazione reale delle risorse audio'
-    );
+        await attendiFrame();
+      }
 
+      async function preparaServer() {
+        cambiaTesto("Connessione al server");
 
-    /*
-     * Se non sono stati configurati audio,
-     * non facciamo una finta attesa.
-     */
-    if (!SUONI.length) {
+        try {
 
-      impostaFase(
-        faseSuoni,
-        'completata',
-        'Nessun audio configurato'
-      );
+          const risposta = await fetch(
+            "https://gioco-oca-server.onrender.com/api/me",
+            {
+              method: "GET",
+              credentials: "include",
+              cache: "no-store"
+            }
+          );
 
-      aggiornaPercentuale(
-        70
-      );
+          /*
+           * 401 non significa che il server è spento:
+           * significa semplicemente che la sessione non è
+           * autenticata. Sarà gioco.js a gestire il login.
+           */
+          if (risposta.status >= 500) {
+            throw new Error(
+              "Il server ha restituito un errore."
+            );
+          }
 
-      return;
-    }
+          return true;
 
+        } catch (errore) {
 
-    let completati =
-      0;
+          /*
+           * Il server Render può essere in avvio.
+           * Facciamo un controllo leggero alternativo.
+           */
+          try {
 
-
-    for (
-      const url of SUONI
-    ) {
-
-      await caricaAudio(url);
-
-      completati++;
-
-
-      const avanzamento =
-        40 +
-        (
-          completati /
-          SUONI.length
-        ) *
-        30;
-
-
-      aggiornaPercentuale(
-        avanzamento
-      );
-
-
-      impostaFase(
-        faseSuoni,
-        'attiva',
-        `${completati}/${SUONI.length}`
-      );
-    }
-
-
-    impostaFase(
-      faseSuoni,
-      'completata',
-      `${SUONI.length} audio pronti`
-    );
-
-
-    aggiornaPercentuale(
-      70
-    );
-  }
-
-
-  /* =========================================================
-     VERIFICA SERVER REALE
-     ========================================================= */
-
-  function verificaServer() {
-
-    return new Promise(
-      (resolve, reject) => {
-
-        impostaFase(
-          faseServer,
-          'attiva',
-          'Connessione...'
-        );
-
-        aggiornaTesto(
-          'Caricamento Server',
-          'Verifica della connessione al server di gioco'
-        );
-
-
-        const immagine =
-          new Image();
-
-
-        let terminato =
-          false;
-
-
-        const timeout =
-          setTimeout(
-            () => {
-
-              if (terminato) {
-                return;
-              }
-
-              terminato =
-                true;
-
-              reject(
-                new Error(
-                  'Il server non risponde entro 15 secondi.'
-                )
+            const controllo =
+              await fetch(
+                "https://gioco-oca-server.onrender.com/immagini/tabellone.png?check=" +
+                Date.now(),
+                {
+                  method: "GET",
+                  cache: "no-store"
+                }
               );
 
-            },
-            15000
-          );
-
-
-        immagine.onload =
-          () => {
-
-            if (terminato) {
-              return;
+            if (!controllo.ok) {
+              throw new Error(
+                "Server non raggiungibile."
+              );
             }
 
-            terminato =
-              true;
+            return true;
 
-            clearTimeout(
-              timeout
+          } catch (erroreFinale) {
+
+            console.warn(
+              "Controllo server non disponibile:",
+              erroreFinale
             );
 
+            /*
+             * Non blocchiamo il gioco qui.
+             * gioco.js gestisce già autenticazione,
+             * WebSocket e riconnessione.
+             */
+            return false;
+          }
+        }
+      }
+
+      function caricaGiocoJS() {
+        return new Promise((resolve, reject) => {
+
+          /*
+           * Evita di caricare gioco.js due volte.
+           */
+          const esistente =
+            document.querySelector(
+              'script[data-gioco-js="true"]'
+            );
+
+          if (esistente) {
             resolve();
+            return;
+          }
 
+          const script =
+            document.createElement("script");
+
+          script.src = "gioco.js";
+          script.defer = true;
+          script.dataset.giocoJs = "true";
+
+          script.onload = () => {
+            resolve();
           };
 
-
-        immagine.onerror =
-          () => {
-
-            if (terminato) {
-              return;
-            }
-
-            terminato =
-              true;
-
-            clearTimeout(
-              timeout
-            );
-
+          script.onerror = () => {
             reject(
               new Error(
-                'Il server di gioco non è raggiungibile.'
+                "Impossibile caricare gioco.js"
               )
             );
-
           };
 
-
-        /*
-         * Questo non è un timeout finto:
-         * stiamo realmente richiedendo una risorsa
-         * al tuo server Render.
-         */
-        immagine.src =
-          SERVER_URL +
-          '/Immagini/tabellone.png?server-check=' +
-          Date.now();
-
+          document.body.appendChild(script);
+        });
       }
-    );
-  }
 
+      async function chiudiOverlayCaricamento() {
 
-  /* =========================================================
-     CARICAMENTO REALE DI gioco.js
-     ========================================================= */
+        if (caricamentoCompletato) {
+          return;
+        }
 
-  function caricaGiocoJS() {
+        caricamentoCompletato = true;
 
-    return new Promise(
-      (resolve, reject) => {
-
-        aggiornaTesto(
-          'Avvio della partita',
-          'Caricamento del motore di gioco'
+        document.body.classList.remove(
+          "caricamento-in-corso"
         );
 
+        if (!overlay) {
+          return;
+        }
 
-        const script =
-          document.createElement(
-            'script'
+        overlay.classList.add(
+          "caricamento-finito"
+        );
+
+        await new Promise((resolve) => {
+          setTimeout(resolve, 450);
+        });
+
+        if (overlay.parentNode) {
+          overlay.remove();
+        }
+      }
+
+      async function mostraErroreCaricamento(messaggio) {
+
+        cambiaTesto(messaggio);
+
+        const spinner =
+          document.getElementById(
+            "caricamento-spinner"
           );
 
+        if (spinner) {
+          spinner.style.animation =
+            "none";
 
-        script.src =
-          'gioco.js';
+          spinner.style.borderTopColor =
+            "#ef6464";
+        }
+      }
 
+      async function avviaCaricamento() {
 
-        script.async =
-          false;
+        document.body.classList.add(
+          "caricamento-in-corso"
+        );
 
+        try {
 
-        script.onload =
-          () => resolve();
+          await preparaGrafica();
+          await preparaSuoni();
 
+          cambiaTesto(
+            "Connessione al server"
+          );
 
-        script.onerror =
-          () => {
+          await preparaServer();
 
-            reject(
-              new Error(
-                'Impossibile caricare gioco.js.'
-              )
+          cambiaTesto(
+            "Avvio partita"
+          );
+
+          await attendiFrame();
+
+          await caricaGiocoJS();
+
+          await attendiFrame();
+
+          await chiudiOverlayCaricamento();
+
+        } catch (errore) {
+
+          console.error(
+            "Errore durante il caricamento del gioco:",
+            errore
+          );
+
+          await mostraErroreCaricamento(
+            "Errore nel caricamento della partita"
+          );
+
+          /*
+           * Mostriamo l'errore senza lasciare la pagina
+           * completamente inutilizzabile.
+           */
+          setTimeout(async () => {
+
+            /*
+             * Un secondo tentativo di caricamento può essere
+             * utile se il server era semplicemente in avvio.
+             */
+            if (!caricamentoCompletato) {
+
+              try {
+                await caricaGiocoJS();
+                await chiudiOverlayCaricamento();
+              } catch (secondoErrore) {
+                console.error(
+                  "Secondo tentativo fallito:",
+                  secondoErrore
+                );
+              }
+            }
+
+          }, 1200);
+        }
+      }
+
+      /*
+       * Accessibilità: permette di premere Invio o Spazio
+       * sul contenitore dei dadi.
+       *
+       * gioco.js continua a gestire il click principale.
+       */
+      const areaDadi =
+        document.getElementById("area-dadi");
+
+      if (areaDadi) {
+
+        areaDadi.addEventListener(
+          "keydown",
+          (evento) => {
+
+            if (
+              evento.key === "Enter" ||
+              evento.key === " "
+            ) {
+              evento.preventDefault();
+
+              if (
+                !areaDadi.classList.contains(
+                  "disabilitato"
+                )
+              ) {
+                areaDadi.click();
+              }
+            }
+
+          }
+        );
+      }
+
+      /*
+       * Aggiorna aria-expanded del menu senza modificare
+       * il funzionamento già presente in gioco.js.
+       */
+      const btnMenu =
+        document.getElementById("btn-menu");
+
+      const pannelloMenu =
+        document.getElementById("pannello-menu");
+
+      if (btnMenu && pannelloMenu) {
+
+        const observer =
+          new MutationObserver(() => {
+
+            const aperto =
+              !pannelloMenu.classList.contains(
+                "nascosto"
+              );
+
+            btnMenu.setAttribute(
+              "aria-expanded",
+              aperto ? "true" : "false"
             );
 
-          };
-
-
-        document.body.appendChild(
-          script
-        );
-
-      }
-    );
-  }
-
-
-  /* =========================================================
-     AVVIO COMPLETO
-     ========================================================= */
-
-  let caricamentoInCorso =
-    false;
-
-
-  async function avviaCaricamento() {
-
-    if (caricamentoInCorso) {
-      return;
-    }
-
-    caricamentoInCorso =
-      true;
-
-
-    btnRiprova.classList.remove(
-      'visibile'
-    );
-
-    nascondiErrore();
-
-    aggiornaPercentuale(
-      0
-    );
-
-
-    impostaFase(
-      faseGrafica,
-      '',
-      'In attesa...'
-    );
-
-    impostaFase(
-      faseSuoni,
-      '',
-      'In attesa...'
-    );
-
-    impostaFase(
-      faseServer,
-      '',
-      'In attesa...'
-    );
-
-
-    try {
-
-      /* -----------------------------------------------
-         1. GRAFICA
-         ----------------------------------------------- */
-
-      await caricaGrafica();
-
-
-      /* -----------------------------------------------
-         2. SUONI
-         ----------------------------------------------- */
-
-      await caricaSuoni();
-
-
-      /* -----------------------------------------------
-         3. SERVER
-         ----------------------------------------------- */
-
-      await verificaServer();
-
-
-      impostaFase(
-        faseServer,
-        'completata',
-        'Server online'
-      );
-
-
-      aggiornaPercentuale(
-        100
-      );
-
-
-      aggiornaTesto(
-        'Partita pronta',
-        'Avvio del tavolo di gioco...'
-      );
-
-
-      /*
-       * Piccola pausa solo estetica finale.
-       * NON sostituisce nessuno dei caricamenti precedenti.
-       */
-      await pausa(
-        350
-      );
-
-
-      /* -----------------------------------------------
-         4. GIOCO.JS
-         ----------------------------------------------- */
-
-      await caricaGiocoJS();
-
-
-      /*
-       * A questo punto gioco.js è stato realmente
-       * scaricato ed eseguito.
-       */
-
-      document.body.classList.add(
-        'gioco-pronto'
-      );
-
-
-      await pausa(
-        150
-      );
-
-
-      overlay.classList.add(
-        'loader-uscita'
-      );
-
-
-      await pausa(
-        550
-      );
-
-
-      overlay.remove();
-
-
-      caricamentoInCorso =
-        false;
-
-
-    } catch (errore) {
-
-      console.error(
-        '[CARICAMENTO PARTITA]',
-        errore
-      );
-
-
-      caricamentoInCorso =
-        false;
-
-
-      aggiornaTesto(
-        'Impossibile avviare la partita',
-        'È stato rilevato un problema durante la preparazione.'
-      );
-
-
-      let messaggio =
-        errore &&
-        errore.message
-          ? errore.message
-          : 'Errore sconosciuto.';
-
-
-      /*
-       * Fase che ha generato l'errore.
-       */
-
-      if (
-        faseGrafica.classList.contains(
-          'attiva'
-        )
-      ) {
-
-        impostaFase(
-          faseGrafica,
-          'errore',
-          'Errore'
-        );
-
-      } else if (
-        faseSuoni.classList.contains(
-          'attiva'
-        )
-      ) {
-
-        impostaFase(
-          faseSuoni,
-          'errore',
-          'Errore'
-        );
-
-      } else if (
-        faseServer.classList.contains(
-          'attiva'
-        )
-      ) {
-
-        impostaFase(
-          faseServer,
-          'errore',
-          'Offline'
+          });
+
+        observer.observe(
+          pannelloMenu,
+          {
+            attributes: true,
+            attributeFilter: ["class"]
+          }
         );
       }
 
+      /*
+       * Aggiorna aria-expanded della chat.
+       */
+      const btnChat =
+        document.getElementById("btn-chat");
 
-      mostraErrore(
-        messaggio
+      const pannelloChat =
+        document.getElementById("pannello-chat");
+
+      if (btnChat && pannelloChat) {
+
+        const observerChat =
+          new MutationObserver(() => {
+
+            const aperto =
+              !pannelloChat.classList.contains(
+                "nascosto"
+              );
+
+            btnChat.setAttribute(
+              "aria-expanded",
+              aperto ? "true" : "false"
+            );
+
+          });
+
+        observerChat.observe(
+          pannelloChat,
+          {
+            attributes: true,
+            attributeFilter: ["class"]
+          }
+        );
+      }
+
+      /*
+       * Il tuo gioco.js utilizza il mondo ruotato
+       * su dispositivi mobili.
+       */
+      function aggiornaModalitaMobile() {
+
+        const desktop =
+          window.matchMedia &&
+          window.matchMedia(
+            "(pointer: fine)"
+          ).matches &&
+          window.innerWidth >= 1000;
+
+        document.body.classList.toggle(
+          "modalita-desktop",
+          desktop
+        );
+
+        document.body.classList.toggle(
+          "tabellone-ruotato",
+          !desktop
+        );
+      }
+
+      aggiornaModalitaMobile();
+
+      window.addEventListener(
+        "resize",
+        aggiornaModalitaMobile,
+        { passive: true }
       );
-    }
-  }
 
+      window.addEventListener(
+        "orientationchange",
+        () => {
+          setTimeout(
+            aggiornaModalitaMobile,
+            300
+          );
+        },
+        { passive: true }
+      );
 
-  /* =========================================================
-     RIPROVA
-     ========================================================= */
-
-  btnRiprova.addEventListener(
-    'click',
-    () => {
-
+      /*
+       * Avvio finale.
+       */
       avviaCaricamento();
 
-    }
-  );
-
-
-  /* =========================================================
-     AVVIO
-     ========================================================= */
-
-  avviaCaricamento();
-
-})();
-</script>
+    })();
+  </script>
 
 </body>
 </html>
+```
