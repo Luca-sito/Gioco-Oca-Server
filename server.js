@@ -765,6 +765,7 @@ function inviaConteggioStanze() {
 }
 
 const HEARTBEAT_MS = 15000;
+const DURATA_ANIMAZIONE_TIRO_MS = 1200;
 const heartbeatInterval = setInterval(() => {
   wss.clients.forEach(socket => { if (socket.isAlive === false) return socket.terminate(); socket.isAlive = false; socket.ping(); });
 }, HEARTBEAT_MS);
@@ -804,10 +805,13 @@ function avviaTimerTurno(partita, nomeStanza, ritardoMs = 0) {
 
   partita.timerTurno = setTimeout(() => {
     if (token !== partita.tokenTimerTurno) return;
+
     partita.timerTurno = null;
+
     gestisciScadenzaTurno(partita, nomeStanza);
   }, millisecondiMossa(partita) + ritardoMs);
 }
+
 async function gestisciScadenzaTurno(partita, nomeStanza) {
   if (!partita.iniziata) return;
   const idGiocatoreDiTurno = partita.ordineGiocatori[partita.turnoAttuale];
