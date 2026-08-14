@@ -1409,7 +1409,11 @@ wss.on("connection", (socket, request) => {
       const partite = stanze[stanzaAttuale].partite;
       for (const pid in partite) {
         const partita = partite[pid];
-        if (uid && partita.giocatori[uid] && !partita.iniziata) {
+        if (
+  uid &&
+  partita.giocatori[uid] &&
+  partita.fase === "attesa_giocatori"
+) {
           const eraIlSuoTurnoDiTirare = partita.fase === "determinazione_ordine" && partita.turnoInCorsoDeterminazione === uid;
           if (partita.fase === "determinazione_ordine") {
             rimuoviGiocatoreDaDeterminazione(partita, uid);
