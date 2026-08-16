@@ -3,28 +3,33 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#0b1118">
-  <title>Account Center - Giochi Società</title>
+  <meta name="theme-color" content="#080d13">
+  <title>Account - Giochi Società</title>
 
   <style>
     :root {
       --bg: #080d13;
-      --bg-soft: #0d141d;
-      --panel: rgba(18, 27, 38, 0.92);
-      --panel-strong: #131d28;
-      --panel-hover: #182533;
-      --border: rgba(255,255,255,.08);
-      --border-strong: rgba(255, 201, 77, .18);
-      --gold: #f3c74f;
-      --gold-strong: #ffd86a;
-      --gold-soft: rgba(243, 199, 79, .11);
-      --text: #f4f7fa;
-      --muted: #8995a3;
-      --muted-2: #5f6b78;
-      --green: #5fd28d;
+      --bg2: #0c131c;
+      --panel: #101922;
+      --panel2: #131f2b;
+      --panel3: #172431;
+
+      --border: rgba(255,255,255,.075);
+      --border-hover: rgba(255,255,255,.13);
+
+      --text: #f2f5f8;
+      --muted: #84909d;
+      --muted2: #5d6874;
+
+      --gold: #f4c84f;
+      --gold2: #ffd86f;
+      --gold-glow: rgba(244,200,79,.14);
+
+      --green: #57d68b;
       --red: #ef6f6c;
-      --blue: #77a9ff;
-      --shadow: 0 25px 70px rgba(0,0,0,.34);
+      --blue: #6ea5ff;
+
+      --shadow: 0 24px 70px rgba(0,0,0,.32);
       --radius: 20px;
     }
 
@@ -32,13 +37,13 @@
       box-sizing: border-box;
     }
 
-    html {
+    html,
+    body {
+      margin: 0;
       min-height: 100%;
-      background: var(--bg);
     }
 
     body {
-      margin: 0;
       min-height: 100vh;
       color: var(--text);
       font-family:
@@ -50,16 +55,24 @@
         "Segoe UI",
         Arial,
         sans-serif;
-      background:
-        radial-gradient(circle at 85% 10%, rgba(243,199,79,.07), transparent 28%),
-        radial-gradient(circle at 10% 80%, rgba(82,126,190,.06), transparent 25%),
-        linear-gradient(135deg, #080d13 0%, #0b1118 52%, #0a1119 100%);
-    }
 
-    button,
-    a,
-    input {
-      font: inherit;
+      background:
+        radial-gradient(
+          circle at 75% 0%,
+          rgba(244,200,79,.055),
+          transparent 25%
+        ),
+        radial-gradient(
+          circle at 5% 85%,
+          rgba(74,124,190,.05),
+          transparent 25%
+        ),
+        linear-gradient(
+          145deg,
+          #070c12 0%,
+          #0a1119 50%,
+          #080e15 100%
+        );
     }
 
     a {
@@ -68,165 +81,313 @@
     }
 
     button {
-      border: 0;
+      font: inherit;
     }
+
+    /* =========================
+       APP
+    ========================= */
 
     .app {
       min-height: 100vh;
-      display: flex;
     }
 
     .sidebar {
       position: fixed;
-      z-index: 20;
+      z-index: 100;
       inset: 0 auto 0 0;
-      width: 280px;
-      padding: 24px 18px;
+      width: 270px;
+
       display: flex;
       flex-direction: column;
+
+      padding: 22px 16px;
+
       background:
-        linear-gradient(180deg, rgba(17,25,35,.97), rgba(9,14,20,.98));
+        linear-gradient(
+          180deg,
+          rgba(15,24,34,.98),
+          rgba(7,12,18,.99)
+        );
+
       border-right: 1px solid var(--border);
-      box-shadow: 20px 0 60px rgba(0,0,0,.15);
+
+      box-shadow:
+        18px 0 50px rgba(0,0,0,.18);
     }
+
+    /* =========================
+       BRAND
+    ========================= */
 
     .brand {
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 4px 10px 25px;
+
+      padding: 5px 10px 22px;
+
       border-bottom: 1px solid var(--border);
     }
 
-    .brand-mark {
+    .brand-logo {
       width: 42px;
       height: 42px;
+
       display: grid;
       place-items: center;
+
       border-radius: 13px;
+
       color: #111;
-      background: linear-gradient(145deg, var(--gold-strong), #c99724);
-      box-shadow: 0 8px 25px rgba(243,199,79,.18);
-      font-size: 20px;
-      font-weight: 900;
-    }
-
-    .brand-text strong {
-      display: block;
+      font-weight: 950;
       font-size: 15px;
-      letter-spacing: .04em;
+
+      background:
+        linear-gradient(
+          145deg,
+          var(--gold2),
+          #c89623
+        );
+
+      box-shadow:
+        0 9px 28px rgba(244,200,79,.18);
     }
 
-    .brand-text span {
-      display: block;
+    .brand-name {
+      font-weight: 850;
+      font-size: 14px;
+      letter-spacing: .025em;
+    }
+
+    .brand-subtitle {
       margin-top: 3px;
-      color: var(--muted);
-      font-size: 11px;
-      letter-spacing: .11em;
-      text-transform: uppercase;
-    }
-
-    .nav-label {
-      padding: 28px 10px 10px;
-      color: var(--muted-2);
-      font-size: 10px;
+      color: var(--muted2);
+      font-size: 9px;
       font-weight: 800;
       letter-spacing: .15em;
       text-transform: uppercase;
     }
 
-    .nav {
-      display: grid;
-      gap: 6px;
+    /* =========================
+       LIVE INDICATOR
+    ========================= */
+
+    .live-box {
+      margin-top: 18px;
+      padding: 13px;
+
+      border:
+        1px solid rgba(87,214,139,.12);
+
+      border-radius: 14px;
+
+      background:
+        linear-gradient(
+          145deg,
+          rgba(87,214,139,.065),
+          rgba(87,214,139,.015)
+        );
     }
 
-    .nav-item {
-      position: relative;
+    .live-top {
       display: flex;
       align-items: center;
-      gap: 13px;
-      min-height: 50px;
-      padding: 0 13px;
-      border: 1px solid transparent;
-      border-radius: 13px;
-      color: #aeb8c3;
-      transition: .2s ease;
+      gap: 7px;
+
+      color: var(--green);
+
+      font-size: 10px;
+      font-weight: 900;
+
+      letter-spacing: .11em;
+      text-transform: uppercase;
     }
 
-    .nav-item:hover {
-      color: var(--text);
-      background: rgba(255,255,255,.035);
-      border-color: var(--border);
+    .live-dot {
+      width: 7px;
+      height: 7px;
+
+      border-radius: 50%;
+      background: var(--green);
+
+      box-shadow:
+        0 0 0 4px rgba(87,214,139,.08),
+        0 0 14px rgba(87,214,139,.5);
+
+      animation: livePulse 1.8s ease-in-out infinite;
+    }
+
+    @keyframes livePulse {
+      0%,100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      50% {
+        opacity: .55;
+        transform: scale(.82);
+      }
+    }
+
+    .live-description {
+      margin-top: 7px;
+      color: var(--muted);
+      font-size: 10px;
+      line-height: 1.5;
+    }
+
+    /* =========================
+       NAV
+    ========================= */
+
+    .nav-title {
+      padding: 24px 10px 9px;
+
+      color: var(--muted2);
+
+      font-size: 9px;
+      font-weight: 900;
+
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+
+    .nav {
+      display: grid;
+      gap: 5px;
+    }
+
+    .nav-link {
+      position: relative;
+
+      display: flex;
+      align-items: center;
+      gap: 12px;
+
+      min-height: 48px;
+
+      padding: 0 12px;
+
+      border: 1px solid transparent;
+      border-radius: 13px;
+
+      color: #aeb8c2;
+
+      transition:
+        background .18s ease,
+        border-color .18s ease,
+        transform .18s ease,
+        color .18s ease;
+    }
+
+    .nav-link:hover {
+      color: white;
+
+      background:
+        rgba(255,255,255,.035);
+
+      border-color: var(--border-hover);
+
       transform: translateX(2px);
     }
 
-    .nav-item.active {
-      color: var(--text);
-      background: linear-gradient(90deg, rgba(243,199,79,.12), rgba(243,199,79,.025));
-      border-color: var(--border-strong);
+    .nav-link.active {
+      color: white;
+
+      background:
+        linear-gradient(
+          90deg,
+          rgba(244,200,79,.115),
+          rgba(244,200,79,.025)
+        );
+
+      border-color:
+        rgba(244,200,79,.15);
     }
 
-    .nav-item.active::before {
+    .nav-link.active::before {
       content: "";
+
       position: absolute;
       left: -1px;
-      top: 12px;
-      bottom: 12px;
+      top: 11px;
+      bottom: 11px;
+
       width: 3px;
-      border-radius: 4px;
+
+      border-radius: 5px;
+
       background: var(--gold);
-      box-shadow: 0 0 15px rgba(243,199,79,.45);
+
+      box-shadow:
+        0 0 16px rgba(244,200,79,.5);
     }
 
     .nav-icon {
       width: 22px;
+
       text-align: center;
+
       font-size: 17px;
     }
 
     .nav-copy {
-      display: flex;
       min-width: 0;
+
+      display: flex;
       flex-direction: column;
     }
 
     .nav-copy strong {
-      font-size: 13px;
-      font-weight: 700;
+      font-size: 12px;
+      font-weight: 800;
     }
 
     .nav-copy span {
       margin-top: 2px;
-      color: var(--muted-2);
-      font-size: 10px;
+
+      color: var(--muted2);
+
+      font-size: 9px;
     }
+
+    /* =========================
+       BOTTOM ACCOUNT
+    ========================= */
 
     .sidebar-bottom {
       margin-top: auto;
     }
 
-    .account-mini {
+    .mini-user {
       display: flex;
       align-items: center;
-      gap: 11px;
-      padding: 13px;
-      margin-bottom: 10px;
+      gap: 10px;
+
+      padding: 11px;
+
       border: 1px solid var(--border);
-      border-radius: 15px;
-      background: rgba(255,255,255,.025);
+      border-radius: 14px;
+
+      background: rgba(255,255,255,.02);
     }
 
     .mini-avatar {
-      width: 38px;
-      height: 38px;
+      width: 39px;
+      height: 39px;
+
       flex: 0 0 auto;
+
       display: grid;
       place-items: center;
+
       overflow: hidden;
+
       border-radius: 50%;
-      color: #fff;
-      background: #223244;
-      font-size: 14px;
+
+      background: #26384b;
+
       font-weight: 900;
     }
 
@@ -236,355 +397,515 @@
       object-fit: cover;
     }
 
-    .account-mini strong {
-      display: block;
-      max-width: 150px;
+    .mini-data {
+      min-width: 0;
+    }
+
+    .mini-nickname {
+      max-width: 155px;
+
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-      font-size: 13px;
+
+      font-size: 12px;
+      font-weight: 800;
     }
 
-    .account-mini span {
-      display: block;
+    .mini-status {
       margin-top: 3px;
+
       color: var(--green);
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: .05em;
+
+      font-size: 9px;
+      font-weight: 900;
+
+      letter-spacing: .08em;
       text-transform: uppercase;
+    }
+
+    .mini-status::before {
+      content: "●";
+      margin-right: 4px;
     }
 
     .home-button {
       display: flex;
-      align-items: center;
       justify-content: center;
-      gap: 8px;
-      width: 100%;
-      min-height: 46px;
-      border: 1px solid var(--border);
+      align-items: center;
+
+      min-height: 44px;
+
+      margin-top: 9px;
+
+      border:
+        1px solid var(--border);
+
       border-radius: 12px;
-      color: #c8d0d9;
-      background: rgba(255,255,255,.025);
-      transition: .2s ease;
+
+      color: #bac3cc;
+
+      background:
+        rgba(255,255,255,.02);
+
+      font-size: 11px;
+      font-weight: 700;
+
+      transition: .18s ease;
     }
 
     .home-button:hover {
       color: #111;
       background: var(--gold);
       border-color: var(--gold);
-      transform: translateY(-1px);
     }
+
+    /* =========================
+       MAIN
+    ========================= */
 
     .main {
-      width: 100%;
-      margin-left: 280px;
+      margin-left: 270px;
       min-width: 0;
-    }
-
-    .topbar {
-      display: none;
     }
 
     .content {
-      width: min(1120px, calc(100% - 60px));
+      width: min(1160px, calc(100% - 64px));
       margin: 0 auto;
-      padding: 44px 0 70px;
+      padding: 42px 0 75px;
     }
 
-    .eyebrow {
-      margin-bottom: 10px;
+    .page-kicker {
+      margin-bottom: 8px;
+
       color: var(--gold);
-      font-size: 11px;
-      font-weight: 800;
-      letter-spacing: .18em;
+
+      font-size: 10px;
+      font-weight: 900;
+
+      letter-spacing: .19em;
       text-transform: uppercase;
     }
 
-    .hero {
-      display: flex;
-      align-items: flex-end;
-      justify-content: space-between;
-      gap: 30px;
-      margin-bottom: 30px;
-    }
-
-    .hero h1 {
+    .page-title {
       margin: 0;
-      font-size: clamp(30px, 4vw, 48px);
-      line-height: 1.03;
-      letter-spacing: -.045em;
+
+      font-size:
+        clamp(30px, 4vw, 46px);
+
+      line-height: 1;
+
+      letter-spacing: -.055em;
     }
 
-    .hero p {
-      max-width: 700px;
-      margin: 13px 0 0;
+    .page-description {
+      max-width: 730px;
+
+      margin: 12px 0 27px;
+
       color: var(--muted);
-      font-size: 14px;
+
+      font-size: 13px;
       line-height: 1.75;
     }
 
-    .hero-badge {
-      flex: 0 0 auto;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 13px;
-      border: 1px solid var(--border-strong);
-      border-radius: 999px;
-      color: var(--gold-strong);
-      background: var(--gold-soft);
-      font-size: 11px;
-      font-weight: 800;
-      white-space: nowrap;
-    }
+    /* =========================
+       USER HERO
+    ========================= */
 
-    .profile-strip {
-      display: flex;
+    .user-hero {
+      display: grid;
+      grid-template-columns: auto minmax(0,1fr) auto;
       align-items: center;
-      justify-content: space-between;
-      gap: 20px;
+      gap: 19px;
+
       padding: 20px;
-      margin-bottom: 28px;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
+
+      border:
+        1px solid var(--border);
+
+      border-radius: 21px;
+
       background:
-        linear-gradient(145deg, rgba(28,41,55,.88), rgba(16,24,34,.88));
+        linear-gradient(
+          145deg,
+          rgba(22,34,47,.95),
+          rgba(12,19,27,.96)
+        );
+
       box-shadow: var(--shadow);
     }
 
-    .profile-identity {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      min-width: 0;
-    }
+    .hero-avatar {
+      width: 67px;
+      height: 67px;
 
-    .profile-avatar {
-      width: 70px;
-      height: 70px;
-      flex: 0 0 auto;
       display: grid;
       place-items: center;
+
       overflow: hidden;
-      border-radius: 20px;
-      border: 1px solid rgba(255,255,255,.10);
-      box-shadow: 0 10px 30px rgba(0,0,0,.25);
-      color: white;
-      background: #243447;
+
+      border:
+        1px solid rgba(255,255,255,.10);
+
+      border-radius: 19px;
+
+      background: #27384b;
+
+      font-weight: 950;
       font-size: 24px;
-      font-weight: 900;
     }
 
-    .profile-avatar img {
+    .hero-avatar img {
       width: 100%;
       height: 100%;
       object-fit: cover;
     }
 
-    .profile-identity h2 {
+    .hero-copy h2 {
       margin: 0;
-      font-size: 20px;
+
+      font-size: 19px;
       letter-spacing: -.02em;
     }
 
-    .profile-identity p {
+    .hero-copy p {
       margin: 5px 0 0;
+
       color: var(--muted);
-      font-size: 12px;
+
+      font-size: 11px;
     }
 
-    .session {
-      text-align: right;
-    }
-
-    .session-label {
-      color: var(--muted-2);
-      font-size: 10px;
-      letter-spacing: .1em;
-      text-transform: uppercase;
-    }
-
-    .session-status {
+    .hero-online {
       display: inline-flex;
       align-items: center;
       gap: 7px;
-      margin-top: 6px;
+
       color: var(--green);
-      font-size: 12px;
-      font-weight: 800;
-    }
 
-    .session-status::before {
-      content: "";
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: var(--green);
-      box-shadow: 0 0 10px rgba(95,210,141,.55);
-    }
-
-    .section-label {
-      margin: 30px 0 13px;
-      color: var(--muted-2);
       font-size: 10px;
-      font-weight: 800;
-      letter-spacing: .16em;
-      text-transform: uppercase;
-    }
+      font-weight: 900;
 
-    .account-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 14px;
-    }
-
-    .account-card {
-      position: relative;
-      min-height: 174px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      padding: 22px;
-      overflow: hidden;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      background:
-        linear-gradient(145deg, rgba(22,33,46,.96), rgba(14,21,29,.96));
-      transition: transform .2s ease, border-color .2s ease, background .2s ease;
-    }
-
-    .account-card::after {
-      content: "";
-      position: absolute;
-      right: -45px;
-      top: -45px;
-      width: 125px;
-      height: 125px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(243,199,79,.08), transparent 68%);
-      pointer-events: none;
-    }
-
-    .account-card:hover {
-      transform: translateY(-3px);
-      border-color: rgba(243,199,79,.20);
-      background:
-        linear-gradient(145deg, rgba(26,39,53,.98), rgba(16,24,33,.98));
-    }
-
-    .card-top {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 20px;
-    }
-
-    .card-icon {
-      width: 45px;
-      height: 45px;
-      display: grid;
-      place-items: center;
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      background: rgba(255,255,255,.035);
-      font-size: 19px;
-    }
-
-    .card-arrow {
-      color: var(--muted-2);
-      font-size: 18px;
-      transition: .2s ease;
-    }
-
-    .account-card:hover .card-arrow {
-      color: var(--gold);
-      transform: translateX(3px);
-    }
-
-    .card-content {
-      margin-top: 18px;
-    }
-
-    .card-content h3 {
-      margin: 0;
-      font-size: 16px;
-      letter-spacing: -.01em;
-    }
-
-    .card-content p {
-      max-width: 430px;
-      margin: 7px 0 0;
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.65;
-    }
-
-    .status-tag {
-      display: inline-flex;
-      margin-top: 13px;
-      padding: 6px 9px;
-      border: 1px solid var(--border);
-      border-radius: 999px;
-      color: var(--muted);
-      background: rgba(255,255,255,.025);
-      font-size: 9px;
-      font-weight: 800;
       letter-spacing: .08em;
       text-transform: uppercase;
     }
 
-    .status-tag.gold {
-      color: var(--gold-strong);
-      border-color: var(--border-strong);
-      background: var(--gold-soft);
+    .hero-online::before {
+      content: "";
+
+      width: 7px;
+      height: 7px;
+
+      border-radius: 50%;
+      background: var(--green);
+
+      box-shadow:
+        0 0 0 4px rgba(87,214,139,.08),
+        0 0 12px rgba(87,214,139,.5);
     }
 
-    .footer-note {
-      margin-top: 30px;
-      padding-top: 18px;
-      border-top: 1px solid var(--border);
-      color: var(--muted-2);
+    /* =========================
+       LIVE CONTEXT
+    ========================= */
+
+    .live-context {
+      display: grid;
+      grid-template-columns: repeat(3,1fr);
+
+      margin-top: 15px;
+
+      border:
+        1px solid var(--border);
+
+      border-radius: 16px;
+
+      overflow: hidden;
+
+      background:
+        rgba(255,255,255,.018);
+    }
+
+    .live-item {
+      padding: 15px 17px;
+
+      border-right:
+        1px solid var(--border);
+    }
+
+    .live-item:last-child {
+      border-right: 0;
+    }
+
+    .live-label {
+      color: var(--muted2);
+
+      font-size: 9px;
+      font-weight: 800;
+
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .live-value {
+      margin-top: 6px;
+
+      color: #eaf0f5;
+
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .live-value span {
+      color: var(--green);
+    }
+
+    /* =========================
+       SECTIONS
+    ========================= */
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+
+      margin:
+        29px
+        0 13px;
+
+      color: #8e99a5;
+
+      font-size: 9px;
+      font-weight: 900;
+
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+
+    .section-title::after {
+      content: "";
+
+      flex: 1;
+
+      height: 1px;
+
+      background:
+        linear-gradient(
+          90deg,
+          var(--border),
+          transparent
+        );
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(2,minmax(0,1fr));
+
+      gap: 13px;
+    }
+
+    .card {
+      position: relative;
+
+      min-height: 166px;
+
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+
+      padding: 20px;
+
+      overflow: hidden;
+
+      border:
+        1px solid var(--border);
+
+      border-radius: var(--radius);
+
+      background:
+        linear-gradient(
+          145deg,
+          rgba(19,30,41,.96),
+          rgba(12,19,27,.97)
+        );
+
+      transition:
+        transform .18s ease,
+        border-color .18s ease,
+        background .18s ease;
+    }
+
+    .card::after {
+      content: "";
+
+      position: absolute;
+
+      right: -40px;
+      top: -50px;
+
+      width: 145px;
+      height: 145px;
+
+      border-radius: 50%;
+
+      background:
+        radial-gradient(
+          circle,
+          rgba(244,200,79,.07),
+          transparent 70%
+        );
+
+      pointer-events: none;
+    }
+
+    .card:hover {
+      transform: translateY(-3px);
+
+      border-color:
+        rgba(244,200,79,.18);
+
+      background:
+        linear-gradient(
+          145deg,
+          rgba(24,37,50,.98),
+          rgba(13,21,30,.98)
+        );
+    }
+
+    .card-top {
+      position: relative;
+      z-index: 1;
+
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .card-icon {
+      width: 43px;
+      height: 43px;
+
+      display: grid;
+      place-items: center;
+
+      border:
+        1px solid var(--border);
+
+      border-radius: 13px;
+
+      background:
+        rgba(255,255,255,.025);
+
+      font-size: 18px;
+    }
+
+    .card-arrow {
+      color: var(--muted2);
+      font-size: 21px;
+
+      transition: .18s ease;
+    }
+
+    .card:hover .card-arrow {
+      color: var(--gold);
+      transform: translateX(3px);
+    }
+
+    .card h3 {
+      position: relative;
+      z-index: 1;
+
+      margin: 15px 0 0;
+
+      font-size: 15px;
+    }
+
+    .card p {
+      position: relative;
+      z-index: 1;
+
+      max-width: 500px;
+
+      margin: 6px 0 0;
+
+      color: var(--muted);
+
       font-size: 11px;
+      line-height: 1.65;
+    }
+
+    .tag {
+      position: relative;
+      z-index: 1;
+
+      display: inline-flex;
+
+      margin-top: 12px;
+      padding: 6px 9px;
+
+      border:
+        1px solid var(--border);
+
+      border-radius: 999px;
+
+      color: var(--muted);
+
+      background:
+        rgba(255,255,255,.02);
+
+      font-size: 8px;
+      font-weight: 900;
+
+      letter-spacing: .09em;
+      text-transform: uppercase;
+    }
+
+    .tag.gold {
+      color: var(--gold2);
+      border-color: var(--border-strong);
+      background: var(--gold-glow);
+    }
+
+    /* =========================
+       ERROR
+    ========================= */
+
+    .errore {
+      display: none;
+
+      margin-top: 17px;
+      padding: 13px 15px;
+
+      border:
+        1px solid rgba(239,111,108,.18);
+
+      border-radius: 12px;
+
+      color: #ffaaa8;
+
+      background:
+        rgba(239,111,108,.055);
+
+      font-size: 11px;
+    }
+
+    .footer {
+      margin-top: 28px;
+      padding-top: 18px;
+
+      border-top:
+        1px solid var(--border);
+
+      color: var(--muted2);
+
+      font-size: 10px;
       line-height: 1.7;
     }
 
-    .error {
-      margin-top: 18px;
-      padding: 12px 14px;
-      display: none;
-      border: 1px solid rgba(239,111,108,.20);
-      border-radius: 12px;
-      color: #ffaaa8;
-      background: rgba(239,111,108,.06);
-      font-size: 12px;
-    }
+    /* =========================
+       MOBILE
+    ========================= */
 
-    .toast {
-      position: fixed;
-      z-index: 50;
-      right: 22px;
-      bottom: 22px;
-      min-width: 260px;
-      max-width: min(420px, calc(100vw - 44px));
-      padding: 14px 16px;
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      color: var(--text);
-      background: rgba(16,24,34,.96);
-      box-shadow: 0 20px 50px rgba(0,0,0,.3);
-      opacity: 0;
-      transform: translateY(12px);
-      pointer-events: none;
-      transition: .25s ease;
-    }
-
-    .toast.show {
-      opacity: 1;
-      transform: translateY(0);
-    }
-
-    @media (max-width: 980px) {
+    @media (max-width: 930px) {
       .sidebar {
         width: 235px;
       }
@@ -594,55 +915,71 @@
       }
 
       .content {
-        width: min(100% - 36px, 900px);
+        width: min(100% - 38px, 800px);
+      }
+
+      .user-hero {
+        grid-template-columns: auto minmax(0,1fr);
+      }
+
+      .hero-online {
+        grid-column: 2;
       }
     }
 
     @media (max-width: 760px) {
-      .app {
-        display: block;
+      body {
+        padding-bottom: 72px;
       }
 
       .sidebar {
-        position: fixed;
         inset: auto 0 0 0;
+
         width: 100%;
         height: 72px;
+
+        display: block;
+
         padding: 8px 10px;
-        flex-direction: row;
-        align-items: center;
-        background: rgba(10,16,23,.97);
-        border-top: 1px solid var(--border);
-        border-right: 0;
-        box-shadow: 0 -15px 40px rgba(0,0,0,.22);
-        backdrop-filter: blur(18px);
+
+        border:
+          1px solid var(--border);
+
+        border-bottom: 0;
+
+        backdrop-filter: blur(16px);
       }
 
       .brand,
-      .nav-label,
+      .live-box,
+      .nav-title,
       .sidebar-bottom {
         display: none;
       }
 
       .nav {
-        width: 100%;
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 4px;
+        height: 100%;
+
+        grid-template-columns:
+          repeat(5,1fr);
+
+        align-items: center;
       }
 
-      .nav-item {
-        min-height: 54px;
+      .nav-link {
+        min-height: 52px;
+
         justify-content: center;
+
         padding: 5px;
-        border-radius: 12px;
       }
 
-      .nav-item.active::before {
-        left: 20%;
-        right: 20%;
+      .nav-link.active::before {
+        left: 25%;
+        right: 25%;
         top: auto;
-        bottom: -1px;
+        bottom: 0;
+
         width: auto;
         height: 2px;
       }
@@ -656,298 +993,568 @@
       }
 
       .nav-copy strong {
-        font-size: 10px;
+        font-size: 9px;
       }
 
       .nav-icon {
-        font-size: 17px;
+        font-size: 16px;
       }
 
       .main {
         margin-left: 0;
-        padding-bottom: 82px;
       }
 
       .content {
-        width: min(100% - 24px, 680px);
-        padding: 28px 0 35px;
+        width: calc(100% - 22px);
+        padding:
+          25px 0 35px;
       }
 
-      .hero {
-        display: block;
+      .user-hero {
+        grid-template-columns: auto minmax(0,1fr);
+        padding: 17px;
       }
 
-      .hero-badge {
-        margin-top: 17px;
+      .hero-online {
+        grid-column: 2;
       }
 
-      .profile-strip {
-        align-items: flex-start;
+      .live-context {
+        grid-template-columns: 1fr;
       }
 
-      .session {
-        display: none;
+      .live-item {
+        border-right: 0;
+        border-bottom: 1px solid var(--border);
       }
 
-      .account-grid {
+      .live-item:last-child {
+        border-bottom: 0;
+      }
+
+      .cards {
         grid-template-columns: 1fr;
       }
     }
 
-    @media (max-width: 480px) {
-      .profile-strip {
-        padding: 16px;
-      }
-
-      .profile-avatar {
-        width: 58px;
-        height: 58px;
-        border-radius: 17px;
-      }
-
-      .profile-identity h2 {
-        font-size: 17px;
-      }
-
-      .account-card {
-        min-height: 160px;
-        padding: 19px;
-      }
-
-      .hero h1 {
+    @media (max-width: 520px) {
+      .page-title {
         font-size: 31px;
+      }
+
+      .hero-avatar {
+        width: 84px;
+        height: 84px;
+        border-radius: 22px;
+      }
+
+      .profile-hero {
+        grid-template-columns: auto 1fr;
+        gap: 14px;
+        padding: 17px;
+      }
+
+      .hero-actions {
+        grid-column: 1 / -1;
+        align-items: stretch;
+      }
+
+      .avatar-input {
+        max-width: none;
       }
     }
   </style>
 </head>
 
 <body>
+
   <div class="app">
 
+    <!-- =========================
+         SIDEBAR
+    ========================== -->
+
     <aside class="sidebar">
+
       <div class="brand">
-        <div class="brand-mark">GS</div>
-        <div class="brand-text">
-          <strong>Giochi Società</strong>
-          <span>Account Center</span>
+        <div class="brand-logo">GS</div>
+
+        <div>
+          <div class="brand-name">
+            Giochi Società
+          </div>
+
+          <div class="brand-subtitle">
+            Multiplayer Platform
+          </div>
         </div>
       </div>
 
-      <div class="nav-label">Gestione account</div>
+      <div class="live-box">
+        <div class="live-top">
+          <span class="live-dot"></span>
+          Servizio online
+        </div>
+
+        <div class="live-description">
+          Sei connesso alla piattaforma multiplayer.
+        </div>
+      </div>
+
+      <div class="nav-title">
+        Multiplayer
+      </div>
 
       <nav class="nav">
-        <a class="nav-item active" href="opzioni-account.html">
+
+        <a
+          class="nav-link"
+          href="https://gioco-oca-server.onrender.com/chat.html"
+        >
+          <span class="nav-icon">💬</span>
+
+          <span class="nav-copy">
+            <strong>Chat</strong>
+            <span>Giocatori online</span>
+          </span>
+        </a>
+
+        <a
+          class="nav-link"
+          href="https://gioco-oca-server.onrender.com/messaggi-privati.html"
+        >
+          <span class="nav-icon">✉️</span>
+
+          <span class="nav-copy">
+            <strong>Messaggi</strong>
+            <span>Conversazioni private</span>
+          </span>
+        </a>
+
+      </nav>
+
+      <div class="nav-title">
+        Account
+      </div>
+
+      <nav class="nav">
+
+        <a
+          class="nav-link active"
+          href="opzioni-account.html"
+        >
           <span class="nav-icon">⚙️</span>
+
           <span class="nav-copy">
             <strong>Account</strong>
             <span>Impostazioni</span>
           </span>
         </a>
 
-        <a class="nav-item" href="profilo.html">
+        <a
+          class="nav-link"
+          href="profilo.html"
+        >
           <span class="nav-icon">👤</span>
+
           <span class="nav-copy">
             <strong>Profilo</strong>
-            <span>La tua identità</span>
+            <span>Giocatore</span>
           </span>
         </a>
 
-        <a class="nav-item" href="https://gioco-oca-server.onrender.com/chat.html">
-          <span class="nav-icon">💬</span>
-          <span class="nav-copy">
-            <strong>Chat</strong>
-            <span>Comunicazione</span>
-          </span>
-        </a>
-
-        <a class="nav-item" href="https://gioco-oca-server.onrender.com/messaggi-privati.html">
-          <span class="nav-icon">✉️</span>
-          <span class="nav-copy">
-            <strong>Messaggi</strong>
-            <span>Privati</span>
-          </span>
-        </a>
-      </nav>
-
-      <div class="nav-label">Sicurezza</div>
-
-      <nav class="nav">
-        <a class="nav-item" href="profilo.html#sicurezza">
+        <a
+          class="nav-link"
+          href="profilo.html#sicurezza"
+        >
           <span class="nav-icon">🛡️</span>
+
           <span class="nav-copy">
             <strong>Sicurezza</strong>
-            <span>Password account</span>
+            <span>Protezione</span>
           </span>
         </a>
+
       </nav>
 
       <div class="sidebar-bottom">
-        <div class="account-mini">
-          <div class="mini-avatar" id="miniAvatar">?</div>
-          <div>
-            <strong id="miniNickname">Caricamento...</strong>
-            <span>Sessione attiva</span>
+
+        <div class="mini-user">
+
+          <div
+            class="mini-avatar"
+            id="miniAvatar"
+          >
+            ?
           </div>
+
+          <div class="mini-data">
+
+            <div
+              class="mini-nickname"
+              id="miniNickname"
+            >
+              Caricamento...
+            </div>
+
+            <div class="mini-status">
+              Online
+            </div>
+
+          </div>
+
         </div>
 
         <a
           class="home-button"
           href="https://solfriniluca1.wixstudio.com/giochisocieta"
         >
-          ← Torna alla piattaforma
+          ← Ritorna al gioco
         </a>
+
       </div>
+
     </aside>
 
+
+    <!-- =========================
+         MAIN
+    ========================== -->
+
     <main class="main">
+
       <div class="content">
 
-        <div class="hero">
-          <div>
-            <div class="eyebrow">Account Center</div>
-            <h1>Il tuo spazio personale</h1>
-            <p>
-              Gestisci profilo, comunicazioni e sicurezza da un'unica area.
-              Le impostazioni del tuo account sono organizzate per rendere
-              ogni operazione semplice, chiara e sicura.
-            </p>
-          </div>
-
-          <div class="hero-badge">
-            ● Area riservata
-          </div>
+        <div class="page-kicker">
+          ACCOUNT
         </div>
 
-        <section class="profile-strip">
-          <div class="profile-identity">
-            <div class="profile-avatar" id="profileAvatar">?</div>
+        <h1 class="page-title">
+          Il tuo centro giocatore
+        </h1>
+
+        <p class="page-description">
+          Tutto ciò che riguarda la tua presenza sulla piattaforma:
+          profilo, comunicazioni, sicurezza e interazione con gli altri
+          giocatori.
+        </p>
+
+
+        <!-- =========================
+             LIVE HERO
+        ========================== -->
+
+        <section class="user-hero">
+
+          <div
+            class="hero-avatar"
+            id="heroAvatar"
+          >
+            ?
+          </div>
+
+          <div class="hero-copy">
+
+            <h2 id="benvenuto">
+              Caricamento...
+            </h2>
+
+            <p>
+              Giocatore connesso alla piattaforma
+            </p>
+
+          </div>
+
+          <div class="hero-online">
+            ONLINE
+          </div>
+
+        </section>
+
+
+        <!-- =========================
+             LIVE CONTEXT
+        ========================== -->
+
+        <div class="live-context">
+
+          <div class="live-item">
+            <div class="live-label">
+              Presenza
+            </div>
+
+            <div class="live-value">
+              <span>●</span>
+              Online adesso
+            </div>
+          </div>
+
+          <div class="live-item">
+            <div class="live-label">
+              Stato multiplayer
+            </div>
+
+            <div class="live-value">
+              Disponibile a giocare
+            </div>
+          </div>
+
+          <div class="live-item">
+            <div class="live-label">
+              Account
+            </div>
+
+            <div class="live-value">
+              Sessione attiva
+            </div>
+          </div>
+
+        </div>
+
+
+        <!-- =========================
+             PROFILE
+        ========================== -->
+
+        <div class="section-title">
+          Identità multiplayer
+        </div>
+
+        <div class="cards">
+
+          <a
+            class="card"
+            href="https://gioco-oca-server.onrender.com/avatar.html"
+          >
+
+            <div class="card-top">
+
+              <div class="card-icon">
+                🖼️
+              </div>
+
+              <div class="card-arrow">
+                →
+              </div>
+
+            </div>
 
             <div>
-              <h2 id="benvenuto">Caricamento account...</h2>
-              <p>Profilo giocatore • Giochi Società</p>
-            </div>
-          </div>
 
-          <div class="session">
-            <div class="session-label">Stato sessione</div>
-            <div class="session-status">Connesso</div>
-          </div>
-        </section>
+              <h3>
+                Avatar
+              </h3>
 
-        <div class="section-label">Profilo e identità</div>
-
-        <section class="account-grid">
-          <a class="account-card" href="https://gioco-oca-server.onrender.com/avatar.html">
-            <div class="card-top">
-              <div class="card-icon">🖼️</div>
-              <div class="card-arrow">›</div>
-            </div>
-
-            <div class="card-content">
-              <h3>Avatar</h3>
               <p>
-                Personalizza l'immagine con cui vieni riconosciuto
-                all'interno della piattaforma.
+                Scegli l'immagine con cui compari nelle lobby,
+                nelle partite e nelle interazioni con gli altri giocatori.
               </p>
-              <span class="status-tag">Personalizzazione</span>
+
+              <span class="tag">
+                IDENTITÀ
+              </span>
+
             </div>
+
           </a>
 
-          <a class="account-card" href="profilo.html">
-            <div class="card-top">
-              <div class="card-icon">👤</div>
-              <div class="card-arrow">›</div>
-            </div>
 
-            <div class="card-content">
-              <h3>Profilo giocatore</h3>
-              <p>
-                Gestisci nickname, dati personali, livello, XP,
-                statistiche e obiettivi.
-              </p>
-              <span class="status-tag gold">Profilo</span>
-            </div>
-          </a>
-        </section>
-
-        <div class="section-label">Comunicazione</div>
-
-        <section class="account-grid">
           <a
-            class="account-card"
+            class="card"
+            href="profilo.html"
+          >
+
+            <div class="card-top">
+
+              <div class="card-icon">
+                👤
+              </div>
+
+              <div class="card-arrow">
+                →
+              </div>
+
+            </div>
+
+            <div>
+
+              <h3>
+                Profilo giocatore
+              </h3>
+
+              <p>
+                Livello, XP, vittorie, statistiche, badge e dati
+                personali del tuo profilo multiplayer.
+              </p>
+
+              <span class="tag gold">
+                GIOCATORE
+              </span>
+
+            </div>
+
+          </a>
+
+        </div>
+
+
+        <!-- =========================
+             SOCIAL
+        ========================== -->
+
+        <div class="section-title">
+          Interazione sociale
+        </div>
+
+        <div class="cards">
+
+          <a
+            class="card"
             href="https://gioco-oca-server.onrender.com/chat.html"
           >
+
             <div class="card-top">
-              <div class="card-icon">💬</div>
-              <div class="card-arrow">›</div>
+
+              <div class="card-icon">
+                💬
+              </div>
+
+              <div class="card-arrow">
+                →
+              </div>
+
             </div>
 
-            <div class="card-content">
-              <h3>Chat</h3>
+            <div>
+
+              <h3>
+                Chat
+              </h3>
+
               <p>
-                Accedi allo spazio di comunicazione dedicato
-                alla piattaforma.
+                Entra nella conversazione live e interagisci
+                con gli altri giocatori presenti sulla piattaforma.
               </p>
-              <span class="status-tag">Comunicazione</span>
+
+              <span class="tag">
+                LIVE
+              </span>
+
             </div>
+
           </a>
+
 
           <a
-            class="account-card"
+            class="card"
             href="https://gioco-oca-server.onrender.com/messaggi-privati.html"
           >
+
             <div class="card-top">
-              <div class="card-icon">✉️</div>
-              <div class="card-arrow">›</div>
+
+              <div class="card-icon">
+                ✉️
+              </div>
+
+              <div class="card-arrow">
+                →
+              </div>
+
             </div>
 
-            <div class="card-content">
-              <h3>Messaggi privati</h3>
+            <div>
+
+              <h3>
+                Messaggi privati
+              </h3>
+
               <p>
-                Invia e leggi conversazioni private con gli altri
-                giocatori.
+                Comunica direttamente con altri giocatori
+                attraverso conversazioni private.
               </p>
-              <span class="status-tag">Privati</span>
+
+              <span class="tag">
+                SOCIAL
+              </span>
+
             </div>
+
           </a>
-        </section>
 
-        <div class="section-label">Protezione account</div>
+        </div>
 
-        <section class="account-grid">
-          <a class="account-card" href="profilo.html#sicurezza">
+
+        <!-- =========================
+             SECURITY
+        ========================== -->
+
+        <div class="section-title">
+          Protezione
+        </div>
+
+        <div class="cards">
+
+          <a
+            class="card"
+            href="profilo.html#sicurezza"
+          >
+
             <div class="card-top">
-              <div class="card-icon">🛡️</div>
-              <div class="card-arrow">›</div>
+
+              <div class="card-icon">
+                🛡️
+              </div>
+
+              <div class="card-arrow">
+                →
+              </div>
+
             </div>
 
-            <div class="card-content">
-              <h3>Sicurezza</h3>
+            <div>
+
+              <h3>
+                Sicurezza account
+              </h3>
+
               <p>
-                Gestisci la password e le principali impostazioni
-                relative alla protezione dell'account.
+                Gestisci la password e le impostazioni legate
+                alla sicurezza del tuo accesso.
               </p>
-              <span class="status-tag gold">Protezione</span>
+
+              <span class="tag gold">
+                PROTETTO
+              </span>
+
             </div>
+
           </a>
-        </section>
 
-        <div class="error" id="errore"></div>
+        </div>
 
-        <div class="footer-note">
-          Le impostazioni del tuo account vengono gestite tramite
-          l'infrastruttura di Giochi Società. Conserva sempre al sicuro
-          le tue credenziali di accesso.
+
+        <div
+          class="errore"
+          id="errore"
+        ></div>
+
+
+        <div class="footer">
+          Giochi Società è una piattaforma multiplayer dedicata
+          all'esperienza di gioco online e all'interazione tra giocatori.
         </div>
 
       </div>
+
     </main>
+
   </div>
 
-  <div class="toast" id="toast"></div>
 
   <script>
-    const SERVER = "https://gioco-oca-server.onrender.com";
+
+    const SERVER =
+      "https://gioco-oca-server.onrender.com";
 
     const PALETTE = [
       "#6a2c70",
@@ -960,88 +1567,155 @@
       "#8d6e63"
     ];
 
+
     function coloreDaNome(nome) {
+
       let somma = 0;
 
-      for (let i = 0; i < nome.length; i++) {
-        somma += nome.charCodeAt(i);
+      for (
+        let i = 0;
+        i < nome.length;
+        i++
+      ) {
+
+        somma +=
+          nome.charCodeAt(i);
+
       }
 
-      return PALETTE[somma % PALETTE.length];
+      return PALETTE[
+        somma % PALETTE.length
+      ];
+
     }
+
 
     function mostraAvatar(elemento, dati) {
-      if (!elemento) return;
+
+      if (!elemento)
+        return;
+
 
       if (dati.avatar) {
+
         elemento.innerHTML = "";
 
-        const img = document.createElement("img");
-        img.src = dati.avatar;
-        img.alt = "Avatar";
-        img.loading = "lazy";
+        const img =
+          document.createElement("img");
+
+        img.src =
+          dati.avatar;
+
+        img.alt =
+          "Avatar";
 
         elemento.appendChild(img);
+
       } else {
+
+        const nickname =
+          dati.nickname || "?";
+
         elemento.textContent =
-          (dati.nickname || "?").charAt(0).toUpperCase();
+          nickname
+            .charAt(0)
+            .toUpperCase();
 
         elemento.style.background =
-          coloreDaNome(dati.nickname || "?");
+          coloreDaNome(nickname);
+
       }
+
     }
 
-    function mostraErrore(messaggio) {
-      const errore = document.getElementById("errore");
 
-      if (!errore) return;
+    function mostraErrore(testo) {
 
-      errore.textContent = messaggio;
-      errore.style.display = "block";
+      const box =
+        document.getElementById("errore");
+
+      box.textContent =
+        testo;
+
+      box.style.display =
+        "block";
+
     }
+
 
     async function controllaAccount() {
+
       try {
-        const risposta = await fetch(
-          SERVER + "/api/me",
-          {
-            credentials: "include"
-          }
-        );
+
+        const risposta =
+          await fetch(
+            SERVER + "/api/me",
+            {
+              credentials: "include"
+            }
+          );
+
 
         if (!risposta.ok) {
+
           window.location.href =
-            SERVER + "/login.html?redirect=" +
-            encodeURIComponent(location.href);
+            SERVER +
+            "/login.html?redirect=" +
+            encodeURIComponent(
+              location.href
+            );
 
           return;
+
         }
 
-        const dati = await risposta.json();
 
-        document.getElementById("benvenuto").textContent =
-          dati.nickname || "Giocatore";
+        const dati =
+          await risposta.json();
 
-        document.getElementById("miniNickname").textContent =
-          dati.nickname || "Giocatore";
+
+        document.getElementById(
+          "benvenuto"
+        ).textContent =
+          dati.nickname ||
+          "Giocatore";
+
+
+        document.getElementById(
+          "miniNickname"
+        ).textContent =
+          dati.nickname ||
+          "Giocatore";
+
 
         mostraAvatar(
-          document.getElementById("profileAvatar"),
+          document.getElementById("heroAvatar"),
           dati
         );
+
 
         mostraAvatar(
           document.getElementById("miniAvatar"),
           dati
         );
 
-      } catch (e) {
-        console.error(e);
-        mostraErrore("Impossibile caricare i dati dell'account.");
+
+      } catch (errore) {
+
+        console.error(errore);
+
+        mostraErrore(
+          "Errore nel caricamento dell'account."
+        );
+
       }
+
     }
 
+
     controllaAccount();
+
   </script>
+
 </body>
 </html>
