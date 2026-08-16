@@ -416,7 +416,7 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET && GOOGLE_CALLBACK_URL) {
       console.error("Errore verifica account Google:", errore);
       return done(errore);
     }
-  });
+  }));
 }
 
 app.get("/auth/google",
