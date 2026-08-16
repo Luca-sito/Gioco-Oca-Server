@@ -1779,8 +1779,13 @@ function mostraPartite(lista) {
   if (lista.length === 0) html = "<p>Nessuna partita disponibile</p>";
   lista.forEach(partita => {
     const piena = partita.numGiocatoriAttuali >= partita.maxGiocatori;
-    const eMia = partita.creatoDa === mioUid;
-    const cePartecipo = partita.giocatori && partita.giocatori.some(g => g.uid === mioUid);
+    const cePartecipo =
+  partita.giocatori &&
+  partita.giocatori.some(g => g.uid === mioUid);
+
+const eMia =
+  partita.creatoDa === mioUid &&
+  cePartecipo;
     let azioniHtml;
 
     if (partita.iniziata) {
@@ -1802,8 +1807,17 @@ function mostraPartite(lista) {
         azioniHtml = invito + `<button class="btn-alzati-scheda" onclick="alzatiDaPartita('${partita.id}')">Alzati</button>`;
       }
     } else if (cePartecipo) {
-      // Ti sei unito ma non sei il creatore, partita non ancora avviata
-      azioniHtml = `<button disabled>✅ Sei dentro</button>`;
+  // Sei dentro alla partita ma non sei il proprietario.
+  // Puoi uscire dal tavolo senza eliminarlo.
+  azioniHtml = `
+    <button
+      class="btn-alzati-scheda"
+      onclick="alzatiDaPartita('${partita.id}')"
+    >
+      Alzati
+    </button>
+  `;
+}
     } else if (partita.modalita === "privata") {
       azioniHtml = `<button disabled>🔒 Solo su invito</button>`;
     } else {
