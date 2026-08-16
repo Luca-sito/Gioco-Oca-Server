@@ -11,6 +11,8 @@ const admin = require("firebase-admin");
 const multer = require("multer");
 const rateLimit = require("express-rate-limit");
 const helmet = require("helmet");
+const passport = require("passport");
+const GoogleStrategy = require("passport-google-oauth20").Strategy;
 
 const app = express();
 
@@ -41,6 +43,7 @@ app.use(helmet({ crossOriginResourcePolicy: false, contentSecurityPolicy: false,
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
+app.use(passport.initialize());
 
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
@@ -190,6 +193,21 @@ async function trovaUtentePerEmail(emailLower) {
   const val = snap.val(); const uid = Object.keys(val)[0];
   return { uid, ...val[uid] };
 }
+async function trovaUtentePerGoogleId(googleId) {
+  if (!db || !googleId) return null;
+
+  const snap = await db.ref("utenti")
+    .orderByChild("googleId")
+    .equalTo(googleId)
+    .once("value");
+
+  if (!snap.exists()) return null;
+
+  const val = snap.val();
+  const uid = Object.keys(val)[0];
+
+  return { uid, ...val[uid] };
+}
 async function trovaUtentePerNickname(nicknameLower) {
   const snap = await db.ref("utenti").orderByChild("nicknameLower").equalTo(nicknameLower).once("value");
   if (!snap.exists()) return null;
@@ -208,6 +226,242 @@ async function statoAmicizia(mioUid, altroUid) {
   if (snapRicevuta.exists()) return "richiesta_ricevuta";
   return "nessuno";
 }
+
+function preparaNicknameGoogle(nome, email) {
+  let base = pulisciTesto(nome || "", 15)
+    .replace(/[^a-zA-Z0-9_ ]/g, "")
+    .trim();
+
+  if (!base) {
+    base = "Google";
+  }
+
+  if (base.length < 5) {
+    const parteEmail = String(email || "")
+      .split("@")[0]
+      .replace(/[^a-zA-Z0-9_]/g, "");
+
+    base = (base + parteEmail).substring(0, 15);
+  }
+
+  if (base.length < 5) {
+    base = "GoogleUser";
+  }
+
+  return base.substring(0, 15);
+}
+
+async function generaNicknameGoogleUnico(nome, email) {
+  let base = preparaNicknameGoogle(nome, email);
+
+  if (!(await trovaUtentePerNickname(base.toLowerCase()))) {
+    return base;
+  }
+
+  for (let i = 1; i <= 99; i++) {
+    const suffisso = String(i);
+    const massimoBase = 15 - suffisso.length;
+
+    const candidato =
+      base.substring(0, massimoBase) + suffisso;
+
+    if (!(await trovaUtentePerNickname(candidato.toLowerCase()))) {
+      return candidato;
+    }
+  }
+
+  return "Google" + Date.now().toString().slice(-8);
+}
+
+// ===== LOGIN CON GOOGLE =====
+
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+const GOOGLE_CALLBACK_URL = process.env.GOOGLE_CALLBACK_URL;
+
+if (!GOOGLE_CLIENT_ID) {
+  console.warn("GOOGLE_CLIENT_ID non configurato su Render.");
+}
+
+if (!GOOGLE_CLIENT_SECRET) {
+  console.warn("GOOGLE_CLIENT_SECRET non configurato su Render.");
+}
+
+if (!GOOGLE_CALLBACK_URL) {
+  console.warn("GOOGLE_CALLBACK_URL non configurato su Render.");
+}
+
+if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET && GOOGLE_CALLBACK_URL) {
+
+  passport.use(new GoogleStrategy({
+    clientID: GOOGLE_CLIENT_ID,
+    clientSecret: GOOGLE_CLIENT_SECRET,
+    callbackURL: GOOGLE_CALLBACK_URL
+  }, async (accessToken, refreshToken, profile, done) => {
+
+    try {
+      if (!db) {
+        return done(new Error("Database non disponibile."));
+      }
+
+      const googleId = profile.id;
+      const email = profile.emails?.[0]?.value?.trim().toLowerCase();
+      const emailVerificata = profile.emails?.[0]?.verified;
+
+      if (!googleId) {
+        return done(new Error("Google non ha restituito un ID valido."));
+      }
+
+      if (!email) {
+        return done(new Error("Google non ha restituito un indirizzo email."));
+      }
+
+      if (emailVerificata === false) {
+        return done(new Error("L'indirizzo email Google non è verificato."));
+      }
+
+      // 1. Cerchiamo prima l'account collegato direttamente
+      //    a questo account Google.
+      let utente = await trovaUtentePerGoogleId(googleId);
+
+      // 2. Se non esiste, cerchiamo un account con la stessa email.
+      if (!utente) {
+        utente = await trovaUtentePerEmail(email);
+      }
+
+      // 3. Account già esistente
+      if (utente) {
+
+        if (utente.stato === "bannato") {
+          return done(new Error("Il tuo account è stato bannato."));
+        }
+
+        if (
+          utente.stato === "sospeso" &&
+          utente.sospesoFino &&
+          utente.sospesoFino > Date.now()
+        ) {
+          return done(new Error(
+            "Account sospeso fino al " +
+            new Date(utente.sospesoFino).toLocaleString("it-IT") +
+            "."
+          ));
+        }
+
+        // Colleghiamo definitivamente l'account Google
+        // all'account già esistente.
+        await db.ref("utenti/" + utente.uid).update({
+          googleId,
+          providerGoogle: true,
+          ultimoAccesso: Date.now()
+        });
+
+        return done(null, {
+          uid: utente.uid,
+          nickname: utente.nickname,
+          ruolo: utente.ruolo || "utente"
+        });
+      }
+
+      // 4. Nessun account esistente:
+      //    creiamo un nuovo account.
+      const nickname = await generaNicknameGoogleUnico(
+        profile.displayName,
+        email
+      );
+
+      const nuovoRef = db.ref("utenti").push();
+      const uid = nuovoRef.key;
+
+      await nuovoRef.set({
+        partiteVinte: 0,
+        partiteGiocate: 0,
+        puntiTotali: 0,
+        xp: 0,
+
+        streakVittorieAttuale: 0,
+        streakVittorieMassima: 0,
+        vittoriaPiuVeloceSecondi: null,
+
+        email,
+        emailLower: email,
+
+        nickname,
+        nicknameLower: nickname.toLowerCase(),
+
+        passwordHash: null,
+
+        googleId,
+        providerGoogle: true,
+
+        avatar: profile.photos?.[0]?.value || null,
+
+        ruolo: "utente",
+        stato: "attivo",
+        sospesoFino: null,
+
+        avvisi: [],
+
+        creatoIl: Date.now(),
+        ultimoAccesso: Date.now()
+      });
+
+      return done(null, {
+        uid,
+        nickname,
+        ruolo: "utente"
+      });
+
+    } catch (errore) {
+      console.error("Errore verifica account Google:", errore);
+      return done(errore);
+    }
+  });
+}
+
+app.get("/auth/google",
+  passport.authenticate("google", {
+    scope: ["profile", "email"]
+  })
+);
+
+app.get(
+  "/auth/google/callback",
+
+  passport.authenticate("google", {
+    session: false,
+    failureRedirect: "/accedi.html?errore=google"
+  }),
+
+  async (req, res) => {
+
+    try {
+
+      const utente = req.user;
+
+      if (!utente || !utente.uid) {
+        return res.redirect("/accedi.html?errore=google");
+      }
+
+      const token = creaToken(
+        utente.uid,
+        utente.nickname,
+        utente.ruolo || "utente"
+      );
+
+      res.cookie("token", token, OPZIONI_COOKIE);
+
+      // Login completato.
+      res.redirect("/");
+
+    } catch (errore) {
+
+      console.error("Errore callback Google:", errore);
+
+      res.redirect("/accedi.html?errore=google");
+    }
+  }
+);
 
 // ===== API REGISTRAZIONE / LOGIN =====
 app.post("/api/registrati", limiteLogin, async (req, res) => {
@@ -244,8 +498,23 @@ app.post("/api/login", limiteLogin, async (req, res) => {
     const { email, password } = req.body;
     if (!email || !password) return res.status(400).json({ errore: "Inserisci email e password." });
     const utente = await trovaUtentePerEmail(pulisciTesto(email, 100).toLowerCase());
-    if (!utente) return res.status(400).json({ errore: "Email o password errati." });
-    if (!(await bcrypt.compare(password, utente.passwordHash))) return res.status(400).json({ errore: "Email o password errati." });
+    if (!utente) {
+  return res.status(400).json({
+    errore: "Email o password errati."
+  });
+}
+
+if (!utente.passwordHash) {
+  return res.status(400).json({
+    errore: "Questo account è stato creato con Google. Usa 'Accedi con Google'."
+  });
+}
+
+if (!(await bcrypt.compare(password, utente.passwordHash))) {
+  return res.status(400).json({
+    errore: "Email o password errati."
+  });
+}
     if (utente.stato === "bannato") return res.status(403).json({ errore: "Il tuo account è stato bannato." });
     if (utente.stato === "sospeso") {
       if (utente.sospesoFino && utente.sospesoFino > Date.now()) return res.status(403).json({ errore: "Account sospeso fino al " + new Date(utente.sospesoFino).toLocaleString("it-IT") + "." });
