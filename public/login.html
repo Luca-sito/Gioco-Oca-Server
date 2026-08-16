@@ -4,79 +4,372 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Accedi - Giochi Società</title>
+
 <style>
-* { box-sizing: border-box; font-family: Arial, sans-serif; }
-body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #101820; }
-.scatola { background: #1e2a38; border: 2px solid #ffd700; border-radius: 14px; padding: 36px; width: 340px; max-width: 90%; }
-h1 { color: #ffd700; text-align: center; font-size: 22px; margin-top: 0; }
-label { display: block; color: #ccc; font-size: 13px; font-weight: bold; margin: 14px 0 6px; }
-input { width: 100%; padding: 11px; border-radius: 8px; border: none; background: #101820; color: #fff; font-size: 14px; }
-button { width: 100%; margin-top: 22px; padding: 13px; border: none; border-radius: 8px; background: #ffd700; color: #111; font-weight: bold; font-size: 15px; cursor: pointer; }
-button:hover { background: #ffaa00; }
-.errore { color: #ff6b6b; font-size: 13px; margin-top: 12px; text-align: center; min-height: 16px; }
-.link-sotto { text-align: center; margin-top: 16px; font-size: 13px; color: #aaa; }
-.link-sotto a { color: #ffd700; text-decoration: none; }
+* {
+  box-sizing: border-box;
+  font-family: Arial, sans-serif;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #101820;
+}
+
+.scatola {
+  background: #1e2a38;
+  border: 2px solid #ffd700;
+  border-radius: 14px;
+  padding: 36px;
+  width: 340px;
+  max-width: 90%;
+}
+
+h1 {
+  color: #ffd700;
+  text-align: center;
+  font-size: 22px;
+  margin-top: 0;
+  margin-bottom: 24px;
+}
+
+label {
+  display: block;
+  color: #ccc;
+  font-size: 13px;
+  font-weight: bold;
+  margin: 14px 0 6px;
+}
+
+input {
+  width: 100%;
+  padding: 11px;
+  border-radius: 8px;
+  border: none;
+  outline: none;
+  background: #101820;
+  color: #fff;
+  font-size: 14px;
+}
+
+input:focus {
+  outline: 1px solid #ffd700;
+}
+
+button {
+  width: 100%;
+  margin-top: 22px;
+  padding: 13px;
+  border: none;
+  border-radius: 8px;
+  background: #ffd700;
+  color: #111;
+  font-weight: bold;
+  font-size: 15px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+button:hover {
+  background: #ffaa00;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.google-btn {
+  margin-top: 16px;
+  background: #fff;
+  color: #222;
+  border: 1px solid #d9d9d9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.google-btn:hover {
+  background: #f4f4f4;
+}
+
+.google-icon {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
+.divisore {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 20px 0 4px;
+  color: #888;
+  font-size: 12px;
+}
+
+.divisore::before,
+.divisore::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #3b4652;
+}
+
+.errore {
+  color: #ff6b6b;
+  font-size: 13px;
+  margin-top: 12px;
+  text-align: center;
+  min-height: 16px;
+}
+
+.link-sotto {
+  text-align: center;
+  margin-top: 16px;
+  font-size: 13px;
+  color: #aaa;
+}
+
+.link-sotto a {
+  color: #ffd700;
+  text-decoration: none;
+}
+
+.link-sotto a:hover {
+  text-decoration: underline;
+}
 </style>
 </head>
+
 <body>
 
 <div class="scatola">
+
   <h1>Accedi</h1>
-  <label>Email</label>
-  <input type="email" id="email" placeholder="tuaemail@esempio.com">
-  <label>Password</label>
-  <input type="password" id="password" placeholder="••••••••">
-  <button onclick="accedi()">Accedi</button>
-  <div class="errore" id="errore"></div>
-  <div class="link-sotto">
-    Non hai un account? <a id="linkRegistrati" href="registrati.html">Registrati</a>
+
+  <label for="email">Email</label>
+  <input
+    type="email"
+    id="email"
+    placeholder="tuaemail@esempio.com"
+    autocomplete="email"
+  >
+
+  <label for="password">Password</label>
+  <input
+    type="password"
+    id="password"
+    placeholder="••••••••"
+    autocomplete="current-password"
+  >
+
+  <button id="btnAccedi" type="button" onclick="accedi()">
+    Accedi
+  </button>
+
+  <div class="divisore">
+    oppure
   </div>
+
+  <button
+    id="btnGoogle"
+    class="google-btn"
+    type="button"
+    onclick="accediConGoogle()"
+  >
+    <svg
+      class="google-icon"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+      <path fill="#4285F4" d="M21.35 12.23c0-.74-.07-1.45-.21-2.13H12v4.03h5.24a4.48 4.48 0 0 1-1.94 2.94v2.44h3.14c1.84-1.69 2.91-4.18 2.91-7.28z"/>
+      <path fill="#34A853" d="M12 21.75c2.63 0 4.84-.87 6.45-2.37l-3.14-2.44c-.87.58-1.98.92-3.31.92-2.55 0-4.71-1.72-5.49-4.03H3.27v2.52A9.75 9.75 0 0 0 12 21.75z"/>
+      <path fill="#FBBC05" d="M6.51 13.83A5.86 5.86 0 0 1 6.2 12c0-.64.11-1.26.31-1.83V7.65H3.27A9.75 9.75 0 0 0 2.25 12c0 1.57.38 3.05 1.02 4.35l3.24-2.52z"/>
+      <path fill="#EA4335" d="M12 6.14c1.43 0 2.71.49 3.72 1.46l2.79-2.79C16.84 3.17 14.63 2.25 12 2.25a9.75 9.75 0 0 0-8.73 5.4l3.24 2.52C7.29 7.86 9.45 6.14 12 6.14z"/>
+    </svg>
+
+    <span>Accedi con Google</span>
+  </button>
+
+  <div class="errore" id="errore"></div>
+
+  <div class="link-sotto">
+    Non hai un account?
+    <a id="linkRegistrati" href="registrati.html">Registrati</a>
+  </div>
+
 </div>
 
 <script>
+
+// ============================================================
+// BLOCCO IFRAME
+// ============================================================
 
 if (window.top !== window.self) {
     window.top.location.href = window.location.href;
 }
 
+
+// ============================================================
+// REDIRECT
+// ============================================================
+
 const parametri = new URLSearchParams(window.location.search);
+
 const redirect = parametri.get("redirect");
-if (redirect) document.getElementById("linkRegistrati").href = "registrati.html?redirect=" + encodeURIComponent(redirect);
 
-async function accedi() {
-  const email = document.getElementById("email").value.trim();
-  const password = document.getElementById("password").value;
-  const erroreEl = document.getElementById("errore");
-  erroreEl.textContent = "";
+const linkRegistrati = document.getElementById("linkRegistrati");
 
-  if (!email || !password) { erroreEl.textContent = "Inserisci email e password."; return; }
-
-  try {
-    const risposta = await fetch("https://gioco-oca-server.onrender.com/api/login", {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password })
-    });
-    const dati = await risposta.json();
-
-    if (!risposta.ok) {
-      erroreEl.textContent = dati.errore || "Errore durante il login.";
-      return;
-    }
-
-    localStorage.setItem("loginEffettuato", "si");
-    window.location.href = redirect || "https://solfriniluca1.wixstudio.com/giochisocieta";
-  } catch (e) {
-    erroreEl.textContent = "Errore di connessione al server.";
-  }
+if (redirect) {
+    linkRegistrati.href =
+        "registrati.html?redirect=" +
+        encodeURIComponent(redirect);
 }
 
-document.addEventListener("keydown", function(e) {
-    if (e.key === "Enter") {
-        accedi();
+
+// ============================================================
+// ERRORE GOOGLE
+// ============================================================
+
+const erroreGoogle = parametri.get("errore");
+
+if (erroreGoogle === "google") {
+    document.getElementById("errore").textContent =
+        "Accesso con Google non riuscito. Riprova.";
+}
+
+
+// ============================================================
+// LOGIN EMAIL / PASSWORD
+// ============================================================
+
+async function accedi() {
+
+    const email =
+        document.getElementById("email").value.trim();
+
+    const password =
+        document.getElementById("password").value;
+
+    const erroreEl =
+        document.getElementById("errore");
+
+    const btn =
+        document.getElementById("btnAccedi");
+
+    erroreEl.textContent = "";
+
+    if (!email || !password) {
+        erroreEl.textContent =
+            "Inserisci email e password.";
+        return;
     }
-});
+
+    btn.disabled = true;
+    btn.textContent = "Accesso in corso...";
+
+    try {
+
+        const risposta = await fetch(
+            "https://gioco-oca-server.onrender.com/api/login",
+            {
+                method: "POST",
+                credentials: "include",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    email,
+                    password
+                })
+            }
+        );
+
+        const dati = await risposta.json();
+
+        if (!risposta.ok) {
+
+            erroreEl.textContent =
+                dati.errore ||
+                "Errore durante il login.";
+
+            btn.disabled = false;
+            btn.textContent = "Accedi";
+
+            return;
+        }
+
+        localStorage.setItem(
+            "loginEffettuato",
+            "si"
+        );
+
+        window.location.href =
+            redirect ||
+            "https://solfriniluca1.wixstudio.com/giochisocieta";
+
+    } catch (e) {
+
+        console.error(e);
+
+        erroreEl.textContent =
+            "Errore di connessione al server.";
+
+        btn.disabled = false;
+        btn.textContent = "Accedi";
+    }
+}
+
+
+// ============================================================
+// LOGIN GOOGLE
+// ============================================================
+
+function accediConGoogle() {
+
+    let url =
+        "https://gioco-oca-server.onrender.com/auth/google";
+
+    if (redirect) {
+
+        url +=
+            "?redirect=" +
+            encodeURIComponent(redirect);
+    }
+
+    window.location.href = url;
+}
+
+
+// ============================================================
+// INVIO CON ENTER
+// ============================================================
+
+document.addEventListener(
+    "keydown",
+    function(e) {
+
+        if (e.key === "Enter") {
+
+            const elemento =
+                document.activeElement;
+
+            if (
+                elemento &&
+                elemento.id === "password"
+            ) {
+                accedi();
+            }
+        }
+    }
+);
 
 </script>
 
