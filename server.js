@@ -2247,7 +2247,7 @@ wss.on("connection", (socket, request) => {
     inviaConteggioStanze();
 
 
-  } catch (erroreInterno) {
+      } catch (erroreInterno) {
 
     console.error(
       "Errore nella chiusura di una connessione:",
@@ -2255,7 +2255,9 @@ wss.on("connection", (socket, request) => {
     );
   }
 
-});
+  });
+
+});   // CHIUDE wss.on("connection")
 
 server.listen(PORT, async () => {
   console.log("Server avviato sulla porta " + PORT);
