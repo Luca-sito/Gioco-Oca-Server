@@ -12,1248 +12,2728 @@
    ========================================================= */
 
 * {
-  box-sizing: border-box;
+    box-sizing: border-box;
 }
 
-html {
-  margin: 0;
-  padding: 0;
-  background: #f4f6f8;
+html,
+body {
+    margin: 0;
+    padding: 0;
+    min-height: 100%;
+    font-family: Arial, Helvetica, sans-serif;
+    background: #f4f6f8;
+    color: #1b2530;
 }
 
 body {
-  margin: 0;
-  min-height: 100vh;
-  background:
-    linear-gradient(
-      180deg,
-      #ffffff 0%,
-      #f7f8fa 48%,
-      #f1f3f5 100%
-    );
-  color: #18212b;
-  font-family: Arial, Helvetica, sans-serif;
+    min-height: 100vh;
 }
 
 /* =========================================================
-   CONTENITORE PRINCIPALE
+   LAYOUT GENERALE
    ========================================================= */
 
-.contenitore {
-  width: min(980px, calc(100% - 32px));
-  margin: 0 auto;
-  padding: 36px 0 70px;
+.app {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.topbar {
+    height: 72px;
+    flex: 0 0 72px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 28px;
+    background: #ffffff;
+    border-bottom: 1px solid #e5e9ed;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.brand-logo {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: #ffd700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #171717;
+    font-weight: 900;
+    font-size: 18px;
+    box-shadow: 0 4px 14px rgba(255, 215, 0, .2);
+}
+
+.brand-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.brand-title {
+    font-size: 15px;
+    font-weight: 800;
+    color: #16202a;
+}
+
+.brand-subtitle {
+    font-size: 11px;
+    color: #8a939c;
+}
+
+.topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.topbar-btn {
+    border: 1px solid #dfe4e8;
+    background: #fff;
+    color: #37424c;
+    border-radius: 9px;
+    min-height: 38px;
+    padding: 0 14px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.topbar-btn:hover {
+    background: #f7f9fa;
 }
 
 /* =========================================================
-   SCHEDE
+   CORPO
    ========================================================= */
 
-.scheda {
-  background: #ffffff;
-  border: 1px solid #e4e8ec;
-  border-radius: 18px;
-  padding: 28px;
-  margin-bottom: 20px;
-  box-shadow:
-    0 8px 26px rgba(16, 24, 32, 0.06);
+.body-layout {
+    width: min(1280px, calc(100% - 32px));
+    margin: 0 auto;
+    flex: 1;
+    display: grid;
+    grid-template-columns: 270px minmax(0, 1fr);
+    gap: 24px;
+    padding: 24px 0 40px;
 }
 
 /* =========================================================
-   TESTATA PROFILO
+   SIDEBAR
    ========================================================= */
 
-.testata-profilo {
-  position: relative;
-  overflow: hidden;
-  padding: 34px;
-  text-align: center;
+.sidebar {
+    position: sticky;
+    top: 96px;
+    height: calc(100vh - 120px);
+    min-height: 580px;
+    display: flex;
+    flex-direction: column;
+    background: #ffffff;
+    border: 1px solid #e2e7eb;
+    border-radius: 18px;
+    box-shadow: 0 10px 28px rgba(20, 30, 40, .05);
+    overflow: hidden;
 }
 
-.testata-profilo::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 5px;
-  background: #ffd700;
+.sidebar-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
 }
 
-.testata-interna {
-  position: relative;
-  z-index: 1;
+.home-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 42px;
+    padding: 0 12px;
+    margin-bottom: 18px;
+    border-radius: 10px;
+    border: 1px solid #e6eaee;
+    background: #fafbfc;
+    color: #3f4b56;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 800;
 }
 
-#avatarGrande {
-  width: 128px;
-  height: 128px;
-  margin: 0 auto 18px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  background: #e9edf1;
-  color: #ffffff;
-  font-size: 48px;
-  font-weight: bold;
-  border: 5px solid #ffffff;
-  box-shadow:
-    0 4px 18px rgba(16, 24, 32, 0.14);
+.home-link:hover {
+    background: #f4f6f8;
 }
 
-#avatarGrande img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.menu-label {
+    padding: 0 10px;
+    margin: 12px 0 8px;
+    color: #99a2aa;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
 }
 
-h1 {
-  margin: 0;
-  color: #18212b;
-  font-size: 28px;
-  font-weight: 800;
-  line-height: 1.2;
+.menu-list {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
 }
 
-.email {
-  margin-top: 8px;
-  color: #6d7781;
-  font-size: 14px;
-  word-break: break-word;
+.menu-link {
+    width: 100%;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 11px;
+    border-radius: 10px;
+    color: #53606b;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .18s, color .18s;
 }
 
-.bloccata {
-  margin-top: 8px;
-  color: #9aa3ab;
-  font-size: 12px;
+.menu-link:hover {
+    background: #f5f7f8;
+    color: #1d2730;
 }
 
-#inputAvatar {
-  display: block;
-  width: min(420px, 100%);
-  margin: 20px auto 0;
-  padding: 10px;
-  border: 1px solid #dce2e7;
-  border-radius: 10px;
-  background: #f8fafb;
-  color: #303944;
-  font-size: 13px;
-  cursor: pointer;
+.menu-link.active {
+    background: #fff7cc;
+    color: #5d4b00;
+}
+
+.menu-link .ico {
+    width: 18px;
+    flex: 0 0 18px;
+    text-align: center;
+    font-size: 15px;
+}
+
+.submenu {
+    margin: 2px 0 6px;
+    padding-left: 17px;
+    border-left: 1px solid #e6eaed;
+}
+
+.submenu .menu-link {
+    min-height: 37px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.sidebar-bottom {
+    padding: 16px;
+    border-top: 1px solid #edf0f2;
+    background: #fbfcfd;
+}
+
+.profile-mini {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+}
+
+.profile-mini-avatar {
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 800;
+    background: #5d6f82;
+}
+
+.profile-mini-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.profile-mini-info {
+    min-width: 0;
+}
+
+.profile-mini-name {
+    color: #1c2630;
+    font-size: 13px;
+    font-weight: 800;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.profile-mini-status {
+    margin-top: 4px;
+    color: #2b8c56;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.player-code {
+    margin-top: 14px;
+    padding: 11px 12px;
+    border: 1px solid #e4e8eb;
+    border-radius: 10px;
+    background: #ffffff;
+}
+
+.player-code-label {
+    color: #9aa3aa;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+}
+
+.player-code-value {
+    margin-top: 5px;
+    color: #27323c;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: .05em;
+    word-break: break-all;
 }
 
 /* =========================================================
-   TITOLI SEZIONE
+   MAIN
    ========================================================= */
 
-.titolo {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 20px;
-  color: #18212b;
-  font-size: 17px;
-  font-weight: 800;
+.main {
+    min-width: 0;
+}
+
+.breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin: 2px 0 14px;
+    color: #8a939b;
+    font-size: 11px;
+}
+
+.breadcrumb strong {
+    color: #4e5964;
+}
+
+.page-header {
+    margin-bottom: 18px;
+}
+
+.page-header h1 {
+    margin: 0;
+    color: #19232d;
+    font-size: 30px;
+    font-weight: 900;
+    line-height: 1.15;
+}
+
+.page-header p {
+    margin: 8px 0 0;
+    color: #7d8790;
+    font-size: 13px;
+}
+
+/* =========================================================
+   PANELLO
+   ========================================================= */
+
+.panel {
+    display: none;
+}
+
+.panel.active {
+    display: block;
+    animation: panelIn .18s ease;
+}
+
+@keyframes panelIn {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.card {
+    background: #fff;
+    border: 1px solid #e1e6ea;
+    border-radius: 18px;
+    padding: 26px;
+    margin-bottom: 18px;
+    box-shadow: 0 8px 24px rgba(18, 28, 38, .045);
+}
+
+.card-title {
+    margin: 0 0 7px;
+    color: #1b2530;
+    font-size: 18px;
+    font-weight: 900;
+}
+
+.card-subtitle {
+    margin: 0 0 20px;
+    color: #7d8790;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+/* =========================================================
+   DASHBOARD PROFILO
+   ========================================================= */
+
+.hero-profile {
+    display: grid;
+    grid-template-columns: 160px minmax(0, 1fr);
+    gap: 24px;
+    align-items: center;
+}
+
+.hero-avatar {
+    width: 146px;
+    height: 146px;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 6px solid #fff;
+    box-shadow:
+        0 8px 25px rgba(20, 30, 40, .13),
+        0 0 0 1px #e7eaed;
+    color: #fff;
+    font-size: 52px;
+    font-weight: 900;
+    background: #5d6f82;
+}
+
+.hero-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.hero-name {
+    margin: 0;
+    color: #18222c;
+    font-size: 29px;
+    font-weight: 900;
+}
+
+.hero-email {
+    margin-top: 7px;
+    color: #7b858e;
+    font-size: 13px;
+}
+
+.status-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.status-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #31a35f;
+    box-shadow: 0 0 0 4px rgba(49, 163, 95, .1);
+}
+
+.status-text {
+    color: #2f8655;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.plan-pill {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    margin-left: 8px;
+    padding: 0 10px;
+    border-radius: 999px;
+    background: #f2f4f6;
+    color: #68737c;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.hero-bio {
+    margin-top: 14px;
+    color: #56626d;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.inline-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 18px;
+}
+
+.btn {
+    min-height: 42px;
+    padding: 0 16px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.btn-primary {
+    background: #ffd700;
+    color: #171717;
+}
+
+.btn-primary:hover {
+    background: #f2cc00;
+}
+
+.btn-secondary {
+    background: #fff;
+    border-color: #dfe4e8;
+    color: #42505b;
+}
+
+.btn-secondary:hover {
+    background: #f7f9fa;
+}
+
+.btn-danger {
+    background: #d94a4a;
+    color: #fff;
+}
+
+.btn-danger:hover {
+    background: #c83e3e;
 }
 
 /* =========================================================
    LIVELLO
    ========================================================= */
 
-.livello-card {
-  padding: 28px;
+.level-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 16px;
 }
 
-.livello-riga {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  margin-bottom: 18px;
+.level-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 38px;
+    padding: 0 16px;
+    border-radius: 999px;
+    background: #ffd700;
+    color: #171717;
+    font-size: 13px;
+    font-weight: 900;
 }
 
-.livello {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 38px;
-  padding: 0 18px;
-  border-radius: 999px;
-  background: #ffd700;
-  color: #171717;
-  font-size: 14px;
-  font-weight: 800;
-  box-shadow:
-    0 4px 12px rgba(255, 215, 0, 0.22);
+.xp-total {
+    color: #6f7982;
+    font-size: 12px;
+    font-weight: 800;
 }
 
-.xp-totale {
-  color: #68737d;
-  font-size: 13px;
-  font-weight: 700;
+.xp-track {
+    height: 14px;
+    border-radius: 999px;
+    background: #edf0f2;
+    border: 1px solid #e2e6e9;
+    overflow: hidden;
 }
 
-.xp-bar {
-  width: 100%;
-  height: 14px;
-  background: #edf0f2;
-  border-radius: 999px;
-  overflow: hidden;
-  border: 1px solid #e2e6ea;
+.xp-fill {
+    width: 0%;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #ffd700, #ffbf00);
+    transition: width .45s ease;
 }
 
-.xp-riempimento {
-  width: 0%;
-  height: 100%;
-  background: linear-gradient(
-    90deg,
-    #ffd700,
-    #ffbf00
-  );
-  border-radius: inherit;
-  transition: width .45s ease;
-}
-
-.xp-testo {
-  margin-top: 9px;
-  color: #7b858e;
-  font-size: 12px;
-  text-align: right;
+.xp-caption {
+    margin-top: 8px;
+    color: #8b959d;
+    font-size: 11px;
+    text-align: right;
 }
 
 /* =========================================================
    STATISTICHE
    ========================================================= */
 
-.statistiche {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
 }
 
-.stat {
-  padding: 20px 14px;
-  border: 1px solid #e6eaee;
-  border-radius: 14px;
-  background: #fafbfc;
-  text-align: center;
+.stat-box {
+    padding: 19px 12px;
+    text-align: center;
+    background: #fafbfc;
+    border: 1px solid #e5e9ec;
+    border-radius: 13px;
 }
 
-.numero {
-  color: #18212b;
-  font-size: 28px;
-  font-weight: 800;
-  line-height: 1;
+.stat-number {
+    color: #1b2530;
+    font-size: 27px;
+    font-weight: 900;
 }
 
-.etichetta {
-  margin-top: 8px;
-  color: #7b858e;
-  font-size: 12px;
-  font-weight: 600;
+.stat-label {
+    margin-top: 6px;
+    color: #818b94;
+    font-size: 11px;
+    font-weight: 700;
 }
 
 /* =========================================================
    FORM
    ========================================================= */
 
-.gruppo {
-  margin-bottom: 16px;
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 15px;
 }
 
-label {
-  display: block;
-  margin-bottom: 7px;
-  color: #45515c;
-  font-size: 13px;
-  font-weight: 700;
+.field {
+    min-width: 0;
 }
 
-input,
-select {
-  width: 100%;
-  height: 44px;
-  padding: 0 13px;
-  border: 1px solid #d9dfe4;
-  border-radius: 10px;
-  background: #fbfcfd;
-  color: #18212b;
-  font-size: 14px;
-  outline: none;
-  transition:
-    border-color .2s,
-    box-shadow .2s,
-    background .2s;
+.field.full {
+    grid-column: 1 / -1;
 }
 
-input:focus,
-select:focus {
-  border-color: #ffd700;
-  background: #ffffff;
-  box-shadow:
-    0 0 0 3px rgba(255, 215, 0, 0.16);
+.field label {
+    display: block;
+    margin-bottom: 7px;
+    color: #4b5762;
+    font-size: 12px;
+    font-weight: 800;
 }
 
-input:disabled {
-  background: #f1f3f5;
-  color: #8b949d;
-  opacity: 0.7;
+.field input,
+.field select {
+    width: 100%;
+    min-height: 44px;
+    padding: 0 13px;
+    border: 1px solid #d9dfe4;
+    border-radius: 10px;
+    outline: none;
+    background: #fbfcfd;
+    color: #1c2730;
+    font-size: 13px;
+}
+
+.field input:focus,
+.field select:focus {
+    border-color: #ffd700;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(255, 215, 0, .15);
 }
 
 /* =========================================================
-   BOTTONI
+   AVATAR UPLOAD
    ========================================================= */
 
-button {
-  width: 100%;
-  min-height: 44px;
-  margin-top: 10px;
-  padding: 0 16px;
-  border: 0;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 800;
-  cursor: pointer;
-  transition:
-    transform .15s ease,
-    opacity .2s ease,
-    box-shadow .2s ease;
+.avatar-upload-card {
+    background: #fff;
+    border: 1px solid #e1e6ea;
+    border-radius: 18px;
+    padding: 26px;
+    box-shadow: 0 8px 24px rgba(18, 28, 38, .045);
 }
 
-button:hover {
-  opacity: .95;
+.avatar-upload-head {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    margin-bottom: 22px;
 }
 
-button:active {
-  transform: translateY(1px);
+.avatar-upload-icon {
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    border-radius: 12px;
+    background: #fff8d6;
+    color: #a98a00;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
 }
 
-.btn-oro {
-  background: #ffd700;
-  color: #171717;
-  box-shadow:
-    0 5px 14px rgba(255, 215, 0, 0.18);
+.avatar-upload-head h2 {
+    margin: 0;
+    color: #19232d;
+    font-size: 18px;
 }
 
-.btn-oro:hover {
-  box-shadow:
-    0 7px 18px rgba(255, 215, 0, 0.25);
+.avatar-upload-head p {
+    margin: 5px 0 0;
+    color: #7f8992;
+    font-size: 12px;
+    line-height: 1.5;
 }
 
-.btn-blu {
-  background: #243447;
-  color: #ffffff;
+.avatar-dropzone {
+    min-height: 300px;
+    padding: 26px;
+    border: 2px dashed #d8dfe4;
+    border-radius: 17px;
+    background: #fafbfc;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: .2s ease;
 }
 
-.btn-rosso {
-  background: #d64545;
-  color: #ffffff;
+.avatar-dropzone.dragover {
+    border-color: #ffd700;
+    background: #fffdf0;
+    transform: translateY(-1px);
+}
+
+.avatar-preview {
+    width: 122px;
+    height: 122px;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #edf1f4;
+    border: 4px solid #fff;
+    box-shadow: 0 9px 24px rgba(20, 30, 40, .12);
+}
+
+.avatar-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.avatar-preview-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #8e99a2;
+    font-size: 34px;
+    font-weight: 300;
+}
+
+.avatar-select-area {
+    margin-top: 18px;
+    text-align: center;
+}
+
+.avatar-select-area strong {
+    display: block;
+    color: #27323c;
+    font-size: 14px;
+}
+
+.avatar-select-area span {
+    display: block;
+    margin-top: 6px;
+    color: #99a2aa;
+    font-size: 12px;
+}
+
+.avatar-select-btn {
+    min-height: 42px;
+    margin-top: 13px;
+    padding: 0 19px;
+    border: 1px solid #d7dde2;
+    border-radius: 10px;
+    background: #fff;
+    color: #27323c;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.avatar-select-btn:hover {
+    border-color: #ffd700;
+    background: #fffdf2;
+}
+
+.avatar-help {
+    margin-top: 14px;
+    color: #9aa3aa;
+    font-size: 11px;
+    text-align: center;
+}
+
+.avatar-file-info {
+    margin-top: 12px;
+    padding: 12px;
+    border: 1px solid #e2e7ea;
+    border-radius: 10px;
+    background: #fafbfc;
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.avatar-file-info.show {
+    display: flex;
+}
+
+.avatar-file-main {
+    min-width: 0;
+}
+
+.avatar-file-name {
+    color: #27323c;
+    font-size: 12px;
+    font-weight: 800;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.avatar-file-size {
+    margin-top: 3px;
+    color: #8c969e;
+    font-size: 10px;
+}
+
+.avatar-change-btn {
+    min-height: 34px;
+    padding: 0 12px;
+    border: 1px solid #d8dee3;
+    border-radius: 8px;
+    background: #fff;
+    color: #6e7983;
+    font-size: 11px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.avatar-save {
+    width: 100%;
+    min-height: 46px;
+    margin-top: 14px;
+    border: 0;
+    border-radius: 10px;
+    background: #ffd700;
+    color: #171717;
+    font-size: 13px;
+    font-weight: 900;
+    cursor: pointer;
+}
+
+.avatar-save:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+}
+
+.avatar-status {
+    min-height: 18px;
+    margin-top: 10px;
+    text-align: center;
+    color: #7a858e;
+    font-size: 11px;
+}
+
+.avatar-status.success {
+    color: #2f8c58;
+}
+
+.avatar-status.error {
+    color: #c44242;
 }
 
 /* =========================================================
    BADGE
    ========================================================= */
 
-.badge-lista {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+.badges-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
 }
 
-.badge {
-  min-height: 110px;
-  padding: 18px 14px;
-  border: 1px solid #e1e6ea;
-  border-radius: 14px;
-  background: #fafbfc;
-  color: #36414b;
-  text-align: center;
-  font-size: 13px;
-  font-weight: 700;
-  transition:
-    transform .18s ease,
-    box-shadow .18s ease;
+.badge-card {
+    min-height: 108px;
+    border: 1px solid #e4e8eb;
+    border-radius: 14px;
+    background: #fafbfc;
+    padding: 17px 13px;
+    text-align: center;
 }
 
-.badge:hover {
-  transform: translateY(-2px);
-  box-shadow:
-    0 8px 18px rgba(16, 24, 32, 0.07);
+.badge-icon {
+    font-size: 29px;
+    line-height: 1;
 }
 
-.badge span {
-  display: block;
-  margin-bottom: 8px;
-  font-size: 29px;
+.badge-name {
+    margin-top: 9px;
+    color: #3f4b55;
+    font-size: 11px;
+    font-weight: 800;
 }
 
-.nessuno {
-  grid-column: 1 / -1;
-  padding: 20px;
-  color: #9099a1;
-  font-size: 13px;
-  font-style: italic;
-  text-align: center;
+.empty-state {
+    padding: 30px 20px;
+    border: 1px dashed #dce2e6;
+    border-radius: 13px;
+    background: #fafbfc;
+    color: #949da5;
+    font-size: 12px;
+    text-align: center;
 }
 
 /* =========================================================
-   INFO
+   RIMOZIONE ACCOUNT
    ========================================================= */
 
-.info {
-  margin-bottom: 15px;
-  color: #7b858e;
-  font-size: 13px;
-  line-height: 1.5;
+.danger-box {
+    border-color: #efcaca;
+    background: #fffafa;
+}
+
+.danger-box .card-title {
+    color: #b63737;
+}
+
+.warning {
+    padding: 13px 14px;
+    border: 1px solid #f1d2d2;
+    border-radius: 10px;
+    background: #fff5f5;
+    color: #8e5e5e;
+    font-size: 12px;
+    line-height: 1.5;
 }
 
 /* =========================================================
-   NICKNAME / PASSWORD
+   INFO PAGE
    ========================================================= */
 
-.sezione-secondaria {
-  padding-top: 26px;
+.info-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
 
-.sezione-secondaria .titolo {
-  margin-bottom: 8px;
+.info-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    padding: 13px 0;
+    border-bottom: 1px solid #eef1f3;
+}
+
+.info-row:last-child {
+    border-bottom: 0;
+}
+
+.info-label {
+    color: #7f8992;
+    font-size: 12px;
+}
+
+.info-value {
+    color: #27323c;
+    font-size: 12px;
+    font-weight: 800;
+    text-align: right;
 }
 
 /* =========================================================
-   ZONA PERICOLOSA
+   MOBILE
    ========================================================= */
 
-.zona-pericolosa {
-  border-color: #efcaca;
-  background: #fffafa;
+.mobile-menu-btn {
+    display: none;
 }
 
-.zona-pericolosa .titolo {
-  color: #b83232;
+@media (max-width: 920px) {
+
+    .body-layout {
+        grid-template-columns: 230px minmax(0, 1fr);
+        gap: 16px;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .badges-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 
-.zona-pericolosa .info {
-  color: #8f6666;
+@media (max-width: 740px) {
+
+    .topbar {
+        padding: 0 14px;
+    }
+
+    .topbar-actions {
+        display: none;
+    }
+
+    .mobile-menu-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border: 1px solid #dfe4e8;
+        border-radius: 10px;
+        background: #fff;
+        cursor: pointer;
+        font-size: 18px;
+    }
+
+    .body-layout {
+        width: calc(100% - 16px);
+        grid-template-columns: 1fr;
+        padding-top: 12px;
+    }
+
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: min(290px, 86vw);
+        height: 100vh;
+        min-height: 0;
+        border-radius: 0 18px 18px 0;
+        z-index: 300;
+        transform: translateX(-105%);
+        transition: transform .22s ease;
+    }
+
+    .sidebar.open {
+        transform: translateX(0);
+    }
+
+    .mobile-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(18, 28, 38, .28);
+        z-index: 250;
+        display: none;
+    }
+
+    .mobile-overlay.show {
+        display: block;
+    }
+
+    .hero-profile {
+        grid-template-columns: 1fr;
+        text-align: center;
+        justify-items: center;
+    }
+
+    .hero-avatar {
+        width: 124px;
+        height: 124px;
+    }
+
+    .status-row {
+        justify-content: center;
+    }
+
+    .inline-actions {
+        justify-content: center;
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .field.full {
+        grid-column: auto;
+    }
 }
-
-/* =========================================================
-   LINK / TORNA HOME
-   ========================================================= */
-
-.pulsante-home {
-  margin-top: 4px;
-  margin-bottom: 0;
-}
-
-/* =========================================================
-   ANIMAZIONE CARICAMENTO
-   ========================================================= */
-
-.caricamento {
-  opacity: .6;
-}
-
-/* =========================================================
-   RESPONSIVE TABLET
-   ========================================================= */
-
-@media (max-width: 760px) {
-
-  .contenitore {
-    width: min(100% - 20px, 680px);
-    padding-top: 20px;
-  }
-
-  .scheda {
-    padding: 22px;
-  }
-
-  .statistiche {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .badge-lista {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-}
-
-/* =========================================================
-   RESPONSIVE MOBILE
-   ========================================================= */
 
 @media (max-width: 500px) {
 
-  .contenitore {
-    width: calc(100% - 14px);
-    padding: 12px 0 40px;
-  }
+    .card,
+    .avatar-upload-card {
+        padding: 18px;
+        border-radius: 14px;
+    }
 
-  .scheda {
-    padding: 18px;
-    border-radius: 14px;
-    margin-bottom: 14px;
-  }
+    .page-header h1 {
+        font-size: 25px;
+    }
 
-  .testata-profilo {
-    padding: 26px 18px;
-  }
+    .stats-grid {
+        gap: 9px;
+    }
 
-  h1 {
-    font-size: 24px;
-  }
+    .stat-box {
+        padding: 16px 9px;
+    }
 
-  #avatarGrande {
-    width: 108px;
-    height: 108px;
-    font-size: 42px;
-  }
+    .badges-grid {
+        grid-template-columns: 1fr;
+    }
 
-  .livello-riga {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
-  }
+    .level-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
 
-  .xp-testo {
-    text-align: left;
-  }
+    .xp-caption {
+        text-align: left;
+    }
 
-  .statistiche {
-    gap: 10px;
-  }
+    .avatar-dropzone {
+        min-height: 250px;
+        padding: 20px 14px;
+    }
 
-  .stat {
-    padding: 17px 10px;
-  }
+    .avatar-preview {
+        width: 102px;
+        height: 102px;
+    }
 
-  .numero {
-    font-size: 24px;
-  }
+    .avatar-file-info {
+        flex-direction: column;
+        align-items: stretch;
+    }
 
-  .badge-lista {
-    grid-template-columns: 1fr;
-  }
-
+    .avatar-change-btn {
+        width: 100%;
+    }
 }
 </style>
 </head>
 
 <body>
 
-<div class="contenitore">
+<div class="app">
 
-  <!-- =====================================================
-       TESTATA PROFILO
-       ===================================================== -->
+    <!-- =====================================================
+         TOPBAR
+         ===================================================== -->
 
-  <div class="scheda testata-profilo">
-    <div class="testata-interna">
+    <header class="topbar">
 
-      <div id="avatarGrande"></div>
+        <div class="brand">
+            <div class="brand-logo">G</div>
 
-      <h1 id="nickname">Caricamento...</h1>
+            <div class="brand-text">
+                <div class="brand-title">
+                    Giochi Società
+                </div>
 
-      <div class="email" id="email"></div>
+                <div class="brand-subtitle">
+                    Area giocatore
+                </div>
+            </div>
+        </div>
 
-      <div class="bloccata">
-        🔒 Email non modificabile
-      </div>
+        <div class="topbar-actions">
 
-      <input
-        id="inputAvatar"
-        type="file"
-        accept="image/*"
-      >
+            <button
+                class="topbar-btn"
+                type="button"
+                onclick="tornaHome()"
+            >
+                Home
+            </button>
 
-    </div>
-  </div>
+        </div>
+
+        <button
+            class="mobile-menu-btn"
+            id="mobileMenuBtn"
+            type="button"
+            aria-label="Apri menu"
+        >
+            ☰
+        </button>
+
+    </header>
 
 
-  <!-- =====================================================
-       LIVELLO / XP
-       ===================================================== -->
-
-  <div class="scheda livello-card">
-
-    <div class="livello-riga">
-
-      <div
-        class="livello"
-        id="livello"
-      >
-        ⭐ Livello -
-      </div>
-
-      <div
-        class="xp-totale"
-        id="xpTotale"
-      >
-        0 XP
-      </div>
-
-    </div>
-
-    <div class="xp-bar">
-      <div
-        class="xp-riempimento"
-        id="barraXP"
-      ></div>
-    </div>
+    <!-- =====================================================
+         MOBILE OVERLAY
+         ===================================================== -->
 
     <div
-      class="xp-testo"
-      id="testoXP"
+        class="mobile-overlay"
+        id="mobileOverlay"
     ></div>
 
-  </div>
+
+    <!-- =====================================================
+         LAYOUT
+         ===================================================== -->
+
+    <div class="body-layout">
 
 
-  <!-- =====================================================
-       STATISTICHE
-       ===================================================== -->
+        <!-- =================================================
+             SIDEBAR
+             ================================================= -->
 
-  <div class="scheda">
-
-    <div class="titolo">
-      🏆 Statistiche
-    </div>
-
-    <div class="statistiche">
-
-      <div class="stat">
-        <div
-          class="numero"
-          id="vinte"
+        <aside
+            class="sidebar"
+            id="sidebar"
         >
-          0
-        </div>
 
-        <div class="etichetta">
-          Vittorie
-        </div>
-      </div>
+            <div class="sidebar-scroll">
 
-      <div class="stat">
-        <div
-          class="numero"
-          id="giocate"
-        >
-          0
-        </div>
+                <a
+                    href="https://solfriniluca1.wixstudio.com/giochisocieta"
+                    class="home-link"
+                >
+                    <span>←</span>
+                    <span>Home</span>
+                </a>
 
-        <div class="etichetta">
-          Partite
-        </div>
-      </div>
 
-      <div class="stat">
-        <div
-          class="numero"
-          id="winrate"
-        >
-          0%
-        </div>
+                <div class="menu-label">
+                    Account
+                </div>
 
-        <div class="etichetta">
-          Win rate
-        </div>
-      </div>
+                <nav class="menu-list">
 
-      <div class="stat">
-        <div
-          class="numero"
-          id="streak"
-        >
-          0
-        </div>
+                    <a
+                        href="#profilo"
+                        class="menu-link"
+                        data-panel="profilo"
+                    >
+                        <span class="ico">👤</span>
+                        <span>Profilo</span>
+                    </a>
 
-        <div class="etichetta">
-          Striscia massima
-        </div>
-      </div>
+                    <a
+                        href="#resoconto"
+                        class="menu-link"
+                        data-panel="resoconto"
+                    >
+                        <span class="ico">📊</span>
+                        <span>Resoconto</span>
+                    </a>
+
+                    <a
+                        href="#messaggi"
+                        class="menu-link"
+                        data-panel="messaggi"
+                    >
+                        <span class="ico">💬</span>
+                        <span>Messaggi privati</span>
+                    </a>
+
+                </nav>
+
+
+                <div class="menu-label">
+                    Profilo
+                </div>
+
+                <div class="submenu">
+
+                    <a
+                        href="#dati-personali"
+                        class="menu-link"
+                        data-panel="dati-personali"
+                    >
+                        <span class="ico">▣</span>
+                        <span>Dati personali</span>
+                    </a>
+
+                    <a
+                        href="#password"
+                        class="menu-link"
+                        data-panel="password"
+                    >
+                        <span class="ico">🔒</span>
+                        <span>Password</span>
+                    </a>
+
+                    <a
+                        href="#nickname"
+                        class="menu-link"
+                        data-panel="nickname"
+                    >
+                        <span class="ico">✏️</span>
+                        <span>Nickname</span>
+                    </a>
+
+                    <a
+                        href="#email"
+                        class="menu-link"
+                        data-panel="email"
+                    >
+                        <span class="ico">✉️</span>
+                        <span>E-mail</span>
+                    </a>
+
+                    <a
+                        href="#avatar"
+                        class="menu-link"
+                        data-panel="avatar"
+                    >
+                        <span class="ico">🖼️</span>
+                        <span>Avatar</span>
+                    </a>
+
+                    <a
+                        href="#foto"
+                        class="menu-link"
+                        data-panel="foto"
+                    >
+                        <span class="ico">📷</span>
+                        <span>Foto</span>
+                    </a>
+
+                    <a
+                        href="#preferenze"
+                        class="menu-link"
+                        data-panel="preferenze"
+                    >
+                        <span class="ico">⚙️</span>
+                        <span>Preferenze</span>
+                    </a>
+
+                    <a
+                        href="#rimozione-account"
+                        class="menu-link"
+                        data-panel="rimozione-account"
+                    >
+                        <span class="ico">⚠️</span>
+                        <span>Rimozione account</span>
+                    </a>
+
+                </div>
+
+            </div>
+
+
+            <!-- =================================================
+                 MINI PROFILO SIDEBAR
+                 ================================================= -->
+
+            <div class="sidebar-bottom">
+
+                <div class="profile-mini">
+
+                    <div
+                        class="profile-mini-avatar"
+                        id="sidebarAvatar"
+                    >
+                        ?
+                    </div>
+
+                    <div class="profile-mini-info">
+
+                        <div
+                            class="profile-mini-name"
+                            id="sidebarNickname"
+                        >
+                            Caricamento...
+                        </div>
+
+                        <div class="profile-mini-status">
+                            ● Online ora
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <div class="player-code">
+
+                    <div class="player-code-label">
+                        Codice giocatore
+                    </div>
+
+                    <div
+                        class="player-code-value"
+                        id="playerCode"
+                    >
+                        ...
+                    </div>
+
+                </div>
+
+            </div>
+
+        </aside>
+
+
+        <!-- =================================================
+             CONTENUTO
+             ================================================= -->
+
+        <main class="main">
+
+            <div class="breadcrumb">
+                <span>Home</span>
+                <span>/</span>
+                <strong id="breadcrumbCurrent">
+                    Profilo
+                </strong>
+            </div>
+
+
+            <div class="page-header">
+                <h1 id="pageTitle">
+                    Profilo
+                </h1>
+
+                <p id="pageSubtitle">
+                    Gestisci il tuo account e le tue informazioni personali.
+                </p>
+            </div>
+
+
+            <!-- =============================================
+                 PROFILO
+                 ============================================= -->
+
+            <section
+                class="panel"
+                id="panel-profilo"
+            >
+
+                <div class="card">
+
+                    <div class="hero-profile">
+
+                        <div
+                            class="hero-avatar"
+                            id="heroAvatar"
+                        >
+                            ?
+                        </div>
+
+                        <div>
+
+                            <h2
+                                class="hero-name"
+                                id="heroNickname"
+                            >
+                                Caricamento...
+                            </h2>
+
+                            <div
+                                class="hero-email"
+                                id="heroEmail"
+                            >
+                                ...
+                            </div>
+
+                            <div class="status-row">
+
+                                <span class="status-dot"></span>
+
+                                <span class="status-text">
+                                    Online ora
+                                </span>
+
+                                <span class="plan-pill">
+                                    Free
+                                </span>
+
+                            </div>
+
+                            <div
+                                class="hero-bio"
+                                id="heroBio"
+                            >
+                                Benvenuto nella tua area personale.
+                            </div>
+
+                            <div class="inline-actions">
+
+                                <button
+                                    class="btn btn-primary"
+                                    type="button"
+                                    onclick="apriSezione('dati-personali')"
+                                >
+                                    Modifica profilo
+                                </button>
+
+                                <button
+                                    class="btn btn-secondary"
+                                    type="button"
+                                    onclick="apriSezione('avatar')"
+                                >
+                                    Modifica avatar
+                                </button>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <div class="card">
+
+                    <div class="level-row">
+
+                        <div
+                            class="level-badge"
+                            id="levelBadge"
+                        >
+                            ⭐ Livello -
+                        </div>
+
+                        <div
+                            class="xp-total"
+                            id="xpTotal"
+                        >
+                            0 XP
+                        </div>
+
+                    </div>
+
+                    <div class="xp-track">
+                        <div
+                            class="xp-fill"
+                            id="xpFill"
+                        ></div>
+                    </div>
+
+                    <div
+                        class="xp-caption"
+                        id="xpCaption"
+                    >
+                        ...
+                    </div>
+
+                </div>
+
+
+                <div class="card">
+
+                    <h2 class="card-title">
+                        Statistiche
+                    </h2>
+
+                    <p class="card-subtitle">
+                        I principali dati della tua attività sulla piattaforma.
+                    </p>
+
+                    <div class="stats-grid">
+
+                        <div class="stat-box">
+                            <div
+                                class="stat-number"
+                                id="statVinte"
+                            >
+                                0
+                            </div>
+
+                            <div class="stat-label">
+                                Vittorie
+                            </div>
+                        </div>
+
+                        <div class="stat-box">
+                            <div
+                                class="stat-number"
+                                id="statGiocate"
+                            >
+                                0
+                            </div>
+
+                            <div class="stat-label">
+                                Partite
+                            </div>
+                        </div>
+
+                        <div class="stat-box">
+                            <div
+                                class="stat-number"
+                                id="statWinrate"
+                            >
+                                0%
+                            </div>
+
+                            <div class="stat-label">
+                                Win rate
+                            </div>
+                        </div>
+
+                        <div class="stat-box">
+                            <div
+                                class="stat-number"
+                                id="statStreak"
+                            >
+                                0
+                            </div>
+
+                            <div class="stat-label">
+                                Streak massima
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <div class="card">
+
+                    <h2 class="card-title">
+                        Badge
+                    </h2>
+
+                    <p class="card-subtitle">
+                        I riconoscimenti che hai ottenuto giocando.
+                    </p>
+
+                    <div
+                        class="badges-grid"
+                        id="profileBadges"
+                    ></div>
+
+                </div>
+
+            </section>
+
+
+            <!-- =============================================
+                 RESOCONTO
+                 ============================================= -->
+
+            <section
+                class="panel"
+                id="panel-resoconto"
+            >
+
+                <div class="card">
+
+                    <h2 class="card-title">
+                        Resoconto
+                    </h2>
+
+                    <p class="card-subtitle">
+                        Una panoramica del tuo account e della tua progressione.
+                    </p>
+
+                    <div class="info-list">
+
+                        <div class="info-row">
+                            <span class="info-label">Nickname</span>
+                            <span
+                                class="info-value"
+                                id="summaryNickname"
+                            >
+                                -
+                            </span>
+                        </div>
+
+                        <div class="info-row">
+                            <span class="info-label">Livello</span>
+                            <span
+                                class="info-value"
+                                id="summaryLevel"
+                            >
+                                -
+                            </span>
+                        </div>
+
+                        <div class="info-row">
+                            <span class="info-label">XP</span>
+                            <span
+                                class="info-value"
+                                id="summaryXp"
+                            >
+                                -
+                            </span>
+                        </div>
+
+                        <div class="info-row">
+                            <span class="info-label">Partite giocate</span>
+                            <span
+                                class="info-value"
+                                id="summaryGames"
+                            >
+                                -
+                            </span>
+                        </div>
+
+                        <div class="info-row">
+                            <span class="info-label">Vittorie</span>
+                            <span
+                                class="info-value"
+                                id="summaryWins"
+                            >
+                                -
+                            </span>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- =============================================
+                 MESSAGGI
+                 ============================================= -->
+
+            <section
+                class="panel"
+                id="panel-messaggi"
+            >
+
+                <div class="card">
+
+                    <h2 class="card-title">
+                        Messaggi privati
+                    </h2>
+
+                    <p class="card-subtitle">
+                        Accedi alla tua area messaggi privata.
+                    </p>
+
+                    <button
+                        class="btn btn-primary"
+                        type="button"
+                        onclick="apriMessaggi()"
+                    >
+                        Apri messaggi privati
+                    </button>
+
+                </div>
+
+            </section>
+
+
+            <!-- =============================================
+                 DATI PERSONALI
+                 ============================================= -->
+
+            <section
+                class="panel"
+                id="panel-dati-personali"
+            >
+
+                <div class="card">
+
+                    <h2 class="card-title">
+                        Dati personali
+                    </h2>
+
+                    <p class="card-subtitle">
+                        Gestisci le informazioni personali associate al tuo account.
+                    </p>
+
+                    <div class="form-grid">
+
+                        <div class="field">
+                            <label for="nome">
+                                Nome
+                            </label>
+
+                            <input
+                                id="nome"
+                                type="text"
+                            >
+                        </div>
+
+                        <div class="field">
+                            <label for="cognome">
+                                Cognome
+                            </label>
+
+                            <input
+                                id="cognome"
+                                type="text"
+                            >
+                        </div>
+
+                        <div class="field">
+                            <label for="dataNascita">
+                                Data di nascita
+                            </label>
+
+                            <input
+                                id="dataNascita"
+                                type="date"
+                            >
+                        </div>
+
+                        <div class="field">
+                            <label for="sesso">
+                                Sesso
+                            </label>
+
+                            <select id="sesso">
+                                <option value="">Seleziona</option>
+                                <option value="M">Maschio</option>
+                                <option value="F">Femmina</option>
+                                <option value="Altro">Altro</option>
+                            </select>
+                        </div>
+
+                        <div class="field">
+                            <label for="citta">
+                                Città
+                            </label>
+
+                            <input
+                                id="citta"
+                                type="text"
+                            >
+                        </div>
+
+                        <div class="field">
+                            <label for="provincia">
+                                Provincia
+                            </label>
+
+                            <input
+                                id="provincia"
+                                type="text"
+                            >
+                        </div>
+
+                    </div>
+
+                    <div class="inline-actions">
+
+                        <button
+                            class="btn btn-primary"
+                            type="button"
+                            onclick="salvaProfilo()"
+                        >
+                            Salva modifiche
+                        </button>
+
+                    </div>
+
+                    <div
+                        class="avatar-status"
+                        id="profiloStatus"
+                    ></div>
+
+                </div>
+
+            </section>
+
+
+            <!-- =============================================
+                 PASSWORD
+                 ============================================= -->
+
+            <section
+                class="panel"
+                id="panel-password"
+            >
+
+                <div class="card">
+
+                    <h2 class="card-title">
+                        Modifica password
+                    </h2>
+
+                    <p class="card-subtitle">
+                        Aggiorna la password del tuo account.
+                    </p>
+
+                    <div class="form-grid">
+
+                        <div class="field full">
+                            <label for="vecchiaPassword">
+                                Password attuale
+                            </label>
+
+                            <input
+                                id="vecchiaPassword"
+                                type="password"
+                                autocomplete="current-password"
+                            >
+                        </div>
+
+                        <div class="field">
+                            <label for="nuovaPassword">
+                                Nuova password
+                            </label>
+
+                            <input
+                                id="nuovaPassword"
+                                type="password"
+                                autocomplete="new-password"
+                            >
+                        </div>
+
+                        <div class="field">
+                            <label for="confermaPassword">
+                                Conferma nuova password
+                            </label>
+
+                            <input
+                                id="confermaPassword"
+                                type="password"
+                                autocomplete="new-password"
+                            >
+                        </div>
+
+                    </div>
+
+                    <div class="inline-actions">
+
+                        <button
+                            class="btn btn-primary"
+                            type="button"
+                            onclick="cambiaPassword()"
+                        >
+                            Cambia password
+                        </button>
+
+                    </div>
+
+                    <div
+                        class="avatar-status"
+                        id="passwordStatus"
+                    ></div>
+
+                </div>
+
+            </section>
+
+
+            <!-- =============================================
+                 NICKNAME
+                 ============================================= -->
+
+            <section
+                class="panel"
+                id="panel-nickname"
+            >
+
+                <div class="card">
+
+                    <h2 class="card-title">
+                        Modifica nickname
+                    </h2>
+
+                    <p class="card-subtitle">
+                        Il nickname viene mostrato agli altri giocatori.
+                    </p>
+
+                    <div class="field">
+
+                        <label for="nuovoNickname">
+                            Nuovo nickname
+                        </label>
+
+                        <input
+                            id="nuovoNickname"
+                            maxlength="15"
+                            type="text"
+                        >
+
+                    </div>
+
+                    <div class="inline-actions">
+
+                        <button
+                            class="btn btn-primary"
+                            type="button"
+                            onclick="cambiaNickname()"
+                        >
+                            Cambia nickname
+                        </button>
+
+                    </div>
+
+                    <div
+                        class="avatar-status"
+                        id="nicknameStatus"
+                    ></div>
+
+                </div>
+
+            </section>
+
+
+            <!-- =============================================
+                 EMAIL
+                 ============================================= -->
+
+            <section
+                class="panel"
+                id="panel-email"
+            >
+
+                <div class="card">
+
+                    <h2 class="card-title">
+                        E-mail
+                    </h2>
+
+                    <p class="card-subtitle">
+                        L'indirizzo e-mail associato al tuo account.
+                    </p>
+
+                    <div class="info-list">
+
+                        <div class="info-row">
+                            <span class="info-label">
+                                E-mail attuale
+                            </span>
+
+                            <span
+                                class="info-value"
+                                id="currentEmail"
+                            >
+                                -
+                            </span>
+                        </div>
+
+                    </div>
+
+                    <div class="warning" style="margin-top:16px;">
+                        La modifica dell'e-mail richiede un'apposita procedura
+                        di verifica. Nel server attuale questa funzione non è
+                        ancora esposta tramite API.
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- =============================================
+                 AVATAR
+                 ============================================= -->
+
+            <section
+                class="panel"
+                id="panel-avatar"
+            >
+
+                <div class="avatar-upload-card">
+
+                    <div class="avatar-upload-head">
+
+                        <div class="avatar-upload-icon">
+                            🖼️
+                        </div>
+
+                        <div>
+                            <h2>
+                                Modifica avatar
+                            </h2>
+
+                            <p>
+                                Scegli un'immagine che rappresenti il tuo profilo.
+                            </p>
+                        </div>
+
+                    </div>
+
+
+                    <div
+                        class="avatar-dropzone"
+                        id="avatarDropzone"
+                    >
+
+                        <div
+                            class="avatar-preview"
+                            id="avatarPreview"
+                        >
+                            <div class="avatar-preview-placeholder">
+                                +
+                            </div>
+                        </div>
+
+                        <div class="avatar-select-area">
+
+                            <strong>
+                                Trascina qui la tua immagine
+                            </strong>
+
+                            <span>
+                                oppure
+                            </span>
+
+                            <button
+                                type="button"
+                                class="avatar-select-btn"
+                                id="avatarSelectBtn"
+                            >
+                                Scegli un'immagine
+                            </button>
+
+                        </div>
+
+                        <div class="avatar-help">
+                            JPG, PNG o WEBP · massimo 3 MB
+                        </div>
+
+                        <input
+                            type="file"
+                            id="inputAvatar"
+                            accept="image/jpeg,image/png,image/webp"
+                            hidden
+                        >
+
+                    </div>
+
+
+                    <div
+                        class="avatar-file-info"
+                        id="avatarFileInfo"
+                    >
+
+                        <div class="avatar-file-main">
+
+                            <div
+                                class="avatar-file-name"
+                                id="avatarFileName"
+                            >
+                                -
+                            </div>
+
+                            <div
+                                class="avatar-file-size"
+                                id="avatarFileSize"
+                            >
+                                -
+                            </div>
+
+                        </div>
+
+                        <button
+                            type="button"
+                            class="avatar-change-btn"
+                            id="avatarChangeBtn"
+                        >
+                            Cambia
+                        </button>
+
+                    </div>
+
+
+                    <button
+                        type="button"
+                        class="avatar-save"
+                        id="avatarSaveBtn"
+                        disabled
+                    >
+                        Carica avatar
+                    </button>
+
+
+                    <div
+                        class="avatar-status"
+                        id="avatarStatus"
+                    ></div>
+
+                </div>
+
+            </section>
+
+
+            <!-- =============================================
+                 FOTO
+                 ============================================= -->
+
+            <section
+                class="panel"
+                id="panel-foto"
+            >
+
+                <div class="card">
+
+                    <h2 class="card-title">
+                        Foto
+                    </h2>
+
+                    <p class="card-subtitle">
+                        Gestione delle fotografie del profilo.
+                    </p>
+
+                    <div class="empty-state">
+                        La sezione Foto può essere collegata in seguito
+                        all'eventuale sistema di galleria del profilo.
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- =============================================
+                 PREFERENZE
+                 ============================================= -->
+
+            <section
+                class="panel"
+                id="panel-preferenze"
+            >
+
+                <div class="card">
+
+                    <h2 class="card-title">
+                        Preferenze
+                    </h2>
+
+                    <p class="card-subtitle">
+                        Impostazioni personali dell'esperienza sulla piattaforma.
+                    </p>
+
+                    <div class="empty-state">
+                        La sezione è predisposta per le future preferenze
+                        dell'account.
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- =============================================
+                 RIMOZIONE ACCOUNT
+                 ============================================= -->
+
+            <section
+                class="panel"
+                id="panel-rimozione-account"
+            >
+
+                <div class="card danger-box">
+
+                    <h2 class="card-title">
+                        Rimozione account
+                    </h2>
+
+                    <p class="card-subtitle">
+                        Eliminazione definitiva del tuo account.
+                    </p>
+
+                    <div class="warning">
+                        Questa operazione è permanente.
+                        Prima di procedere assicurati di essere consapevole
+                        delle conseguenze.
+                    </div>
+
+                    <div class="inline-actions">
+
+                        <button
+                            class="btn btn-danger"
+                            type="button"
+                            onclick="eliminaAccount()"
+                        >
+                            Elimina definitivamente l'account
+                        </button>
+
+                    </div>
+
+                    <div
+                        class="avatar-status"
+                        id="deleteStatus"
+                    ></div>
+
+                </div>
+
+            </section>
+
+        </main>
 
     </div>
-
-  </div>
-
-
-  <!-- =====================================================
-       DATI PERSONALI
-       ===================================================== -->
-
-  <div class="scheda">
-
-    <div class="titolo">
-      👤 Dati personali
-    </div>
-
-    <div class="gruppo">
-      <label for="nome">
-        Nome
-      </label>
-
-      <input
-        id="nome"
-        type="text"
-        autocomplete="given-name"
-      >
-    </div>
-
-    <div class="gruppo">
-      <label for="cognome">
-        Cognome
-      </label>
-
-      <input
-        id="cognome"
-        type="text"
-        autocomplete="family-name"
-      >
-    </div>
-
-    <div class="gruppo">
-      <label for="dataNascita">
-        Data di nascita
-      </label>
-
-      <input
-        id="dataNascita"
-        type="date"
-      >
-    </div>
-
-    <div class="gruppo">
-
-      <label for="sesso">
-        Sesso
-      </label>
-
-      <select id="sesso">
-
-        <option value="">
-          Seleziona
-        </option>
-
-        <option value="M">
-          Maschio
-        </option>
-
-        <option value="F">
-          Femmina
-        </option>
-
-        <option value="Altro">
-          Altro
-        </option>
-
-      </select>
-
-    </div>
-
-    <div class="gruppo">
-      <label for="citta">
-        Città
-      </label>
-
-      <input
-        id="citta"
-        type="text"
-        autocomplete="address-level2"
-      >
-    </div>
-
-    <div class="gruppo">
-      <label for="provincia">
-        Provincia
-      </label>
-
-      <input
-        id="provincia"
-        type="text"
-      >
-    </div>
-
-    <button
-      class="btn-oro"
-      onclick="salvaProfilo()"
-    >
-      💾 Salva modifiche
-    </button>
-
-  </div>
-
-
-  <!-- =====================================================
-       BADGE
-       ===================================================== -->
-
-  <div class="scheda">
-
-    <div class="titolo">
-      🎖️ Obiettivi ottenuti
-    </div>
-
-    <div
-      class="badge-lista"
-      id="badgeLista"
-    ></div>
-
-  </div>
-
-
-  <!-- =====================================================
-       NICKNAME
-       ===================================================== -->
-
-  <div class="scheda sezione-secondaria">
-
-    <div class="titolo">
-      ✏️ Cambio nickname
-    </div>
-
-    <div class="info">
-      Il nickname può essere cambiato una volta ogni 365 giorni.
-    </div>
-
-    <div class="gruppo">
-
-      <label for="nuovoNickname">
-        Nuovo nickname
-      </label>
-
-      <input
-        id="nuovoNickname"
-        maxlength="15"
-        type="text"
-      >
-
-    </div>
-
-    <button
-      class="btn-oro"
-      onclick="cambiaNickname()"
-    >
-      Cambia nickname
-    </button>
-
-    <div
-      class="info"
-      id="infoNickname"
-    ></div>
-
-  </div>
-
-
-  <!-- =====================================================
-       PASSWORD
-       ===================================================== -->
-
-  <div class="scheda sezione-secondaria">
-
-    <div class="titolo">
-      🔑 Cambio password
-    </div>
-
-    <div class="gruppo">
-
-      <label for="vecchiaPassword">
-        Password attuale
-      </label>
-
-      <input
-        id="vecchiaPassword"
-        type="password"
-        autocomplete="current-password"
-      >
-
-    </div>
-
-    <div class="gruppo">
-
-      <label for="nuovaPassword">
-        Nuova password
-      </label>
-
-      <input
-        id="nuovaPassword"
-        type="password"
-        autocomplete="new-password"
-      >
-
-    </div>
-
-    <div class="gruppo">
-
-      <label for="confermaPassword">
-        Conferma nuova password
-      </label>
-
-      <input
-        id="confermaPassword"
-        type="password"
-        autocomplete="new-password"
-      >
-
-    </div>
-
-    <button
-      class="btn-blu"
-      onclick="cambiaPassword()"
-    >
-      🔒 Cambia password
-    </button>
-
-  </div>
-
-
-  <!-- =====================================================
-       ZONA PERICOLOSA
-       ===================================================== -->
-
-  <div class="scheda zona-pericolosa">
-
-    <div class="titolo">
-      ⚠️ Zona pericolosa
-    </div>
-
-    <div class="info">
-      L'eliminazione dell'account è permanente e non può essere annullata.
-    </div>
-
-    <button
-      class="btn-rosso"
-      onclick="eliminaAccount()"
-    >
-      Elimina account
-    </button>
-
-  </div>
-
-
-  <!-- =====================================================
-       HOME
-       ===================================================== -->
-
-  <button
-    class="btn-blu pulsante-home"
-    onclick="tornaHome()"
-  >
-    ← Torna alla Home
-  </button>
 
 </div>
 
 
 <script>
-
-const SERVER =
-  "https://gioco-oca-server.onrender.com";
-
-
 /* =========================================================
-   PALETTE AVATAR
+   CONFIGURAZIONE
    ========================================================= */
 
+const SERVER =
+    "https://gioco-oca-server.onrender.com";
+
+
+const HOME_URL =
+    "https://solfriniluca1.wixstudio.com/giochisocieta";
+
+
 const PALETTE = [
-  "#6a2c70",
-  "#1e40af",
-  "#43a047",
-  "#f57c00",
-  "#c0ca33",
-  "#e53935",
-  "#00838f",
-  "#8d6e63"
+    "#6a2c70",
+    "#1e40af",
+    "#43a047",
+    "#f57c00",
+    "#c0ca33",
+    "#e53935",
+    "#00838f",
+    "#8d6e63"
 ];
 
 
-function coloreDaNome(nome) {
-
-  let somma = 0;
-
-  for (
-    let i = 0;
-    i < nome.length;
-    i++
-  ) {
-    somma += nome.charCodeAt(i);
-  }
-
-  return PALETTE[
-    somma % PALETTE.length
-  ];
-
-}
+let datiUtente = null;
+let avatarFileSelezionato = null;
 
 
 /* =========================================================
-   AVATAR
+   ELEMENTI
    ========================================================= */
 
-function mostraAvatar(dati) {
+const sidebar =
+    document.getElementById("sidebar");
 
-  const box =
-    document.getElementById("avatarGrande");
+const mobileOverlay =
+    document.getElementById("mobileOverlay");
 
-  if (dati.avatar) {
+const mobileMenuBtn =
+    document.getElementById("mobileMenuBtn");
 
-    box.innerHTML =
-      `<img
-        src="${dati.avatar}"
-        alt="Avatar"
-      >`;
 
-    box.style.background =
-      "#eef1f4";
+/* =========================================================
+   COLORE AVATAR
+   ========================================================= */
 
-  } else {
+function coloreDaNome(nome) {
 
-    box.innerHTML = "";
+    let somma = 0;
 
-    box.textContent =
-      (dati.nickname || "?")
-        .charAt(0)
-        .toUpperCase();
+    for (
+        let i = 0;
+        i < String(nome || "").length;
+        i++
+    ) {
+        somma +=
+            String(nome || "")
+                .charCodeAt(i);
+    }
 
-    box.style.background =
-      coloreDaNome(
-        dati.nickname || "utente"
-      );
-
-  }
-
+    return PALETTE[
+        somma % PALETTE.length
+    ];
 }
 
 
 /* =========================================================
-   CARICAMENTO PROFILO
+   AVATAR GENERICO
+   ========================================================= */
+
+function avatarMarkup(
+    nickname,
+    avatar,
+    classe = ""
+) {
+
+    if (avatar) {
+
+        return `
+            <img
+                class="${classe}"
+                src="${avatar}"
+                alt="Avatar di ${nickname || "utente"}"
+            >
+        `;
+
+    }
+
+    const colore =
+        coloreDaNome(
+            nickname || "utente"
+        );
+
+    const iniziale =
+        (nickname || "?")
+            .charAt(0)
+            .toUpperCase();
+
+    return `
+        <div
+            style="
+                width:100%;
+                height:100%;
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                background:${colore};
+                color:#fff;
+                font-weight:900;
+                font-size:inherit;
+            "
+        >
+            ${iniziale}
+        </div>
+    `;
+}
+
+
+/* =========================================================
+   CARICA PROFILO
    ========================================================= */
 
 async function caricaProfilo() {
 
-  try {
+    try {
 
-    const risposta =
-      await fetch(
-        SERVER + "/api/me",
-        {
-          credentials: "include"
+        const risposta =
+            await fetch(
+                SERVER + "/api/me",
+                {
+                    credentials: "include"
+                }
+            );
+
+
+        if (!risposta.ok) {
+
+            window.location.href =
+                "login.html?redirect=" +
+                encodeURIComponent(
+                    location.href
+                );
+
+            return;
         }
-      );
 
 
-    if (!risposta.ok) {
+        datiUtente =
+            await risposta.json();
 
-      window.location.href =
-        "login.html?redirect=" +
-        encodeURIComponent(
-          location.href
+
+        aggiornaInterfaccia();
+
+
+    } catch (errore) {
+
+        console.error(
+            "Errore caricamento profilo:",
+            errore
         );
 
-      return;
+        alert(
+            "Errore durante il caricamento del profilo."
+        );
+    }
 
+}
+
+
+/* =========================================================
+   AGGIORNA INTERFACCIA
+   ========================================================= */
+
+function aggiornaInterfaccia() {
+
+    if (!datiUtente) {
+        return;
     }
 
 
-    const dati =
-      await risposta.json();
+    const nickname =
+        datiUtente.nickname ||
+        "Utente";
+
+    const email =
+        datiUtente.email ||
+        "";
+
+    const avatar =
+        datiUtente.avatar ||
+        null;
 
 
-    /* DATI PRINCIPALI */
+    /* SIDEBAR */
 
     document.getElementById(
-      "nickname"
+        "sidebarNickname"
     ).textContent =
-      dati.nickname || "Utente";
+        nickname;
 
 
     document.getElementById(
-      "email"
+        "playerCode"
     ).textContent =
-      dati.email || "";
+        datiUtente.uid ||
+        "N/D";
 
 
-    mostraAvatar(dati);
+    const sidebarAvatar =
+        document.getElementById(
+            "sidebarAvatar"
+        );
+
+
+    sidebarAvatar.innerHTML =
+        avatarMarkup(
+            nickname,
+            avatar
+        );
+
+
+    /* HERO */
+
+    document.getElementById(
+        "heroNickname"
+    ).textContent =
+        nickname;
+
+
+    document.getElementById(
+        "heroEmail"
+    ).textContent =
+        email;
+
+
+    document.getElementById(
+        "heroAvatar"
+    ).innerHTML =
+        avatarMarkup(
+            nickname,
+            avatar
+        );
 
 
     /* LIVELLO */
 
+    const livello =
+        datiUtente.livello ||
+        1;
+
+    const xp =
+        datiUtente.xp ||
+        0;
+
     document.getElementById(
-      "livello"
+        "levelBadge"
     ).textContent =
-      "⭐ Livello " +
-      (dati.livello || 1);
+        "⭐ Livello " +
+        livello;
 
 
     document.getElementById(
-      "xpTotale"
+        "xpTotal"
     ).textContent =
-      (dati.xp || 0) +
-      " XP";
+        xp + " XP";
+
+
+    let progresso = 0;
 
 
     if (
-      dati.sogliaProssima !== null &&
-      dati.sogliaProssima !== undefined
+        datiUtente.sogliaProssima !== null &&
+        datiUtente.sogliaProssima !== undefined
     ) {
 
-      const intervallo =
-        dati.sogliaProssima -
-        dati.sogliaAttuale;
-
-      const progresso =
-        intervallo > 0
-          ? Math.round(
-              (
-                (dati.xp -
-                  dati.sogliaAttuale) /
-                intervallo
-              ) * 100
-            )
-          : 0;
+        const intervallo =
+            datiUtente.sogliaProssima -
+            datiUtente.sogliaAttuale;
 
 
-      document.getElementById(
-        "barraXP"
-      ).style.width =
-        Math.max(
-          0,
-          Math.min(
-            100,
-            progresso
-          )
-        ) + "%";
+        if (intervallo > 0) {
 
+            progresso =
+                Math.round(
+                    (
+                        (xp -
+                            datiUtente.sogliaAttuale) /
+                        intervallo
+                    ) * 100
+                );
+        }
 
-      document.getElementById(
-        "testoXP"
-      ).textContent =
-        dati.xp +
-        " XP — " +
-        Math.max(
-          0,
-          dati.sogliaProssima -
-          dati.xp
-        ) +
-        " XP al prossimo livello";
+        document.getElementById(
+            "xpCaption"
+        ).textContent =
+            xp +
+            " XP · " +
+            Math.max(
+                0,
+                datiUtente.sogliaProssima - xp
+            ) +
+            " XP al prossimo livello";
 
     } else {
 
-      document.getElementById(
-        "barraXP"
-      ).style.width =
-        "100%";
+        progresso = 100;
 
-
-      document.getElementById(
-        "testoXP"
-      ).textContent =
-        (dati.xp || 0) +
-        " XP — livello massimo raggiunto!";
+        document.getElementById(
+            "xpCaption"
+        ).textContent =
+            xp +
+            " XP · livello massimo raggiunto";
 
     }
+
+
+    document.getElementById(
+        "xpFill"
+    ).style.width =
+        Math.max(
+            0,
+            Math.min(
+                100,
+                progresso
+            )
+        ) + "%";
 
 
     /* STATISTICHE */
 
     const vinte =
-      dati.partiteVinte || 0;
+        datiUtente.partiteVinte || 0;
 
     const giocate =
-      dati.partiteGiocate || 0;
+        datiUtente.partiteGiocate || 0;
+
+    const winrate =
+        giocate > 0
+            ? Math.round(
+                (vinte / giocate) * 100
+            )
+            : 0;
 
 
     document.getElementById(
-      "vinte"
+        "statVinte"
     ).textContent =
-      vinte;
+        vinte;
 
 
     document.getElementById(
-      "giocate"
+        "statGiocate"
     ).textContent =
-      giocate;
-
-
-    const percentuale =
-      giocate > 0
-        ? Math.round(
-            (vinte / giocate) *
-            100
-          )
-        : 0;
+        giocate;
 
 
     document.getElementById(
-      "winrate"
+        "statWinrate"
     ).textContent =
-      percentuale + "%";
+        winrate + "%";
 
 
     document.getElementById(
-      "streak"
+        "statStreak"
     ).textContent =
-      dati.streakVittorieMassima ||
-      0;
+        datiUtente.streakVittorieMassima ||
+        0;
+
+
+    /* RIASSUNTO */
+
+    document.getElementById(
+        "summaryNickname"
+    ).textContent =
+        nickname;
+
+
+    document.getElementById(
+        "summaryLevel"
+    ).textContent =
+        "Livello " + livello;
+
+
+    document.getElementById(
+        "summaryXp"
+    ).textContent =
+        xp + " XP";
+
+
+    document.getElementById(
+        "summaryGames"
+    ).textContent =
+        giocate;
+
+
+    document.getElementById(
+        "summaryWins"
+    ).textContent =
+        vinte;
+
+
+    document.getElementById(
+        "currentEmail"
+    ).textContent =
+        email || "Non disponibile";
 
 
     /* DATI PERSONALI */
 
     document.getElementById(
-      "nome"
+        "nome"
     ).value =
-      dati.nome || "";
+        datiUtente.nome || "";
 
 
     document.getElementById(
-      "cognome"
+        "cognome"
     ).value =
-      dati.cognome || "";
+        datiUtente.cognome || "";
 
 
     document.getElementById(
-      "dataNascita"
+        "dataNascita"
     ).value =
-      dati.dataNascita || "";
+        datiUtente.dataNascita || "";
 
 
     document.getElementById(
-      "sesso"
+        "sesso"
     ).value =
-      dati.sesso || "";
+        datiUtente.sesso || "";
 
 
     document.getElementById(
-      "citta"
+        "citta"
     ).value =
-      dati.citta || "";
+        datiUtente.citta || "";
 
 
     document.getElementById(
-      "provincia"
+        "provincia"
     ).value =
-      dati.provincia || "";
+        datiUtente.provincia || "";
 
-
-    /* BADGE */
 
     creaBadge(
-      dati.badge || []
+        datiUtente.badge || []
     );
-
-  } catch (e) {
-
-    console.error(
-      "Errore caricamento profilo:",
-      e
-    );
-
-    alert(
-      "Errore caricamento profilo"
-    );
-
-  }
 
 }
 
@@ -1264,161 +2744,342 @@ async function caricaProfilo() {
 
 function creaBadge(lista) {
 
-  const contenitore =
-    document.getElementById(
-      "badgeLista"
-    );
+    const box =
+        document.getElementById(
+            "profileBadges"
+        );
 
 
-  if (!contenitore) {
-    return;
-  }
+    if (
+        !Array.isArray(lista) ||
+        lista.length === 0
+    ) {
+
+        box.innerHTML =
+            `
+            <div
+                class="empty-state"
+                style="grid-column:1/-1;"
+            >
+                Nessun badge ottenuto.
+            </div>
+            `;
+
+        return;
+    }
 
 
-  if (
-    !Array.isArray(lista) ||
-    lista.length === 0
-  ) {
+    box.innerHTML =
+        lista
+            .map(
+                badge => `
+                    <div class="badge-card">
+                        <div class="badge-icon">
+                            ${badge.icona || "🏅"}
+                        </div>
 
-    contenitore.innerHTML =
-      `
-      <div class="nessuno">
-        Nessun badge ottenuto
-      </div>
-      `;
-
-    return;
-
-  }
-
-
-  contenitore.innerHTML =
-    lista.map(
-      badge => `
-        <div class="badge">
-          <span>${badge.icona || "🏅"}</span>
-          ${badge.nome || "Badge"}
-        </div>
-      `
-    ).join("");
-
+                        <div class="badge-name">
+                            ${badge.nome || "Badge"}
+                        </div>
+                    </div>
+                `
+            )
+            .join("");
 }
 
 
 /* =========================================================
-   UPLOAD AVATAR
+   NAVIGAZIONE
+   ========================================================= */
+
+const pannelli = [
+    "profilo",
+    "resoconto",
+    "messaggi",
+    "dati-personali",
+    "password",
+    "nickname",
+    "email",
+    "avatar",
+    "foto",
+    "preferenze",
+    "rimozione-account"
+];
+
+
+const metadatiPannelli = {
+
+    profilo: {
+        titolo: "Profilo",
+        sottotitolo:
+            "La tua area personale e la tua progressione."
+    },
+
+    resoconto: {
+        titolo: "Resoconto",
+        sottotitolo:
+            "Una panoramica del tuo account."
+    },
+
+    messaggi: {
+        titolo: "Messaggi privati",
+        sottotitolo:
+            "Gestisci le tue conversazioni private."
+    },
+
+    "dati-personali": {
+        titolo: "Dati personali",
+        sottotitolo:
+            "Gestisci le informazioni personali."
+    },
+
+    password: {
+        titolo: "Password",
+        sottotitolo:
+            "Aggiorna la password del tuo account."
+    },
+
+    nickname: {
+        titolo: "Nickname",
+        sottotitolo:
+            "Gestisci il nome con cui vieni mostrato."
+    },
+
+    email: {
+        titolo: "E-mail",
+        sottotitolo:
+            "Visualizza le informazioni e-mail del tuo account."
+    },
+
+    avatar: {
+        titolo: "Avatar",
+        sottotitolo:
+            "Personalizza l'immagine del tuo profilo."
+    },
+
+    foto: {
+        titolo: "Foto",
+        sottotitolo:
+            "Gestisci le fotografie del profilo."
+    },
+
+    preferenze: {
+        titolo: "Preferenze",
+        sottotitolo:
+            "Gestisci le preferenze della tua esperienza."
+    },
+
+    "rimozione-account": {
+        titolo: "Rimozione account",
+        sottotitolo:
+            "Gestisci la rimozione definitiva del tuo account."
+    }
+
+};
+
+
+function apriSezione(nome) {
+
+    if (!pannelli.includes(nome)) {
+        nome = "profilo";
+    }
+
+
+    if (
+        location.hash !== "#" + nome
+    ) {
+        location.hash =
+            nome;
+
+        return;
+    }
+
+
+    cambiaPannello(nome);
+}
+
+
+function cambiaPannello(nome) {
+
+    pannelli.forEach(
+        panel => {
+
+            const elemento =
+                document.getElementById(
+                    "panel-" + panel
+                );
+
+
+            if (!elemento) {
+                return;
+            }
+
+
+            elemento.classList.toggle(
+                "active",
+                panel === nome
+            );
+
+        }
+    );
+
+
+    document
+        .querySelectorAll(
+            ".menu-link[data-panel]"
+        )
+        .forEach(link => {
+
+            link.classList.toggle(
+                "active",
+                link.dataset.panel === nome
+            );
+
+        });
+
+
+    const meta =
+        metadatiPannelli[nome] ||
+        metadatiPannelli.profilo;
+
+
+    document.getElementById(
+        "pageTitle"
+    ).textContent =
+        meta.titolo;
+
+
+    document.getElementById(
+        "pageSubtitle"
+    ).textContent =
+        meta.sottotitolo;
+
+
+    document.getElementById(
+        "breadcrumbCurrent"
+    ).textContent =
+        meta.titolo;
+
+
+    chiudiMenuMobile();
+}
+
+
+function gestisciHash() {
+
+    let nome =
+        location.hash.replace(
+            "#",
+            ""
+        );
+
+
+    if (!pannelli.includes(nome)) {
+        nome = "profilo";
+    }
+
+
+    cambiaPannello(nome);
+}
+
+
+/* =========================================================
+   LINK MENU
    ========================================================= */
 
 document
-  .getElementById("inputAvatar")
-  .addEventListener(
-    "change",
-    async function () {
+    .querySelectorAll(
+        ".menu-link[data-panel]"
+    )
+    .forEach(
+        link => {
 
-      const file =
-        this.files[0];
+            link.addEventListener(
+                "click",
+                () => {
 
+                    const panel =
+                        link.dataset.panel;
 
-      if (!file) {
-        return;
-      }
+                    if (
+                        location.hash ===
+                        "#" + panel
+                    ) {
 
+                        cambiaPannello(panel);
 
-      if (
-        !file.type.startsWith(
-          "image/"
-        )
-      ) {
+                    }
 
-        alert(
-          "Seleziona un'immagine valida."
-        );
-
-        this.value = "";
-        return;
-
-      }
-
-
-      const form =
-        new FormData();
-
-
-      form.append(
-        "avatar",
-        file
-      );
-
-
-      try {
-
-        const risposta =
-          await fetch(
-            SERVER +
-            "/api/carica-avatar",
-            {
-              method: "POST",
-              credentials: "include",
-              body: form
-            }
-          );
-
-
-        const dati =
-          await risposta.json();
-
-
-        if (risposta.ok) {
-
-          document
-            .getElementById(
-              "avatarGrande"
-            )
-            .innerHTML =
-            `
-            <img
-              src="${dati.avatar}"
-              alt="Avatar"
-            >
-            `;
-
-
-          document
-            .getElementById(
-              "avatarGrande"
-            )
-            .style.background =
-            "#eef1f4";
-
-
-          this.value = "";
-
-
-          alert(
-            "Avatar aggiornato!"
-          );
-
-        } else {
-
-          alert(
-            dati.errore ||
-            "Errore caricamento avatar"
-          );
+                }
+            );
 
         }
+    );
 
-      } catch (e) {
 
-        console.error(e);
+window.addEventListener(
+    "hashchange",
+    gestisciHash
+);
 
-        alert(
-          "Errore caricamento avatar"
-        );
 
-      }
+/* =========================================================
+   MOBILE MENU
+   ========================================================= */
 
-    }
-  );
+function apriMenuMobile() {
+
+    sidebar.classList.add(
+        "open"
+    );
+
+    mobileOverlay.classList.add(
+        "show"
+    );
+
+}
+
+
+function chiudiMenuMobile() {
+
+    sidebar.classList.remove(
+        "open"
+    );
+
+    mobileOverlay.classList.remove(
+        "show"
+    );
+
+}
+
+
+mobileMenuBtn.addEventListener(
+    "click",
+    apriMenuMobile
+);
+
+
+mobileOverlay.addEventListener(
+    "click",
+    chiudiMenuMobile
+);
+
+
+/* =========================================================
+   MESSAGGI
+   ========================================================= */
+
+function apriMessaggi() {
+
+    /*
+      Se hai una pagina specifica per i messaggi,
+      sostituisci qui l'URL.
+    */
+
+    window.location.href =
+        "messaggi-privati.html";
+
+}
 
 
 /* =========================================================
@@ -1427,84 +3088,118 @@ document
 
 async function salvaProfilo() {
 
-  const corpo = {
-
-    nome:
-      document.getElementById("nome").value,
-
-    cognome:
-      document.getElementById("cognome").value,
-
-    dataNascita:
-      document.getElementById(
-        "dataNascita"
-      ).value,
-
-    sesso:
-      document.getElementById(
-        "sesso"
-      ).value,
-
-    citta:
-      document.getElementById(
-        "citta"
-      ).value,
-
-    provincia:
-      document.getElementById(
-        "provincia"
-      ).value
-
-  };
+    const status =
+        document.getElementById(
+            "profiloStatus"
+        );
 
 
-  try {
+    const corpo = {
 
-    const risposta =
-      await fetch(
-        SERVER +
-        "/api/modifica-profilo",
-        {
-          method: "POST",
-          credentials: "include",
-          headers: {
-            "Content-Type":
-              "application/json"
-          },
-          body:
-            JSON.stringify(corpo)
+        nome:
+            document.getElementById(
+                "nome"
+            ).value,
+
+        cognome:
+            document.getElementById(
+                "cognome"
+            ).value,
+
+        dataNascita:
+            document.getElementById(
+                "dataNascita"
+            ).value,
+
+        sesso:
+            document.getElementById(
+                "sesso"
+            ).value,
+
+        citta:
+            document.getElementById(
+                "citta"
+            ).value,
+
+        provincia:
+            document.getElementById(
+                "provincia"
+            ).value
+
+    };
+
+
+    status.textContent =
+        "Salvataggio in corso...";
+
+    status.className =
+        "avatar-status";
+
+
+    try {
+
+        const risposta =
+            await fetch(
+                SERVER +
+                "/api/modifica-profilo",
+                {
+                    method: "POST",
+                    credentials: "include",
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+                    body:
+                        JSON.stringify(
+                            corpo
+                        )
+                }
+            );
+
+
+        const dati =
+            await risposta.json();
+
+
+        if (!risposta.ok) {
+
+            throw new Error(
+                dati.errore ||
+                "Errore durante il salvataggio."
+            );
+
         }
-      );
 
 
-    const dati =
-      await risposta.json();
+        Object.assign(
+            datiUtente,
+            corpo
+        );
 
 
-    if (risposta.ok) {
+        status.textContent =
+            "Modifiche salvate.";
 
-      alert(
-        "Profilo aggiornato!"
-      );
+        status.classList.add(
+            "success"
+        );
 
-    } else {
 
-      alert(
-        dati.errore ||
-        "Errore"
-      );
+    } catch (errore) {
+
+        console.error(
+            errore
+        );
+
+        status.textContent =
+            errore.message ||
+            "Errore server.";
+
+        status.classList.add(
+            "error"
+        );
 
     }
-
-  } catch (e) {
-
-    console.error(e);
-
-    alert(
-      "Errore server"
-    );
-
-  }
 
 }
 
@@ -1515,77 +3210,111 @@ async function salvaProfilo() {
 
 async function cambiaNickname() {
 
-  const nickname =
-    document
-      .getElementById(
-        "nuovoNickname"
-      )
-      .value
-      .trim();
+    const status =
+        document.getElementById(
+            "nicknameStatus"
+        );
 
 
-  if (!nickname) {
-
-    alert(
-      "Inserisci un nickname"
-    );
-
-    return;
-
-  }
+    const nickname =
+        document
+            .getElementById(
+                "nuovoNickname"
+            )
+            .value
+            .trim();
 
 
-  try {
+    if (!nickname) {
 
-    const risposta =
-      await fetch(
-        SERVER +
-        "/api/modifica-nickname",
-        {
-          method: "POST",
-          credentials: "include",
-          headers: {
-            "Content-Type":
-              "application/json"
-          },
-          body:
-            JSON.stringify({
-              nickname
-            })
-        }
-      );
+        status.textContent =
+            "Inserisci un nickname.";
 
+        status.className =
+            "avatar-status error";
 
-    const dati =
-      await risposta.json();
-
-
-    if (risposta.ok) {
-
-      alert(
-        "Nickname cambiato!"
-      );
-
-      location.reload();
-
-    } else {
-
-      alert(
-        dati.errore ||
-        "Errore"
-      );
-
+        return;
     }
 
-  } catch (e) {
 
-    console.error(e);
+    status.textContent =
+        "Aggiornamento in corso...";
 
-    alert(
-      "Errore server"
-    );
+    status.className =
+        "avatar-status";
 
-  }
+
+    try {
+
+        const risposta =
+            await fetch(
+                SERVER +
+                "/api/modifica-nickname",
+                {
+                    method: "POST",
+                    credentials: "include",
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+                    body:
+                        JSON.stringify({
+                            nickname
+                        })
+                }
+            );
+
+
+        const dati =
+            await risposta.json();
+
+
+        if (!risposta.ok) {
+
+            throw new Error(
+                dati.errore ||
+                "Errore durante la modifica."
+            );
+
+        }
+
+
+        datiUtente.nickname =
+            dati.nickname ||
+            nickname;
+
+
+        aggiornaInterfaccia();
+
+
+        status.textContent =
+            "Nickname aggiornato.";
+
+        status.classList.add(
+            "success"
+        );
+
+
+        document.getElementById(
+            "nuovoNickname"
+        ).value = "";
+
+
+    } catch (errore) {
+
+        console.error(
+            errore
+        );
+
+        status.textContent =
+            errore.message ||
+            "Errore server.";
+
+        status.classList.add(
+            "error"
+        );
+
+    }
 
 }
 
@@ -1596,176 +3325,633 @@ async function cambiaNickname() {
 
 async function cambiaPassword() {
 
-  const vecchia =
-    document.getElementById(
-      "vecchiaPassword"
-    ).value;
+    const status =
+        document.getElementById(
+            "passwordStatus"
+        );
 
 
-  const nuova =
-    document.getElementById(
-      "nuovaPassword"
-    ).value;
+    const vecchia =
+        document.getElementById(
+            "vecchiaPassword"
+        ).value;
+
+    const nuova =
+        document.getElementById(
+            "nuovaPassword"
+        ).value;
+
+    const conferma =
+        document.getElementById(
+            "confermaPassword"
+        ).value;
 
 
-  const conferma =
-    document.getElementById(
-      "confermaPassword"
-    ).value;
+    if (
+        !vecchia ||
+        !nuova ||
+        !conferma
+    ) {
 
+        status.textContent =
+            "Compila tutti i campi.";
 
-  if (!vecchia || !nuova || !conferma) {
+        status.className =
+            "avatar-status error";
 
-    alert(
-      "Compila tutti i campi della password."
-    );
-
-    return;
-
-  }
-
-
-  if (nuova !== conferma) {
-
-    alert(
-      "Le password non coincidono"
-    );
-
-    return;
-
-  }
-
-
-  try {
-
-    const risposta =
-      await fetch(
-        SERVER +
-        "/api/cambia-password",
-        {
-          method: "POST",
-          credentials: "include",
-          headers: {
-            "Content-Type":
-              "application/json"
-          },
-          body:
-            JSON.stringify({
-              vecchiaPassword:
-                vecchia,
-
-              nuovaPassword:
-                nuova
-            })
-        }
-      );
-
-
-    const dati =
-      await risposta.json();
-
-
-    if (risposta.ok) {
-
-      alert(
-        "Password cambiata!"
-      );
-
-      document.getElementById(
-        "vecchiaPassword"
-      ).value = "";
-
-      document.getElementById(
-        "nuovaPassword"
-      ).value = "";
-
-      document.getElementById(
-        "confermaPassword"
-      ).value = "";
-
-    } else {
-
-      alert(
-        dati.errore ||
-        "Errore"
-      );
-
+        return;
     }
 
-  } catch (e) {
 
-    console.error(e);
+    if (nuova !== conferma) {
 
-    alert(
-      "Errore server"
-    );
+        status.textContent =
+            "Le password non coincidono.";
 
-  }
+        status.className =
+            "avatar-status error";
+
+        return;
+    }
+
+
+    status.textContent =
+        "Aggiornamento in corso...";
+
+    status.className =
+        "avatar-status";
+
+
+    try {
+
+        const risposta =
+            await fetch(
+                SERVER +
+                "/api/cambia-password",
+                {
+                    method: "POST",
+                    credentials: "include",
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+                    body:
+                        JSON.stringify({
+                            vecchiaPassword:
+                                vecchia,
+                            nuovaPassword:
+                                nuova
+                        })
+                }
+            );
+
+
+        const dati =
+            await risposta.json();
+
+
+        if (!risposta.ok) {
+
+            throw new Error(
+                dati.errore ||
+                "Errore durante il cambio password."
+            );
+
+        }
+
+
+        document.getElementById(
+            "vecchiaPassword"
+        ).value = "";
+
+        document.getElementById(
+            "nuovaPassword"
+        ).value = "";
+
+        document.getElementById(
+            "confermaPassword"
+        ).value = "";
+
+
+        status.textContent =
+            "Password cambiata correttamente.";
+
+        status.classList.add(
+            "success"
+        );
+
+
+    } catch (errore) {
+
+        console.error(
+            errore
+        );
+
+        status.textContent =
+            errore.message ||
+            "Errore server.";
+
+        status.classList.add(
+            "error"
+        );
+
+    }
 
 }
 
 
 /* =========================================================
-   ELIMINA ACCOUNT
+   AVATAR - ELEMENTI
+   ========================================================= */
+
+const avatarInput =
+    document.getElementById(
+        "inputAvatar"
+    );
+
+const avatarDropzone =
+    document.getElementById(
+        "avatarDropzone"
+    );
+
+const avatarSelectBtn =
+    document.getElementById(
+        "avatarSelectBtn"
+    );
+
+const avatarPreview =
+    document.getElementById(
+        "avatarPreview"
+    );
+
+const avatarFileInfo =
+    document.getElementById(
+        "avatarFileInfo"
+    );
+
+const avatarFileName =
+    document.getElementById(
+        "avatarFileName"
+    );
+
+const avatarFileSize =
+    document.getElementById(
+        "avatarFileSize"
+    );
+
+const avatarChangeBtn =
+    document.getElementById(
+        "avatarChangeBtn"
+    );
+
+const avatarSaveBtn =
+    document.getElementById(
+        "avatarSaveBtn"
+    );
+
+const avatarStatus =
+    document.getElementById(
+        "avatarStatus"
+    );
+
+
+/* =========================================================
+   APERTURA FILE
+   ========================================================= */
+
+avatarSelectBtn.addEventListener(
+    "click",
+    () => avatarInput.click()
+);
+
+avatarChangeBtn.addEventListener(
+    "click",
+    () => avatarInput.click()
+);
+
+
+/* =========================================================
+   SELEZIONE FILE
+   ========================================================= */
+
+avatarInput.addEventListener(
+    "change",
+    () => {
+
+        const file =
+            avatarInput.files[0];
+
+        selezionaAvatar(file);
+
+    }
+);
+
+
+/* =========================================================
+   DRAG & DROP
+   ========================================================= */
+
+avatarDropzone.addEventListener(
+    "dragover",
+    event => {
+
+        event.preventDefault();
+
+        avatarDropzone.classList.add(
+            "dragover"
+        );
+
+    }
+);
+
+
+avatarDropzone.addEventListener(
+    "dragleave",
+    () => {
+
+        avatarDropzone.classList.remove(
+            "dragover"
+        );
+
+    }
+);
+
+
+avatarDropzone.addEventListener(
+    "drop",
+    event => {
+
+        event.preventDefault();
+
+        avatarDropzone.classList.remove(
+            "dragover"
+        );
+
+
+        const file =
+            event.dataTransfer.files[0];
+
+        selezionaAvatar(file);
+
+    }
+);
+
+
+/* =========================================================
+   SELEZIONA AVATAR
+   ========================================================= */
+
+function selezionaAvatar(file) {
+
+    avatarStatus.textContent =
+        "";
+
+    avatarStatus.className =
+        "avatar-status";
+
+
+    if (!file) {
+        return;
+    }
+
+
+    const tipiConsentiti = [
+        "image/jpeg",
+        "image/png",
+        "image/webp"
+    ];
+
+
+    if (
+        !tipiConsentiti.includes(
+            file.type
+        )
+    ) {
+
+        avatarStatus.textContent =
+            "Formato non supportato. Usa JPG, PNG o WEBP.";
+
+        avatarStatus.classList.add(
+            "error"
+        );
+
+        return;
+    }
+
+
+    if (
+        file.size >
+        3 * 1024 * 1024
+    ) {
+
+        avatarStatus.textContent =
+            "L'immagine supera il limite di 3 MB.";
+
+        avatarStatus.classList.add(
+            "error"
+        );
+
+        return;
+    }
+
+
+    avatarFileSelezionato =
+        file;
+
+
+    const reader =
+        new FileReader();
+
+
+    reader.onload =
+        event => {
+
+            avatarPreview.innerHTML =
+                `
+                <img
+                    src="${event.target.result}"
+                    alt="Anteprima avatar"
+                >
+                `;
+
+        };
+
+
+    reader.readAsDataURL(file);
+
+
+    avatarFileName.textContent =
+        file.name;
+
+
+    avatarFileSize.textContent =
+        formattaDimensione(
+            file.size
+        );
+
+
+    avatarFileInfo.classList.add(
+        "show"
+    );
+
+
+    avatarSaveBtn.disabled =
+        false;
+
+}
+
+
+/* =========================================================
+   DIMENSIONE
+   ========================================================= */
+
+function formattaDimensione(
+    bytes
+) {
+
+    if (bytes < 1024) {
+        return bytes + " B";
+    }
+
+    if (
+        bytes <
+        1024 * 1024
+    ) {
+        return (
+            (bytes / 1024)
+                .toFixed(1) +
+            " KB"
+        );
+    }
+
+    return (
+        (bytes /
+            (1024 * 1024))
+            .toFixed(1) +
+        " MB"
+    );
+
+}
+
+
+/* =========================================================
+   UPLOAD AVATAR
+   ========================================================= */
+
+avatarSaveBtn.addEventListener(
+    "click",
+    async () => {
+
+        if (
+            !avatarFileSelezionato
+        ) {
+            return;
+        }
+
+
+        const form =
+            new FormData();
+
+
+        form.append(
+            "avatar",
+            avatarFileSelezionato
+        );
+
+
+        avatarSaveBtn.disabled =
+            true;
+
+        avatarSaveBtn.textContent =
+            "Caricamento...";
+
+
+        avatarStatus.textContent =
+            "Caricamento avatar in corso...";
+
+        avatarStatus.className =
+            "avatar-status";
+
+
+        try {
+
+            const risposta =
+                await fetch(
+                    SERVER +
+                    "/api/carica-avatar",
+                    {
+                        method: "POST",
+                        credentials: "include",
+                        body: form
+                    }
+                );
+
+
+            const dati =
+                await risposta.json();
+
+
+            if (!risposta.ok) {
+
+                throw new Error(
+                    dati.errore ||
+                    "Errore durante il caricamento."
+                );
+
+            }
+
+
+            datiUtente.avatar =
+                dati.avatar;
+
+
+            aggiornaInterfaccia();
+
+
+            avatarPreview.innerHTML =
+                `
+                <img
+                    src="${dati.avatar}"
+                    alt="Avatar aggiornato"
+                >
+                `;
+
+
+            avatarFileSelezionato =
+                null;
+
+
+            avatarInput.value =
+                "";
+
+
+            avatarFileInfo.classList.remove(
+                "show"
+            );
+
+
+            avatarStatus.textContent =
+                "Avatar aggiornato correttamente.";
+
+            avatarStatus.classList.add(
+                "success"
+            );
+
+
+        } catch (errore) {
+
+            console.error(
+                errore
+            );
+
+            avatarStatus.textContent =
+                errore.message ||
+                "Errore durante il caricamento.";
+
+            avatarStatus.classList.add(
+                "error"
+            );
+
+        } finally {
+
+            avatarSaveBtn.disabled =
+                !avatarFileSelezionato;
+
+            avatarSaveBtn.textContent =
+                "Carica avatar";
+
+        }
+
+    }
+);
+
+
+/* =========================================================
+   ELIMINAZIONE ACCOUNT
    ========================================================= */
 
 async function eliminaAccount() {
 
-  const conferma =
-    confirm(
-      "Sei sicuro? L'account verrà eliminato definitivamente."
-    );
+    const conferma =
+        confirm(
+            "Sei sicuro di voler eliminare definitivamente il tuo account?"
+        );
 
 
-  if (!conferma) {
-    return;
-  }
-
-
-  try {
-
-    const risposta =
-      await fetch(
-        SERVER +
-        "/api/elimina-account",
-        {
-          method: "POST",
-          credentials: "include"
-        }
-      );
-
-
-    const dati =
-      await risposta.json();
-
-
-    if (risposta.ok) {
-
-      alert(
-        "Account eliminato"
-      );
-
-      window.location.href =
-        "login.html";
-
-    } else {
-
-      alert(
-        dati.errore ||
-        "Errore durante l'eliminazione."
-      );
-
+    if (!conferma) {
+        return;
     }
 
-  } catch (e) {
 
-    console.error(e);
+    const conferma2 =
+        confirm(
+            "Questa operazione è permanente. Confermi nuovamente?"
+        );
 
-    alert(
-      "Errore server"
-    );
 
-  }
+    if (!conferma2) {
+        return;
+    }
+
+
+    const status =
+        document.getElementById(
+            "deleteStatus"
+        );
+
+
+    status.textContent =
+        "Eliminazione in corso...";
+
+    status.className =
+        "avatar-status";
+
+
+    try {
+
+        const risposta =
+            await fetch(
+                SERVER +
+                "/api/elimina-account",
+                {
+                    method: "POST",
+                    credentials: "include"
+                }
+            );
+
+
+        const dati =
+            await risposta.json();
+
+
+        if (!risposta.ok) {
+
+            throw new Error(
+                dati.errore ||
+                "Errore durante l'eliminazione."
+            );
+
+        }
+
+
+        window.location.href =
+            "login.html";
+
+    } catch (errore) {
+
+        console.error(
+            errore
+        );
+
+        status.textContent =
+            errore.message ||
+            "Errore server.";
+
+        status.classList.add(
+            "error"
+        );
+
+    }
 
 }
 
@@ -1776,8 +3962,8 @@ async function eliminaAccount() {
 
 function tornaHome() {
 
-  window.location.href =
-    "https://solfriniluca1.wixstudio.com/giochisocieta";
+    window.location.href =
+        HOME_URL;
 
 }
 
@@ -1787,6 +3973,8 @@ function tornaHome() {
    ========================================================= */
 
 caricaProfilo();
+
+gestisciHash();
 
 </script>
 
