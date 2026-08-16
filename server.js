@@ -2797,13 +2797,25 @@ if (
             partita.tiriEffettuatiNelTurno = 0;
             partita.tiriConsentitiNelTurno = 1;
 
-            partita.animazioneTiroInCorso = false;
+                  partita.animazioneTiroInCorso = false;
 
-            avviaTimerTurno(
-              partita,
-              nomeStanza
-            );
-          }
+      /*
+       * SOLO ADESSO, dopo la fine dell'animazione,
+       * passiamo al prossimo giocatore.
+       */
+      if (
+        !risultato.tiraAncora &&
+        !risultato.vittoria
+      ) {
+        passaAlProssimoTurno(
+          partita
+        );
+      }
+
+      avviaTimerTurno(
+        partita,
+        nomeStanza
+      );
 
           const idAttuale =
             partita.ordineGiocatori[
