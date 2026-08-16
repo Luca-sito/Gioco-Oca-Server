@@ -7,182 +7,283 @@
 
 <style>
 * {
-  box-sizing: border-box;
-  font-family: Arial, sans-serif;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+}
+
+html,
+body {
+    width: 100%;
+    min-height: 100%;
 }
 
 body {
-  margin: 0;
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #101820;
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #101820;
+    color: #fff;
 }
+
+/* =========================================================
+   CONTENITORE LOGIN
+   ========================================================= */
 
 .scatola {
-  background: #1e2a38;
-  border: 2px solid #ffd700;
-  border-radius: 14px;
-  padding: 36px;
-  width: 340px;
-  max-width: 90%;
+    width: 340px;
+    max-width: calc(100vw - 30px);
+    padding: 36px;
+    background: #1e2a38;
+    border: 2px solid #ffd700;
+    border-radius: 14px;
 }
+
+/* =========================================================
+   TITOLO
+   ========================================================= */
 
 h1 {
-  color: #ffd700;
-  text-align: center;
-  font-size: 22px;
-  margin-top: 0;
-  margin-bottom: 24px;
+    margin: 0 0 24px;
+    color: #ffd700;
+    text-align: center;
+    font-size: 22px;
+    line-height: 1.2;
 }
 
-label {
-  display: block;
-  color: #ccc;
-  font-size: 13px;
-  font-weight: bold;
-  margin: 14px 0 6px;
-}
-
-input {
-  width: 100%;
-  padding: 11px;
-  border-radius: 8px;
-  border: none;
-  outline: none;
-  background: #101820;
-  color: #fff;
-  font-size: 14px;
-}
-
-input:focus {
-  outline: 1px solid #ffd700;
-}
-
-button {
-  width: 100%;
-  margin-top: 22px;
-  padding: 13px;
-  border: none;
-  border-radius: 8px;
-  background: #ffd700;
-  color: #111;
-  font-weight: bold;
-  font-size: 15px;
-  cursor: pointer;
-  transition: 0.2s;
-}
-
-button:hover {
-  background: #ffaa00;
-}
-
-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
+/* =========================================================
+   GOOGLE
+   ========================================================= */
 
 .google-btn {
-  margin-top: 4px;
-  background: #fff;
-  color: #222;
-  border: 1px solid #d9d9d9;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
+    width: 100%;
+    height: 44px;
+    margin: 0;
+    padding: 0 14px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+
+    border: 1px solid #d9d9d9;
+    border-radius: 8px;
+
+    background: #fff;
+    color: #222;
+
+    font-size: 14px;
+    font-weight: bold;
+
+    cursor: pointer;
+    transition: background 0.2s, box-shadow 0.2s;
 }
 
 .google-btn:hover {
-  background: #f4f4f4;
+    background: #f5f5f5;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.google-btn:active {
+    transform: translateY(1px);
+}
+
+.google-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 .google-icon {
-  width: 20px;
-  height: 20px;
-  display: block;
+    width: 20px;
+    height: 20px;
+    flex: 0 0 20px;
+    display: block;
 }
+
+/* =========================================================
+   LINEA SOTTO GOOGLE
+   SOLO LINEA, SENZA "OPPURE"
+   ========================================================= */
 
 .linea-separatrice {
-  width: 100%;
-  height: 1px;
-  background: #3b4652;
-  margin: 22px 0 6px;
+    width: 100%;
+    height: 1px;
+    margin: 20px 0 6px;
+    background: #3b4652;
 }
 
+/* =========================================================
+   LABEL
+   ========================================================= */
+
+label {
+    display: block;
+    margin: 14px 0 6px;
+
+    color: #ccc;
+
+    font-size: 13px;
+    font-weight: bold;
+}
+
+/* =========================================================
+   INPUT
+   ========================================================= */
+
+input {
+    width: 100%;
+    height: 36px;
+    padding: 0 11px;
+
+    border: none;
+    border-radius: 8px;
+    outline: none;
+
+    background: #101820;
+    color: #fff;
+
+    font-size: 14px;
+}
+
+input::placeholder {
+    color: #647181;
+}
+
+input:focus {
+    outline: 1px solid #ffd700;
+}
+
+/* =========================================================
+   BOTTONE ACCEDI
+   ========================================================= */
+
+#btnAccedi {
+    width: 100%;
+    height: 40px;
+
+    margin-top: 22px;
+    padding: 0 13px;
+
+    border: none;
+    border-radius: 8px;
+
+    background: #ffd700;
+    color: #111;
+
+    font-size: 15px;
+    font-weight: bold;
+
+    cursor: pointer;
+
+    transition: background 0.2s, transform 0.1s;
+}
+
+#btnAccedi:hover {
+    background: #ffaa00;
+}
+
+#btnAccedi:active {
+    transform: translateY(1px);
+}
+
+#btnAccedi:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* =========================================================
+   ERRORE
+   ========================================================= */
+
+.errore {
+    min-height: 16px;
+    margin-top: 12px;
+
+    color: #ff6b6b;
+
+    font-size: 13px;
+    text-align: center;
+    line-height: 1.3;
+}
+
+/* =========================================================
+   LINEA CON "OPPURE"
+   ========================================================= */
+
 .linea-oppure {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 22px 0 2px;
-  color: #888;
-  font-size: 12px;
+    width: 100%;
+
+    display: flex;
+    align-items: center;
+
+    gap: 10px;
+
+    margin: 19px 0 0;
+
+    color: #888;
+
+    font-size: 12px;
 }
 
 .linea-oppure span {
-  flex: 1;
-  height: 1px;
-  background: #3b4652;
+    flex: 1;
+    height: 1px;
+    background: #3b4652;
 }
 
 .linea-oppure b {
-  font-weight: normal;
-  color: #888;
-  white-space: nowrap;
+    color: #888;
+    font-size: 12px;
+    font-weight: normal;
+    white-space: nowrap;
 }
 
+/* =========================================================
+   BOTTONE REGISTRATI
+   ========================================================= */
+
 .registrati-btn {
-  margin-top: 14px;
-  background: transparent;
-  color: #ffd700;
-  border: 1px solid #ffd700;
+    width: 100%;
+    height: 40px;
+
+    margin-top: 14px;
+    padding: 0 13px;
+
+    border: 1px solid #ffd700;
+    border-radius: 8px;
+
+    background: transparent;
+    color: #ffd700;
+
+    font-size: 15px;
+    font-weight: bold;
+
+    cursor: pointer;
+
+    transition: background 0.2s, color 0.2s, transform 0.1s;
 }
 
 .registrati-btn:hover {
-  background: rgba(255, 215, 0, 0.08);
+    background: rgba(255, 215, 0, 0.08);
 }
 
-.divisore {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 20px 0 4px;
-  color: #888;
-  font-size: 12px;
+.registrati-btn:active {
+    transform: translateY(1px);
 }
 
-.divisore::before,
-.divisore::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: #3b4652;
-}
+/* =========================================================
+   MOBILE
+   ========================================================= */
 
-.errore {
-  color: #ff6b6b;
-  font-size: 13px;
-  margin-top: 12px;
-  text-align: center;
-  min-height: 16px;
-}
+@media (max-width: 420px) {
 
-.link-sotto {
-  text-align: center;
-  margin-top: 16px;
-  font-size: 13px;
-  color: #aaa;
-}
+    .scatola {
+        width: 340px;
+        max-width: calc(100vw - 24px);
+        padding: 30px 24px;
+    }
 
-.link-sotto a {
-  color: #ffd700;
-  text-decoration: none;
-}
-
-.link-sotto a:hover {
-  text-decoration: underline;
 }
 </style>
 </head>
@@ -191,141 +292,177 @@ button:disabled {
 
 <div class="scatola">
 
-  <h1>Accedi</h1>
+    <!-- TITOLO -->
+    <h1>Accedi</h1>
 
-  <button
-    id="btnGoogle"
-    class="google-btn"
-    type="button"
-    onclick="accediConGoogle()"
-  >
-    <svg
-      class="google-icon"
-      viewBox="0 0 24 24"
-      aria-hidden="true"
+    <!-- =====================================================
+         ACCEDI CON GOOGLE
+         ===================================================== -->
+
+    <button
+        id="btnGoogle"
+        class="google-btn"
+        type="button"
+        onclick="accediConGoogle()"
     >
-      <path fill="#4285F4" d="M21.35 12.23c0-.74-.07-1.45-.21-2.13H12v4.03h5.24a4.48 4.48 0 0 1-1.94 2.94v2.44h3.14c1.84-1.69 2.91-4.18 2.91-7.28z"/>
-      <path fill="#34A853" d="M12 21.75c2.63 0 4.84-.87 6.45-2.37l-3.14-2.44c-.87.58-1.98.92-3.31.92-2.55 0-4.71-1.72-5.49-4.03H3.27v2.52A9.75 9.75 0 0 0 12 21.75z"/>
-      <path fill="#FBBC05" d="M6.51 13.83A5.86 5.86 0 0 1 6.2 12c0-.64.11-1.26.31-1.83V7.65H3.27A9.75 9.75 0 0 0 2.25 12c0 1.57.38 3.05 1.02 4.35l3.24-2.52z"/>
-      <path fill="#EA4335" d="M12 6.14c1.43 0 2.71.49 3.72 1.46l2.79-2.79C16.84 3.17 14.63 2.25 12 2.25a9.75 9.75 0 0 0-8.73 5.4l3.24 2.52C7.29 7.86 9.45 6.14 12 6.14z"/>
-    </svg>
+        <svg
+            class="google-icon"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+        >
+            <path
+                fill="#4285F4"
+                d="M21.35 12.23c0-.74-.07-1.45-.21-2.13H12v4.03h5.24a4.48 4.48 0 0 1-1.94 2.94v2.44h3.14c1.84-1.69 2.91-4.18 2.91-7.28z"
+            />
 
-    <span>Accedi con Google</span>
-  </button>
+            <path
+                fill="#34A853"
+                d="M12 21.75c2.63 0 4.84-.87 6.45-2.37l-3.14-2.44c-.87.58-1.98.92-3.31.92-2.55 0-4.71-1.72-5.49-4.03H3.27v2.52A9.75 9.75 0 0 0 12 21.75z"
+            />
 
-  <div class="linea-separatrice"></div>
+            <path
+                fill="#FBBC05"
+                d="M6.51 13.83A5.86 5.86 0 0 1 6.2 12c0-.64.11-1.26.31-1.83V7.65H3.27A9.75 9.75 0 0 0 2.25 12c0 1.57.38 3.05 1.02 4.35l3.24-2.52z"
+            />
 
-  <label for="email">Email</label>
-  <input
-    type="email"
-    id="email"
-    placeholder="tuaemail@esempio.com"
-    autocomplete="email"
-  >
+            <path
+                fill="#EA4335"
+                d="M12 6.14c1.43 0 2.71.49 3.72 1.46l2.79-2.79C16.84 3.17 14.63 2.25 12 2.25a9.75 9.75 0 0 0-8.73 5.4l3.24 2.52C7.29 7.86 9.45 6.14 12 6.14z"
+            />
+        </svg>
 
-  <label for="password">Password</label>
-  <input
-    type="password"
-    id="password"
-    placeholder="••••••••"
-    autocomplete="current-password"
-  >
+        <span>Accedi con Google</span>
+    </button>
 
-  <button id="btnAccedi" type="button" onclick="accedi()">
-    Accedi
-  </button>
 
-  <div class="errore" id="errore"></div>
+    <!-- =====================================================
+         SOLO LINEA
+         ===================================================== -->
 
-  <div class="linea-oppure">
-    <span></span>
-    <b>Oppure</b>
-    <span></span>
-  </div>
+    <div class="linea-separatrice"></div>
 
-  <button
-    id="btnRegistrati"
-    class="registrati-btn"
-    type="button"
-    onclick="vaiARegistrazione()"
-  >
-    Registrati
-  </button>
+
+    <!-- =====================================================
+         EMAIL
+         ===================================================== -->
+
+    <label for="email">Email</label>
+
+    <input
+        type="email"
+        id="email"
+        placeholder="tuaemail@esempio.com"
+        autocomplete="email"
+    >
+
+
+    <!-- =====================================================
+         PASSWORD
+         ===================================================== -->
+
+    <label for="password">Password</label>
+
+    <input
+        type="password"
+        id="password"
+        placeholder="••••••••"
+        autocomplete="current-password"
+    >
+
+
+    <!-- =====================================================
+         ACCEDI
+         ===================================================== -->
+
+    <button
+        id="btnAccedi"
+        type="button"
+        onclick="accedi()"
+    >
+        Accedi
+    </button>
+
+
+    <!-- =====================================================
+         ERRORE
+         ===================================================== -->
+
+    <div
+        class="errore"
+        id="errore"
+    ></div>
+
+
+    <!-- =====================================================
+         OPPURE
+         ===================================================== -->
+
+    <div class="linea-oppure">
+
+        <span></span>
+
+        <b>Oppure</b>
+
+        <span></span>
+
+    </div>
+
+
+    <!-- =====================================================
+         REGISTRATI
+         ===================================================== -->
+
+    <button
+        id="btnRegistrati"
+        class="registrati-btn"
+        type="button"
+        onclick="vaiARegistrazione()"
+    >
+        Registrati
+    </button>
 
 </div>
 
-  <button
-    id="btnGoogle"
-    class="google-btn"
-    type="button"
-    onclick="accediConGoogle()"
-  >
-    <svg
-      class="google-icon"
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-    >
-      <path fill="#4285F4" d="M21.35 12.23c0-.74-.07-1.45-.21-2.13H12v4.03h5.24a4.48 4.48 0 0 1-1.94 2.94v2.44h3.14c1.84-1.69 2.91-4.18 2.91-7.28z"/>
-      <path fill="#34A853" d="M12 21.75c2.63 0 4.84-.87 6.45-2.37l-3.14-2.44c-.87.58-1.98.92-3.31.92-2.55 0-4.71-1.72-5.49-4.03H3.27v2.52A9.75 9.75 0 0 0 12 21.75z"/>
-      <path fill="#FBBC05" d="M6.51 13.83A5.86 5.86 0 0 1 6.2 12c0-.64.11-1.26.31-1.83V7.65H3.27A9.75 9.75 0 0 0 2.25 12c0 1.57.38 3.05 1.02 4.35l3.24-2.52z"/>
-      <path fill="#EA4335" d="M12 6.14c1.43 0 2.71.49 3.72 1.46l2.79-2.79C16.84 3.17 14.63 2.25 12 2.25a9.75 9.75 0 0 0-8.73 5.4l3.24 2.52C7.29 7.86 9.45 6.14 12 6.14z"/>
-    </svg>
-
-    <span>Accedi con Google</span>
-  </button>
-
-  <div class="errore" id="errore"></div>
-
-  <div class="link-sotto">
-    Non hai un account?
-    <a id="linkRegistrati" href="registrati.html">Registrati</a>
-  </div>
-
-</div>
 
 <script>
 
-// ============================================================
-// BLOCCO IFRAME
-// ============================================================
+/* ==========================================================
+   USCITA DA EVENTUALE IFRAME
+   ========================================================== */
 
 if (window.top !== window.self) {
     window.top.location.href = window.location.href;
 }
 
 
-// ============================================================
-// REDIRECT
-// ============================================================
+/* ==========================================================
+   PARAMETRI URL
+   ========================================================== */
 
-const parametri = new URLSearchParams(window.location.search);
+const parametri = new URLSearchParams(
+    window.location.search
+);
 
 const redirect = parametri.get("redirect");
 
-const linkRegistrati = document.getElementById("linkRegistrati");
 
-if (redirect) {
-    linkRegistrati.href =
-        "registrati.html?redirect=" +
-        encodeURIComponent(redirect);
-}
-
-
-// ============================================================
-// ERRORE GOOGLE
-// ============================================================
+/* ==========================================================
+   EVENTUALE ERRORE GOOGLE
+   ========================================================== */
 
 const erroreGoogle = parametri.get("errore");
 
 if (erroreGoogle === "google") {
+
     document.getElementById("errore").textContent =
         "Accesso con Google non riuscito. Riprova.";
+
 }
 
 
-// ============================================================
-// LOGIN EMAIL / PASSWORD
-// ============================================================
+/* ==========================================================
+   LOGIN EMAIL + PASSWORD
+   ========================================================== */
 
 async function accedi() {
 
@@ -341,16 +478,22 @@ async function accedi() {
     const btn =
         document.getElementById("btnAccedi");
 
+
     erroreEl.textContent = "";
 
+
     if (!email || !password) {
+
         erroreEl.textContent =
             "Inserisci email e password.";
+
         return;
     }
 
+
     btn.disabled = true;
     btn.textContent = "Accesso in corso...";
+
 
     try {
 
@@ -358,10 +501,13 @@ async function accedi() {
             "https://gioco-oca-server.onrender.com/api/login",
             {
                 method: "POST",
+
                 credentials: "include",
+
                 headers: {
                     "Content-Type": "application/json"
                 },
+
                 body: JSON.stringify({
                     email,
                     password
@@ -369,7 +515,9 @@ async function accedi() {
             }
         );
 
+
         const dati = await risposta.json();
+
 
         if (!risposta.ok) {
 
@@ -383,77 +531,115 @@ async function accedi() {
             return;
         }
 
+
         localStorage.setItem(
             "loginEffettuato",
             "si"
         );
 
+
         window.location.href =
             redirect ||
             "https://solfriniluca1.wixstudio.com/giochisocieta";
 
+
     } catch (e) {
 
-        console.error(e);
+        console.error(
+            "Errore login:",
+            e
+        );
+
 
         erroreEl.textContent =
             "Errore di connessione al server.";
 
+
         btn.disabled = false;
         btn.textContent = "Accedi";
+
     }
+
 }
 
 
-// ============================================================
-// LOGIN GOOGLE
-// ============================================================
+/* ==========================================================
+   LOGIN CON GOOGLE
+   ========================================================== */
 
 function accediConGoogle() {
 
     let url =
         "https://gioco-oca-server.onrender.com/auth/google";
 
+
     if (redirect) {
 
         url +=
             "?redirect=" +
             encodeURIComponent(redirect);
+
     }
 
+
     window.location.href = url;
+
 }
 
 
-// ============================================================
-// INVIO CON ENTER
-// ============================================================
+/* ==========================================================
+   REGISTRAZIONE
+   ========================================================== */
+
+function vaiARegistrazione() {
+
+    if (redirect) {
+
+        window.location.href =
+            "registrati.html?redirect=" +
+            encodeURIComponent(redirect);
+
+    } else {
+
+        window.location.href =
+            "registrati.html";
+
+    }
+
+}
+
+
+/* ==========================================================
+   TASTO ENTER
+   ========================================================== */
 
 document.addEventListener(
     "keydown",
     function(e) {
 
-        if (e.key === "Enter") {
-
-            const elemento =
-                document.activeElement;
-
-            if (
-                elemento &&
-                elemento.id === "password"
-            ) {
-                accedi();
-            }
+        if (e.key !== "Enter") {
+            return;
         }
+
+
+        const elemento =
+            document.activeElement;
+
+
+        if (
+            elemento &&
+            (
+                elemento.id === "email" ||
+                elemento.id === "password"
+            )
+        ) {
+
+            accedi();
+
+        }
+
     }
 );
-
-function vaiARegistrazione() {
-    window.location.href =
-        redirect
-            ? "registrati.html?redirect=" + encodeURIComponent(redirect)
-            : "registrati.html";
-}
 
 </script>
 
