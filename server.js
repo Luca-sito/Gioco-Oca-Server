@@ -2210,7 +2210,7 @@ wss.on("connection", (socket, request) => {
       erroreInterno
     );
   }
-
+  });
 });
 
 server.listen(PORT, async () => {
