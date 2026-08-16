@@ -419,11 +419,29 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET && GOOGLE_CALLBACK_URL) {
   }));
 }
 
-app.get("/auth/google",
+app.get("/auth/google", (req, res, next) => {
+
+  const redirect =
+    typeof req.query.redirect === "string"
+      ? req.query.redirect
+      : "";
+
+  if (redirect) {
+    res.cookie(
+      "google_redirect",
+      redirect,
+      {
+        ...OPZIONI_COOKIE,
+        maxAge: 10 * 60 * 1000
+      }
+    );
+  }
+
   passport.authenticate("google", {
     scope: ["profile", "email"]
-  })
-);
+  })(req, res, next);
+
+});
 
 app.get(
   "/auth/google/callback",
@@ -451,8 +469,18 @@ app.get(
 
       res.cookie("token", token, OPZIONI_COOKIE);
 
-      // Login completato.
-      res.redirect("/");
+const redirectGoogle =
+  req.cookies.google_redirect || "";
+
+res.clearCookie(
+  "google_redirect",
+  OPZIONI_COOKIE
+);
+
+res.redirect(
+  redirectGoogle ||
+  "https://solfriniluca1.wixstudio.com/giochisocieta"
+);
 
     } catch (errore) {
 
