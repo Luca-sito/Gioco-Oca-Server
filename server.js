@@ -872,9 +872,16 @@ function tiraDadoRandomOrg() {
   });
 }
 async function lanciaDueDadiSicuri() {
-  const risultato = await tiraDadoRandomOrg();
-  if (risultato) return risultato;
-  return { dado1: Math.floor(Math.random() * 6) + 1, dado2: Math.floor(Math.random() * 6) + 1 };
+  const risultato =
+    await tiraDadoRandomOrg();
+
+  if (!risultato) {
+    throw new Error(
+      "Random.org non disponibile: impossibile generare i dadi."
+    );
+  }
+
+  return risultato;
 }
 
 // ===== LOGICA DI GIOCO =====
@@ -1199,7 +1206,6 @@ function avviaTimerTurno(
     }, durata);
 }
 
-
 function ripristinaTimerTurno(
   partita,
   nomeStanza
@@ -1208,9 +1214,14 @@ function ripristinaTimerTurno(
     return;
   }
 
-  if (
-    !partita.scadenzaTurno
-  ) {
+  // Durante il ripristino non c'è un'animazione
+  // di tiro in corso.
+  partita.animazioneTiroInCorso = false;
+
+  // Se per qualche motivo la partita non ha
+  // una scadenza salvata, creiamo un nuovo
+  // turno regolare.
+  if (!partita.scadenzaTurno) {
     avviaTimerTurno(
       partita,
       nomeStanza
@@ -1227,11 +1238,13 @@ function ripristinaTimerTurno(
     partita.scadenzaTurno -
     Date.now();
 
-  // Il turno era già scaduto mentre
-  // il server era offline/ripartiva.
+  // ---------------------------------------------------------
+  // IL TURNO ERA GIÀ SCADUTO
+  // ---------------------------------------------------------
+
   if (tempoRimanente <= 0) {
 
-    setTimeout(() => {
+    partita.timerTurno = setTimeout(async () => {
 
       if (
         token !==
@@ -1240,7 +1253,11 @@ function ripristinaTimerTurno(
         return;
       }
 
-      gestisciScadenzaTurno(
+      partita.timerTurno = null;
+
+      partita.animazioneTiroInCorso = false;
+
+      await gestisciScadenzaTurno(
         partita,
         nomeStanza
       );
@@ -1249,6 +1266,10 @@ function ripristinaTimerTurno(
 
     return;
   }
+
+  // ---------------------------------------------------------
+  // IL TURNO È ANCORA ATTIVO
+  // ---------------------------------------------------------
 
   partita.timerTurno =
     setTimeout(async () => {
@@ -1262,6 +1283,8 @@ function ripristinaTimerTurno(
 
       partita.timerTurno = null;
 
+      partita.animazioneTiroInCorso = false;
+
       await gestisciScadenzaTurno(
         partita,
         nomeStanza
@@ -1270,14 +1293,54 @@ function ripristinaTimerTurno(
     }, tempoRimanente);
 }
 
-async function gestisciScadenzaTurno(partita, nomeStanza) {
-  if (!partita.iniziata) return;
-  const idGiocatoreDiTurno = partita.ordineGiocatori[partita.turnoAttuale];
-  const giocatore = partita.giocatori[idGiocatoreDiTurno];
-  if (!giocatore) return;
-  giocatore.tentativiAutomaticiConsecutivi = (giocatore.tentativiAutomaticiConsecutivi || 0) + 1;
-  if (giocatore.tentativiAutomaticiConsecutivi > 3) { await forzaAbbandonoPerInattivita(partita, nomeStanza, idGiocatoreDiTurno); return; }
-  await eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatoreDiTurno, true);
+
+async function gestisciScadenzaTurno(
+  partita,
+  nomeStanza
+) {
+  if (!partita.iniziata) {
+    return;
+  }
+
+  const idGiocatoreDiTurno =
+    partita.ordineGiocatori[
+      partita.turnoAttuale
+    ];
+
+  const giocatore =
+    partita.giocatori[
+      idGiocatoreDiTurno
+    ];
+
+  if (!giocatore) {
+    return;
+  }
+
+  giocatore.tentativiAutomaticiConsecutivi =
+    (
+      giocatore.tentativiAutomaticiConsecutivi ||
+      0
+    ) + 1;
+
+  if (
+    giocatore.tentativiAutomaticiConsecutivi >
+    3
+  ) {
+    await forzaAbbandonoPerInattivita(
+      partita,
+      nomeStanza,
+      idGiocatoreDiTurno
+    );
+
+    return;
+  }
+
+  await eseguiTiroDadiPerGiocatore(
+    partita,
+    nomeStanza,
+    idGiocatoreDiTurno,
+    true
+  );
 }
 
 async function eseguiTiroDadiPerGiocatore(
@@ -1292,6 +1355,12 @@ async function eseguiTiroDadiPerGiocatore(
   ) {
     return;
   }
+
+  if (
+  partita.animazioneTiroInCorso
+) {
+  return;
+}
 
   if (
     partita.ordineGiocatori[
@@ -2326,6 +2395,7 @@ wss.on("connection", (socket, request) => {
           turnoAttuale: 0,
           iniziata: false,
           elaborandoTiro: false,
+          animazioneTiroInCorso: false,
           tiriEffettuatiNelTurno: 0,
           tiriConsentitiNelTurno: 1,
           invitati: dati.modalita === "privata" ? { [uid]: true } : null, timerTurno: null, tempoInizioTurno: null,
@@ -2594,7 +2664,9 @@ if (
           await concludiPartita(partita, vincitoreId, nomeStanza, elencoPartecipantiOriginali);
           await rimuoviPartita(nomeStanza, partita.id);
         } else {
+
   if (eraLuiIlGiocatoreAttivo) {
+
     partita.tiriEffettuatiNelTurno = 0;
     partita.tiriConsentitiNelTurno = 1;
 
@@ -2608,7 +2680,79 @@ if (
     partita.ordineGiocatori[
       partita.turnoAttuale
     ];
-          const idAttuale = partita.ordineGiocatori[partita.turnoAttuale];
+
+  const statoGiocatori =
+    costruisciStatoGiocatori(partita);
+
+  Object.values(partita.giocatori).forEach(g => {
+
+    if (
+      g.socket &&
+      g.socket.readyState === WebSocket.OPEN
+    ) {
+      g.socket.send(
+        JSON.stringify({
+          tipo: "statoPartita",
+
+          giocatori:
+            statoGiocatori,
+
+          turnoDiId:
+            idAttuale,
+
+          messaggi: [
+            nomeUscente +
+            " ha abbandonato la partita."
+          ],
+
+          tempoInizioTurno:
+            partita.tempoInizioTurno || null,
+
+          scadenzaTurno:
+            partita.scadenzaTurno || null,
+
+          durataMossaMs:
+            millisecondiMossa(partita),
+
+          tiriEffettuatiNelTurno:
+            partita.tiriEffettuatiNelTurno,
+
+          tiriConsentitiNelTurno:
+            partita.tiriConsentitiNelTurno
+        })
+      );
+    }
+  });
+
+  await aggiornaStatoPartita(
+    partita.id,
+    {
+      giocatori:
+        preparaGiocatoriPerFirebase(
+          partita.giocatori
+        ),
+
+      ordineGiocatori:
+        partita.ordineGiocatori,
+
+      turnoAttuale:
+        partita.turnoAttuale,
+
+      tiriEffettuatiNelTurno:
+        partita.tiriEffettuatiNelTurno,
+
+      tiriConsentitiNelTurno:
+        partita.tiriConsentitiNelTurno,
+
+      tempoInizioTurno:
+        partita.tempoInizioTurno || null,
+
+      scadenzaTurno:
+        partita.scadenzaTurno || null
+    }
+  );
+}
+    ];
           const statoGiocatori = costruisciStatoGiocatori(partita);
           Object.values(partita.giocatori).forEach(g => {
             if (g.socket && g.socket.readyState === WebSocket.OPEN) {
