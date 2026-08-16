@@ -2897,7 +2897,7 @@ if (
           );
         }
 
-        inviaListaPartite(
+                inviaListaPartite(
           nomeStanza
         );
 
