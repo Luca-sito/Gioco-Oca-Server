@@ -2665,105 +2665,97 @@ if (
           await rimuoviPartita(nomeStanza, partita.id);
         } else {
 
-  if (eraLuiIlGiocatoreAttivo) {
+          } else {
 
-    partita.tiriEffettuatiNelTurno = 0;
-    partita.tiriConsentitiNelTurno = 1;
+          if (eraLuiIlGiocatoreAttivo) {
 
-    avviaTimerTurno(
-      partita,
-      nomeStanza
-    );
-  }
+            partita.tiriEffettuatiNelTurno = 0;
+            partita.tiriConsentitiNelTurno = 1;
 
-  const idAttuale =
-    partita.ordineGiocatori[
-      partita.turnoAttuale
-    ];
+            avviaTimerTurno(
+              partita,
+              nomeStanza
+            );
+          }
 
-  const statoGiocatori =
-    costruisciStatoGiocatori(partita);
+          const idAttuale =
+            partita.ordineGiocatori[
+              partita.turnoAttuale
+            ];
 
-  Object.values(partita.giocatori).forEach(g => {
+          const statoGiocatori =
+            costruisciStatoGiocatori(partita);
 
-    if (
-      g.socket &&
-      g.socket.readyState === WebSocket.OPEN
-    ) {
-      g.socket.send(
-        JSON.stringify({
-          tipo: "statoPartita",
+          Object.values(
+            partita.giocatori
+          ).forEach(g => {
 
-          giocatori:
-            statoGiocatori,
+            if (
+              g.socket &&
+              g.socket.readyState === WebSocket.OPEN
+            ) {
 
-          turnoDiId:
-            idAttuale,
+              g.socket.send(
+                JSON.stringify({
+                  tipo: "statoPartita",
 
-          messaggi: [
-            nomeUscente +
-            " ha abbandonato la partita."
-          ],
+                  giocatori:
+                    statoGiocatori,
 
-          tempoInizioTurno:
-            partita.tempoInizioTurno || null,
+                  turnoDiId:
+                    idAttuale,
 
-          scadenzaTurno:
-            partita.scadenzaTurno || null,
+                  messaggi: [
+                    nomeUscente +
+                    " ha abbandonato la partita."
+                  ],
 
-          durataMossaMs:
-            millisecondiMossa(partita),
+                  tempoInizioTurno:
+                    partita.tempoInizioTurno || null,
 
-          tiriEffettuatiNelTurno:
-            partita.tiriEffettuatiNelTurno,
+                  scadenzaTurno:
+                    partita.scadenzaTurno || null,
 
-          tiriConsentitiNelTurno:
-            partita.tiriConsentitiNelTurno
-        })
-      );
-    }
-  });
+                  durataMossaMs:
+                    millisecondiMossa(partita),
 
-  await aggiornaStatoPartita(
-    partita.id,
-    {
-      giocatori:
-        preparaGiocatoriPerFirebase(
-          partita.giocatori
-        ),
+                  tiriEffettuatiNelTurno:
+                    partita.tiriEffettuatiNelTurno,
 
-      ordineGiocatori:
-        partita.ordineGiocatori,
-
-      turnoAttuale:
-        partita.turnoAttuale,
-
-      tiriEffettuatiNelTurno:
-        partita.tiriEffettuatiNelTurno,
-
-      tiriConsentitiNelTurno:
-        partita.tiriConsentitiNelTurno,
-
-      tempoInizioTurno:
-        partita.tempoInizioTurno || null,
-
-      scadenzaTurno:
-        partita.scadenzaTurno || null
-    }
-  );
-}
-    ];
-          const statoGiocatori = costruisciStatoGiocatori(partita);
-          Object.values(partita.giocatori).forEach(g => {
-            if (g.socket && g.socket.readyState === WebSocket.OPEN) {
-              g.socket.send(JSON.stringify({
-                tipo: "statoPartita", giocatori: statoGiocatori, turnoDiId: idAttuale,
-                messaggi: [nomeUscente + " ha abbandonato la partita."],
-                tempoInizioTurno: partita.tempoInizioTurno || Date.now(), durataMossaMs: millisecondiMossa(partita)
-              }));
+                  tiriConsentitiNelTurno:
+                    partita.tiriConsentitiNelTurno
+                })
+              );
             }
           });
-          await aggiornaStatoPartita(partita.id, { giocatori: preparaGiocatoriPerFirebase(partita.giocatori), ordineGiocatori: partita.ordineGiocatori, turnoAttuale: partita.turnoAttuale });
+
+          await aggiornaStatoPartita(
+            partita.id,
+            {
+              giocatori:
+                preparaGiocatoriPerFirebase(
+                  partita.giocatori
+                ),
+
+              ordineGiocatori:
+                partita.ordineGiocatori,
+
+              turnoAttuale:
+                partita.turnoAttuale,
+
+              tiriEffettuatiNelTurno:
+                partita.tiriEffettuatiNelTurno,
+
+              tiriConsentitiNelTurno:
+                partita.tiriConsentitiNelTurno,
+
+              tempoInizioTurno:
+                partita.tempoInizioTurno || null,
+
+              scadenzaTurno:
+                partita.scadenzaTurno || null
+            }
+          );
         }
         inviaListaPartite(nomeStanza);
         inviaConteggioStanze();
