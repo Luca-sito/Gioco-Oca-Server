@@ -1522,6 +1522,170 @@ async function avviaPartitaAutomaticamente(partita) {
   inviaConteggioStanze();
 }
 
+// =========================================================
+// USCITA DA UNA PARTITA NON ANCORA INIZIATA
+// =========================================================
+//
+// Gestisce sia:
+// - pulsante "Alzati"
+// - chiusura del browser / disconnessione WebSocket
+//
+// Regole:
+// - il giocatore viene rimosso dalla partita;
+// - se era il creatore e rimangono giocatori,
+//   il primo giocatore rimasto diventa il nuovo creatore;
+// - se non rimane nessuno, la partita viene eliminata;
+// - Firebase viene aggiornato immediatamente;
+// - la lobby riceve subito la nuova lista.
+// =========================================================
+
+async function esciDaPartitaInAttesa(
+  partita,
+  nomeStanza,
+  uid
+) {
+
+  if (!partita || !uid) {
+    return false;
+  }
+
+  if (partita.fase !== "attesa_giocatori") {
+    return false;
+  }
+
+  const giocatoreUscente =
+    partita.giocatori[uid];
+
+  if (!giocatoreUscente) {
+    return false;
+  }
+
+  const eraCreatore =
+    partita.creatoDa === uid;
+
+  const nomeUscente =
+    giocatoreUscente.nome || "Giocatore";
+
+  // ---------------------------------------------------------
+  // RIMOZIONE DEL GIOCATORE
+  // ---------------------------------------------------------
+
+  delete partita.giocatori[uid];
+
+  partita.ordineGiocatori =
+    (partita.ordineGiocatori || [])
+      .filter(id => id !== uid);
+
+  partita.turnoAttuale = 0;
+
+
+  // ---------------------------------------------------------
+  // NESSUN GIOCATORE RIMASTO
+  // ---------------------------------------------------------
+
+  const restanti =
+    Object.keys(partita.giocatori);
+
+  if (restanti.length === 0) {
+
+    await rimuoviPartita(
+      nomeStanza,
+      partita.id
+    );
+
+    inviaListaPartite(
+      nomeStanza
+    );
+
+    inviaConteggioStanze();
+
+    return true;
+  }
+
+
+  // ---------------------------------------------------------
+  // CAMBIO PROPRIETARIO
+  // ---------------------------------------------------------
+
+  if (eraCreatore) {
+
+    const nuovoCreatoreUid =
+      partita.ordineGiocatori[0];
+
+    const nuovoCreatore =
+      partita.giocatori[nuovoCreatoreUid];
+
+    if (nuovoCreatore) {
+
+      partita.creatoDa =
+        nuovoCreatoreUid;
+
+      partita.creatore =
+        nuovoCreatore.nome;
+    }
+  }
+
+
+  // ---------------------------------------------------------
+  // PERSISTENZA FIREBASE
+  // ---------------------------------------------------------
+
+  await aggiornaStatoPartita(
+    partita.id,
+    {
+      creatore: partita.creatore,
+      creatoDa: partita.creatoDa,
+
+      giocatori:
+        preparaGiocatoriPerFirebase(
+          partita.giocatori
+        ),
+
+      ordineGiocatori:
+        partita.ordineGiocatori,
+
+      turnoAttuale:
+        partita.turnoAttuale,
+
+      iniziata:
+        false,
+
+      fase:
+        "attesa_giocatori"
+    }
+  );
+
+
+  // ---------------------------------------------------------
+  // NOTIFICA AGLI ALTRI GIOCATORI
+  // ---------------------------------------------------------
+
+  inviaAllaStanza(
+    nomeStanza,
+    {
+      tipo: "giocatoreHaLasciatoPartita",
+      partitaId: partita.id,
+      uid: uid,
+      nome: nomeUscente,
+      nuovoCreatoreUid:
+        partita.creatoDa
+    }
+  );
+
+
+  // ---------------------------------------------------------
+  // AGGIORNA LISTA LOBBY
+  // ---------------------------------------------------------
+
+  inviaListaPartite(
+    nomeStanza
+  );
+
+  inviaConteggioStanze();
+
+  return true;
+}
+
 // ===== CONNESSIONI WEBSOCKET =====
 wss.on("connection", (socket, request) => {
   socket.isAlive = true;
@@ -1776,27 +1940,88 @@ wss.on("connection", (socket, request) => {
       }
 
       if (dati.tipo === "abbandonaPartita") {
-        if (!uid) return;
-        const trovato = trovaPartita(dati.partitaId);
-        if (!trovato) return;
-        const { partita, nomeStanza } = trovato;
-        if (!partita.giocatori[uid]) return;
 
-        if (partita.fase === "determinazione_ordine") {
-          const eraIlSuoTurnoDiTirare = (partita.turnoInCorsoDeterminazione === uid);
-          fermaTimerTurno(partita);
-          rimuoviGiocatoreDaDeterminazione(partita, uid);
-          const restanti = Object.keys(partita.giocatori);
-          if (restanti.length <= 1) {
-            await rimuoviPartita(nomeStanza, partita.id);
-          } else {
-            if (eraIlSuoTurnoDiTirare) partita.turnoInCorsoDeterminazione = null;
-            await avanzaDeterminazione(partita, nomeStanza);
-          }
-          inviaListaPartite(nomeStanza);
-          inviaConteggioStanze();
-          return;
-        }
+  if (!uid) return;
+
+  const trovato =
+    trovaPartita(dati.partitaId);
+
+  if (!trovato) return;
+
+  const { partita, nomeStanza } =
+    trovato;
+
+  if (!partita.giocatori[uid]) {
+    return;
+  }
+
+
+  // -------------------------------------------------------
+  // PARTITA ANCORA IN ATTESA
+  // -------------------------------------------------------
+
+  if (partita.fase === "attesa_giocatori") {
+
+    await esciDaPartitaInAttesa(
+      partita,
+      nomeStanza,
+      uid
+    );
+
+    return;
+  }
+
+
+  // -------------------------------------------------------
+  // DA QUI IN POI LASCIA IL TUO CODICE ATTUALE
+  // PER DETERMINAZIONE / PARTITA IN CORSO
+  // -------------------------------------------------------
+
+  if (partita.fase === "determinazione_ordine") {
+
+    const eraIlSuoTurnoDiTirare =
+      (
+        partita.turnoInCorsoDeterminazione === uid
+      );
+
+    fermaTimerTurno(partita);
+
+    rimuoviGiocatoreDaDeterminazione(
+      partita,
+      uid
+    );
+
+    const restanti =
+      Object.keys(partita.giocatori);
+
+    if (restanti.length <= 1) {
+
+      await rimuoviPartita(
+        nomeStanza,
+        partita.id
+      );
+
+    } else {
+
+      if (eraIlSuoTurnoDiTirare) {
+        partita.turnoInCorsoDeterminazione =
+          null;
+      }
+
+      await avanzaDeterminazione(
+        partita,
+        nomeStanza
+      );
+    }
+
+    inviaListaPartite(
+      nomeStanza
+    );
+
+    inviaConteggioStanze();
+
+    return;
+  }
 
         const eraLuiIlGiocatoreAttivo = (partita.ordineGiocatori[partita.turnoAttuale] === uid);
         const idGiocatoreAttivoPrimaDiRimuovere = eraLuiIlGiocatoreAttivo ? null : partita.ordineGiocatori[partita.turnoAttuale];
@@ -1854,41 +2079,138 @@ wss.on("connection", (socket, request) => {
     }
   });
 
-  socket.on("close", () => {
-    try {
-      delete socketsPerId[socketId];
-      if (!stanzaAttuale || !stanze[stanzaAttuale]) return;
-      delete stanze[stanzaAttuale].giocatoriOnline[socketId];
-      inviaConteggioStanze();
-      inviaAllaStanza(stanzaAttuale, { tipo: "online", numero: Object.keys(stanze[stanzaAttuale].giocatoriOnline).length });
+  socket.on("close", async () => {
 
-      const partite = stanze[stanzaAttuale].partite;
-      for (const pid in partite) {
-        const partita = partite[pid];
-        if (
-  uid &&
-  partita.giocatori[uid] &&
-  partita.fase === "attesa_giocatori"
-) {
-          const eraIlSuoTurnoDiTirare = partita.fase === "determinazione_ordine" && partita.turnoInCorsoDeterminazione === uid;
-          if (partita.fase === "determinazione_ordine") {
-            rimuoviGiocatoreDaDeterminazione(partita, uid);
-          } else {
-            delete partita.giocatori[uid];
-            partita.ordineGiocatori = partita.ordineGiocatori.filter(id => id !== uid);
-          }
-          if (Object.keys(partita.giocatori).length === 0) { delete partite[pid]; continue; }
-          if (partita.fase === "determinazione_ordine" && eraIlSuoTurnoDiTirare) {
-            partita.turnoInCorsoDeterminazione = null;
-            avanzaDeterminazione(partita, stanzaAttuale);
-          }
+  try {
+
+    delete socketsPerId[socketId];
+
+
+    // =======================================================
+    // RIMUOVI LA CONNESSIONE DALLA STANZA ONLINE
+    // =======================================================
+
+    if (
+      stanzaAttuale &&
+      stanze[stanzaAttuale]
+    ) {
+
+      delete stanze[
+        stanzaAttuale
+      ].giocatoriOnline[socketId];
+
+      inviaConteggioStanze();
+
+      inviaAllaStanza(
+        stanzaAttuale,
+        {
+          tipo: "online",
+          numero:
+            Object.keys(
+              stanze[
+                stanzaAttuale
+              ].giocatoriOnline
+            ).length
         }
-      }
-      inviaListaPartite(stanzaAttuale);
-    } catch (erroreInterno) {
-      console.error("Errore nella chiusura di una connessione:", erroreInterno);
+      );
     }
-  });
+
+
+    // =======================================================
+    // USCITA AUTOMATICA DALLE PARTITE IN ATTESA
+    // =======================================================
+
+    if (
+      !stanzaAttuale ||
+      !stanze[stanzaAttuale] ||
+      !uid
+    ) {
+      return;
+    }
+
+
+    const partite =
+      stanze[
+        stanzaAttuale
+      ].partite;
+
+
+    for (
+      const pid in partite
+    ) {
+
+      const partita =
+        partite[pid];
+
+
+      // -----------------------------------------------------
+      // Consideriamo solo le partite ancora in attesa.
+      // Le partite già iniziate vengono gestite dal sistema
+      // del gioco/ripresa e non vengono chiuse semplicemente
+      // perché si chiude la lobby.
+      // -----------------------------------------------------
+
+      if (
+        partita.fase !==
+        "attesa_giocatori"
+      ) {
+        continue;
+      }
+
+
+      const giocatore =
+        partita.giocatori[uid];
+
+
+      if (!giocatore) {
+        continue;
+      }
+
+
+      // -----------------------------------------------------
+      // IMPORTANTE:
+      // rimuoviamo il giocatore solo se questa specifica
+      // connessione era quella registrata nella partita.
+      //
+      // Evita di espellere accidentalmente un giocatore
+      // che ha un'altra connessione ancora attiva.
+      // -----------------------------------------------------
+
+      if (
+        giocatore.socket &&
+        giocatore.socket !== socket
+      ) {
+        continue;
+      }
+
+
+      await esciDaPartitaInAttesa(
+        partita,
+        stanzaAttuale,
+        uid
+      );
+    }
+
+
+    // =======================================================
+    // AGGIORNAMENTO FINALE
+    // =======================================================
+
+    inviaListaPartite(
+      stanzaAttuale
+    );
+
+    inviaConteggioStanze();
+
+
+  } catch (erroreInterno) {
+
+    console.error(
+      "Errore nella chiusura di una connessione:",
+      erroreInterno
+    );
+  }
+
 });
 
 server.listen(PORT, async () => {
