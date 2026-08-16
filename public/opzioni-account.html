@@ -1,79 +1,1047 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-<meta charset="UTF-8">
-<title>Opzioni Account - Giochi Società</title>
-<style>
-* { box-sizing:border-box; }
-body { margin:0; background:#101820; color:#e8e8e8; font-family:Arial,sans-serif; }
-.contenitore { max-width:600px; margin:auto; padding:40px 24px 80px; }
-.scatola { background:#1e2a38; border:1px solid #333; border-radius:14px; padding:30px; }
-h1 { color:#ffd700; text-align:center; margin-top:0; }
-.sottotitolo { text-align:center; color:#999; margin-bottom:30px; }
-.opzione { background:#263746; border-radius:12px; padding:18px; margin-bottom:15px; cursor:pointer; transition:0.2s; }
-.opzione:hover { background:#34495e; transform:scale(1.02); }
-.numero { color:#ffd700; font-weight:bold; font-size:20px; }
-.titolo { font-size:18px; font-weight:bold; }
-.descrizione { color:#aaa; font-size:14px; margin-top:5px; }
-.link-home { display:inline-block; margin-top:25px; padding:10px 20px; background:#ffd700; color:#111; text-decoration:none; border-radius:8px; font-weight:bold; }
-.link-home:hover { background:#ffaa00; }
-.errore { text-align:center; color:#ff6b6b; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0b1118">
+  <title>Account Center - Giochi Società</title>
+
+  <style>
+    :root {
+      --bg: #080d13;
+      --bg-soft: #0d141d;
+      --panel: rgba(18, 27, 38, 0.92);
+      --panel-strong: #131d28;
+      --panel-hover: #182533;
+      --border: rgba(255,255,255,.08);
+      --border-strong: rgba(255, 201, 77, .18);
+      --gold: #f3c74f;
+      --gold-strong: #ffd86a;
+      --gold-soft: rgba(243, 199, 79, .11);
+      --text: #f4f7fa;
+      --muted: #8995a3;
+      --muted-2: #5f6b78;
+      --green: #5fd28d;
+      --red: #ef6f6c;
+      --blue: #77a9ff;
+      --shadow: 0 25px 70px rgba(0,0,0,.34);
+      --radius: 20px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      min-height: 100%;
+      background: var(--bg);
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      font-family:
+        Inter,
+        ui-sans-serif,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        Arial,
+        sans-serif;
+      background:
+        radial-gradient(circle at 85% 10%, rgba(243,199,79,.07), transparent 28%),
+        radial-gradient(circle at 10% 80%, rgba(82,126,190,.06), transparent 25%),
+        linear-gradient(135deg, #080d13 0%, #0b1118 52%, #0a1119 100%);
+    }
+
+    button,
+    a,
+    input {
+      font: inherit;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    button {
+      border: 0;
+    }
+
+    .app {
+      min-height: 100vh;
+      display: flex;
+    }
+
+    .sidebar {
+      position: fixed;
+      z-index: 20;
+      inset: 0 auto 0 0;
+      width: 280px;
+      padding: 24px 18px;
+      display: flex;
+      flex-direction: column;
+      background:
+        linear-gradient(180deg, rgba(17,25,35,.97), rgba(9,14,20,.98));
+      border-right: 1px solid var(--border);
+      box-shadow: 20px 0 60px rgba(0,0,0,.15);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 4px 10px 25px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand-mark {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 13px;
+      color: #111;
+      background: linear-gradient(145deg, var(--gold-strong), #c99724);
+      box-shadow: 0 8px 25px rgba(243,199,79,.18);
+      font-size: 20px;
+      font-weight: 900;
+    }
+
+    .brand-text strong {
+      display: block;
+      font-size: 15px;
+      letter-spacing: .04em;
+    }
+
+    .brand-text span {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: .11em;
+      text-transform: uppercase;
+    }
+
+    .nav-label {
+      padding: 28px 10px 10px;
+      color: var(--muted-2);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+    }
+
+    .nav {
+      display: grid;
+      gap: 6px;
+    }
+
+    .nav-item {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      min-height: 50px;
+      padding: 0 13px;
+      border: 1px solid transparent;
+      border-radius: 13px;
+      color: #aeb8c3;
+      transition: .2s ease;
+    }
+
+    .nav-item:hover {
+      color: var(--text);
+      background: rgba(255,255,255,.035);
+      border-color: var(--border);
+      transform: translateX(2px);
+    }
+
+    .nav-item.active {
+      color: var(--text);
+      background: linear-gradient(90deg, rgba(243,199,79,.12), rgba(243,199,79,.025));
+      border-color: var(--border-strong);
+    }
+
+    .nav-item.active::before {
+      content: "";
+      position: absolute;
+      left: -1px;
+      top: 12px;
+      bottom: 12px;
+      width: 3px;
+      border-radius: 4px;
+      background: var(--gold);
+      box-shadow: 0 0 15px rgba(243,199,79,.45);
+    }
+
+    .nav-icon {
+      width: 22px;
+      text-align: center;
+      font-size: 17px;
+    }
+
+    .nav-copy {
+      display: flex;
+      min-width: 0;
+      flex-direction: column;
+    }
+
+    .nav-copy strong {
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .nav-copy span {
+      margin-top: 2px;
+      color: var(--muted-2);
+      font-size: 10px;
+    }
+
+    .sidebar-bottom {
+      margin-top: auto;
+    }
+
+    .account-mini {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      padding: 13px;
+      margin-bottom: 10px;
+      border: 1px solid var(--border);
+      border-radius: 15px;
+      background: rgba(255,255,255,.025);
+    }
+
+    .mini-avatar {
+      width: 38px;
+      height: 38px;
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      border-radius: 50%;
+      color: #fff;
+      background: #223244;
+      font-size: 14px;
+      font-weight: 900;
+    }
+
+    .mini-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .account-mini strong {
+      display: block;
+      max-width: 150px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 13px;
+    }
+
+    .account-mini span {
+      display: block;
+      margin-top: 3px;
+      color: var(--green);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+    }
+
+    .home-button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      min-height: 46px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: #c8d0d9;
+      background: rgba(255,255,255,.025);
+      transition: .2s ease;
+    }
+
+    .home-button:hover {
+      color: #111;
+      background: var(--gold);
+      border-color: var(--gold);
+      transform: translateY(-1px);
+    }
+
+    .main {
+      width: 100%;
+      margin-left: 280px;
+      min-width: 0;
+    }
+
+    .topbar {
+      display: none;
+    }
+
+    .content {
+      width: min(1120px, calc(100% - 60px));
+      margin: 0 auto;
+      padding: 44px 0 70px;
+    }
+
+    .eyebrow {
+      margin-bottom: 10px;
+      color: var(--gold);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+
+    .hero {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 30px;
+      margin-bottom: 30px;
+    }
+
+    .hero h1 {
+      margin: 0;
+      font-size: clamp(30px, 4vw, 48px);
+      line-height: 1.03;
+      letter-spacing: -.045em;
+    }
+
+    .hero p {
+      max-width: 700px;
+      margin: 13px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.75;
+    }
+
+    .hero-badge {
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 13px;
+      border: 1px solid var(--border-strong);
+      border-radius: 999px;
+      color: var(--gold-strong);
+      background: var(--gold-soft);
+      font-size: 11px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .profile-strip {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 20px;
+      margin-bottom: 28px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background:
+        linear-gradient(145deg, rgba(28,41,55,.88), rgba(16,24,34,.88));
+      box-shadow: var(--shadow);
+    }
+
+    .profile-identity {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      min-width: 0;
+    }
+
+    .profile-avatar {
+      width: 70px;
+      height: 70px;
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,.10);
+      box-shadow: 0 10px 30px rgba(0,0,0,.25);
+      color: white;
+      background: #243447;
+      font-size: 24px;
+      font-weight: 900;
+    }
+
+    .profile-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .profile-identity h2 {
+      margin: 0;
+      font-size: 20px;
+      letter-spacing: -.02em;
+    }
+
+    .profile-identity p {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .session {
+      text-align: right;
+    }
+
+    .session-label {
+      color: var(--muted-2);
+      font-size: 10px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+
+    .session-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      margin-top: 6px;
+      color: var(--green);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .session-status::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 10px rgba(95,210,141,.55);
+    }
+
+    .section-label {
+      margin: 30px 0 13px;
+      color: var(--muted-2);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+
+    .account-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .account-card {
+      position: relative;
+      min-height: 174px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 22px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background:
+        linear-gradient(145deg, rgba(22,33,46,.96), rgba(14,21,29,.96));
+      transition: transform .2s ease, border-color .2s ease, background .2s ease;
+    }
+
+    .account-card::after {
+      content: "";
+      position: absolute;
+      right: -45px;
+      top: -45px;
+      width: 125px;
+      height: 125px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(243,199,79,.08), transparent 68%);
+      pointer-events: none;
+    }
+
+    .account-card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(243,199,79,.20);
+      background:
+        linear-gradient(145deg, rgba(26,39,53,.98), rgba(16,24,33,.98));
+    }
+
+    .card-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .card-icon {
+      width: 45px;
+      height: 45px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: rgba(255,255,255,.035);
+      font-size: 19px;
+    }
+
+    .card-arrow {
+      color: var(--muted-2);
+      font-size: 18px;
+      transition: .2s ease;
+    }
+
+    .account-card:hover .card-arrow {
+      color: var(--gold);
+      transform: translateX(3px);
+    }
+
+    .card-content {
+      margin-top: 18px;
+    }
+
+    .card-content h3 {
+      margin: 0;
+      font-size: 16px;
+      letter-spacing: -.01em;
+    }
+
+    .card-content p {
+      max-width: 430px;
+      margin: 7px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.65;
+    }
+
+    .status-tag {
+      display: inline-flex;
+      margin-top: 13px;
+      padding: 6px 9px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      color: var(--muted);
+      background: rgba(255,255,255,.025);
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .status-tag.gold {
+      color: var(--gold-strong);
+      border-color: var(--border-strong);
+      background: var(--gold-soft);
+    }
+
+    .footer-note {
+      margin-top: 30px;
+      padding-top: 18px;
+      border-top: 1px solid var(--border);
+      color: var(--muted-2);
+      font-size: 11px;
+      line-height: 1.7;
+    }
+
+    .error {
+      margin-top: 18px;
+      padding: 12px 14px;
+      display: none;
+      border: 1px solid rgba(239,111,108,.20);
+      border-radius: 12px;
+      color: #ffaaa8;
+      background: rgba(239,111,108,.06);
+      font-size: 12px;
+    }
+
+    .toast {
+      position: fixed;
+      z-index: 50;
+      right: 22px;
+      bottom: 22px;
+      min-width: 260px;
+      max-width: min(420px, calc(100vw - 44px));
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      color: var(--text);
+      background: rgba(16,24,34,.96);
+      box-shadow: 0 20px 50px rgba(0,0,0,.3);
+      opacity: 0;
+      transform: translateY(12px);
+      pointer-events: none;
+      transition: .25s ease;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 980px) {
+      .sidebar {
+        width: 235px;
+      }
+
+      .main {
+        margin-left: 235px;
+      }
+
+      .content {
+        width: min(100% - 36px, 900px);
+      }
+    }
+
+    @media (max-width: 760px) {
+      .app {
+        display: block;
+      }
+
+      .sidebar {
+        position: fixed;
+        inset: auto 0 0 0;
+        width: 100%;
+        height: 72px;
+        padding: 8px 10px;
+        flex-direction: row;
+        align-items: center;
+        background: rgba(10,16,23,.97);
+        border-top: 1px solid var(--border);
+        border-right: 0;
+        box-shadow: 0 -15px 40px rgba(0,0,0,.22);
+        backdrop-filter: blur(18px);
+      }
+
+      .brand,
+      .nav-label,
+      .sidebar-bottom {
+        display: none;
+      }
+
+      .nav {
+        width: 100%;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 4px;
+      }
+
+      .nav-item {
+        min-height: 54px;
+        justify-content: center;
+        padding: 5px;
+        border-radius: 12px;
+      }
+
+      .nav-item.active::before {
+        left: 20%;
+        right: 20%;
+        top: auto;
+        bottom: -1px;
+        width: auto;
+        height: 2px;
+      }
+
+      .nav-copy {
+        align-items: center;
+      }
+
+      .nav-copy span {
+        display: none;
+      }
+
+      .nav-copy strong {
+        font-size: 10px;
+      }
+
+      .nav-icon {
+        font-size: 17px;
+      }
+
+      .main {
+        margin-left: 0;
+        padding-bottom: 82px;
+      }
+
+      .content {
+        width: min(100% - 24px, 680px);
+        padding: 28px 0 35px;
+      }
+
+      .hero {
+        display: block;
+      }
+
+      .hero-badge {
+        margin-top: 17px;
+      }
+
+      .profile-strip {
+        align-items: flex-start;
+      }
+
+      .session {
+        display: none;
+      }
+
+      .account-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .profile-strip {
+        padding: 16px;
+      }
+
+      .profile-avatar {
+        width: 58px;
+        height: 58px;
+        border-radius: 17px;
+      }
+
+      .profile-identity h2 {
+        font-size: 17px;
+      }
+
+      .account-card {
+        min-height: 160px;
+        padding: 19px;
+      }
+
+      .hero h1 {
+        font-size: 31px;
+      }
+    }
+  </style>
 </head>
+
 <body>
+  <div class="app">
 
-<div class="contenitore">
-  <div class="scatola">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">GS</div>
+        <div class="brand-text">
+          <strong>Giochi Società</strong>
+          <span>Account Center</span>
+        </div>
+      </div>
 
-    <h1>⚙️ Opzioni Account</h1>
-    <div class="sottotitolo" id="benvenuto">Caricamento account...</div>
+      <div class="nav-label">Gestione account</div>
 
-    <div class="opzione" onclick="apriAvatar()">
-      <div><span class="numero">1.</span><span class="titolo">🖼️ Avatar</span></div>
-      <div class="descrizione">Cambia immagine profilo e scegli il tuo avatar</div>
-    </div>
+      <nav class="nav">
+        <a class="nav-item active" href="opzioni-account.html">
+          <span class="nav-icon">⚙️</span>
+          <span class="nav-copy">
+            <strong>Account</strong>
+            <span>Impostazioni</span>
+          </span>
+        </a>
 
-    <div class="opzione" onclick="apriProfilo()">
-      <div><span class="numero">2.</span><span class="titolo">👤 Modifica profilo</span></div>
-      <div class="descrizione">Modifica nickname e informazioni account</div>
-    </div>
+        <a class="nav-item" href="profilo.html">
+          <span class="nav-icon">👤</span>
+          <span class="nav-copy">
+            <strong>Profilo</strong>
+            <span>La tua identità</span>
+          </span>
+        </a>
 
-    <div class="opzione" onclick="apriMessaggi()">
-      <div><span class="numero">3.</span><span class="titolo">💬 Messaggi privati</span></div>
-      <div class="descrizione">Scrivi e leggi i messaggi privati con altri giocatori</div>
-    </div>
+        <a class="nav-item" href="https://gioco-oca-server.onrender.com/chat.html">
+          <span class="nav-icon">💬</span>
+          <span class="nav-copy">
+            <strong>Chat</strong>
+            <span>Comunicazione</span>
+          </span>
+        </a>
 
-    <div class="opzione" onclick="apriSicurezza()">
-      <div><span class="numero">4.</span><span class="titolo">🔒 Sicurezza</span></div>
-      <div class="descrizione">Gestisci password e sicurezza account</div>
-    </div>
+        <a class="nav-item" href="https://gioco-oca-server.onrender.com/messaggi-privati.html">
+          <span class="nav-icon">✉️</span>
+          <span class="nav-copy">
+            <strong>Messaggi</strong>
+            <span>Privati</span>
+          </span>
+        </a>
+      </nav>
 
-    <div class="errore" id="errore"></div>
+      <div class="nav-label">Sicurezza</div>
 
-    <a href="https://solfriniluca1.wixstudio.com/giochisocieta" class="link-home">← Torna alla home</a>
+      <nav class="nav">
+        <a class="nav-item" href="profilo.html#sicurezza">
+          <span class="nav-icon">🛡️</span>
+          <span class="nav-copy">
+            <strong>Sicurezza</strong>
+            <span>Password account</span>
+          </span>
+        </a>
+      </nav>
 
+      <div class="sidebar-bottom">
+        <div class="account-mini">
+          <div class="mini-avatar" id="miniAvatar">?</div>
+          <div>
+            <strong id="miniNickname">Caricamento...</strong>
+            <span>Sessione attiva</span>
+          </div>
+        </div>
+
+        <a
+          class="home-button"
+          href="https://solfriniluca1.wixstudio.com/giochisocieta"
+        >
+          ← Torna alla piattaforma
+        </a>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="content">
+
+        <div class="hero">
+          <div>
+            <div class="eyebrow">Account Center</div>
+            <h1>Il tuo spazio personale</h1>
+            <p>
+              Gestisci profilo, comunicazioni e sicurezza da un'unica area.
+              Le impostazioni del tuo account sono organizzate per rendere
+              ogni operazione semplice, chiara e sicura.
+            </p>
+          </div>
+
+          <div class="hero-badge">
+            ● Area riservata
+          </div>
+        </div>
+
+        <section class="profile-strip">
+          <div class="profile-identity">
+            <div class="profile-avatar" id="profileAvatar">?</div>
+
+            <div>
+              <h2 id="benvenuto">Caricamento account...</h2>
+              <p>Profilo giocatore • Giochi Società</p>
+            </div>
+          </div>
+
+          <div class="session">
+            <div class="session-label">Stato sessione</div>
+            <div class="session-status">Connesso</div>
+          </div>
+        </section>
+
+        <div class="section-label">Profilo e identità</div>
+
+        <section class="account-grid">
+          <a class="account-card" href="https://gioco-oca-server.onrender.com/avatar.html">
+            <div class="card-top">
+              <div class="card-icon">🖼️</div>
+              <div class="card-arrow">›</div>
+            </div>
+
+            <div class="card-content">
+              <h3>Avatar</h3>
+              <p>
+                Personalizza l'immagine con cui vieni riconosciuto
+                all'interno della piattaforma.
+              </p>
+              <span class="status-tag">Personalizzazione</span>
+            </div>
+          </a>
+
+          <a class="account-card" href="profilo.html">
+            <div class="card-top">
+              <div class="card-icon">👤</div>
+              <div class="card-arrow">›</div>
+            </div>
+
+            <div class="card-content">
+              <h3>Profilo giocatore</h3>
+              <p>
+                Gestisci nickname, dati personali, livello, XP,
+                statistiche e obiettivi.
+              </p>
+              <span class="status-tag gold">Profilo</span>
+            </div>
+          </a>
+        </section>
+
+        <div class="section-label">Comunicazione</div>
+
+        <section class="account-grid">
+          <a
+            class="account-card"
+            href="https://gioco-oca-server.onrender.com/chat.html"
+          >
+            <div class="card-top">
+              <div class="card-icon">💬</div>
+              <div class="card-arrow">›</div>
+            </div>
+
+            <div class="card-content">
+              <h3>Chat</h3>
+              <p>
+                Accedi allo spazio di comunicazione dedicato
+                alla piattaforma.
+              </p>
+              <span class="status-tag">Comunicazione</span>
+            </div>
+          </a>
+
+          <a
+            class="account-card"
+            href="https://gioco-oca-server.onrender.com/messaggi-privati.html"
+          >
+            <div class="card-top">
+              <div class="card-icon">✉️</div>
+              <div class="card-arrow">›</div>
+            </div>
+
+            <div class="card-content">
+              <h3>Messaggi privati</h3>
+              <p>
+                Invia e leggi conversazioni private con gli altri
+                giocatori.
+              </p>
+              <span class="status-tag">Privati</span>
+            </div>
+          </a>
+        </section>
+
+        <div class="section-label">Protezione account</div>
+
+        <section class="account-grid">
+          <a class="account-card" href="profilo.html#sicurezza">
+            <div class="card-top">
+              <div class="card-icon">🛡️</div>
+              <div class="card-arrow">›</div>
+            </div>
+
+            <div class="card-content">
+              <h3>Sicurezza</h3>
+              <p>
+                Gestisci la password e le principali impostazioni
+                relative alla protezione dell'account.
+              </p>
+              <span class="status-tag gold">Protezione</span>
+            </div>
+          </a>
+        </section>
+
+        <div class="error" id="errore"></div>
+
+        <div class="footer-note">
+          Le impostazioni del tuo account vengono gestite tramite
+          l'infrastruttura di Giochi Società. Conserva sempre al sicuro
+          le tue credenziali di accesso.
+        </div>
+
+      </div>
+    </main>
   </div>
-</div>
 
-<script>
-async function controllaAccount(){
-  try{
-    const risposta = await fetch("https://gioco-oca-server.onrender.com/api/me", { credentials:"include" });
-    if(!risposta.ok){ window.location.href = "https://gioco-oca-server.onrender.com/login.html"; return; }
-    const dati = await risposta.json();
-    document.getElementById("benvenuto").textContent = "Account di: " + dati.nickname;
-  }catch(e){
-    document.getElementById("errore").textContent = "Errore caricamento account";
-  }
-}
+  <div class="toast" id="toast"></div>
 
-function apriAvatar(){ window.location.href = "https://gioco-oca-server.onrender.com/avatar.html"; }
-function apriProfilo(){ window.location.href = "https://gioco-oca-server.onrender.com/profilo.html"; }
-function apriMessaggi(){ window.location.href = "https://gioco-oca-server.onrender.com/messaggi-privati.html"; }
-function apriSicurezza(){ alert("Sezione sicurezza in sviluppo."); }
+  <script>
+    const SERVER = "https://gioco-oca-server.onrender.com";
 
-controllaAccount();
-</script>
+    const PALETTE = [
+      "#6a2c70",
+      "#1e40af",
+      "#43a047",
+      "#f57c00",
+      "#c0ca33",
+      "#e53935",
+      "#00838f",
+      "#8d6e63"
+    ];
 
+    function coloreDaNome(nome) {
+      let somma = 0;
+
+      for (let i = 0; i < nome.length; i++) {
+        somma += nome.charCodeAt(i);
+      }
+
+      return PALETTE[somma % PALETTE.length];
+    }
+
+    function mostraAvatar(elemento, dati) {
+      if (!elemento) return;
+
+      if (dati.avatar) {
+        elemento.innerHTML = "";
+
+        const img = document.createElement("img");
+        img.src = dati.avatar;
+        img.alt = "Avatar";
+        img.loading = "lazy";
+
+        elemento.appendChild(img);
+      } else {
+        elemento.textContent =
+          (dati.nickname || "?").charAt(0).toUpperCase();
+
+        elemento.style.background =
+          coloreDaNome(dati.nickname || "?");
+      }
+    }
+
+    function mostraErrore(messaggio) {
+      const errore = document.getElementById("errore");
+
+      if (!errore) return;
+
+      errore.textContent = messaggio;
+      errore.style.display = "block";
+    }
+
+    async function controllaAccount() {
+      try {
+        const risposta = await fetch(
+          SERVER + "/api/me",
+          {
+            credentials: "include"
+          }
+        );
+
+        if (!risposta.ok) {
+          window.location.href =
+            SERVER + "/login.html?redirect=" +
+            encodeURIComponent(location.href);
+
+          return;
+        }
+
+        const dati = await risposta.json();
+
+        document.getElementById("benvenuto").textContent =
+          dati.nickname || "Giocatore";
+
+        document.getElementById("miniNickname").textContent =
+          dati.nickname || "Giocatore";
+
+        mostraAvatar(
+          document.getElementById("profileAvatar"),
+          dati
+        );
+
+        mostraAvatar(
+          document.getElementById("miniAvatar"),
+          dati
+        );
+
+      } catch (e) {
+        console.error(e);
+        mostraErrore("Impossibile caricare i dati dell'account.");
+      }
+    }
+
+    controllaAccount();
+  </script>
 </body>
 </html>
