@@ -2897,7 +2897,7 @@ if (
           );
         }
 
-                inviaListaPartite(
+        inviaListaPartite(
           nomeStanza
         );
 
@@ -2906,15 +2906,114 @@ if (
         return;
       }
 
-    console.error(
-      "Errore nella chiusura di una connessione:",
-      erroreInterno
-    );
-  }
+    } catch (erroreInterno) {
+
+      console.error(
+        "Errore nella gestione di un messaggio:",
+        erroreInterno
+      );
+    }
+  });
+
+  socket.on("close", async () => {
+
+    try {
+
+      delete socketsPerId[socketId];
+
+      if (
+        stanzaAttuale &&
+        stanze[stanzaAttuale]
+      ) {
+
+        delete stanze[
+          stanzaAttuale
+        ].giocatoriOnline[socketId];
+
+        inviaConteggioStanze();
+
+        inviaAllaStanza(
+          stanzaAttuale,
+          {
+            tipo: "online",
+            numero:
+              Object.keys(
+                stanze[
+                  stanzaAttuale
+                ].giocatoriOnline
+              ).length
+          }
+        );
+      }
+
+      if (
+        !stanzaAttuale ||
+        !stanze[stanzaAttuale] ||
+        !uid
+      ) {
+        return;
+      }
+
+      const partite =
+        stanze[
+          stanzaAttuale
+        ].partite;
+
+      for (
+        const pid in partite
+      ) {
+
+        const partita =
+          partite[pid];
+
+        if (
+          partita.fase !==
+          "attesa_giocatori"
+        ) {
+          continue;
+        }
+
+        const giocatore =
+          partita.giocatori[uid];
+
+        if (!giocatore) {
+          continue;
+        }
+
+        if (
+          giocatore.socket &&
+          giocatore.socket !== socket
+        ) {
+          continue;
+        }
+
+        await esciDaPartitaInAttesa(
+          partita,
+          stanzaAttuale,
+          uid
+        );
+      }
+
+      inviaListaPartite(
+        stanzaAttuale
+      );
+
+      inviaConteggioStanze();
+
+    } catch (erroreInterno) {
+
+      console.error(
+        "Errore nella chiusura di una connessione:",
+        erroreInterno
+      );
+    }
   });
 });
 
 server.listen(PORT, async () => {
-  console.log("Server avviato sulla porta " + PORT);
+  console.log(
+    "Server avviato sulla porta " + PORT
+  );
+
   await ripristinaPartiteDaFirebase();
 });
