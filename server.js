@@ -873,6 +873,8 @@ async function ripristinaPartiteDaFirebase() {
       turnoAttuale: p.turnoAttuale || 0,
       iniziata: p.iniziata === true,
       iniziataIl: p.iniziataIl || null,
+      tiriEffettuatiNelTurno: p.tiriEffettuatiNelTurno || 0,
+      tiriConsentitiNelTurno: p.tiriConsentitiNelTurno || 1,
       elaborandoTiro: false,
       invitati: {},
       timerTurno: null,
@@ -959,12 +961,16 @@ function passaAlProssimoTurno(partita) {
 
     // Questo è il prossimo giocatore che può giocare.
     partita.turnoAttuale = indice;
+    partita.tiriEffettuatiNelTurno = 0;
+    partita.tiriConsentitiNelTurno = 1;
     return;
   }
 
   // Tutti gli altri giocatori hanno consumato un turno saltato.
   // Il turno torna al giocatore di partenza.
   partita.turnoAttuale = indiceDiPartenza;
+  partita.tiriEffettuatiNelTurno = 0;
+  partita.tiriConsentitiNelTurno = 1;
 }
 
 function trovaPartita(partitaId) {
@@ -1010,6 +1016,7 @@ function inviaListaPartite(nomeStanza) {
   const lista = Object.values(stanze[nomeStanza].partite).map(p => ({
     id: p.id, creatore: p.creatore, creatoDa: p.creatoDa, tempo: p.tempo, punti: p.punti, modalita: p.modalita,
     maxGiocatori: p.maxGiocatori, numGiocatoriAttuali: Object.keys(p.giocatori).length, chatAttiva: p.chatAttiva !== false,
+    iniziata: p.iniziata !== false,
     giocatori: Object.entries(p.giocatori).map(([uid, g]) => ({ uid, nome: g.nome, avatar: g.avatar || null }))
   }));
   inviaAllaStanza(nomeStanza, { tipo: "listaPartite", partite: lista });
@@ -1094,6 +1101,18 @@ async function gestisciScadenzaTurno(partita, nomeStanza) {
 async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, automatico) {
   if (partita.elaborandoTiro) return;
 
+  const tiriEffettuati = Number(partita.tiriEffettuatiNelTurno || 0);
+  const tiriConsentiti = Number(partita.tiriConsentitiNelTurno || 1);
+
+  if (tiriEffettuati >= tiriConsentiti) {
+    return;
+  }
+
+  const giocatore = partita.giocatori[idGiocatore];
+  if (!giocatore) return;
+
+  partita.tiriEffettuatiNelTurno = tiriEffettuati + 1;
+
   partita.elaborandoTiro = true;
   fermaTimerTurno(partita);
 
@@ -1108,6 +1127,14 @@ async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, auto
       giocatore.posizione,
       valoreDado
     );
+
+    if (risultato.tiraAncora) {
+  partita.tiriConsentitiNelTurno =
+    Math.max(
+      Number(partita.tiriConsentitiNelTurno || 1),
+      Number(partita.tiriEffettuatiNelTurno || 0) + 1
+    );
+}
 
     giocatore.posizione = risultato.nuovaPosizione;
 
@@ -1429,6 +1456,8 @@ async function completaDeterminazione(partita, nomeStanza, ordineFinale) {
   partita.iniziata = true;
   partita.iniziataIl = Date.now();
   partita.elaborandoTiro = false;
+  partita.tiriEffettuatiNelTurno = 0;
+  partita.tiriConsentitiNelTurno = 1;
 
   // I punteggi ottenuti in "Chi inizia?" servono SOLO
   // per stabilire l'ordine di gioco.
@@ -1809,7 +1838,12 @@ wss.on("connection", (socket, request) => {
           chatAttiva: dati.chatAttiva !== false,
           fase: "attesa_giocatori",
           giocatori: { [uid]: { nome: nickname, avatar: mioAvatar, posizione: 0, socket, turniSaltati: 0, tentativiAutomaticiConsecutivi: 0 } },
-          ordineGiocatori: [uid], turnoAttuale: 0, iniziata: false, elaborandoTiro: false,
+          ordineGiocatori: [uid],
+          turnoAttuale: 0,
+          iniziata: false,
+          elaborandoTiro: false,
+          tiriEffettuatiNelTurno: 0,
+          tiriConsentitiNelTurno: 1,
           invitati: dati.modalita === "privata" ? { [uid]: true } : null, timerTurno: null, tempoInizioTurno: null,
           coppieAudioApprovate: new Set()
         };
@@ -2085,7 +2119,6 @@ wss.on("connection", (socket, request) => {
 
     delete socketsPerId[socketId];
 
-
     // =======================================================
     // RIMUOVI LA CONNESSIONE DALLA STANZA ONLINE
     // =======================================================
@@ -2115,7 +2148,6 @@ wss.on("connection", (socket, request) => {
       );
     }
 
-
     // =======================================================
     // USCITA AUTOMATICA DALLE PARTITE IN ATTESA
     // =======================================================
@@ -2128,12 +2160,10 @@ wss.on("connection", (socket, request) => {
       return;
     }
 
-
     const partite =
       stanze[
         stanzaAttuale
       ].partite;
-
 
     for (
       const pid in partite
@@ -2141,7 +2171,6 @@ wss.on("connection", (socket, request) => {
 
       const partita =
         partite[pid];
-
 
       // -----------------------------------------------------
       // Consideriamo solo le partite ancora in attesa.
@@ -2157,15 +2186,12 @@ wss.on("connection", (socket, request) => {
         continue;
       }
 
-
       const giocatore =
         partita.giocatori[uid];
-
 
       if (!giocatore) {
         continue;
       }
-
 
       // -----------------------------------------------------
       // IMPORTANTE:
@@ -2183,14 +2209,12 @@ wss.on("connection", (socket, request) => {
         continue;
       }
 
-
       await esciDaPartitaInAttesa(
         partita,
         stanzaAttuale,
         uid
       );
     }
-
 
     // =======================================================
     // AGGIORNAMENTO FINALE
