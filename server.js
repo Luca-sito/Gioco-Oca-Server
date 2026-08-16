@@ -2550,87 +2550,353 @@ if (
 
       if (dati.tipo === "abbandonaPartita") {
 
-  if (!uid) return;
+        if (!uid) return;
 
-  const trovato =
-    trovaPartita(dati.partitaId);
+        const trovato =
+          trovaPartita(dati.partitaId);
 
-  if (!trovato) return;
+        if (!trovato) return;
 
-  const { partita, nomeStanza } =
-    trovato;
+        const { partita, nomeStanza } =
+          trovato;
 
-  if (!partita.giocatori[uid]) {
-    return;
-  }
+        if (!partita.giocatori[uid]) {
+          return;
+        }
 
+        // -------------------------------------------------------
+        // PARTITA ANCORA IN ATTESA
+        // -------------------------------------------------------
 
-  // -------------------------------------------------------
-  // PARTITA ANCORA IN ATTESA
-  // -------------------------------------------------------
+        if (partita.fase === "attesa_giocatori") {
 
-  if (partita.fase === "attesa_giocatori") {
+          await esciDaPartitaInAttesa(
+            partita,
+            nomeStanza,
+            uid
+          );
 
-    await esciDaPartitaInAttesa(
-      partita,
-      nomeStanza,
-      uid
-    );
+          return;
+        }
 
-    return;
-  }
+        // -------------------------------------------------------
+        // DETERMINAZIONE ORDINE
+        // -------------------------------------------------------
 
+        if (partita.fase === "determinazione_ordine") {
 
-  // -------------------------------------------------------
-  // DA QUI IN POI LASCIA IL TUO CODICE ATTUALE
-  // PER DETERMINAZIONE / PARTITA IN CORSO
-  // -------------------------------------------------------
+          const eraIlSuoTurnoDiTirare =
+            partita.turnoInCorsoDeterminazione === uid;
 
-  if (partita.fase === "determinazione_ordine") {
+          fermaTimerTurno(partita);
 
-    const eraIlSuoTurnoDiTirare =
-      (
-        partita.turnoInCorsoDeterminazione === uid
-      );
+          rimuoviGiocatoreDaDeterminazione(
+            partita,
+            uid
+          );
 
-    fermaTimerTurno(partita);
+          const restanti =
+            Object.keys(partita.giocatori);
 
-    rimuoviGiocatoreDaDeterminazione(
-      partita,
-      uid
-    );
+          if (restanti.length <= 1) {
 
-    const restanti =
-      Object.keys(partita.giocatori);
+            await rimuoviPartita(
+              nomeStanza,
+              partita.id
+            );
 
-    if (restanti.length <= 1) {
+          } else {
 
-      await rimuoviPartita(
-        nomeStanza,
-        partita.id
-      );
+            if (eraIlSuoTurnoDiTirare) {
+              partita.turnoInCorsoDeterminazione =
+                null;
+            }
 
-    } else {
+            await avanzaDeterminazione(
+              partita,
+              nomeStanza
+            );
+          }
 
-      if (eraIlSuoTurnoDiTirare) {
-        partita.turnoInCorsoDeterminazione =
-          null;
+          inviaListaPartite(
+            nomeStanza
+          );
+
+          inviaConteggioStanze();
+
+          return;
+        }
+
+        // -------------------------------------------------------
+        // PARTITA IN CORSO
+        // -------------------------------------------------------
+
+        const eraLuiIlGiocatoreAttivo =
+          partita.ordineGiocatori[
+            partita.turnoAttuale
+          ] === uid;
+
+        const idGiocatoreAttivoPrimaDiRimuovere =
+          eraLuiIlGiocatoreAttivo
+            ? null
+            : partita.ordineGiocatori[
+                partita.turnoAttuale
+              ];
+
+        const elencoPartecipantiOriginali =
+          partita.ordineGiocatori.map(id => ({
+            uid: id,
+            nome:
+              partita.giocatori[id]
+                ? partita.giocatori[id].nome
+                : "?"
+          }));
+
+        const nomeUscente =
+          partita.giocatori[uid].nome;
+
+        delete partita.giocatori[uid];
+
+        partita.ordineGiocatori =
+          partita.ordineGiocatori.filter(
+            id => id !== uid
+          );
+
+        const restanti =
+          Object.keys(partita.giocatori);
+
+        // -------------------------------------------------------
+        // NESSUNO RIMASTO
+        // -------------------------------------------------------
+
+        if (restanti.length === 0) {
+
+          await rimuoviPartita(
+            nomeStanza,
+            partita.id
+          );
+
+          inviaListaPartite(
+            nomeStanza
+          );
+
+          inviaConteggioStanze();
+
+          return;
+        }
+
+        // -------------------------------------------------------
+        // SISTEMA IL TURNO DOPO LA RIMOZIONE
+        // -------------------------------------------------------
+
+        if (!eraLuiIlGiocatoreAttivo) {
+
+          const nuovoIndice =
+            partita.ordineGiocatori.indexOf(
+              idGiocatoreAttivoPrimaDiRimuovere
+            );
+
+          partita.turnoAttuale =
+            nuovoIndice >= 0
+              ? nuovoIndice
+              : 0;
+
+        } else if (
+          partita.turnoAttuale >=
+          partita.ordineGiocatori.length
+        ) {
+
+          partita.turnoAttuale = 0;
+        }
+
+        // -------------------------------------------------------
+        // SE RIMANE UN SOLO GIOCATORE → VITTORIA
+        // -------------------------------------------------------
+
+        if (
+          restanti.length === 1 &&
+          partita.iniziata
+        ) {
+
+          const vincitoreId =
+            restanti[0];
+
+          const vincitoreNome =
+            partita.giocatori[
+              vincitoreId
+            ].nome;
+
+          const statoGiocatori =
+            costruisciStatoGiocatori(
+              partita
+            );
+
+          Object.values(
+            partita.giocatori
+          ).forEach(g => {
+
+            if (
+              g.socket &&
+              g.socket.readyState ===
+                WebSocket.OPEN
+            ) {
+
+              g.socket.send(
+                JSON.stringify({
+                  tipo: "statoPartita",
+
+                  giocatori:
+                    statoGiocatori,
+
+                  turnoDiId:
+                    vincitoreId,
+
+                  vittoria: true,
+
+                  vincitore:
+                    vincitoreNome,
+
+                  messaggi: [
+                    nomeUscente +
+                    " ha abbandonato la partita."
+                  ]
+                })
+              );
+            }
+          });
+
+          await concludiPartita(
+            partita,
+            vincitoreId,
+            nomeStanza,
+            elencoPartecipantiOriginali
+          );
+
+          await rimuoviPartita(
+            nomeStanza,
+            partita.id
+          );
+
+        } else {
+
+          // -----------------------------------------------------
+          // SE È USCITO IL GIOCATORE ATTIVO,
+          // IL NUOVO GIOCATORE PARTE DA UN TURNO PULITO
+          // -----------------------------------------------------
+
+          if (eraLuiIlGiocatoreAttivo) {
+
+            partita.tiriEffettuatiNelTurno = 0;
+            partita.tiriConsentitiNelTurno = 1;
+
+            partita.animazioneTiroInCorso = false;
+
+            avviaTimerTurno(
+              partita,
+              nomeStanza
+            );
+          }
+
+          const idAttuale =
+            partita.ordineGiocatori[
+              partita.turnoAttuale
+            ];
+
+          const statoGiocatori =
+            costruisciStatoGiocatori(
+              partita
+            );
+
+          Object.values(
+            partita.giocatori
+          ).forEach(g => {
+
+            if (
+              g.socket &&
+              g.socket.readyState ===
+                WebSocket.OPEN
+            ) {
+
+              g.socket.send(
+                JSON.stringify({
+                  tipo: "statoPartita",
+
+                  giocatori:
+                    statoGiocatori,
+
+                  turnoDiId:
+                    idAttuale,
+
+                  messaggi: [
+                    nomeUscente +
+                    " ha abbandonato la partita."
+                  ],
+
+                  tempoInizioTurno:
+                    partita.tempoInizioTurno ||
+                    null,
+
+                  scadenzaTurno:
+                    partita.scadenzaTurno ||
+                    null,
+
+                  durataMossaMs:
+                    millisecondiMossa(
+                      partita
+                    ),
+
+                  tiriEffettuatiNelTurno:
+                    partita.tiriEffettuatiNelTurno,
+
+                  tiriConsentitiNelTurno:
+                    partita.tiriConsentitiNelTurno
+                })
+              );
+            }
+          });
+
+          await aggiornaStatoPartita(
+            partita.id,
+            {
+              giocatori:
+                preparaGiocatoriPerFirebase(
+                  partita.giocatori
+                ),
+
+              ordineGiocatori:
+                partita.ordineGiocatori,
+
+              turnoAttuale:
+                partita.turnoAttuale,
+
+              tiriEffettuatiNelTurno:
+                partita.tiriEffettuatiNelTurno,
+
+              tiriConsentitiNelTurno:
+                partita.tiriConsentitiNelTurno,
+
+              tempoInizioTurno:
+                partita.tempoInizioTurno ||
+                null,
+
+              scadenzaTurno:
+                partita.scadenzaTurno ||
+                null,
+
+              iniziata:
+                partita.iniziata
+            }
+          );
+        }
+
+        inviaListaPartite(
+          nomeStanza
+        );
+
+        inviaConteggioStanze();
+
+        return;
       }
-
-      await avanzaDeterminazione(
-        partita,
-        nomeStanza
-      );
-    }
-
-    inviaListaPartite(
-      nomeStanza
-    );
-
-    inviaConteggioStanze();
-
-    return;
-  }
 
         const eraLuiIlGiocatoreAttivo = (partita.ordineGiocatori[partita.turnoAttuale] === uid);
         const idGiocatoreAttivoPrimaDiRimuovere = eraLuiIlGiocatoreAttivo ? null : partita.ordineGiocatori[partita.turnoAttuale];
