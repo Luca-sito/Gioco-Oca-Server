@@ -1796,10 +1796,10 @@ function mostraPartite(lista) {
       if (partita.modalita === "privata" && !piena) invito = `<button onclick="apriModalInvito('${partita.id}')">➕ Invita</button>`;
       if (partita.numGiocatoriAttuali <= 1) {
         // Nessuno si è ancora unito: puoi eliminare senza disturbare nessuno
-        azioniHtml = invito + `<button class="btn-elimina-scheda" onclick="eliminaPartita()">🗑 Elimina</button>`;
+        azioniHtml = invito + `<button class="btn-elimina-scheda" onclick="eliminaPartita()">Elimina</button>`;
       } else {
         // Qualcuno è già dentro: non è giusto cancellare tutto, solo alzarsi
-        azioniHtml = invito + `<button class="btn-alzati-scheda" onclick="alzatiDaPartita('${partita.id}')">🧍 Alzati</button>`;
+        azioniHtml = invito + `<button class="btn-alzati-scheda" onclick="alzatiDaPartita('${partita.id}')">Alzati</button>`;
       }
     } else if (cePartecipo) {
       // Ti sei unito ma non sei il creatore, partita non ancora avviata
@@ -2042,7 +2042,7 @@ function disegnaPopupGiocatore(dati) {
     : `<div class="popup-avatar" style="background:${coloreDaNome(dati.nickname)};">${iniziale(dati.nickname)}</div>`;
   let azioneHtml;
   if (dati.statoAmicizia === "amici") {
-    azioneHtml = `<button class="btn-popup btn-rimuovi-amico" onclick="rimuoviAmico('${dati.uid}')">🗑️ Rimuovi amico</button>`;
+    azioneHtml = `<button class="btn-popup btn-rimuovi-amico" onclick="rimuoviAmico('${dati.uid}')">Rimuovi amico</button>`;
   } else if (dati.statoAmicizia === "richiesta_inviata") {
     azioneHtml = `<button class="btn-popup" disabled>⏳ Richiesta inviata</button>`;
   } else if (dati.statoAmicizia === "richiesta_ricevuta") {
