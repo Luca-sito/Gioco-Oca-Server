@@ -854,6 +854,40 @@ function inviaListaPartite(nomeStanza) {
   inviaAllaStanza(nomeStanza, { tipo: "listaPartite", partite: lista });
 }
 
+function rimuoviVecchieConnessioniOnline(nomeStanza, uid, socketIdDaConservare) {
+  if (!stanze[nomeStanza] || !uid) return;
+
+  for (const [sid, giocatoreOnline] of Object.entries(
+    stanze[nomeStanza].giocatoriOnline
+  )) {
+    if (
+      giocatoreOnline.uid === uid &&
+      sid !== socketIdDaConservare
+    ) {
+      delete stanze[nomeStanza].giocatoriOnline[sid];
+    }
+  }
+}
+
+function aggiornaSocketGiocatoreOnline(
+  nomeStanza,
+  uid,
+  socket
+) {
+  if (!stanze[nomeStanza] || !uid || !socket) {
+    return;
+  }
+
+  for (const sid in stanze[nomeStanza].giocatoriOnline) {
+    const giocatoreOnline =
+      stanze[nomeStanza].giocatoriOnline[sid];
+
+    if (giocatoreOnline.uid === uid) {
+      giocatoreOnline.socket = socket;
+    }
+  }
+}
+
 function inviaConteggioStanze() {
   const conteggi = {}, giocatoriPerStanza = {};
   for (const nome in stanze) {
@@ -1444,7 +1478,31 @@ wss.on("connection", (socket, request) => {
         }
         stanzaAttuale = dati.stanza; nickname = utenteDb.nickname; mioAvatar = utenteDb.avatar || null;
         if (!stanze[stanzaAttuale]) stanze[stanzaAttuale] = { giocatoriOnline: {}, partite: {} };
-        stanze[stanzaAttuale].giocatoriOnline[socketId] = { uid, nickname, avatar: mioAvatar, tipoDispositivo };
+        rimuoviVecchieConnessioniOnline(
+  stanzaAttuale,
+  uid,
+  socketId
+);
+
+stanze[stanzaAttuale].giocatoriOnline[socketId] = {
+  uid,
+  nickname,
+  avatar: mioAvatar,
+  tipoDispositivo,
+  socket
+};
+
+for (const partita of Object.values(
+  stanze[stanzaAttuale].partite
+)) {
+  if (
+    partita.giocatori &&
+    partita.giocatori[uid] &&
+    partita.fase === "attesa_giocatori"
+  ) {
+    partita.giocatori[uid].socket = socket;
+  }
+}
         inviaConteggioStanze();
         inviaAllaStanza(stanzaAttuale, { tipo: "online", numero: Object.keys(stanze[stanzaAttuale].giocatoriOnline).length });
         inviaListaPartite(stanzaAttuale);
@@ -1465,7 +1523,19 @@ wss.on("connection", (socket, request) => {
         nickname = mioGiocatore.nome; mioAvatar = mioGiocatore.avatar || null;
 
         if (!stanze[stanzaAttuale]) stanze[stanzaAttuale] = { giocatoriOnline: {}, partite: {} };
-        stanze[stanzaAttuale].giocatoriOnline[socketId] = { uid, nickname, avatar: mioAvatar, tipoDispositivo };
+        rimuoviVecchieConnessioniOnline(
+  stanzaAttuale,
+  uid,
+  socketId
+);
+
+stanze[stanzaAttuale].giocatoriOnline[socketId] = {
+  uid,
+  nickname,
+  avatar: mioAvatar,
+  tipoDispositivo,
+  socket
+};
         inviaConteggioStanze();
 
         if (partita.fase === "determinazione_ordine") {
@@ -1626,22 +1696,56 @@ wss.on("connection", (socket, request) => {
       }
 
       if (dati.tipo === "tiraDadi") {
-        if (!uid) return;
-        const trovato = trovaPartita(dati.partitaId);
-        if (!trovato) return;
-        const { partita, nomeStanza } = trovato;
-        if (partita.fase !== "in_corso") return;
-        if (partita.ordineGiocatori[partita.turnoAttuale] !== uid) {
-          socket.send(JSON.stringify({ tipo: "errore", messaggio: "Non è il tuo turno!" }));
-          return;
-        }
-        if (partita.scadenzaTurno && Date.now() >= partita.scadenzaTurno) return;
-        if (partita.giocatori[uid]) partita.giocatori[uid].tentativiAutomaticiConsecutivi = 0;
-        await eseguiTiroDadiPerGiocatore(partita, nomeStanza, uid, false);
-        return;
-      }
+  if (!uid) return;
 
-      if (dati.tipo === "abbandonaPartita") {
+  const trovato = trovaPartita(dati.partitaId);
+  if (!trovato) return;
+
+  const { partita, nomeStanza } = trovato;
+
+  if (partita.fase !== "in_corso") return;
+
+  if (
+    partita.ordineGiocatori[
+      partita.turnoAttuale
+    ] !== uid
+  ) {
+    socket.send(JSON.stringify({
+      tipo: "errore",
+      messaggio: "Non è il tuo turno!"
+    }));
+    return;
+  }
+
+  // Se il timer è scaduto proprio in questo istante,
+  // gestiamo subito la scadenza invece di lasciare
+  // il client con il countdown a zero.
+  if (
+    partita.scadenzaTurno &&
+    Date.now() >= partita.scadenzaTurno
+  ) {
+    await gestisciScadenzaTurno(
+      partita,
+      nomeStanza
+    );
+    return;
+  }
+
+  if (partita.giocatori[uid]) {
+    partita.giocatori[uid].tentativiAutomaticiConsecutivi = 0;
+  }
+
+  await eseguiTiroDadiPerGiocatore(
+    partita,
+    nomeStanza,
+    uid,
+    false
+  );
+
+  return;
+}
+
+if (dati.tipo === "abbandonaPartita") {
         if (!uid) return;
         const trovato = trovaPartita(dati.partitaId);
         if (!trovato) return;
@@ -1747,14 +1851,32 @@ wss.on("connection", (socket, request) => {
   });
 
   socket.on("close", async () => {
-    try {
-      delete socketsPerId[socketId];
+  try {
+    delete socketsPerId[socketId];
 
-      if (stanzaAttuale && stanze[stanzaAttuale]) {
+    if (
+      stanzaAttuale &&
+      stanze[stanzaAttuale]
+    ) {
+      const connessioneOnline =
+        stanze[stanzaAttuale].giocatoriOnline[socketId];
+
+      if (connessioneOnline) {
         delete stanze[stanzaAttuale].giocatoriOnline[socketId];
+
         inviaConteggioStanze();
-        inviaAllaStanza(stanzaAttuale, { tipo: "online", numero: Object.keys(stanze[stanzaAttuale].giocatoriOnline).length });
+
+        inviaAllaStanza(
+          stanzaAttuale,
+          {
+            tipo: "online",
+            numero: Object.keys(
+              stanze[stanzaAttuale].giocatoriOnline
+            ).length
+          }
+        );
       }
+    }
 
       if (!stanzaAttuale || !stanze[stanzaAttuale] || !uid) return;
 
