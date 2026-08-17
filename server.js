@@ -905,6 +905,10 @@ function inviaConteggioStanze() {
 
 const HEARTBEAT_MS = 15000;
 const DURATA_ANIMAZIONE_TIRO_MS = 1200;
+
+// il giocatore ha il tempo di mossa scelto + 2 secondi di tolleranza
+// per compensare eventuali ritardi della rete.
+const TOLLERANZA_MOSSA_MS = 2000;
 const heartbeatInterval = setInterval(() => {
   wss.clients.forEach(socket => { if (socket.isAlive === false) return socket.terminate(); socket.isAlive = false; socket.ping(); });
 }, HEARTBEAT_MS);
@@ -931,32 +935,70 @@ function fermaTimerTurno(partita) {
 
 function avviaTimerTurno(partita, nomeStanza) {
   if (!partita || !partita.iniziata) return;
+
   fermaTimerTurno(partita);
+
   const durata = millisecondiMossa(partita);
+
   const token = partita.tokenTimerTurno;
+
+  // Questo è l'istante in cui il server assegna il turno.
   partita.tempoInizioTurno = Date.now();
-  partita.scadenzaTurno = partita.tempoInizioTurno + durata;
-  partita.timerTurno = setTimeout(async () => {
-    if (token !== partita.tokenTimerTurno) return;
-    partita.timerTurno = null;
-    await gestisciScadenzaTurno(partita, nomeStanza);
-  }, durata);
+
+  // Tempo di mossa normale, senza tolleranza.
+  partita.scadenzaTurno =
+    partita.tempoInizioTurno + durata;
+
+  // Il timeout automatico scatta solo dopo la tolleranza
+  // di 2 secondi.
+  partita.timerTurno = setTimeout(
+    async () => {
+
+      if (token !== partita.tokenTimerTurno) return;
+
+      partita.timerTurno = null;
+
+      await gestisciScadenzaTurno(
+        partita,
+        nomeStanza
+      );
+
+    },
+    durata + TOLLERANZA_MOSSA_MS
+  );
 }
 
 function ripristinaTimerTurno(partita, nomeStanza) {
   if (!partita || !partita.iniziata) return;
+
   partita.animazioneTiroInCorso = false;
-  if (!partita.scadenzaTurno) { avviaTimerTurno(partita, nomeStanza); return; }
+
+  if (!partita.scadenzaTurno) {
+    avviaTimerTurno(partita, nomeStanza);
+    return;
+  }
+
   fermaTimerTurno(partita);
+
   const token = partita.tokenTimerTurno;
-  const tempoRimanente = partita.scadenzaTurno - Date.now();
-  const ritardo = tempoRimanente <= 0 ? 0 : tempoRimanente;
-  partita.timerTurno = setTimeout(async () => {
+
+  const tempoRimanenteFinoAllaScadenza =
+    partita.scadenzaTurno - Date.now();
+
+  const ritardo =
+    Math.max(
+      0,
+      tempoRimanenteFinoAllaScadenza + TOLLERANZA_MOSSA_MS
+    );
+
+    partita.timerTurno = setTimeout(async () => {
     if (token !== partita.tokenTimerTurno) return;
+
     partita.timerTurno = null;
     partita.animazioneTiroInCorso = false;
+
     await gestisciScadenzaTurno(partita, nomeStanza);
-  }, ritardo);
+  }, ritardo + TOLLERANZA_MOSSA_MS);
 }
 
 async function gestisciScadenzaTurno(partita, nomeStanza) {
@@ -1695,7 +1737,7 @@ stanze[stanzaAttuale].giocatoriOnline[socketId] = {
         return;
       }
 
-      if (dati.tipo === "tiraDadi") {
+        if (dati.tipo === "tiraDadi") {
   if (!uid) return;
 
   const trovato = trovaPartita(dati.partitaId);
@@ -1705,11 +1747,10 @@ stanze[stanzaAttuale].giocatoriOnline[socketId] = {
 
   if (partita.fase !== "in_corso") return;
 
-  if (
-    partita.ordineGiocatori[
-      partita.turnoAttuale
-    ] !== uid
-  ) {
+  const idGiocatoreDiTurno =
+    partita.ordineGiocatori[partita.turnoAttuale];
+
+  if (idGiocatoreDiTurno !== uid) {
     socket.send(JSON.stringify({
       tipo: "errore",
       messaggio: "Non è il tuo turno!"
@@ -1717,20 +1758,40 @@ stanze[stanzaAttuale].giocatoriOnline[socketId] = {
     return;
   }
 
-  // Se il timer è scaduto proprio in questo istante,
-  // gestiamo subito la scadenza invece di lasciare
-  // il client con il countdown a zero.
+  /*
+   * Il tempo ufficiale del turno è scaduto,
+   * ma concediamo ancora la tolleranza di rete.
+   *
+   * Esempio:
+   * tempo = 15 secondi
+   * scadenzaTurno = 15s
+   * tolleranza = 2s
+   *
+   * Il tiro viene quindi accettato fino a circa 17s.
+   */
   if (
     partita.scadenzaTurno &&
-    Date.now() >= partita.scadenzaTurno
+    Date.now() >=
+      partita.scadenzaTurno + TOLLERANZA_MOSSA_MS
   ) {
+    /*
+     * La tolleranza è terminata.
+     * Se il timer automatico non ha ancora elaborato
+     * la scadenza, la elaboriamo ora.
+     */
     await gestisciScadenzaTurno(
       partita,
       nomeStanza
     );
+
     return;
   }
 
+  /*
+   * Il click è arrivato entro il limite consentito.
+   * Anche se il countdown sul client è già arrivato a 0,
+   * il server accetta ancora il tiro durante la tolleranza.
+   */
   if (partita.giocatori[uid]) {
     partita.giocatori[uid].tentativiAutomaticiConsecutivi = 0;
   }
