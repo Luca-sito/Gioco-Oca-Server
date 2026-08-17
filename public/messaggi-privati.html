@@ -2295,6 +2295,15 @@ function renderRichiestaMessaggio(
             "messaggiChat"
         );
 
+const compositore =
+    document.querySelector(
+        ".compositore"
+    );
+
+if (compositore) {
+    compositore.style.display = "none";
+}
+
     box.innerHTML = `
         <div class="richiesta-messaggio">
 
