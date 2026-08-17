@@ -5,575 +5,1072 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Opzioni Account - Giochi Società</title>
+<title>Dati personali - Giochi Società</title>
 
 <style>
+
 * {
   box-sizing: border-box;
 }
 
+html,
 body {
   margin: 0;
-  min-height: 100vh;
-  background: #101820;
-  color: #eee;
-  font-family: Arial, Helvetica, sans-serif;
+  padding: 0;
+  min-height: 100%;
 }
 
-.contenitore {
-  max-width: 700px;
-  margin: auto;
-  padding: 30px 20px 80px;
-}
-
-/* ============================================================
-   TESTATA
-   ============================================================ */
-
-.scheda {
-  background: #1e2a38;
-  border: 1px solid #333;
-  border-radius: 16px;
-  padding: 25px;
-  margin-bottom: 20px;
-}
-
-.testata {
-  text-align: center;
-}
-
-.avatar-profilo {
-  width: 92px;
-  height: 92px;
-  margin: 0 auto 15px;
-  border-radius: 50%;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-size: 34px;
-  font-weight: bold;
-  background: #34495e;
-  border: 3px solid #ffd700;
-  box-shadow: 0 0 0 5px rgba(255, 215, 0, 0.08);
-}
-
-.avatar-profilo img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-h1 {
-  margin: 5px 0;
-  color: #ffd700;
-  font-size: 27px;
-}
-
-.sottotitolo {
-  color: #999;
-  font-size: 14px;
-  margin-top: 5px;
-}
-
-.stato-account {
-  display: inline-block;
-  margin-top: 15px;
-  padding: 6px 14px;
-  border-radius: 20px;
-  background: #263746;
-  color: #ffd700;
-  font-size: 12px;
-  font-weight: bold;
+body {
+  background: #f4f6f8;
+  color: #172033;
+  font-family:
+    Arial,
+    Helvetica,
+    sans-serif;
 }
 
 /* ============================================================
-   SEZIONE
+   TOP BAR
    ============================================================ */
 
-.titolo-sezione {
-  color: #ffd700;
-  font-size: 18px;
-  font-weight: bold;
-  margin-bottom: 15px;
-}
-
-/* ============================================================
-   OPZIONI
-   ============================================================ */
-
-.opzione {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-
-  background: #263746;
-  border: 1px solid transparent;
-  border-radius: 12px;
-
-  padding: 16px;
-  margin-bottom: 12px;
-
-  cursor: pointer;
-  transition:
-    background .2s ease,
-    transform .2s ease,
-    border-color .2s ease;
-}
-
-.opzione:last-child {
-  margin-bottom: 0;
-}
-
-.opzione:hover {
-  background: #34495e;
-  border-color: #4b6075;
-  transform: translateY(-2px);
-}
-
-.icona {
-  flex: 0 0 48px;
-  width: 48px;
-  height: 48px;
-
-  border-radius: 12px;
+.topbar {
+  height: 68px;
+  background: #ffffff;
+  border-bottom: 1px solid #dfe4e8;
 
   display: flex;
   align-items: center;
-  justify-content: center;
-
-  background: #101820;
-
-  font-size: 23px;
-}
-
-.contenuto-opzione {
-  flex: 1;
-  min-width: 0;
-}
-
-.numero {
-  color: #ffd700;
-  font-size: 12px;
-  font-weight: bold;
-  margin-bottom: 3px;
-}
-
-.titolo-opzione {
-  color: #fff;
-  font-size: 17px;
-  font-weight: bold;
-}
-
-.descrizione {
-  color: #aaa;
-  font-size: 13px;
-  line-height: 1.4;
-  margin-top: 4px;
-}
-
-.freccia {
-  color: #888;
-  font-size: 24px;
-  flex: 0 0 auto;
-}
-
-/* ============================================================
-   ACCOUNT INFO
-   ============================================================ */
-
-.info-riga {
-  display: flex;
   justify-content: space-between;
+
+  padding: 0 28px;
+}
+
+.brand {
+  display: flex;
   align-items: center;
-  gap: 15px;
-
-  padding: 12px 0;
-  border-bottom: 1px solid #2c3946;
+  gap: 11px;
 }
 
-.info-riga:last-child {
-  border-bottom: none;
+.brand-logo {
+  width: 36px;
+  height: 36px;
+
+  border-radius: 10px;
+
+  background: #ffd400;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  color: #111;
+  font-size: 17px;
+  font-weight: 900;
 }
 
-.info-etichetta {
-  color: #999;
-  font-size: 13px;
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.info-valore {
-  color: #eee;
-  font-size: 14px;
-  font-weight: bold;
-  text-align: right;
-  word-break: break-word;
+.brand-name {
+  font-size: 15px;
+  font-weight: 800;
+  color: #162033;
 }
 
-.email-bloccata {
-  color: #777;
+.brand-subtitle {
+  font-size: 10px;
+  color: #7c8794;
 }
 
 /* ============================================================
-   HOME
+   HOME BUTTON
    ============================================================ */
 
-.link-home {
-  display: block;
-  width: 100%;
+.home-top {
+  border: 1px solid #dce2e7;
+  background: #fff;
 
-  margin-top: 10px;
-
-  padding: 12px 20px;
-
-  background: #ffd700;
-  color: #111;
-
-  text-align: center;
-  text-decoration: none;
+  color: #263246;
 
   border-radius: 9px;
 
-  font-weight: bold;
+  padding: 10px 15px;
+
+  font-size: 12px;
+  font-weight: 700;
+
+  text-decoration: none;
 
   transition:
-    background .2s ease,
-    transform .2s ease;
+    background .18s ease,
+    border-color .18s ease;
 }
 
-.link-home:hover {
-  background: #ffaa00;
+.home-top:hover {
+  background: #f5f7f9;
+  border-color: #cfd6dd;
+}
+
+/* ============================================================
+   LAYOUT PRINCIPALE
+   ============================================================ */
+
+.layout {
+  max-width: 1180px;
+
+  margin: 22px auto 40px;
+
+  padding: 0 20px;
+
+  display: grid;
+
+  grid-template-columns:
+    246px
+    minmax(0, 1fr);
+
+  gap: 22px;
+}
+
+/* ============================================================
+   SIDEBAR
+   ============================================================ */
+
+.sidebar {
+  background: #ffffff;
+
+  border: 1px solid #dfe4e8;
+
+  border-radius: 16px;
+
+  min-height: 720px;
+
+  display: flex;
+  flex-direction: column;
+
+  overflow: hidden;
+
+  box-shadow:
+    0 8px 25px rgba(18, 29, 44, 0.04);
+}
+
+.sidebar-content {
+  padding: 14px;
+}
+
+.sidebar-home {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  width: 100%;
+
+  padding: 12px 12px;
+
+  border: 1px solid #dde3e8;
+
+  border-radius: 10px;
+
+  color: #263246;
+
+  text-decoration: none;
+
+  font-size: 13px;
+  font-weight: 700;
+
+  background: #fff;
+}
+
+.sidebar-home:hover {
+  background: #f6f8fa;
+}
+
+.menu-label {
+  margin:
+    20px 9px
+    9px;
+
+  color: #87919d;
+
+  font-size: 10px;
+  font-weight: 800;
+
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.menu-item {
+  width: 100%;
+
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  padding: 10px 10px;
+
+  border-radius: 9px;
+
+  color: #536071;
+
+  font-size: 13px;
+  font-weight: 600;
+
+  text-decoration: none;
+
+  margin-bottom: 3px;
+
+  transition:
+    background .18s ease,
+    color .18s ease;
+}
+
+.menu-item:hover {
+  background: #f5f7f9;
+  color: #182233;
+}
+
+.menu-item-icon {
+  width: 17px;
+  text-align: center;
+  flex: 0 0 17px;
+
+  font-size: 15px;
+}
+
+.menu-item.active {
+  background: #fff4b9;
+
+  color: #4c4100;
+
+  border: 2px solid #171717;
+
+  padding:
+    8px 8px;
+
+  font-weight: 800;
+}
+
+.menu-sub {
+  margin-left: 10px;
+
+  border-left:
+    1px solid #d9e0e6;
+
+  padding-left: 7px;
+}
+
+/* ============================================================
+   SIDEBAR USER
+   ============================================================ */
+
+.sidebar-bottom {
+  margin-top: auto;
+
+  padding: 14px;
+
+  border-top: 1px solid #e6eaee;
+
+  background: #fbfcfd;
+}
+
+.user-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-avatar {
+  width: 38px;
+  height: 38px;
+
+  border-radius: 50%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  color: white;
+
+  font-size: 14px;
+  font-weight: 800;
+
+  overflow: hidden;
+
+  flex: 0 0 38px;
+}
+
+.user-avatar img {
+  width: 100%;
+  height: 100%;
+
+  object-fit: cover;
+}
+
+.user-info {
+  min-width: 0;
+}
+
+.user-name {
+  font-size: 13px;
+  font-weight: 800;
+
+  color: #263246;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-online {
+  margin-top: 3px;
+
+  font-size: 10px;
+  font-weight: 700;
+
+  color: #279b4c;
+}
+
+.player-code {
+  margin-top: 13px;
+
+  border: 1px solid #dde3e8;
+
+  border-radius: 9px;
+
+  padding: 10px;
+
+  background: #fff;
+}
+
+.player-code-label {
+  color: #8b95a1;
+
+  font-size: 9px;
+  font-weight: 800;
+
+  letter-spacing: .8px;
+  text-transform: uppercase;
+
+  margin-bottom: 5px;
+}
+
+.player-code-value {
+  color: #334052;
+
+  font-size: 12px;
+  font-weight: 800;
+
+  word-break: break-all;
+}
+
+/* ============================================================
+   CONTENUTO
+   ============================================================ */
+
+.main {
+  min-width: 0;
+}
+
+.breadcrumb {
+  color: #84909d;
+
+  font-size: 11px;
+
+  margin:
+    2px 0
+    12px;
+}
+
+.breadcrumb strong {
+  color: #566274;
+}
+
+.page-title {
+  margin: 0;
+
+  color: #111a2b;
+
+  font-size: 31px;
+  line-height: 1.1;
+  font-weight: 900;
+}
+
+.page-subtitle {
+  margin:
+    6px 0
+    17px;
+
+  color: #7b8795;
+
+  font-size: 13px;
+}
+
+/* ============================================================
+   CARD PRINCIPALE
+   ============================================================ */
+
+.card {
+  background: #ffffff;
+
+  border: 1px solid #dfe4e8;
+
+  border-radius: 16px;
+
+  padding: 25px;
+
+  box-shadow:
+    0 8px 25px rgba(18, 29, 44, 0.04);
+}
+
+.card-title {
+  margin: 0;
+
+  color: #151f30;
+
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.card-description {
+  margin:
+    7px 0
+    20px;
+
+  color: #7f8996;
+
+  font-size: 12px;
+}
+
+/* ============================================================
+   FORM
+   ============================================================ */
+
+.form-grid {
+  display: grid;
+
+  grid-template-columns:
+    1fr
+    1fr;
+
+  gap: 15px;
+}
+
+.field {
+  min-width: 0;
+}
+
+.field.full {
+  grid-column:
+    1 / -1;
+}
+
+.field label {
+  display: block;
+
+  color: #2f3a4a;
+
+  font-size: 12px;
+  font-weight: 800;
+
+  margin-bottom: 7px;
+}
+
+.field input,
+.field select {
+  width: 100%;
+
+  height: 42px;
+
+  padding:
+    0 12px;
+
+  border:
+    1px solid #d7dfe6;
+
+  border-radius: 9px;
+
+  background: #ffffff;
+
+  color: #1c2738;
+
+  font-size: 12px;
+
+  outline: none;
+
+  transition:
+    border-color .18s ease,
+    box-shadow .18s ease;
+}
+
+.field input:focus,
+.field select:focus {
+  border-color: #aeb8c3;
+
+  box-shadow:
+    0 0 0 3px rgba(
+      255,
+      212,
+      0,
+      .16
+    );
+}
+
+.save-row {
+  margin-top: 17px;
+
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-save {
+  border: 0;
+
+  background: #ffd400;
+
+  color: #111;
+
+  padding:
+    11px 17px;
+
+  border-radius: 9px;
+
+  font-size: 12px;
+  font-weight: 900;
+
+  cursor: pointer;
+
+  transition:
+    background .18s ease,
+    transform .18s ease;
+}
+
+.btn-save:hover {
+  background: #f3c800;
   transform: translateY(-1px);
 }
 
-/* ============================================================
-   ERRORI
-   ============================================================ */
+.btn-save:disabled {
+  opacity: .65;
+  cursor: wait;
+  transform: none;
+}
 
-.errore {
-  text-align: center;
-  color: #ff6b6b;
-  font-size: 14px;
-  margin-top: 10px;
+.feedback {
+  color: #6d7785;
+
+  font-size: 11px;
+}
+
+.feedback.success {
+  color: #29904a;
+}
+
+.feedback.error {
+  color: #d14d4d;
 }
 
 /* ============================================================
-   RESPONSIVE
+   MOBILE
    ============================================================ */
 
-@media (max-width: 500px) {
+@media (max-width: 850px) {
 
-  .contenitore {
-    padding: 20px 14px 50px;
+  .layout {
+    grid-template-columns: 1fr;
   }
 
-  .scheda {
+  .sidebar {
+    min-height: auto;
+  }
+
+  .sidebar-content {
+    padding-bottom: 12px;
+  }
+
+  .sidebar-bottom {
+    margin-top: 0;
+  }
+}
+
+@media (max-width: 600px) {
+
+  .topbar {
+    height: 62px;
+    padding: 0 15px;
+  }
+
+  .brand-name {
+    font-size: 14px;
+  }
+
+  .layout {
+    margin:
+      15px auto
+      30px;
+
+    padding:
+      0 12px;
+
+    gap: 15px;
+  }
+
+  .page-title {
+    font-size: 26px;
+  }
+
+  .card {
     padding: 18px;
-    border-radius: 14px;
   }
 
-  .avatar-profilo {
-    width: 82px;
-    height: 82px;
-    font-size: 30px;
+  .form-grid {
+    grid-template-columns: 1fr;
   }
 
-  h1 {
-    font-size: 24px;
+  .field.full {
+    grid-column: auto;
   }
 
-  .opzione {
-    padding: 14px;
-    gap: 12px;
-  }
-
-  .icona {
-    width: 44px;
-    height: 44px;
-    flex-basis: 44px;
-  }
-
-  .titolo-opzione {
-    font-size: 16px;
-  }
-
-  .descrizione {
-    font-size: 12px;
-  }
-
-  .info-riga {
+  .save-row {
     align-items: flex-start;
     flex-direction: column;
-    gap: 4px;
   }
 
-  .info-valore {
-    text-align: left;
+  .btn-save {
+    width: 100%;
+  }
+
+  .feedback {
+    min-height: 16px;
   }
 }
+
 </style>
 
 </head>
 
 <body>
 
-<div class="contenitore">
+<!-- ==========================================================
+     TOPBAR
+     ========================================================== -->
 
-  <!-- ========================================================
-       TESTATA
-       ======================================================== -->
+<header class="topbar">
 
-  <div class="scheda testata">
-
-```
-<div class="avatar-profilo" id="avatarProfilo">
-  ?
-</div>
-
-<h1>⚙️ Opzioni Account</h1>
-
-<div class="sottotitolo" id="benvenuto">
-  Caricamento account...
-</div>
-
-<div class="stato-account" id="statoAccount">
-  Verifica account...
-</div>
-```
-
-  </div>
-
-  <!-- ========================================================
-       GESTIONE ACCOUNT
-       ======================================================== -->
-
-  <div class="scheda">
+  <div class="brand">
 
 ```
-<div class="titolo-sezione">
-  👤 Gestione account
+<div class="brand-logo">
+  G
 </div>
 
-<div class="opzione" onclick="apriAvatar()">
+<div class="brand-text">
 
-  <div class="icona">
-    🖼️
+  <div class="brand-name">
+    Giochi Società
   </div>
 
-  <div class="contenuto-opzione">
-
-    <div class="numero">
-      01
-    </div>
-
-    <div class="titolo-opzione">
-      Avatar
-    </div>
-
-    <div class="descrizione">
-      Personalizza la tua immagine profilo e aggiorna il tuo avatar.
-    </div>
-
-  </div>
-
-  <div class="freccia">
-    ›
-  </div>
-
-</div>
-
-
-<div class="opzione" onclick="apriProfilo()">
-
-  <div class="icona">
-    👤
-  </div>
-
-  <div class="contenuto-opzione">
-
-    <div class="numero">
-      02
-    </div>
-
-    <div class="titolo-opzione">
-      Modifica profilo
-    </div>
-
-    <div class="descrizione">
-      Gestisci nickname, dati personali, statistiche, XP e badge.
-    </div>
-
-  </div>
-
-  <div class="freccia">
-    ›
+  <div class="brand-subtitle">
+    Area giocatore
   </div>
 
 </div>
 ```
 
   </div>
-
-  <!-- ========================================================
-       COMUNICAZIONI
-       ======================================================== -->
-
-  <div class="scheda">
-
-```
-<div class="titolo-sezione">
-  💬 Comunicazioni
-</div>
-
-<div class="opzione" onclick="apriMessaggi()">
-
-  <div class="icona">
-    💬
-  </div>
-
-  <div class="contenuto-opzione">
-
-    <div class="numero">
-      03
-    </div>
-
-    <div class="titolo-opzione">
-      Messaggi privati
-    </div>
-
-    <div class="descrizione">
-      Scrivi e leggi messaggi privati con gli altri giocatori della piattaforma.
-    </div>
-
-  </div>
-
-  <div class="freccia">
-    ›
-  </div>
-
-</div>
-```
-
-  </div>
-
-  <!-- ========================================================
-       SICUREZZA
-       ======================================================== -->
-
-  <div class="scheda">
-
-```
-<div class="titolo-sezione">
-  🔐 Sicurezza e accesso
-</div>
-
-<div class="opzione" onclick="apriSicurezza()">
-
-  <div class="icona">
-    🔒
-  </div>
-
-  <div class="contenuto-opzione">
-
-    <div class="numero">
-      04
-    </div>
-
-    <div class="titolo-opzione">
-      Sicurezza
-    </div>
-
-    <div class="descrizione">
-      Gestisci password, accesso all'account e impostazioni di sicurezza.
-    </div>
-
-  </div>
-
-  <div class="freccia">
-    ›
-  </div>
-
-</div>
-```
-
-  </div>
-
-  <!-- ========================================================
-       INFORMAZIONI ACCOUNT
-       ======================================================== -->
-
-  <div class="scheda">
-
-```
-<div class="titolo-sezione">
-  ℹ️ Informazioni account
-</div>
-
-<div class="info-riga">
-
-  <div class="info-etichetta">
-    Nickname
-  </div>
-
-  <div class="info-valore" id="infoNickname">
-    —
-  </div>
-
-</div>
-
-<div class="info-riga">
-
-  <div class="info-etichetta">
-    Email
-  </div>
-
-  <div class="info-valore email-bloccata" id="infoEmail">
-    —
-  </div>
-
-</div>
-
-<div class="info-riga">
-
-  <div class="info-etichetta">
-    Livello
-  </div>
-
-  <div class="info-valore" id="infoLivello">
-    —
-  </div>
-
-</div>
-
-<div class="info-riga">
-
-  <div class="info-etichetta">
-    XP
-  </div>
-
-  <div class="info-valore" id="infoXP">
-    —
-  </div>
-
-</div>
-```
-
-  </div>
-
-  <div class="errore" id="errore"></div>
 
 <a
 href="https://solfriniluca1.wixstudio.com/giochisocieta"
-class="link-home"
+class="home-top"
 
 >
 
 ```
-← Torna alla Home
+Home
 ```
 
   </a>
+
+</header>
+
+<!-- ==========================================================
+     LAYOUT
+     ========================================================== -->
+
+<div class="layout">
+
+  <!-- ========================================================
+       SIDEBAR
+       ======================================================== -->
+
+  <aside class="sidebar">
+
+```
+<div class="sidebar-content">
+
+  <a
+    href="https://solfriniluca1.wixstudio.com/giochisocieta"
+    class="sidebar-home"
+  >
+    ← &nbsp; Home
+  </a>
+
+
+  <div class="menu-label">
+    Account
+  </div>
+
+
+  <a
+    href="profilo.html"
+    class="menu-item"
+  >
+    <span class="menu-item-icon">✚</span>
+    <span>Profilo</span>
+  </a>
+
+
+  <a
+    href="storico.html"
+    class="menu-item"
+  >
+    <span class="menu-item-icon">✚</span>
+    <span>Resoconto</span>
+  </a>
+
+
+  <a
+    href="messaggi-privati.html"
+    class="menu-item"
+  >
+    <span class="menu-item-icon">✚</span>
+    <span>Messaggi privati</span>
+  </a>
+
+
+  <div class="menu-label">
+    Profilo
+  </div>
+
+
+  <div class="menu-sub">
+
+    <a
+      href="opzioni-account.html"
+      class="menu-item active"
+    >
+      <span class="menu-item-icon">♙</span>
+      <span>Dati personali</span>
+    </a>
+
+
+    <a
+      href="profilo.html#sicurezza"
+      class="menu-item"
+    >
+      <span class="menu-item-icon">🔒</span>
+      <span>Password</span>
+    </a>
+
+
+    <a
+      href="profilo.html"
+      class="menu-item"
+    >
+      <span class="menu-item-icon">✎</span>
+      <span>Nickname</span>
+    </a>
+
+
+    <a
+      href="profilo.html"
+      class="menu-item"
+    >
+      <span class="menu-item-icon">✉</span>
+      <span>E-mail</span>
+    </a>
+
+
+    <a
+      href="avatar.html"
+      class="menu-item"
+    >
+      <span class="menu-item-icon">▣</span>
+      <span>Avatar</span>
+    </a>
+
+
+    <a
+      href="avatar.html"
+      class="menu-item"
+    >
+      <span class="menu-item-icon">▧</span>
+      <span>Foto</span>
+    </a>
+
+
+    <a
+      href="opzioni-account.html"
+      class="menu-item"
+    >
+      <span class="menu-item-icon">☷</span>
+      <span>Preferenze</span>
+    </a>
+
+
+    <a
+      href="profilo.html"
+      class="menu-item"
+    >
+      <span class="menu-item-icon">▧</span>
+      <span>Rimozione account</span>
+    </a>
+
+  </div>
+
+</div>
+
+
+<!-- ======================================================
+     UTENTE
+     ====================================================== -->
+
+<div class="sidebar-bottom">
+
+  <div class="user-card">
+
+    <div
+      class="user-avatar"
+      id="userAvatar"
+    >
+      ?
+    </div>
+
+    <div class="user-info">
+
+      <div
+        class="user-name"
+        id="userNickname"
+      >
+        Caricamento...
+      </div>
+
+      <div class="user-online">
+        ● Online ora
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <div class="player-code">
+
+    <div class="player-code-label">
+      Codice giocatore
+    </div>
+
+    <div
+      class="player-code-value"
+      id="playerCode"
+    >
+      —
+    </div>
+
+  </div>
+
+</div>
+```
+
+  </aside>
+
+  <!-- ========================================================
+       MAIN
+       ======================================================== -->
+
+  <main class="main">
+
+```
+<div class="breadcrumb">
+  Home&nbsp;&nbsp;/&nbsp;&nbsp;
+  <strong>Dati personali</strong>
+</div>
+
+
+<h1 class="page-title">
+  Dati personali
+</h1>
+
+<div class="page-subtitle">
+  Gestisci le informazioni personali associate al tuo account.
+</div>
+
+
+<!-- ======================================================
+     CARD DATI PERSONALI
+     ====================================================== -->
+
+<section class="card">
+
+  <h2 class="card-title">
+    Dati personali
+  </h2>
+
+  <div class="card-description">
+    Gestisci le informazioni personali associate al tuo account.
+  </div>
+
+
+  <form
+    id="formProfilo"
+    novalidate
+  >
+
+    <div class="form-grid">
+
+
+      <div class="field">
+
+        <label for="nome">
+          Nome
+        </label>
+
+        <input
+          id="nome"
+          name="nome"
+          type="text"
+          maxlength="50"
+          autocomplete="given-name"
+        >
+
+      </div>
+
+
+      <div class="field">
+
+        <label for="cognome">
+          Cognome
+        </label>
+
+        <input
+          id="cognome"
+          name="cognome"
+          type="text"
+          maxlength="50"
+          autocomplete="family-name"
+        >
+
+      </div>
+
+
+      <div class="field">
+
+        <label for="dataNascita">
+          Data di nascita
+        </label>
+
+        <input
+          id="dataNascita"
+          name="dataNascita"
+          type="date"
+        >
+
+      </div>
+
+
+      <div class="field">
+
+        <label for="sesso">
+          Sesso
+        </label>
+
+        <select
+          id="sesso"
+          name="sesso"
+        >
+
+          <option value="">
+            Seleziona
+          </option>
+
+          <option value="M">
+            Maschio
+          </option>
+
+          <option value="F">
+            Femmina
+          </option>
+
+          <option value="Altro">
+            Altro
+          </option>
+
+        </select>
+
+      </div>
+
+
+      <div class="field">
+
+        <label for="citta">
+          Città
+        </label>
+
+        <input
+          id="citta"
+          name="citta"
+          type="text"
+          maxlength="60"
+          autocomplete="address-level2"
+        >
+
+      </div>
+
+
+      <div class="field">
+
+        <label for="provincia">
+          Provincia
+        </label>
+
+        <input
+          id="provincia"
+          name="provincia"
+          type="text"
+          maxlength="60"
+          autocomplete="address-level1"
+        >
+
+      </div>
+
+    </div>
+
+
+    <div class="save-row">
+
+      <button
+        type="submit"
+        class="btn-save"
+        id="btnSalva"
+      >
+        Salva modifiche
+      </button>
+
+      <div
+        class="feedback"
+        id="feedback"
+      ></div>
+
+    </div>
+
+  </form>
+
+</section>
+```
+
+  </main>
 
 </div>
 
@@ -595,20 +1092,24 @@ const PALETTE = [
 ];
 
 
+/* ============================================================
+   UTILITÀ
+   ============================================================ */
+
 function coloreDaNome(nome) {
 
-  const valore =
+  const testo =
     String(nome || "?");
 
   let somma = 0;
 
   for (
     let i = 0;
-    i < valore.length;
+    i < testo.length;
     i++
   ) {
     somma +=
-      valore.charCodeAt(i);
+      testo.charCodeAt(i);
   }
 
   return (
@@ -619,103 +1120,57 @@ function coloreDaNome(nome) {
 }
 
 
-function mostraAvatar(dati) {
+function mostraAvatar(
+  avatar,
+  nickname
+) {
 
   const box =
     document.getElementById(
-      "avatarProfilo"
+      "userAvatar"
     );
 
   if (!box) return;
 
   box.innerHTML = "";
 
-  if (dati && dati.avatar) {
+  if (avatar) {
 
     const img =
       document.createElement("img");
 
-    img.src =
-      dati.avatar;
+    img.src = avatar;
 
     img.alt =
-      "Avatar di " +
-      (dati.nickname || "utente");
+      "Avatar";
 
     box.appendChild(img);
 
     return;
   }
 
-  const nickname =
-    String(
-      dati?.nickname || "?"
-    );
-
   box.textContent =
-    nickname
+    String(
+      nickname || "?"
+    )
       .charAt(0)
       .toUpperCase();
 
   box.style.background =
     coloreDaNome(nickname);
+
 }
 
 
-function aggiornaStatoAccount(dati) {
+/* ============================================================
+   CARICAMENTO ACCOUNT
+   ============================================================ */
 
-  const stato =
+async function caricaAccount() {
+
+  const feedback =
     document.getElementById(
-      "statoAccount"
-    );
-
-  if (!stato) return;
-
-  const valore =
-    dati?.stato || "attivo";
-
-  if (valore === "attivo") {
-
-    stato.textContent =
-      "✓ Account attivo";
-
-    stato.style.color =
-      "#6ee7b7";
-
-  } else if (
-    valore === "sospeso"
-  ) {
-
-    stato.textContent =
-      "⚠ Account sospeso";
-
-    stato.style.color =
-      "#ffcc66";
-
-  } else if (
-    valore === "bannato"
-  ) {
-
-    stato.textContent =
-      "⛔ Account bannato";
-
-    stato.style.color =
-      "#ff6b6b";
-
-  } else {
-
-    stato.textContent =
-      valore;
-
-  }
-}
-
-
-async function controllaAccount() {
-
-  const errore =
-    document.getElementById(
-      "errore"
+      "feedback"
     );
 
   try {
@@ -739,103 +1194,280 @@ async function controllaAccount() {
       return;
     }
 
+
     const dati =
       await risposta.json();
 
-    document.getElementById(
-      "benvenuto"
-    ).textContent =
-      "Account di: " +
-      (dati.nickname || "Giocatore");
-
 
     document.getElementById(
-      "infoNickname"
+      "userNickname"
     ).textContent =
-      dati.nickname || "—";
+      dati.nickname ||
+      "Giocatore";
+
+
+    mostraAvatar(
+      dati.avatar,
+      dati.nickname
+    );
+
+
+    /*
+     * Manteniamo un codice giocatore
+     * stabile derivato dall'UID.
+     */
+
+    document.getElementById(
+      "playerCode"
+    ).textContent =
+      dadosiceGiocatore(
+        dadosuid(dati)
+      );
 
 
     document.getElementById(
-      "infoEmail"
-    ).textContent =
-      dati.email || "—";
+      "nome"
+    ).value =
+      dati.nome ||
+      "";
 
 
     document.getElementById(
-      "infoLivello"
-    ).textContent =
-      dati.livello != null
-        ? "⭐ " + dati.livello
-        : "—";
+      "cognome"
+    ).value =
+      dati.cognome ||
+      "";
 
 
     document.getElementById(
-      "infoXP"
-    ).textContent =
-      dati.xp != null
-        ? String(dati.xp) + " XP"
-        : "—";
+      "dataNascita"
+    ).value =
+      dati.dataNascita ||
+      "";
 
 
-    mostraAvatar(dati);
+    document.getElementById(
+      "sesso"
+    ).value =
+      dati.sesso ||
+      "";
 
-    aggiornaStatoAccount(dati);
 
-  } catch (e) {
+    document.getElementById(
+      "citta"
+    ).value =
+      dati.citta ||
+      "";
+
+
+    document.getElementById(
+      "provincia"
+    ).value =
+      dati.provincia ||
+      "";
+
+
+  } catch (errore) {
 
     console.error(
       "Errore caricamento account:",
-      e
+      errore
     );
 
-    if (errore) {
+    if (feedback) {
 
-      errore.textContent =
+      feedback.textContent =
         "Errore durante il caricamento dell'account.";
+
+      feedback.className =
+        "feedback error";
 
     }
 
   }
+
+}
+
+
+function dadosuid(dati) {
+
+  return String(
+    dati?.uid ||
+    ""
+  );
+
+}
+
+
+function dadosiceGiocatore(uid) {
+
+  if (!uid) {
+    return "—";
+  }
+
+  /*
+   * Non modifichiamo l'UID originale.
+   * Lo trasformiamo soltanto in un codice
+   * leggibile per il pannello.
+   */
+
+  return (
+    "-" +
+    uid
+      .replace(/[^a-zA-Z0-9]/g, "")
+      .slice(0, 16)
+  );
+
 }
 
 
 /* ============================================================
-   NAVIGAZIONE
+   SALVATAGGIO
    ============================================================ */
 
-function apriAvatar() {
+document
+  .getElementById("formProfilo")
+  .addEventListener(
+    "submit",
+    async function(event) {
 
-  window.location.href =
-    "https://gioco-oca-server.onrender.com/avatar.html";
+      event.preventDefault();
 
-}
+      const button =
+        document.getElementById(
+          "btnSalva"
+        );
+
+      const feedback =
+        document.getElementById(
+          "feedback"
+        );
+
+      const corpo = {
+
+        nome:
+          document
+            .getElementById("nome")
+            .value
+            .trim(),
+
+        cognome:
+          document
+            .getElementById("cognome")
+            .value
+            .trim(),
+
+        dataNascita:
+          document
+            .getElementById("dataNascita")
+            .value,
+
+        sesso:
+          document
+            .getElementById("sesso")
+            .value,
+
+        citta:
+          document
+            .getElementById("citta")
+            .value
+            .trim(),
+
+        provincia:
+          document
+            .getElementById("provincia")
+            .value
+            .trim()
+
+      };
 
 
-function apriProfilo() {
+      button.disabled = true;
 
-  window.location.href =
-    "https://gioco-oca-server.onrender.com/profilo.html";
+      feedback.textContent =
+        "Salvataggio...";
 
-}
-
-
-function apriMessaggi() {
-
-  window.location.href =
-    "https://gioco-oca-server.onrender.com/messaggi-privati.html";
-
-}
+      feedback.className =
+        "feedback";
 
 
-function apriSicurezza() {
+      try {
 
-  window.location.href =
-    "https://gioco-oca-server.onrender.com/profilo.html#sicurezza";
+        const risposta =
+          await fetch(
+            SERVER +
+              "/api/modifica-profilo",
+            {
+              method: "POST",
 
-}
+              credentials:
+                "include",
+
+              headers: {
+                "Content-Type":
+                  "application/json"
+              },
+
+              body:
+                JSON.stringify(
+                  corpo
+                )
+            }
+          );
 
 
-controllaAccount();
+        let dati = {};
+
+        try {
+          dati =
+            await risposta.json();
+        } catch {
+          dati = {};
+        }
+
+
+        if (!risposta.ok) {
+
+          throw new Error(
+            dati.errore ||
+            "Impossibile salvare le modifiche."
+          );
+
+        }
+
+
+        feedback.textContent =
+          "✓ Modifiche salvate correttamente.";
+
+        feedback.className =
+          "feedback success";
+
+
+      } catch (errore) {
+
+        console.error(
+          "Errore salvataggio profilo:",
+          errore
+        );
+
+        feedback.textContent =
+          errore.message ||
+          "Errore durante il salvataggio.";
+
+        feedback.className =
+          "feedback error";
+
+      } finally {
+
+        button.disabled = false;
+
+      }
+
+    }
+  );
+
+
+caricaAccount();
 
 </script>
 
