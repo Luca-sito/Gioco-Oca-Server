@@ -234,6 +234,16 @@ async function statoAmicizia(mioUid, altroUid) {
   return "nessuno";
 }
 
+async function verificaAmicizia(uidA, uidB) {
+  if (!db || !uidA || !uidB) return false;
+  if (uidA === uidB) return true;
+
+  const snap =
+    await db.ref(`utenti/${uidA}/amici/${uidB}`).once("value");
+
+  return snap.exists() && snap.val() === true;
+}
+
 function preparaNicknameGoogle(nome, email) {
   let base = pulisciTesto(nome || "", 15).replace(/[^a-zA-Z0-9_ ]/g, "").trim();
   if (!base) base = "Google";
@@ -530,54 +540,510 @@ app.get("/api/storico", richiediAuth, async (req, res) => {
 
 // ===== MESSAGGI PRIVATI =====
 app.get("/api/messaggi-privati/:altroUid", richiediAuth, async (req, res) => {
-  if (!db) return res.status(500).json({ errore: "Servizio non disponibile." });
+  if (!db) {
+    return res.status(500).json({
+      errore: "Servizio non disponibile."
+    });
+  }
+
   try {
-    const idConv = idConversazione(req.utente.uid, req.params.altroUid);
-    const messaggi = (await db.ref("messaggiPrivati/" + idConv).once("value")).val() || {};
-    const lista = Object.entries(messaggi).map(([id, m]) => ({ id, ...m })).sort((a, b) => a.data - b.data);
+    const mioUid = req.utente.uid;
+    const altroUid = req.params.altroUid;
+
+    if (!altroUid || altroUid === mioUid) {
+      return res.status(400).json({
+        errore: "Conversazione non valida."
+      });
+    }
+
+    const destinatarioEsiste =
+      await db.ref("utenti/" + altroUid).once("value");
+
+    if (!destinatarioEsiste.exists()) {
+      return res.status(404).json({
+        errore: "Utente non trovato."
+      });
+    }
+
+    const idConv =
+      idConversazione(mioUid, altroUid);
+
+    const messaggi =
+      (
+        await db
+          .ref("messaggiPrivati/" + idConv)
+          .once("value")
+      ).val() || {};
+
+    const lista =
+      Object.entries(messaggi)
+        .map(([id, m]) => ({
+          id,
+          ...m
+        }))
+        .sort(
+          (a, b) =>
+            Number(a.data || 0) -
+            Number(b.data || 0)
+        );
+
+    const amici =
+      await verificaAmicizia(
+        mioUid,
+        altroUid
+      );
+
+    /*
+     * Se non sono amici, il messaggio esiste ma
+     * il destinatario NON può leggerne il contenuto.
+     *
+     * Non segniamo nulla come letto.
+     */
+    if (!amici) {
+
+      const esisteMessaggioDaAltro =
+        lista.some(
+          m =>
+            m.daUid === altroUid &&
+            m.aUid === mioUid
+        );
+
+      if (esisteMessaggioDaAltro) {
+
+        return res.json({
+          messaggi: [],
+          bloccata: true,
+          richiestaAmicizia: true,
+          altroUid,
+          messaggio:
+            "Questa persona ti ha inviato un messaggio. Per leggerlo devi prima diventare suo amico."
+        });
+      }
+
+      /*
+       * Nessun messaggio ricevuto dall'altra persona.
+       * In questo caso possiamo comunque lasciare
+       * consultabile una eventuale conversazione
+       * iniziata dal destinatario stesso.
+       */
+    }
+
+    /*
+     * Conversazione autorizzata:
+     * ora possiamo leggere tutto e segnare
+     * come letti i messaggi ricevuti.
+     */
     const aggiornamenti = {};
-    Object.entries(messaggi).forEach(([id, m]) => { if (m.aUid === req.utente.uid && !m.letto) aggiornamenti[id + "/letto"] = true; });
-    if (Object.keys(aggiornamenti).length) await db.ref("messaggiPrivati/" + idConv).update(aggiornamenti);
-    res.json({ messaggi: lista });
-  } catch (err) { console.error(err); res.status(500).json({ errore: "Errore del server." }); }
+
+    Object.entries(messaggi).forEach(
+      ([id, m]) => {
+
+        if (
+          m.aUid === mioUid &&
+          !m.letto
+        ) {
+          aggiornamenti[
+            id + "/letto"
+          ] = true;
+        }
+      }
+    );
+
+    if (
+      Object.keys(aggiornamenti).length
+    ) {
+      await db
+        .ref("messaggiPrivati/" + idConv)
+        .update(aggiornamenti);
+    }
+
+    res.json({
+      messaggi: lista,
+      bloccata: false,
+      richiestaAmicizia: false,
+      altroUid
+    });
+
+  } catch (err) {
+
+    console.error(
+      "Errore caricamento messaggi privati:",
+      err
+    );
+
+    res.status(500).json({
+      errore:
+        "Errore del server."
+    });
+  }
 });
 
 app.post("/api/messaggi-privati", limiteMessaggiPrivati, richiediAuth, async (req, res) => {
-  if (!db) return res.status(500).json({ errore: "Servizio non disponibile." });
+  if (!db) {
+    return res.status(500).json({
+      errore: "Servizio non disponibile."
+    });
+  }
+
   try {
-    const { destinatarioUid, testo } = req.body;
-    if (!destinatarioUid || !testo || !testo.trim()) return res.status(400).json({ errore: "Dati mancanti." });
-    if (destinatarioUid === req.utente.uid) return res.status(400).json({ errore: "Non puoi scrivere a te stesso." });
-    const testoPulito = pulisciTesto(testo, 500);
-    if (!testoPulito) return res.status(400).json({ errore: "Messaggio vuoto." });
-    const mittente = (await db.ref("utenti/" + req.utente.uid).once("value")).val();
-    const destinatario = (await db.ref("utenti/" + destinatarioUid).once("value")).val();
-    if (!mittente || !destinatario) return res.status(404).json({ errore: "Utente non trovato." });
-    const idConv = idConversazione(req.utente.uid, destinatarioUid);
-    const nuovoRef = db.ref("messaggiPrivati/" + idConv).push();
-    const messaggio = { daUid: req.utente.uid, daNome: mittente.nickname, aUid: destinatarioUid, aNome: destinatario.nickname, testo: testoPulito, data: Date.now(), letto: false };
-    await nuovoRef.set(messaggio);
-    res.json({ ok: true, messaggio: { id: nuovoRef.key, ...messaggio } });
-  } catch (err) { console.error(err); res.status(500).json({ errore: "Errore durante l'invio, riprova." }); }
+
+    const {
+      destinatarioUid,
+      testo
+    } = req.body;
+
+    if (
+      !destinatarioUid ||
+      !testo ||
+      !testo.trim()
+    ) {
+      return res.status(400).json({
+        errore: "Dati mancanti."
+      });
+    }
+
+    if (
+      destinatarioUid ===
+      req.utente.uid
+    ) {
+      return res.status(400).json({
+        errore:
+          "Non puoi scrivere a te stesso."
+      });
+    }
+
+    const testoPulito =
+      pulisciTesto(
+        testo,
+        500
+      );
+
+    if (!testoPulito) {
+      return res.status(400).json({
+        errore:
+          "Messaggio vuoto."
+      });
+    }
+
+    const mittente =
+      (
+        await db
+          .ref(
+            "utenti/" +
+            req.utente.uid
+          )
+          .once("value")
+      ).val();
+
+    const destinatario =
+      (
+        await db
+          .ref(
+            "utenti/" +
+            destinatarioUid
+          )
+          .once("value")
+      ).val();
+
+    if (
+      !mittente ||
+      !destinatario
+    ) {
+      return res.status(404).json({
+        errore:
+          "Utente non trovato."
+      });
+    }
+
+    /*
+     * Controlliamo se i due utenti sono amici.
+     * Il messaggio viene comunque inviato anche
+     * se NON sono amici.
+     */
+    const sonoAmici =
+      await verificaAmicizia(
+        req.utente.uid,
+        destinatarioUid
+      );
+
+    const idConv =
+      idConversazione(
+        req.utente.uid,
+        destinatarioUid
+      );
+
+    const ora =
+      Date.now();
+
+    const nuovoRef =
+      db
+        .ref(
+          "messaggiPrivati/" +
+          idConv
+        )
+        .push();
+
+    const messaggio = {
+      daUid:
+        req.utente.uid,
+
+      daNome:
+        mittente.nickname,
+
+      aUid:
+        destinatarioUid,
+
+      aNome:
+        destinatario.nickname,
+
+      testo:
+        testoPulito,
+
+      data:
+        ora,
+
+      letto:
+        false,
+
+      /*
+       * Serve al server per sapere che,
+       * al momento dell'invio, la conversazione
+       * non era ancora sbloccata.
+       *
+       * Il messaggio non viene cancellato:
+       * dopo l'amicizia sarà leggibile.
+       */
+      richiestaAmicizia:
+        !sonoAmici
+    };
+
+    await nuovoRef.set(
+      messaggio
+    );
+
+    /*
+     * Se non sono amici, informiamo il destinatario
+     * tramite il normale sistema delle notifiche.
+     *
+     * In questo modo sa che qualcuno gli ha scritto
+     * anche senza entrare nel profilo del mittente.
+     */
+    if (!sonoAmici) {
+
+      const notificheRef =
+        db.ref(
+          "utenti/" +
+          destinatarioUid +
+          "/notifiche"
+        );
+
+      await notificheRef.push({
+        tipo:
+          "messaggioPrivato",
+
+        testo:
+          `${mittente.nickname} ti ha inviato un messaggio. Diventate amici per leggerlo.`,
+
+        data:
+          ora,
+
+        letta:
+          false,
+
+        daUid:
+          req.utente.uid,
+
+        daNome:
+          mittente.nickname,
+
+        conversazioneUid:
+          req.utente.uid
+      });
+
+    }
+
+    res.json({
+      ok: true,
+
+      messaggio: {
+        id:
+          nuovoRef.key,
+
+        ...messaggio
+      },
+
+      richiestaAmicizia:
+        !sonoAmici
+    });
+
+  } catch (err) {
+
+    console.error(
+      "Errore invio messaggio privato:",
+      err
+    );
+
+    res.status(500).json({
+      errore:
+        "Errore durante l'invio, riprova."
+    });
+  }
 });
 
 app.get("/api/conversazioni", richiediAuth, async (req, res) => {
-  if (!db) return res.status(500).json({ errore: "Servizio non disponibile." });
-  try {
-    const tutte = (await db.ref("messaggiPrivati").once("value")).val() || {};
-    const mieUid = req.utente.uid;
-    const conversazioni = {};
-    Object.entries(tutte).forEach(([idConv, messaggi]) => {
-      if (!idConv.split("_").includes(mieUid)) return;
-      const lista = Object.values(messaggi);
-      if (!lista.length) return;
-      const ultimo = lista.sort((a, b) => b.data - a.data)[0];
-      const altroUid = ultimo.daUid === mieUid ? ultimo.aUid : ultimo.daUid;
-      const altroNome = ultimo.daUid === mieUid ? ultimo.aNome : ultimo.daNome;
-      conversazioni[altroUid] = { altroUid, altroNome, ultimoTesto: ultimo.testo, ultimaData: ultimo.data, nonLetti: lista.filter(m => m.aUid === mieUid && !m.letto).length };
+  if (!db) {
+    return res.status(500).json({
+      errore: "Servizio non disponibile."
     });
-    res.json({ conversazioni: Object.values(conversazioni).sort((a, b) => b.ultimaData - a.ultimaData) });
-  } catch (err) { console.error(err); res.status(500).json({ errore: "Errore del server." }); }
+  }
+
+  try {
+
+    const tutte =
+      (
+        await db
+          .ref("messaggiPrivati")
+          .once("value")
+      ).val() || {};
+
+    const mioUid =
+      req.utente.uid;
+
+    const conversazioni = {};
+
+    for (
+      const [
+        idConv,
+        messaggi
+      ] of Object.entries(tutte)
+    ) {
+
+      /*
+       * La conversazione appartiene all'utente
+       * solo se il suo UID è uno dei due.
+       */
+      if (
+        !idConv
+          .split("_")
+          .includes(mioUid)
+      ) {
+        continue;
+      }
+
+      const lista =
+        Object.values(
+          messaggi || {}
+        );
+
+      if (!lista.length) {
+        continue;
+      }
+
+      lista.sort(
+        (a, b) =>
+          Number(b.data || 0) -
+          Number(a.data || 0)
+      );
+
+      const ultimo =
+        lista[0];
+
+      const altroUid =
+        ultimo.daUid === mioUid
+          ? ultimo.aUid
+          : ultimo.daUid;
+
+      const altroNome =
+        ultimo.daUid === mioUid
+          ? ultimo.aNome
+          : ultimo.daNome;
+
+      /*
+       * Una volta amici la conversazione
+       * è completamente normale.
+       */
+      const amici =
+        await verificaAmicizia(
+          mioUid,
+          altroUid
+        );
+
+      /*
+       * Controlliamo se esiste almeno un messaggio
+       * ricevuto dal nostro interlocutore.
+       */
+      const haMessaggiRicevuti =
+        lista.some(
+          m =>
+            m.aUid === mioUid
+        );
+
+      /*
+       * Se non siamo amici e abbiamo ricevuto
+       * almeno un messaggio, l'inbox mostra
+       * l'esistenza del messaggio ma MAI il suo testo.
+       */
+      const bloccata =
+        !amici &&
+        haMessaggiRicevuti;
+
+      const ultimoTesto =
+        bloccata
+          ? "Ti ha inviato un messaggio"
+          : (ultimo.testo || "");
+
+      const nonLetti =
+        lista.filter(
+          m =>
+            m.aUid === mioUid &&
+            !m.letto
+        ).length;
+
+      conversazioni[altroUid] = {
+
+        altroUid,
+
+        altroNome,
+
+        ultimoTesto,
+
+        ultimaData:
+          ultimo.data,
+
+        nonLetti,
+
+        bloccata,
+
+        richiestaAmicizia:
+          bloccata
+      };
+    }
+
+    res.json({
+      conversazioni:
+        Object
+          .values(
+            conversazioni
+          )
+          .sort(
+            (a, b) =>
+              Number(b.ultimaData || 0) -
+              Number(a.ultimaData || 0)
+          )
+    });
+
+  } catch (err) {
+
+    console.error(
+      "Errore caricamento conversazioni:",
+      err
+    );
+
+    res.status(500).json({
+      errore:
+        "Errore del server."
+    });
+  }
 });
 
 // ===== AMICI =====
