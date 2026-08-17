@@ -34,43 +34,49 @@ const coloriGiocatori = [
 ];
 
 /*
- * DEVONO essere coerenti con il server.js:
+ * SINCRONIZZAZIONE CON SERVER:
  *
- * server:
+ * server.js:
  *   DURATA_ANIMAZIONE_BASE_MS = 700
  *   DURATA_ANIMAZIONE_PER_CASELLA_MS = 220
  *
- * Per questo il client usa:
- *   lancio dadi = 700 ms
- *   ogni casella = 220 ms
+ * Il server considera quindi:
+ *   700 ms + 220 ms * percorso.length
+ *
+ * Il client esegue:
+ *   700 ms di dadi
+ *   + 220 ms per ogni casella
+ *
+ * In questo modo il nuovo turno viene aperto dal server
+ * nello stesso intervallo in cui l'animazione termina sul client.
  */
 const DURATA_LANCIO_DADI_MS = 700;
 const DURATA_SALTO_MS = 220;
+
+const URL_SERVER_HTTP = "https://gioco-oca-server.onrender.com";
+const URL_SERVER_WS = "wss://gioco-oca-server.onrender.com";
 
 const params = new URLSearchParams(window.location.search);
 const partitaId = params.get("partita");
 const stanza = params.get("stanza");
 
 let mioUid = null;
-
 let socket = null;
+
 let ultimoStatoGiocatori = [];
 let mioTurno = false;
 let turnoAttualeId = null;
+
 let timerRiconnessione = null;
+let tentativoRiconnessioneInCorso = false;
 
 let faseAttuale = "normale";
 let possoTirareIoInDeterminazione = false;
 
-/*
- * ===== TIMER CLIENT =====
- *
- * Il server è la fonte ufficiale.
- *
- * tempoInizioTurnoAttuale = inizio stabilito dal server
- * durataMossaMsAttuale    = durata scelta nella partita
- * scadenzaTurnoAttuale    = scadenza assoluta stabilita dal server
- */
+/* ============================================================
+   TIMER CLIENT
+   ============================================================ */
+
 let tempoInizioTurnoAttuale = null;
 let durataMossaMsAttuale = null;
 let scadenzaTurnoAttuale = null;
@@ -103,26 +109,32 @@ function coloreDaNome(nome) {
   return colori[somma % colori.length];
 }
 
-// ============================================================
-// SUONI
-// ============================================================
+/* ============================================================
+   SUONI
+   ============================================================ */
 
 let suoniAttivi = localStorage.getItem("suoniAttivi") !== "off";
 let contestoAudio = null;
 
 function ottieniContestoAudio() {
-  if (!contestoAudio) {
-    const C = window.AudioContext || window.webkitAudioContext;
-    if (!C) return null;
+  try {
+    if (!contestoAudio) {
+      const C = window.AudioContext || window.webkitAudioContext;
+      if (!C) return null;
+      contestoAudio = new C();
+    }
 
-    contestoAudio = new C();
+    if (contestoAudio.state === "suspended") {
+      const promessa = contestoAudio.resume();
+      if (promessa && typeof promessa.catch === "function") {
+        promessa.catch(() => {});
+      }
+    }
+
+    return contestoAudio;
+  } catch (e) {
+    return null;
   }
-
-  if (contestoAudio.state === "suspended") {
-    contestoAudio.resume();
-  }
-
-  return contestoAudio;
 }
 
 function suonaTono(
@@ -137,39 +149,33 @@ function suonaTono(
   const ctx = ottieniContestoAudio();
   if (!ctx) return;
 
-  const inizio =
-    ctx.currentTime + (ritardoMs || 0) / 1000;
+  try {
+    const inizio =
+      ctx.currentTime + (ritardoMs || 0) / 1000;
 
-  const osc = ctx.createOscillator();
-  const g = ctx.createGain();
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
 
-  osc.type = tipoOnda || "sine";
-  osc.frequency.setValueAtTime(
-    frequenza,
-    inizio
-  );
+    osc.type = tipoOnda || "sine";
+    osc.frequency.setValueAtTime(frequenza, inizio);
 
-  g.gain.setValueAtTime(0, inizio);
+    g.gain.setValueAtTime(0.0001, inizio);
+    g.gain.linearRampToValueAtTime(
+      volume || 0.12,
+      inizio + 0.01
+    );
 
-  g.gain.linearRampToValueAtTime(
-    volume || 0.12,
-    inizio + 0.01
-  );
+    g.gain.exponentialRampToValueAtTime(
+      0.0001,
+      inizio + durataMs / 1000
+    );
 
-  g.gain.exponentialRampToValueAtTime(
-    0.0001,
-    inizio + durataMs / 1000
-  );
+    osc.connect(g);
+    g.connect(ctx.destination);
 
-  osc.connect(g);
-  g.connect(ctx.destination);
-
-  osc.start(inizio);
-  osc.stop(
-    inizio +
-    durataMs / 1000 +
-    0.02
-  );
+    osc.start(inizio);
+    osc.stop(inizio + durataMs / 1000 + 0.02);
+  } catch (e) {}
 }
 
 function suonaClick(volume, ritardoMs) {
@@ -178,50 +184,51 @@ function suonaClick(volume, ritardoMs) {
   const ctx = ottieniContestoAudio();
   if (!ctx) return;
 
-  const inizio =
-    ctx.currentTime + (ritardoMs || 0) / 1000;
+  try {
+    const inizio =
+      ctx.currentTime + (ritardoMs || 0) / 1000;
 
-  const durata = 0.045;
-  const lung =
-    Math.floor(ctx.sampleRate * durata);
-
-  const buffer =
-    ctx.createBuffer(
+    const durata = 0.045;
+    const lung = Math.max(
       1,
-      lung,
-      ctx.sampleRate
+      Math.floor(ctx.sampleRate * durata)
     );
 
-  const dati =
-    buffer.getChannelData(0);
+    const buffer =
+      ctx.createBuffer(
+        1,
+        lung,
+        ctx.sampleRate
+      );
 
-  for (let i = 0; i < lung; i++) {
-    dati[i] =
-      (Math.random() * 2 - 1) *
-      (1 - i / lung);
-  }
+    const dati = buffer.getChannelData(0);
 
-  const s =
-    ctx.createBufferSource();
+    for (let i = 0; i < lung; i++) {
+      dati[i] =
+        (Math.random() * 2 - 1) *
+        (1 - i / lung);
+    }
 
-  s.buffer = buffer;
+    const s = ctx.createBufferSource();
+    s.buffer = buffer;
 
-  const g = ctx.createGain();
+    const g = ctx.createGain();
 
-  g.gain.setValueAtTime(
-    volume || 0.18,
-    inizio
-  );
+    g.gain.setValueAtTime(
+      volume || 0.18,
+      inizio
+    );
 
-  g.gain.exponentialRampToValueAtTime(
-    0.001,
-    inizio + durata
-  );
+    g.gain.exponentialRampToValueAtTime(
+      0.001,
+      inizio + durata
+    );
 
-  s.connect(g);
-  g.connect(ctx.destination);
+    s.connect(g);
+    g.connect(ctx.destination);
 
-  s.start(inizio);
+    s.start(inizio);
+  } catch (e) {}
 }
 
 function suonaTiroDadi() {
@@ -233,43 +240,17 @@ function suonaTiroDadi() {
 }
 
 function suonaAtterraggioDadi() {
-  suonaTono(
-    180,
-    90,
-    "square",
-    0.14,
-    0
-  );
-
+  suonaTono(180, 90, "square", 0.14, 0);
   suonaClick(0.15, 20);
 }
 
 function suonaPassoPedina() {
-  suonaTono(
-    520,
-    55,
-    "sine",
-    0.09,
-    0
-  );
+  suonaTono(520, 55, "sine", 0.09, 0);
 }
 
 function suonaTuoTurno() {
-  suonaTono(
-    660,
-    120,
-    "sine",
-    0.11,
-    0
-  );
-
-  suonaTono(
-    880,
-    160,
-    "sine",
-    0.11,
-    120
-  );
+  suonaTono(660, 120, "sine", 0.11, 0);
+  suonaTono(880, 160, "sine", 0.11, 120);
 }
 
 function suonaVittoria() {
@@ -280,41 +261,16 @@ function suonaVittoria() {
 }
 
 function suonaMessaggioChat() {
-  suonaTono(
-    740,
-    70,
-    "sine",
-    0.08,
-    0
-  );
+  suonaTono(740, 70, "sine", 0.08, 0);
 }
 
 function suonaAvvisoTempo() {
-  suonaTono(
-    300,
-    90,
-    "triangle",
-    0.14,
-    0
-  );
+  suonaTono(300, 90, "triangle", 0.14, 0);
 }
 
 function suonaRichiestaAudio() {
-  suonaTono(
-    700,
-    90,
-    "sine",
-    0.12,
-    0
-  );
-
-  suonaTono(
-    900,
-    120,
-    "sine",
-    0.12,
-    130
-  );
+  suonaTono(700, 90, "sine", 0.12, 0);
+  suonaTono(900, 120, "sine", 0.12, 130);
 }
 
 function toggleSuoni() {
@@ -322,11 +278,11 @@ function toggleSuoni() {
 }
 
 function impostaSuoni(attivi) {
-  suoniAttivi = attivi;
+  suoniAttivi = !!attivi;
 
   localStorage.setItem(
     "suoniAttivi",
-    attivi ? "on" : "off"
+    suoniAttivi ? "on" : "off"
   );
 
   aggiornaTestoBottoneSuoni();
@@ -334,9 +290,7 @@ function impostaSuoni(attivi) {
 
 function aggiornaTestoBottoneSuoni() {
   const b =
-    document.getElementById(
-      "btn-toggle-suoni"
-    );
+    document.getElementById("btn-toggle-suoni");
 
   if (!b) return;
 
@@ -346,9 +300,9 @@ function aggiornaTestoBottoneSuoni() {
       : "🔇 Suoni: Off";
 }
 
-// ============================================================
-// TUTTO SCHERMO
-// ============================================================
+/* ============================================================
+   TUTTO SCHERMO
+   ============================================================ */
 
 function toggleFullscreen() {
   try {
@@ -356,8 +310,7 @@ function toggleFullscreen() {
       !document.fullscreenElement &&
       !document.webkitFullscreenElement
     ) {
-      const elemento =
-        document.documentElement;
+      const elemento = document.documentElement;
 
       const richiesta =
         elemento.requestFullscreen ||
@@ -372,8 +325,7 @@ function toggleFullscreen() {
         return;
       }
 
-      const risultato =
-        richiesta.call(elemento);
+      const risultato = richiesta.call(elemento);
 
       if (
         risultato &&
@@ -440,9 +392,9 @@ document.addEventListener(
   aggiornaTestoBottoneFullscreen
 );
 
-// ============================================================
-// ORIENTAMENTO
-// ============================================================
+/* ============================================================
+   ORIENTAMENTO / LAYOUT
+   ============================================================ */
 
 function eSchermoInLandscape() {
   if (
@@ -468,10 +420,7 @@ function eSchermoInLandscape() {
     }
   }
 
-  return (
-    window.innerWidth >
-    window.innerHeight
-  );
+  return window.innerWidth > window.innerHeight;
 }
 
 function calcolaEAggiornaOrientamento() {
@@ -506,41 +455,32 @@ function calcolaEAggiornaOrientamento() {
 function rilevaEImpostaModalitaDesktop() {
   const puntatorePreciso =
     window.matchMedia &&
-    window.matchMedia(
-      "(pointer: fine)"
-    ).matches;
+    window.matchMedia("(pointer: fine)").matches;
 
   const schermoAmpio =
     window.innerWidth >= 1000;
 
   document.body.classList.toggle(
     "modalita-desktop",
-    puntatorePreciso && schermoAmpio
+    !!(puntatorePreciso && schermoAmpio)
   );
 }
 
 function aggiornaLayoutTabellone() {
   const areaTabellone =
-    document.getElementById(
-      "area-tabellone"
-    );
+    document.getElementById("area-tabellone");
 
   const immagine =
-    document.getElementById(
-      "immagine-tabellone"
-    );
+    document.getElementById("immagine-tabellone");
 
-  if (!areaTabellone || !immagine) {
-    return;
-  }
+  if (!areaTabellone || !immagine) return;
 
   const rapportoNaturale =
     (
       immagine.naturalWidth &&
       immagine.naturalHeight
     )
-      ? immagine.naturalWidth /
-        immagine.naturalHeight
+      ? immagine.naturalWidth / immagine.naturalHeight
       : 1.48;
 
   const eDesktop =
@@ -646,6 +586,10 @@ function aggiornaLayoutTabellone() {
     }
   }
 
+  if (!Number.isFinite(Wc) || !Number.isFinite(Hc)) {
+    return;
+  }
+
   areaTabellone.style.width =
     Wc + "px";
 
@@ -661,9 +605,7 @@ function gestisciResize() {
   rilevaEImpostaModalitaDesktop();
   calcolaEAggiornaOrientamento();
 
-  clearTimeout(
-    timerDebounceResize
-  );
+  clearTimeout(timerDebounceResize);
 
   timerDebounceResize =
     setTimeout(
@@ -730,20 +672,18 @@ function inizializzaGestioneOrientamento() {
     );
   }
 
+  const immagine =
+    document.getElementById(
+      "immagine-tabellone"
+    );
+
   if (immagine_pronta()) {
     aggiornaLayoutTabellone();
-  } else {
-    const immagine =
-      document.getElementById(
-        "immagine-tabellone"
-      );
-
-    if (immagine) {
-      immagine.addEventListener(
-        "load",
-        aggiornaLayoutTabellone
-      );
-    }
+  } else if (immagine) {
+    immagine.addEventListener(
+      "load",
+      aggiornaLayoutTabellone
+    );
   }
 }
 
@@ -753,7 +693,7 @@ function immagine_pronta() {
       "immagine-tabellone"
     );
 
-  return (
+  return !!(
     immagine &&
     immagine.complete &&
     immagine.naturalWidth
@@ -776,9 +716,9 @@ function riposizionaTuttePedine() {
   });
 }
 
-// ============================================================
-// MESSAGGIO GRANDE
-// ============================================================
+/* ============================================================
+   MESSAGGIO GRANDE
+   ============================================================ */
 
 let timerFlashMessaggio = null;
 
@@ -823,9 +763,7 @@ function mostraMessaggioGiocoGrande(testo) {
   el.classList.add("visibile");
 
   if (timerFlashMessaggio) {
-    clearTimeout(
-      timerFlashMessaggio
-    );
+    clearTimeout(timerFlashMessaggio);
   }
 
   timerFlashMessaggio =
@@ -836,9 +774,9 @@ function mostraMessaggioGiocoGrande(testo) {
     }, 1500);
 }
 
-// ============================================================
-// DETERMINAZIONE ORDINE
-// ============================================================
+/* ============================================================
+   DETERMINAZIONE ORDINE
+   ============================================================ */
 
 let areaDadiHomeGenitore = null;
 let areaDadiHomeFratelloSuccessivo = null;
@@ -893,7 +831,8 @@ function riportaDadiAllaPartita() {
   }
 
   if (
-    areaDadiHomeFratelloSuccessivo
+    areaDadiHomeFratelloSuccessivo &&
+    areaDadiHomeFratelloSuccessivo.parentNode === areaDadiHomeGenitore
   ) {
     areaDadiHomeGenitore.insertBefore(
       areaDadi,
@@ -922,16 +861,23 @@ function disegnaListaDeterminazione(
 
   if (!lista) return;
 
+  const elenco =
+    Array.isArray(giocatori)
+      ? giocatori
+      : [];
+
   const spareggioSet =
     new Set(
-      gruppoSpareggio || []
+      Array.isArray(gruppoSpareggio)
+        ? gruppoSpareggio
+        : []
     );
 
   lista.innerHTML =
-    giocatori.map((g) => {
+    elenco.map((g) => {
       const avatarHtml =
         g.avatar
-          ? `<img class="avatar-mini" src="${g.avatar}">`
+          ? `<img class="avatar-mini" src="${g.avatar}" alt="">`
           : `<div class="avatar-mini" style="background:${coloreDaNome(g.nome)};">${iniziale(g.nome)}</div>`;
 
       let statoHtml;
@@ -940,8 +886,7 @@ function disegnaListaDeterminazione(
         statoHtml =
           `<span class="determinazione-risultato">🎲 ${g.risultato}</span>`;
       } else if (
-        g.uid ===
-        turnoInCorsoUid
+        g.uid === turnoInCorsoUid
       ) {
         statoHtml =
           `<span class="determinazione-in-corso">🎲 sta tirando...</span>`;
@@ -956,15 +901,14 @@ function disegnaListaDeterminazione(
           : "";
 
       const evidenzia =
-        g.uid ===
-        turnoInCorsoUid
+        g.uid === turnoInCorsoUid
           ? " determinazione-riga-attiva"
           : "";
 
       return `
         <div class="determinazione-riga${evidenzia}">
           ${avatarHtml}
-          <span class="determinazione-nome">${g.nome}</span>
+          <span class="determinazione-nome">${g.nome || "?"}</span>
           ${tagSpareggio}
           ${statoHtml}
         </div>
@@ -973,8 +917,7 @@ function disegnaListaDeterminazione(
 }
 
 function gestisciStatoDeterminazione(dati) {
-  faseAttuale =
-    "determinazione";
+  faseAttuale = "determinazione";
 
   const overlay =
     document.getElementById(
@@ -992,15 +935,19 @@ function gestisciStatoDeterminazione(dati) {
     mostraDadi(1, 1);
   }
 
+  const giocatori =
+    Array.isArray(dati.giocatori)
+      ? dati.giocatori
+      : [];
+
   disegnaListaDeterminazione(
-    dati.giocatori || [],
-    dati.turnoInCorsoUid,
-    dati.gruppoSpareggioAttuale
+    giocatori,
+    dati.turnoInCorsoUid || null,
+    dati.gruppoSpareggioAttuale || []
   );
 
   possoTirareIoInDeterminazione =
-    dati.turnoInCorsoUid ===
-    mioUid;
+    dati.turnoInCorsoUid === mioUid;
 
   const areaDadi =
     document.getElementById(
@@ -1027,10 +974,9 @@ function gestisciStatoDeterminazione(dati) {
       dati.gruppoSpareggioAttuale
         .map((u) => {
           const g =
-            (dati.giocatori || [])
-              .find(
-                (x) => x.uid === u
-              );
+            giocatori.find(
+              (x) => x.uid === u
+            );
 
           return g
             ? g.nome
@@ -1053,12 +999,11 @@ function gestisciStatoDeterminazione(dati) {
     }
   } else {
     const inAttesaDi =
-      (dati.giocatori || [])
-        .find(
-          (g) =>
-            g.uid ===
-            dati.turnoInCorsoUid
-        );
+      giocatori.find(
+        (g) =>
+          g.uid ===
+          dati.turnoInCorsoUid
+      );
 
     if (sottotitolo) {
       sottotitolo.textContent =
@@ -1098,7 +1043,7 @@ function gestisciRisultatoDeterminazione(
 
       if (sottotitolo) {
         sottotitolo.textContent =
-          dati.nome +
+          (dati.nome || "Il giocatore") +
           " ha fatto " +
           dati.valoreDado +
           (
@@ -1132,42 +1077,44 @@ function gestisciOrdineFinaleCalcolato(
 
   if (!lista) return;
 
+  const ordine =
+    Array.isArray(dati.ordineGiocatori)
+      ? dati.ordineGiocatori
+      : [];
+
   lista.innerHTML =
-    (dati.ordineGiocatori || [])
-      .map(
-        (nome, indice) => {
-          const punteggio =
-            dati.punteggi &&
-            dati.punteggi[nome] != null
-              ? dati.punteggi[nome]
-              : "?";
+    ordine.map(
+      (nome, indice) => {
+        const punteggio =
+          dati.punteggi &&
+          dati.punteggi[nome] != null
+            ? dati.punteggi[nome]
+            : "?";
 
-          return `
-            <div class="determinazione-riga determinazione-riga-finale"
-                 style="animation-delay:${indice * 0.12}s;">
-              <span class="determinazione-posizione-finale">
-                ${indice + 1}°
-              </span>
+        return `
+          <div class="determinazione-riga determinazione-riga-finale"
+               style="animation-delay:${indice * 0.12}s;">
+            <span class="determinazione-posizione-finale">
+              ${indice + 1}°
+            </span>
 
-              <span class="determinazione-nome">
-                ${nome}
-              </span>
+            <span class="determinazione-nome">
+              ${nome || "?"}
+            </span>
 
-              <span class="determinazione-risultato">
-                🎲 ${punteggio}
-              </span>
-            </div>
-          `;
-        }
-      )
-      .join("");
+            <span class="determinazione-risultato">
+              🎲 ${punteggio}
+            </span>
+          </div>
+        `;
+      }
+    ).join("");
 }
 
 function gestisciDeterminazioneCompletata(
   dati
 ) {
-  faseAttuale =
-    "normale";
+  faseAttuale = "normale";
 
   const overlay =
     document.getElementById(
@@ -1183,7 +1130,12 @@ function gestisciDeterminazioneCompletata(
   riportaDadiAllaPartita();
 
   ultimoStatoGiocatori =
-    dati.giocatori || [];
+    Array.isArray(dati.giocatori)
+      ? dati.giocatori
+      : [];
+
+  const primoMovimento =
+    dati.primoMovimento || {};
 
   const messaggiGioco =
     document.getElementById(
@@ -1193,24 +1145,24 @@ function gestisciDeterminazioneCompletata(
   if (messaggiGioco) {
     messaggiGioco.textContent =
       "🎲 " +
-      dati.primoMovimento.nomeGiocatore +
+      (primoMovimento.nomeGiocatore || "?") +
       " ha fatto " +
-      dati.primoMovimento.valoreDado +
+      Number(primoMovimento.valoreDado || 0) +
       " — avanza di " +
-      dati.primoMovimento.valoreDado +
+      Number(primoMovimento.valoreDado || 0) +
       " caselle!";
   }
 
   animaSaltoPedina(
-    dati.primoMovimento.idGiocatore,
-    dati.primoMovimento.percorso,
+    primoMovimento.idGiocatore,
+    primoMovimento.percorso || [],
     () => {
       if (
-        dati.primoMovimento.messaggi &&
-        dati.primoMovimento.messaggi.length
+        Array.isArray(primoMovimento.messaggi) &&
+        primoMovimento.messaggi.length
       ) {
         mostraMessaggioGiocoGrande(
-          dati.primoMovimento.messaggi.join(" ")
+          primoMovimento.messaggi.join(" ")
         );
       }
 
@@ -1227,6 +1179,8 @@ function gestisciDeterminazioneCompletata(
 
       if (dati.vittoria) {
         turnoAttualeId = null;
+
+        fermaCountdownCompleto();
 
         const areaDadi =
           document.getElementById(
@@ -1246,7 +1200,7 @@ function gestisciDeterminazioneCompletata(
         );
       } else {
         aggiornaTurno(
-          dati.turnoDiId
+          dati.turnoDiId || null
         );
 
         disegnaGiocatori();
@@ -1255,18 +1209,22 @@ function gestisciDeterminazioneCompletata(
   );
 }
 
-// ============================================================
-// TIMER
-// ============================================================
+/* ============================================================
+   TIMER
+   ============================================================ */
 
 function fermaCountdownCompleto() {
-  if (intervalCountdown) {
-    clearInterval(
-      intervalCountdown
-    );
-
+  if (intervalCountdown !== null) {
+    clearInterval(intervalCountdown);
     intervalCountdown = null;
   }
+}
+
+function azzeraDatiCountdown() {
+  tempoInizioTurnoAttuale = null;
+  durataMossaMsAttuale = null;
+  scadenzaTurnoAttuale = null;
+  ultimoSecondoAvviso = null;
 }
 
 function avviaCountdownTurno(
@@ -1274,25 +1232,23 @@ function avviaCountdownTurno(
   durataMs,
   scadenzaTurno = null
 ) {
+  const inizioNumero = Number(tempoInizio);
+  const durataNumero = Number(durataMs);
+  const scadenzaNumero = Number(scadenzaTurno);
+
   tempoInizioTurnoAttuale =
-    Number.isFinite(
-      Number(tempoInizio)
-    )
-      ? Number(tempoInizio)
+    Number.isFinite(inizioNumero)
+      ? inizioNumero
       : null;
 
   durataMossaMsAttuale =
-    Number.isFinite(
-      Number(durataMs)
-    )
-      ? Number(durataMs)
+    Number.isFinite(durataNumero)
+      ? durataNumero
       : null;
 
   scadenzaTurnoAttuale =
-    Number.isFinite(
-      Number(scadenzaTurno)
-    )
-      ? Number(scadenzaTurno)
+    Number.isFinite(scadenzaNumero)
+      ? scadenzaNumero
       : (
         tempoInizioTurnoAttuale != null &&
         durataMossaMsAttuale != null
@@ -1301,13 +1257,20 @@ function avviaCountdownTurno(
           : null
       );
 
-  ultimoSecondoAvviso =
-    null;
-
-  turnoLocalmenteCompletato =
-    false;
+  ultimoSecondoAvviso = null;
+  turnoLocalmenteCompletato = false;
 
   fermaCountdownCompleto();
+
+  if (
+    scadenzaTurnoAttuale == null &&
+    (
+      tempoInizioTurnoAttuale == null ||
+      durataMossaMsAttuale == null
+    )
+  ) {
+    return;
+  }
 
   intervalCountdown =
     setInterval(
@@ -1319,8 +1282,7 @@ function avviaCountdownTurno(
 }
 
 function fermaCountdownPerAzioneLocale() {
-  turnoLocalmenteCompletato =
-    true;
+  turnoLocalmenteCompletato = true;
 
   fermaCountdownCompleto();
 
@@ -1350,9 +1312,7 @@ function aggiornaCountdownTurno() {
 
   if (!el) return;
 
-  if (
-    turnoLocalmenteCompletato
-  ) {
+  if (turnoLocalmenteCompletato) {
     return;
   }
 
@@ -1368,9 +1328,7 @@ function aggiornaCountdownTurno() {
 
   let restanteMs;
 
-  if (
-    scadenzaTurnoAttuale != null
-  ) {
+  if (scadenzaTurnoAttuale != null) {
     restanteMs =
       scadenzaTurnoAttuale -
       Date.now();
@@ -1405,12 +1363,6 @@ function aggiornaCountdownTurno() {
     "countdown-fermo"
   );
 
-  /*
-   * Il suono scatta solo negli ultimi 3 secondi
-   * del tempo ufficiale del server.
-   *
-   * La tolleranza NON viene mostrata come tempo extra.
-   */
   if (
     sec <= 3 &&
     sec >= 1 &&
@@ -1421,9 +1373,9 @@ function aggiornaCountdownTurno() {
   }
 }
 
-// ============================================================
-// MICROFONO
-// ============================================================
+/* ============================================================
+   MICROFONO / WEBRTC
+   ============================================================ */
 
 let microfonoAttivo = false;
 let flussoAudioLocale = null;
@@ -1451,6 +1403,16 @@ async function toggleMicrofono() {
 
 async function attivaMicrofono() {
   try {
+    if (
+      !navigator.mediaDevices ||
+      typeof navigator.mediaDevices.getUserMedia !== "function"
+    ) {
+      alert(
+        "Il tuo browser non permette l'accesso al microfono."
+      );
+      return;
+    }
+
     flussoAudioLocale =
       await navigator.mediaDevices.getUserMedia({
         audio: true,
@@ -1460,7 +1422,6 @@ async function attivaMicrofono() {
     alert(
       "Non è stato possibile accedere al microfono. Controlla i permessi del browser."
     );
-
     return;
   }
 
@@ -1507,32 +1468,31 @@ function aggiornaTestoBottoneMicrofono() {
   }
 }
 
-function richiediAudioCon(
-  altroUid
-) {
+function richiediAudioCon(altroUid) {
   if (!microfonoAttivo) {
     alert(
       "Attiva prima il tuo microfono dal menu ☰."
     );
-
     return;
   }
 
   if (
-    richiesteInviate.has(
-      altroUid
-    ) ||
-    coppieAudioAttive.has(
-      altroUid
-    )
+    !altroUid ||
+    altroUid === mioUid
+  ) {
+    return;
+  }
+
+  if (
+    richiesteInviate.has(altroUid) ||
+    coppieAudioAttive.has(altroUid)
   ) {
     return;
   }
 
   if (
     !socket ||
-    socket.readyState !==
-      WebSocket.OPEN
+    socket.readyState !== WebSocket.OPEN
   ) {
     return;
   }
@@ -1568,7 +1528,7 @@ function mostraRichiestaAudioRicevuta(
 
   if (testo) {
     testo.textContent =
-      mittenteNome +
+      (mittenteNome || "Un giocatore") +
       " ti sta chiedendo di parlare in chiamata audio";
   }
 
@@ -1647,7 +1607,7 @@ async function rispondiRichiestaAudioRicevuta(
       partitaId,
       destinatarioUid:
         mittenteUid,
-      accettato
+      accettato: !!accettato
     })
   );
 
@@ -1663,25 +1623,39 @@ async function rispondiRichiestaAudioRicevuta(
 function creaConnessionePeer(
   altroUid
 ) {
-  const pc =
-    new RTCPeerConnection(
-      CONFIGURAZIONE_ICE
-    );
+  if (!altroUid) return null;
+
+  if (connessioniPeer[altroUid]) {
+    return connessioniPeer[altroUid];
+  }
+
+  let pc;
+
+  try {
+    pc =
+      new RTCPeerConnection(
+        CONFIGURAZIONE_ICE
+      );
+  } catch (e) {
+    return null;
+  }
 
   if (flussoAudioLocale) {
     flussoAudioLocale
       .getTracks()
       .forEach(
-        (t) => pc.addTrack(
-          t,
-          flussoAudioLocale
-        )
+        (t) => {
+          try {
+            pc.addTrack(
+              t,
+              flussoAudioLocale
+            );
+          } catch (e) {}
+        }
       );
   }
 
-  pc.onicecandidate = (
-    ev
-  ) => {
+  pc.onicecandidate = (ev) => {
     if (
       ev.candidate &&
       socket &&
@@ -1715,6 +1689,7 @@ function creaConnessionePeer(
         );
 
       elAudio.autoplay = true;
+      elAudio.playsInline = true;
       elAudio.id =
         "audio-remoto-" +
         altroUid;
@@ -1728,8 +1703,25 @@ function creaConnessionePeer(
       ] = elAudio;
     }
 
-    elAudio.srcObject =
-      ev.streams[0];
+    if (ev.streams && ev.streams[0]) {
+      elAudio.srcObject =
+        ev.streams[0];
+
+      const p = elAudio.play();
+
+      if (p && typeof p.catch === "function") {
+        p.catch(() => {});
+      }
+    }
+  };
+
+  pc.onconnectionstatechange = () => {
+    if (
+      pc.connectionState === "failed" ||
+      pc.connectionState === "closed"
+    ) {
+      chiudiConnessioneAudio(altroUid);
+    }
   };
 
   connessioniPeer[
@@ -1744,6 +1736,13 @@ async function avviaConnessioneAudio(
   sonoIoAdIniziare
 ) {
   if (
+    !altroUid ||
+    altroUid === mioUid
+  ) {
+    return;
+  }
+
+  if (
     connessioniPeer[
       altroUid
     ]
@@ -1756,12 +1755,73 @@ async function avviaConnessioneAudio(
       altroUid
     );
 
+  if (!pc) return;
+
   if (sonoIoAdIniziare) {
-    const offerta =
-      await pc.createOffer();
+    try {
+      const offerta =
+        await pc.createOffer();
+
+      await pc.setLocalDescription(
+        offerta
+      );
+
+      if (
+        socket &&
+        socket.readyState ===
+          WebSocket.OPEN
+      ) {
+        socket.send(
+          JSON.stringify({
+            tipo: "webrtc-offer",
+            partitaId,
+            destinatarioUid:
+              altroUid,
+            sdp:
+              pc.localDescription
+          })
+        );
+      }
+    } catch (e) {
+      chiudiConnessioneAudio(altroUid);
+    }
+  }
+}
+
+async function gestisciOffertaRicevuta(
+  mittenteUid,
+  sdp
+) {
+  if (
+    !microfonoAttivo ||
+    !mittenteUid ||
+    !sdp
+  ) {
+    return;
+  }
+
+  try {
+    const pc =
+      connessioniPeer[
+        mittenteUid
+      ] ||
+      creaConnessionePeer(
+        mittenteUid
+      );
+
+    if (!pc) return;
+
+    await pc.setRemoteDescription(
+      new RTCSessionDescription(
+        sdp
+      )
+    );
+
+    const risposta =
+      await pc.createAnswer();
 
     await pc.setLocalDescription(
-      offerta
+      risposta
     );
 
     if (
@@ -1771,61 +1831,16 @@ async function avviaConnessioneAudio(
     ) {
       socket.send(
         JSON.stringify({
-          tipo: "webrtc-offer",
+          tipo: "webrtc-answer",
           partitaId,
           destinatarioUid:
-            altroUid,
-          sdp: offerta
+            mittenteUid,
+          sdp:
+            pc.localDescription
         })
       );
     }
-  }
-}
-
-async function gestisciOffertaRicevuta(
-  mittenteUid,
-  sdp
-) {
-  if (!microfonoAttivo) {
-    return;
-  }
-
-  const pc =
-    connessioniPeer[
-      mittenteUid
-    ] ||
-    creaConnessionePeer(
-      mittenteUid
-    );
-
-  await pc.setRemoteDescription(
-    new RTCSessionDescription(
-      sdp
-    )
-  );
-
-  const risposta =
-    await pc.createAnswer();
-
-  await pc.setLocalDescription(
-    risposta
-  );
-
-  if (
-    socket &&
-    socket.readyState ===
-      WebSocket.OPEN
-  ) {
-    socket.send(
-      JSON.stringify({
-        tipo: "webrtc-answer",
-        partitaId,
-        destinatarioUid:
-          mittenteUid,
-        sdp: risposta
-      })
-    );
-  }
+  } catch (e) {}
 }
 
 async function gestisciRispostaRicevuta(
@@ -1837,13 +1852,20 @@ async function gestisciRispostaRicevuta(
       mittenteUid
     ];
 
-  if (!pc) return;
+  if (
+    !pc ||
+    !sdp
+  ) {
+    return;
+  }
 
-  await pc.setRemoteDescription(
-    new RTCSessionDescription(
-      sdp
-    )
-  );
+  try {
+    await pc.setRemoteDescription(
+      new RTCSessionDescription(
+        sdp
+      )
+    );
+  } catch (e) {}
 }
 
 async function gestisciCandidatoRicevuto(
@@ -1868,9 +1890,7 @@ async function gestisciCandidatoRicevuto(
         candidate
       )
     );
-  } catch (e) {
-    // candidato non valido/arrivato troppo presto
-  }
+  } catch (e) {}
 }
 
 function chiudiConnessioneAudio(
@@ -1882,7 +1902,10 @@ function chiudiConnessioneAudio(
     ];
 
   if (pc) {
-    pc.close();
+    try {
+      pc.close();
+    } catch (e) {}
+
     delete connessioniPeer[
       altroUid
     ];
@@ -1894,6 +1917,10 @@ function chiudiConnessioneAudio(
     ];
 
   if (elAudio) {
+    try {
+      elAudio.srcObject = null;
+    } catch (e) {}
+
     elAudio.remove();
 
     delete elementiAudioRemoti[
@@ -1925,9 +1952,9 @@ window.addEventListener(
   }
 );
 
-// ============================================================
-// DADI 3D
-// ============================================================
+/* ============================================================
+   DADI 3D
+   ============================================================ */
 
 const CORREZIONE_ANGOLI_DADO = {
   1: { x: 0, y: 0 },
@@ -1964,6 +1991,10 @@ function calcolaNuovaRotazione(
     CORREZIONE_ANGOLI_DADO[
       valore
     ];
+
+  if (!c) {
+    return rotazioneAttuale[idDado];
+  }
 
   const a =
     rotazioneAttuale[
@@ -2030,7 +2061,7 @@ function applicaRotazioneDado(
       " .cubo"
     );
 
-  if (cubo) {
+  if (cubo && r) {
     cubo.style.transform =
       `rotateX(${r.x}deg) rotateY(${r.y}deg)`;
   }
@@ -2060,15 +2091,19 @@ function mostraDadi(
       "none";
   }
 
-  applicaRotazioneDado(
-    "dado1",
-    v1
-  );
+  if (v1 >= 1 && v1 <= 6) {
+    applicaRotazioneDado(
+      "dado1",
+      v1
+    );
+  }
 
-  applicaRotazioneDado(
-    "dado2",
-    v2
-  );
+  if (v2 >= 1 && v2 <= 6) {
+    applicaRotazioneDado(
+      "dado2",
+      v2
+    );
+  }
 
   if (c1) {
     void c1.offsetHeight;
@@ -2083,15 +2118,6 @@ function mostraDadi(
   }
 }
 
-/*
- * Durata sincronizzata con:
- *
- * server:
- *   DURATA_ANIMAZIONE_BASE_MS = 700
- *
- * Il server libera il turno successivo dopo
- * 700 ms + 220 ms per ogni casella.
- */
 function animaLancioDadi(
   vf1,
   vf2,
@@ -2113,7 +2139,7 @@ function animaLancioDadi(
     () => {
       suonaAtterraggioDadi();
 
-      if (callback) {
+      if (typeof callback === "function") {
         callback();
       }
     },
@@ -2121,9 +2147,9 @@ function animaLancioDadi(
   );
 }
 
-// ============================================================
-// PEDINE
-// ============================================================
+/* ============================================================
+   PEDINE
+   ============================================================ */
 
 function schiarisciColore(
   hex,
@@ -2154,9 +2180,13 @@ function mescolaColore(
 ) {
   const num =
     parseInt(
-      hex.replace("#", ""),
+      String(hex).replace("#", ""),
       16
     );
+
+  if (!Number.isFinite(num)) {
+    return `rgb(${target},${target},${target})`;
+  }
 
   let r =
     (num >> 16) & 255;
@@ -2188,9 +2218,7 @@ function mescolaColore(
         (p / 100)
     );
 
-  return (
-    `rgb(${r},${g},${b})`
-  );
+  return `rgb(${r},${g},${b})`;
 }
 
 function coordinatePerCasella(
@@ -2246,6 +2274,8 @@ function posizionaPedina(
   pedina,
   casellaNumero
 ) {
+  if (!pedina) return;
+
   const coord =
     coordinatePerCasella(
       casellaNumero
@@ -2267,6 +2297,10 @@ function ottieniOCreaPedina(
   colore,
   indice
 ) {
+  if (!idGiocatore) {
+    return null;
+  }
+
   let pedina =
     document.getElementById(
       "pedina-" +
@@ -2288,10 +2322,10 @@ function ottieniOCreaPedina(
 
     const idG =
       "gradPedina" +
-      indice;
+      String(indice).replace(/[^a-zA-Z0-9_-]/g, "");
 
     pedina.innerHTML = `
-      <svg width="26" height="38" viewBox="0 0 34 48">
+      <svg width="26" height="38" viewBox="0 0 34 48" aria-hidden="true">
         <defs>
           <radialGradient
             id="${idG}"
@@ -2377,24 +2411,20 @@ function ottieniOCreaPedina(
   return pedina;
 }
 
-/*
- * Il server calcola:
- *
- * 700 ms + 220 ms * percorso.length
- *
- * Il client usa esattamente:
- * 220 ms per casella.
- */
 function animaSaltoPedina(
   idGiocatore,
   percorso,
   callback
 ) {
+  const listaPercorso =
+    Array.isArray(percorso)
+      ? percorso
+      : [];
+
   if (
-    !percorso ||
-    percorso.length === 0
+    listaPercorso.length === 0
   ) {
-    if (callback) {
+    if (typeof callback === "function") {
       callback();
     }
 
@@ -2427,14 +2457,21 @@ function animaSaltoPedina(
         : 0
     );
 
+  if (!pedina) {
+    if (typeof callback === "function") {
+      callback();
+    }
+    return;
+  }
+
   let passo = 0;
 
   function saltaProssimo() {
     if (
       passo >=
-      percorso.length
+      listaPercorso.length
     ) {
-      if (callback) {
+      if (typeof callback === "function") {
         callback();
       }
 
@@ -2442,7 +2479,7 @@ function animaSaltoPedina(
     }
 
     const casella =
-      percorso[passo];
+      listaPercorso[passo];
 
     pedina.classList.add(
       "pedina-salta"
@@ -2463,7 +2500,7 @@ function animaSaltoPedina(
 
     if (et) {
       et.textContent =
-        casella;
+        String(casella);
     }
 
     setTimeout(
@@ -2472,7 +2509,10 @@ function animaSaltoPedina(
           "pedina-salta"
         );
       },
-      DURATA_SALTO_MS * 0.6
+      Math.max(
+        1,
+        DURATA_SALTO_MS * 0.6
+      )
     );
 
     passo++;
@@ -2486,15 +2526,15 @@ function animaSaltoPedina(
   saltaProssimo();
 }
 
-// ============================================================
-// AVVIO / CONNESSIONE
-// ============================================================
+/* ============================================================
+   AVVIO / AUTENTICAZIONE
+   ============================================================ */
 
 async function avvia() {
   try {
     const risposta =
       await fetch(
-        "https://gioco-oca-server.onrender.com/api/me",
+        URL_SERVER_HTTP + "/api/me",
         {
           credentials: "include"
         }
@@ -2513,7 +2553,22 @@ async function avvia() {
     const dati =
       await risposta.json();
 
+    if (!dati || !dati.uid) {
+      window.location.href =
+        "login.html?redirect=" +
+        encodeURIComponent(
+          window.location.href
+        );
+
+      return;
+    }
+
     mioUid = dati.uid;
+
+    if (!partitaId) {
+      alert("ID partita mancante.");
+      return;
+    }
 
     connetti();
   } catch (e) {
@@ -2525,20 +2580,58 @@ async function avvia() {
   }
 }
 
-function connetti() {
-  socket =
-    new WebSocket(
-      "wss://gioco-oca-server.onrender.com"
+/* ============================================================
+   CONNESSIONE WEBSOCKET
+   ============================================================ */
+
+function pianificaRiconnessione() {
+  if (timerRiconnessione) return;
+
+  timerRiconnessione =
+    setTimeout(
+      () => {
+        timerRiconnessione = null;
+
+        if (
+          socket &&
+          socket.readyState === WebSocket.OPEN
+        ) {
+          return;
+        }
+
+        connetti();
+      },
+      3000
     );
+}
+
+function connetti() {
+  if (tentativoRiconnessioneInCorso) {
+    return;
+  }
+
+  tentativoRiconnessioneInCorso = true;
+
+  try {
+    socket =
+      new WebSocket(
+        URL_SERVER_WS
+      );
+  } catch (e) {
+    tentativoRiconnessioneInCorso = false;
+    pianificaRiconnessione();
+    return;
+  }
 
   socket.onopen = () => {
+    tentativoRiconnessioneInCorso = false;
+
     if (timerRiconnessione) {
       clearTimeout(
         timerRiconnessione
       );
 
-      timerRiconnessione =
-        null;
+      timerRiconnessione = null;
     }
 
     socket.send(
@@ -2550,6 +2643,8 @@ function connetti() {
   };
 
   socket.onclose = () => {
+    tentativoRiconnessioneInCorso = false;
+
     const rigaTurno =
       document.getElementById(
         "riga-turno"
@@ -2560,23 +2655,11 @@ function connetti() {
         "🔴 Disconnesso, riconnessione...";
     }
 
-    if (!timerRiconnessione) {
-      timerRiconnessione =
-        setTimeout(
-          () => {
-            timerRiconnessione =
-              null;
-
-            connetti();
-          },
-          3000
-        );
-    }
+    pianificaRiconnessione();
   };
 
   socket.onerror = () => {
-    // la gestione effettiva della riconnessione
-    // viene fatta da onclose
+    // onclose gestisce la riconnessione.
   };
 
   socket.onmessage = (msg) => {
@@ -2589,10 +2672,20 @@ function connetti() {
       return;
     }
 
+    if (!dati || !dati.tipo) {
+      return;
+    }
+
+    /* =========================
+       SESSIONE
+       ========================= */
+
     if (
       dati.tipo ===
       "sessioneScaduta"
     ) {
+      fermaCountdownCompleto();
+
       window.location.href =
         "login.html?redirect=" +
         encodeURIComponent(
@@ -2602,9 +2695,9 @@ function connetti() {
       return;
     }
 
-    // ========================================================
-    // DETERMINAZIONE ORDINE
-    // ========================================================
+    /* =========================
+       DETERMINAZIONE ORDINE
+       ========================= */
 
     if (
       dati.tipo ===
@@ -2650,9 +2743,9 @@ function connetti() {
       return;
     }
 
-    // ========================================================
-    // AUDIO
-    // ========================================================
+    /* =========================
+       AUDIO
+       ========================= */
 
     if (
       dati.tipo ===
@@ -2670,11 +2763,13 @@ function connetti() {
       dati.tipo ===
       "rispostaAudioRicevuta"
     ) {
-      richiesteInviate.delete(
-        dati.mittenteUid
-      );
+      if (dati.mittenteUid) {
+        richiesteInviate.delete(
+          dati.mittenteUid
+        );
+      }
 
-      if (dati.accettato) {
+      if (dati.accettato && dati.mittenteUid) {
         coppieAudioAttive.add(
           dati.mittenteUid
         );
@@ -2728,9 +2823,9 @@ function connetti() {
       return;
     }
 
-    // ========================================================
-    // STATO PARTITA
-    // ========================================================
+    /* =========================
+       STATO PARTITA
+       ========================= */
 
     if (
       dati.tipo ===
@@ -2740,7 +2835,9 @@ function connetti() {
         "normale";
 
       ultimoStatoGiocatori =
-        dati.giocatori || [];
+        Array.isArray(dati.giocatori)
+          ? dati.giocatori
+          : [];
 
       const chatWrapper =
         document.getElementById(
@@ -2756,8 +2853,10 @@ function connetti() {
 
       if (dati.vittoria) {
         turnoAttualeId = null;
+        mioTurno = false;
 
         fermaCountdownCompleto();
+        azzeraDatiCountdown();
 
         const areaDadi =
           document.getElementById(
@@ -2777,14 +2876,14 @@ function connetti() {
         );
       } else {
         aggiornaTurno(
-          dati.turnoDiId
+          dati.turnoDiId || null
         );
 
         disegnaGiocatori();
       }
 
       if (
-        dati.messaggi &&
+        Array.isArray(dati.messaggi) &&
         dati.messaggi.length &&
         dati.idGiocatoreCheHaTirato ===
           mioUid
@@ -2794,10 +2893,6 @@ function connetti() {
         );
       }
 
-      /*
-       * QUI il client usa direttamente la
-       * scadenza assoluta del server.
-       */
       if (
         dati.tempoInizioTurno != null &&
         dati.durataMossaMs != null
@@ -2809,104 +2904,98 @@ function connetti() {
         );
       }
 
-      /*
-       * Non richiamiamo mostraDadi(1,1) qui.
-       *
-       * Lo stato della partita può arrivare
-       * immediatamente dopo un aggiornamento.
-       * Reimpostare i dadi in questo punto
-       * rischierebbe di interrompere visivamente
-       * il tiro appena mostrato.
-       */
-
       return;
     }
 
-    // ========================================================
-    // AGGIORNAMENTO PARTITA / TIRO
-    // ========================================================
+    /* =========================
+       AGGIORNAMENTO PARTITA
+       ========================= */
 
     if (
       dati.tipo ===
       "aggiornamentoPartita"
     ) {
       /*
-       * Blocchiamo temporaneamente il timer client.
+       * Il timer del turno precedente viene sempre fermato.
        *
-       * Il nuovo timer verrà avviato dal successivo
-       * "statoPartita" inviato dal server, cioè quando
-       * il server ha effettivamente assegnato il nuovo turno.
+       * Il nuovo timer non viene avviato qui:
+       * il server lo avvia nel momento esatto in cui
+       * assegna il turno successivo e manda "statoPartita".
        */
       fermaCountdownCompleto();
-
-      turnoLocalmenteCompletato =
-        true;
+      turnoLocalmenteCompletato = true;
 
       animaLancioDadi(
-        dati.dado1,
-        dati.dado2,
+        Number(dati.dado1),
+        Number(dati.dado2),
         () => {
-          const completa =
-            () => {
-              ultimoStatoGiocatori =
-                dati.giocatori || [];
+          const completa = () => {
+            ultimoStatoGiocatori =
+              Array.isArray(dati.giocatori)
+                ? dati.giocatori
+                : [];
 
-              const messaggiGioco =
+            const messaggiGioco =
+              document.getElementById(
+                "messaggi-gioco"
+              );
+
+            if (messaggiGioco) {
+              messaggiGioco.textContent =
+                "🎲 " +
+                Number(dati.dado1 || 0) +
+                " + " +
+                Number(dati.dado2 || 0) +
+                " = " +
+                Number(dati.valoreDado || 0);
+            }
+
+            if (
+              Array.isArray(dati.messaggi) &&
+              dati.messaggi.length
+            ) {
+              mostraMessaggioGiocoGrande(
+                dati.messaggi.join(" ")
+              );
+            }
+
+            if (dati.vittoria) {
+              turnoAttualeId = null;
+              mioTurno = false;
+
+              fermaCountdownCompleto();
+              azzeraDatiCountdown();
+
+              const areaDadi =
                 document.getElementById(
-                  "messaggi-gioco"
+                  "area-dadi"
                 );
 
-              if (messaggiGioco) {
-                messaggiGioco.textContent =
-                  "🎲 " +
-                  dati.dado1 +
-                  " + " +
-                  dati.dado2 +
-                  " = " +
-                  dados.valorDado;
-              }
-
-              if (
-                dados.messaggi &&
-                dados.messaggi.length
-              ) {
-                mostraMessaggioGiocoGrande(
-                  dados.messaggi.join(" ")
+              if (areaDadi) {
+                areaDadi.classList.add(
+                  "disabilitato"
                 );
               }
 
+              disegnaGiocatori();
+
+              mostraVittoria(
+                dati.vincitore
+              );
+            } else {
               /*
-               * Il server manda un "statoPartita"
-               * separato per iniziare il nuovo
-               * turno. Non avviamo il countdown qui.
+               * Non cambiare manualmente il turno qui.
+               *
+               * Lo farà il successivo "statoPartita"
+               * proveniente dal server.
                */
-              if (dati.vittoria) {
-                turnoAttualeId =
-                  null;
-
-                const areaDadi =
-                  document.getElementById(
-                    "area-dadi"
-                  );
-
-                if (areaDadi) {
-                  areaDadi.classList.add(
-                    "disabilitato"
-                  );
-                }
-
-                disegnaGiocatori();
-
-                mostraVittoria(
-                  dati.vincitore
-                );
-              } else {
-                disegnaGiocatori();
-              }
-            };
+              disegnaGiocatori();
+            }
+          };
 
           if (
-            dati.percorso &&
+            Array.isArray(dati.percorso) &&
+            dati.percorso.length > 0 &&
             dati.idGiocatoreCheHaTirato
           ) {
             animaSaltoPedina(
@@ -2923,9 +3012,9 @@ function connetti() {
       return;
     }
 
-    // ========================================================
-    // CHAT PARTITA
-    // ========================================================
+    /* =========================
+       CHAT PARTITA
+       ========================= */
 
     if (
       dati.tipo ===
@@ -2939,37 +3028,31 @@ function connetti() {
       return;
     }
 
-    // ========================================================
-    // ERRORI
-    // ========================================================
+    /* =========================
+       ERRORI
+       ========================= */
 
     if (
       dati.tipo ===
       "errore"
     ) {
       alert(
-        dati.messaggio
+        dati.messaggio ||
+        "Si è verificato un errore."
       );
 
       /*
-       * IMPORTANTISSIMO:
-       *
-       * Non riavviamo il timer locale
-       * usando vecchi valori.
-       *
-       * Il server resta la fonte ufficiale.
-       *
-       * L'eventuale nuovo stato del turno
-       * arriverà via "statoPartita".
+       * Non tocchiamo il timer qui.
+       * Lo stato corretto arriverà dal server.
        */
       return;
     }
   };
 }
 
-// ============================================================
-// TURNI
-// ============================================================
+/* ============================================================
+   TURNI
+   ============================================================ */
 
 function aggiornaTurno(
   turnoDiId
@@ -2978,15 +3061,17 @@ function aggiornaTurno(
     mioTurno;
 
   turnoAttualeId =
-    turnoDiId;
+    turnoDiId || null;
 
   mioTurno =
+    !!turnoDiId &&
     turnoDiId === mioUid;
 
   if (
     mioTurno &&
     !eraIlMioTurno
   ) {
+    turnoLocalmenteCompletato = false;
     suonaTuoTurno();
   }
 
@@ -3013,23 +3098,11 @@ function aggiornaTurno(
       !mioTurno
     );
   }
-
-  /*
-   * Quando il server assegna un nuovo turno,
-   * il precedente "✓" locale non deve rimanere.
-   */
-  if (
-    mioTurno &&
-    !eraIlMioTurno
-  ) {
-    turnoLocalmenteCompletato =
-      false;
-  }
 }
 
-// ============================================================
-// GIOCATORI
-// ============================================================
+/* ============================================================
+   GIOCATORI
+   ============================================================ */
 
 function disegnaGiocatori() {
   const contenitore =
@@ -3073,6 +3146,10 @@ function disegnaGiocatori() {
       giocatore,
       indice
     ) => {
+      if (!giocatore || !giocatore.id) {
+        return;
+      }
+
       const colore =
         coloriGiocatori[
           indice %
@@ -3086,14 +3163,16 @@ function disegnaGiocatori() {
           indice
         );
 
-      posizionaPedina(
-        pedina,
-        giocatore.posizione
-      );
+      if (pedina) {
+        posizionaPedina(
+          pedina,
+          Number(giocatore.posizione || 0)
+        );
+      }
 
       const avatarHtml =
         giocatore.avatar
-          ? `<img class="avatar-mini" src="${giocatore.avatar}">`
+          ? `<img class="avatar-mini" src="${giocatore.avatar}" alt="">`
           : `<div class="avatar-mini" style="background:${colore};">${iniziale(giocatore.nome)}</div>`;
 
       const eAttivo =
@@ -3130,7 +3209,7 @@ function disegnaGiocatori() {
           microfonoAttivo
         ) {
           audioHtml =
-            `<button class="btn-chiama-audio" title="Chiedi di parlare" onclick="richiediAudioCon('${giocatore.id}')">📞</button>`;
+            `<button type="button" class="btn-chiama-audio" title="Chiedi di parlare" onclick="richiediAudioCon('${String(giocatore.id).replace(/'/g, "\\'")}')">📞</button>`;
         }
       }
 
@@ -3147,12 +3226,15 @@ function disegnaGiocatori() {
             : ""
         );
 
+      const nicknameHtml =
+        `<a href="profilo-pubblico.html?nickname=${encodeURIComponent(giocatore.nome || "")}" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:none;flex-grow:1;">${giocatore.nome || "Giocatore"}</a>`;
+
       card.innerHTML =
         `${avatarHtml}` +
-        `<a href="profilo-pubblico.html?nickname=${encodeURIComponent(giocatore.nome)}" target="_blank" style="color:inherit;text-decoration:none;flex-grow:1;">${giocatore.nome}</a>` +
+        nicknameHtml +
         `${audioHtml}` +
         `${countdownHtml}` +
-        `<span class="casella-mini" id="casella-${giocatore.id}">${giocatore.posizione}</span>`;
+        `<span class="casella-mini" id="casella-${giocatore.id}">${Number(giocatore.posizione || 0)}</span>`;
 
       listaPannello.appendChild(
         card
@@ -3160,24 +3242,14 @@ function disegnaGiocatori() {
     }
   );
 
-  /*
-   * Quando ridisegniamo i giocatori,
-   * il countdown potrebbe essere stato appena
-   * ricreato nel DOM.
-   *
-   * Ridisegnamo quindi immediatamente
-   * il valore corrente senza aspettare l'intervallo.
-   */
-  if (
-    turnoAttualeId
-  ) {
+  if (turnoAttualeId) {
     aggiornaCountdownTurno();
   }
 }
 
-// ============================================================
-// VITTORIA
-// ============================================================
+/* ============================================================
+   VITTORIA
+   ============================================================ */
 
 function mostraVittoria(
   nomeVincitore
@@ -3192,7 +3264,7 @@ function mostraVittoria(
   if (testo) {
     testo.textContent =
       "🎉 Ha vinto " +
-      nomeVincitore +
+      (nomeVincitore || "un giocatore") +
       "!";
   }
 
@@ -3208,13 +3280,13 @@ function mostraVittoria(
   }
 }
 
-// ============================================================
-// MENU / USCITA
-// ============================================================
+/* ============================================================
+   MENU / USCITA
+   ============================================================ */
 
 function tornaAllaLobby() {
   window.location.href =
-    `lobby.html?stanza=${stanza}`;
+    `lobby.html?stanza=${encodeURIComponent(stanza || "")}`;
 }
 
 function abbandonaPartita() {
@@ -3302,9 +3374,9 @@ document.addEventListener(
   }
 );
 
-// ============================================================
-// PANNELLO GIOCATORI
-// ============================================================
+/* ============================================================
+   PANNELLO GIOCATORI
+   ============================================================ */
 
 const btnGiocatori =
   document.getElementById(
@@ -3372,9 +3444,9 @@ if (backdropGiocatori) {
     };
 }
 
-// ============================================================
-// CHAT PARTITA
-// ============================================================
+/* ============================================================
+   CHAT PARTITA
+   ============================================================ */
 
 let messaggiChatNonLetti = 0;
 
@@ -3395,7 +3467,7 @@ function aggiornaBadgeChatPartita() {
     badge.textContent =
       messaggiChatNonLetti > 9
         ? "9+"
-        : messaggiChatNonLetti;
+        : String(messaggiChatNonLetti);
   } else {
     badge.style.display =
       "none";
@@ -3423,8 +3495,24 @@ function aggiungiMessaggioChatPartita(
   riga.className =
     "chat-msg";
 
-  riga.innerHTML =
-    `<b>${nome}:</b> ${testo}`;
+  /*
+   * Usiamo textContent invece di innerHTML
+   * per evitare che il testo ricevuto possa
+   * interpretare HTML.
+   */
+  const nomeEl =
+    document.createElement("b");
+
+  nomeEl.textContent =
+    String(nome || "Giocatore") + ":";
+
+  const testoEl =
+    document.createTextNode(
+      " " + String(testo || "")
+    );
+
+  riga.appendChild(nomeEl);
+  riga.appendChild(testoEl);
 
   box.appendChild(
     riga
@@ -3476,9 +3564,9 @@ function inviaChatPartita() {
         testo
       })
     );
-  }
 
-  input.value = "";
+    input.value = "";
+  }
 }
 
 const chatInput =
@@ -3491,6 +3579,7 @@ if (chatInput) {
     "keypress",
     (e) => {
       if (e.key === "Enter") {
+        e.preventDefault();
         inviaChatPartita();
       }
     }
@@ -3533,9 +3622,9 @@ if (btnChat) {
     };
 }
 
-// ============================================================
-// CLICK SUI DADI
-// ============================================================
+/* ============================================================
+   CLICK SUI DADI
+   ============================================================ */
 
 const areaDadi =
   document.getElementById(
@@ -3564,21 +3653,11 @@ if (areaDadi) {
       }
 
       /*
-       * Questo ferma SOLAMENTE il timer visivo.
+       * Il timer locale è solo la rappresentazione visiva.
+       * Il server decide se il click è arrivato ancora
+       * entro la finestra valida.
        *
-       * La validità della mossa viene comunque
-       * decisa dal server.
-       *
-       * Quindi:
-       *
-       * 15.0s -> click
-       * 15.8s -> click
-       * 16.7s -> click
-       *
-       * possono ancora essere accettati dal server.
-       *
-       * Dopo la tolleranza server-side:
-       * il server produce la mossa automatica.
+       * Il server gestisce inoltre la tolleranza di 2 secondi.
        */
       fermaCountdownPerAzioneLocale();
 
@@ -3609,12 +3688,17 @@ if (areaDadi) {
     };
 }
 
-// ============================================================
-// AVVIO
-// ============================================================
+/* ============================================================
+   STATO INIZIALE
+   ============================================================ */
 
 aggiornaTestoBottoneSuoni();
+aggiornaTestoBottoneFullscreen();
 aggiornaTestoBottoneMicrofono();
+aggiornaBadgeChatPartita();
+
 mostraDadi(1, 1);
+
 inizializzaGestioneOrientamento();
+
 avvia();
