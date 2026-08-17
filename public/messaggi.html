@@ -2,20 +2,613 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<title>Messaggi - Giochi Società</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Messaggi privati - Giochi Società</title>
+
 <style>
-* { box-sizing: border-box; }
-body { margin: 0; background: #101820; color: #e8e8e8; font-family: Arial, sans-serif; line-height: 1.6; }
-.contenitore { max-width: 700px; margin: 0 auto; padding: 40px 24px 80px; }
-.intestazione { text-align: center; margin-bottom: 34px; padding-bottom: 22px; border-bottom: 2px solid #ffd700; }
-.intestazione h1 { color: #ffd700; font-size: 28px; margin: 0 0 8px; }
-.intestazione p { color: #999; margin: 0; font-size: 14px; }
-.avviso-card { background: #1e2a38; border: 1px solid #7a5c00; border-left: 4px solid #ffb300; border-radius: 10px; padding: 16px 20px; margin-bottom: 14px; }
-.avviso-card .data { font-size: 12px; color: #999; margin-bottom: 6px; }
-.avviso-card .testo { font-size: 15px; color: #ffe9a8; }
-.nessun-messaggio { text-align: center; color: #888; font-style: italic; padding: 40px 20px; background: #1e2a38; border-radius: 10px; }
-.link-home { display: inline-block; margin-top: 30px; padding: 10px 20px; background: #ffd700; color: #111; text-decoration: none; border-radius: 8px; font-weight: bold; }
-.link-home:hover { background: #ffaa00; }
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: #101820;
+  color: #eee;
+  font-family: Arial, sans-serif;
+}
+
+.contenitore {
+  max-width: 700px;
+  margin: auto;
+  padding: 30px 20px 80px;
+}
+
+/* ============================================================
+   SCHEDE GENERALI
+   ============================================================ */
+
+.scheda {
+  background: #1e2a38;
+  border: 1px solid #333;
+  border-radius: 16px;
+  padding: 25px;
+  margin-bottom: 20px;
+}
+
+.titolo {
+  color: #ffd700;
+  font-size: 18px;
+  margin-bottom: 8px;
+  font-weight: bold;
+}
+
+.sottotitolo {
+  color: #999;
+  font-size: 13px;
+  margin-bottom: 18px;
+}
+
+.info {
+  color: #aaa;
+  font-size: 13px;
+}
+
+/* ============================================================
+   TESTATA
+   ============================================================ */
+
+.intestazione {
+  text-align: center;
+  padding: 25px;
+  margin-bottom: 20px;
+}
+
+.intestazione h1 {
+  color: #ffd700;
+  font-size: 28px;
+  margin: 0 0 8px;
+}
+
+.intestazione p {
+  margin: 0;
+  color: #999;
+  font-size: 14px;
+}
+
+/* ============================================================
+   INBOX
+   ============================================================ */
+
+#areaInbox {
+  display: block;
+}
+
+.lista-conversazioni {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.conversazione {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  background: #263746;
+  border: 1px solid transparent;
+  border-radius: 12px;
+
+  padding: 15px 16px;
+
+  cursor: pointer;
+
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.conversazione:hover {
+  background: #34495e;
+  border-color: #ffd700;
+  transform: translateY(-1px);
+}
+
+.conversazione:active {
+  transform: translateY(0);
+}
+
+.avatar-mini {
+  width: 46px;
+  height: 46px;
+
+  border-radius: 50%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  overflow: hidden;
+
+  color: white;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.avatar-mini img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.conversazione .info {
+  flex: 1;
+  min-width: 0;
+}
+
+.conversazione .nome {
+  color: #fff;
+  font-weight: bold;
+  font-size: 15px;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.conversazione .anteprima {
+  margin-top: 3px;
+
+  color: #999;
+  font-size: 13px;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.non-letti {
+  min-width: 24px;
+  height: 24px;
+
+  padding: 0 7px;
+
+  border-radius: 20px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: #e53935;
+  color: white;
+
+  font-size: 11px;
+  font-weight: bold;
+
+  flex-shrink: 0;
+}
+
+.nessuna {
+  text-align: center;
+
+  color: #777;
+  font-style: italic;
+
+  padding: 45px 20px;
+
+  background: #1e2a38;
+
+  border: 1px solid #333;
+  border-radius: 16px;
+}
+
+/* ============================================================
+   THREAD
+   ============================================================ */
+
+#areaThread {
+  display: none;
+}
+
+.thread-scheda {
+  padding: 20px;
+}
+
+#threadHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+
+  border-bottom: 1px solid #333;
+}
+
+#threadHeader .avatar-mini {
+  width: 44px;
+  height: 44px;
+}
+
+.thread-identita {
+  min-width: 0;
+}
+
+.nomeAltro {
+  color: #ffd700;
+  font-size: 18px;
+  font-weight: bold;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stato-thread {
+  margin-top: 3px;
+  color: #888;
+  font-size: 12px;
+}
+
+/* ============================================================
+   MESSAGGI
+   ============================================================ */
+
+#messaggiThread {
+  height: 450px;
+
+  overflow-y: auto;
+
+  background: #16202b;
+  border: 1px solid #333;
+  border-radius: 14px;
+
+  padding: 18px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  scrollbar-width: thin;
+}
+
+#messaggiThread::-webkit-scrollbar {
+  width: 7px;
+}
+
+#messaggiThread::-webkit-scrollbar-track {
+  background: #101820;
+  border-radius: 10px;
+}
+
+#messaggiThread::-webkit-scrollbar-thumb {
+  background: #34495e;
+  border-radius: 10px;
+}
+
+.msg {
+  max-width: 78%;
+
+  padding: 10px 13px;
+
+  border-radius: 14px;
+
+  font-size: 14px;
+
+  line-height: 1.45;
+
+  word-break: break-word;
+
+  box-shadow:
+    0 3px 12px rgba(0,0,0,0.12);
+}
+
+.msg.mio {
+  align-self: flex-end;
+
+  background: #ffd700;
+  color: #111;
+
+  border-bottom-right-radius: 5px;
+}
+
+.msg.altro {
+  align-self: flex-start;
+
+  background: #263746;
+  color: #eee;
+
+  border-bottom-left-radius: 5px;
+}
+
+.msg .testo-messaggio {
+  white-space: pre-wrap;
+}
+
+.msg .ora {
+  display: block;
+
+  margin-top: 5px;
+
+  font-size: 10px;
+
+  opacity: 0.65;
+}
+
+.msg.mio .ora {
+  color: #333;
+}
+
+.segnala {
+  margin-left: 8px;
+
+  cursor: pointer;
+
+  text-decoration: underline;
+
+  font-size: 10px;
+}
+
+.segnala:hover {
+  opacity: 0.7;
+}
+
+/* ============================================================
+   INVIO
+   ============================================================ */
+
+.riga-invio {
+  display: flex;
+  gap: 10px;
+
+  margin-top: 14px;
+}
+
+.riga-invio input {
+  flex: 1;
+
+  min-width: 0;
+
+  padding: 13px 14px;
+
+  border-radius: 10px;
+
+  border: 1px solid #444;
+
+  background: #101820;
+  color: white;
+
+  font-size: 14px;
+
+  outline: none;
+
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.riga-invio input:focus {
+  border-color: #ffd700;
+
+  box-shadow:
+    0 0 0 2px rgba(255,215,0,0.10);
+}
+
+.riga-invio button {
+  padding: 13px 20px;
+
+  border: none;
+  border-radius: 10px;
+
+  background: #ffd700;
+  color: #111;
+
+  font-weight: bold;
+
+  cursor: pointer;
+
+  transition:
+    background 0.18s ease,
+    transform 0.18s ease,
+    opacity 0.18s ease;
+}
+
+.riga-invio button:hover {
+  background: #ffaa00;
+}
+
+.riga-invio button:active {
+  transform: scale(0.98);
+}
+
+.riga-invio button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ============================================================
+   NAVIGAZIONE
+   ============================================================ */
+
+.navigazione {
+  display: flex;
+
+  justify-content: space-between;
+  align-items: center;
+
+  gap: 10px;
+
+  margin-top: 5px;
+}
+
+.btn-nav {
+  display: inline-block;
+
+  padding: 11px 18px;
+
+  background: #263746;
+  color: #ffd700;
+
+  border: 1px solid #384b5e;
+
+  text-decoration: none;
+
+  border-radius: 10px;
+
+  font-weight: bold;
+
+  cursor: pointer;
+
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease;
+}
+
+.btn-nav:hover {
+  background: #34495e;
+  border-color: #ffd700;
+}
+
+/* ============================================================
+   STATISTICA INTESTAZIONE THREAD
+   ============================================================ */
+
+.badge-thread {
+  display: inline-flex;
+  align-items: center;
+
+  padding: 5px 9px;
+
+  border-radius: 20px;
+
+  background: #263746;
+  color: #aaa;
+
+  font-size: 11px;
+}
+
+/* ============================================================
+   MOBILE
+   ============================================================ */
+
+@media (max-width: 600px) {
+
+  .contenitore {
+    width: 100%;
+    padding: 16px 10px 35px;
+  }
+
+  .scheda {
+    padding: 18px;
+    border-radius: 14px;
+  }
+
+  .intestazione {
+    padding: 18px;
+    margin-bottom: 12px;
+  }
+
+  .intestazione h1 {
+    font-size: 22px;
+  }
+
+  .intestazione p {
+    font-size: 13px;
+  }
+
+  .conversazione {
+    gap: 10px;
+    padding: 12px;
+    border-radius: 11px;
+  }
+
+  .avatar-mini {
+    width: 40px;
+    height: 40px;
+    font-size: 14px;
+  }
+
+  .conversazione .nome {
+    font-size: 14px;
+  }
+
+  .conversazione .anteprima {
+    font-size: 12px;
+  }
+
+  #threadHeader {
+    gap: 9px;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+  }
+
+  #threadHeader .avatar-mini {
+    width: 38px;
+    height: 38px;
+  }
+
+  .nomeAltro {
+    font-size: 16px;
+  }
+
+  .stato-thread {
+    font-size: 11px;
+  }
+
+  #messaggiThread {
+    height: 360px;
+    padding: 12px;
+    border-radius: 11px;
+    gap: 7px;
+  }
+
+  .msg {
+    max-width: 88%;
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+
+  .msg .ora {
+    font-size: 9px;
+  }
+
+  .riga-invio {
+    gap: 6px;
+  }
+
+  .riga-invio input {
+    padding: 10px;
+    font-size: 13px;
+    border-radius: 8px;
+  }
+
+  .riga-invio button {
+    padding: 10px 13px;
+    font-size: 13px;
+    border-radius: 8px;
+  }
+
+  .navigazione {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .btn-nav {
+    text-align: center;
+    width: 100%;
+  }
+
+}
+
 </style>
 </head>
 
@@ -23,89 +616,1512 @@ body { margin: 0; background: #101820; color: #e8e8e8; font-family: Arial, sans-
 
 <div class="contenitore">
 
-  <div class="intestazione">
-    <h1>💬 I tuoi messaggi</h1>
-    <p>Avvisi e comunicazioni ufficiali ricevute dallo staff</p>
+  <!-- ========================================================
+       TESTATA
+       ======================================================== -->
+
+  <div class="scheda intestazione">
+
+    <h1>💬 Messaggi privati</h1>
+
+    <p id="testoIntestazione">
+      Le tue conversazioni con gli altri giocatori.
+    </p>
+
   </div>
 
-  <div id="listaMessaggi">Caricamento...</div>
+
+  <!-- ========================================================
+       INBOX
+       ======================================================== -->
+
+  <div id="areaInbox">
+
+    <div class="scheda">
+
+      <div class="titolo">
+        💬 Conversazioni
+      </div>
+
+      <div class="sottotitolo">
+        Visualizza le conversazioni recenti e apri una chat.
+      </div>
+
+      <div id="listaConversazioni" class="lista-conversazioni">
+        Caricamento...
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- ========================================================
+       THREAD
+       ======================================================== -->
+
+  <div id="areaThread">
+
+    <div class="scheda thread-scheda">
+
+      <div id="threadHeader"></div>
+
+      <div
+        id="messaggiThread"
+        aria-live="polite"
+      ></div>
+
+      <div class="riga-invio">
+
+        <input
+          id="inputMessaggio"
+          type="text"
+          placeholder="Scrivi un messaggio..."
+          maxlength="500"
+          autocomplete="off"
+        >
+
+        <button
+          id="btnInvia"
+          type="button"
+        >
+          Invia
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- ========================================================
+       NAVIGAZIONE
+       ======================================================== -->
+
+  <div class="navigazione">
+
+    <button
+      id="btnIndietro"
+      class="btn-nav"
+      type="button"
+    >
+      ← Indietro
+    </button>
+
+    <a
+      class="btn-nav"
+      href="https://solfriniluca1.wixstudio.com/giochisocieta"
+    >
+      ← Torna alla Home
+    </a>
+
+  </div>
 
 </div>
 
 
 <script>
 
-async function carica() {
+/* ============================================================
+   CONFIG
+   ============================================================ */
+
+const SERVER =
+  "https://gioco-oca-server.onrender.com";
+
+
+const parametri =
+  new URLSearchParams(
+    window.location.search
+  );
+
+
+let uidConversazioneAperta =
+  parametri.get("con");
+
+
+let nomeConversazioneAperta =
+  parametri.get("nome");
+
+
+let timerAggiornamento =
+  null;
+
+
+let mioUid =
+  null;
+
+
+let invioInCorso =
+  false;
+
+
+/* ============================================================
+   PALETTE
+   ============================================================ */
+
+const PALETTE = [
+  "#6a2c70",
+  "#1e40af",
+  "#43a047",
+  "#f57c00",
+  "#c0ca33",
+  "#e53935",
+  "#00838f",
+  "#8d6e63"
+];
+
+
+function coloreDaNome(nome) {
+
+  const valore =
+    String(nome || "?");
+
+  let somma = 0;
+
+  for (
+    let i = 0;
+    i < valore.length;
+    i++
+  ) {
+
+    somma +=
+      valore.charCodeAt(i);
+
+  }
+
+  return PALETTE[
+    somma % PALETTE.length
+  ];
+
+}
+
+
+function iniziale(nome) {
+
+  return (
+    String(nome || "?")
+      .trim()
+      .charAt(0)
+      .toUpperCase() ||
+    "?"
+  );
+
+}
+
+
+/* ============================================================
+   AVATAR
+   ============================================================ */
+
+function creaAvatarElemento(
+  nome,
+  avatar
+) {
+
+  const box =
+    document.createElement("div");
+
+  box.className =
+    "avatar-mini";
+
+  if (avatar) {
+
+    const img =
+      document.createElement("img");
+
+    img.src =
+      avatar;
+
+    img.alt =
+      "";
+
+    img.loading =
+      "lazy";
+
+    img.referrerPolicy =
+      "no-referrer";
+
+    box.appendChild(img);
+
+  } else {
+
+    box.textContent =
+      iniziale(nome);
+
+    box.style.background =
+      coloreDaNome(nome);
+
+  }
+
+  return box;
+
+}
+
+
+/* ============================================================
+   AUTENTICAZIONE
+   ============================================================ */
+
+async function avvia() {
 
   try {
 
-    const risposta = await fetch(
-      "https://gioco-oca-server.onrender.com/api/me",
-      {
-        credentials: "include"
-      }
-    );
+    const risposta =
+      await fetch(
+        SERVER + "/api/me",
+        {
+          credentials:
+            "include"
+        }
+      );
 
 
     if (!risposta.ok) {
+
       window.location.href =
-      "login.html?redirect=" + encodeURIComponent(window.location.href);
+        "login.html?redirect=" +
+        encodeURIComponent(
+          window.location.href
+        );
+
       return;
+
     }
 
 
-    const dati = await risposta.json();
+    const dati =
+      await risposta.json();
 
-    mostraMessaggi(dati.avvisi || []);
 
+    if (
+      !dati ||
+      !dati.uid
+    ) {
+
+      window.location.href =
+        "login.html?redirect=" +
+        encodeURIComponent(
+          window.location.href
+        );
+
+      return;
+
+    }
+
+
+    mioUid =
+      dati.uid;
+
+
+    const testoIntestazione =
+      document.getElementById(
+        "testoIntestazione"
+      );
+
+
+    if (testoIntestazione) {
+
+      testoIntestazione.textContent =
+        "Account di " +
+        (dati.nickname || "Giocatore") +
+        " — gestisci qui le tue conversazioni.";
+
+    }
+
+
+    if (
+      uidConversazioneAperta
+    ) {
+
+      await apriThread(
+        uidConversazioneAperta,
+        nomeConversazioneAperta
+      );
+
+    } else {
+
+      await caricaInbox();
+
+    }
 
   } catch (e) {
 
-    document.getElementById("listaMessaggi").innerHTML =
-    "<p>Errore nel caricamento dei messaggi.</p>";
+    console.error(
+      "Errore autenticazione:",
+      e
+    );
+
+    window.location.href =
+      "login.html?redirect=" +
+      encodeURIComponent(
+        window.location.href
+      );
 
   }
 
 }
 
 
+/* ============================================================
+   INBOX
+   ============================================================ */
 
-function mostraMessaggi(avvisi) {
+async function caricaInbox() {
 
-  const container = document.getElementById("listaMessaggi");
+  if (
+    timerAggiornamento
+  ) {
+
+    clearInterval(
+      timerAggiornamento
+    );
+
+    timerAggiornamento =
+      null;
+
+  }
 
 
-  if (avvisi.length === 0) {
+  document.getElementById(
+    "areaInbox"
+  ).style.display =
+    "block";
 
-    container.innerHTML =
-    '<div class="nessun-messaggio">Nessun messaggio al momento. Tutto in regola! ✅</div>';
+
+  document.getElementById(
+    "areaThread"
+  ).style.display =
+    "none";
+
+
+  try {
+
+    const risposta =
+      await fetch(
+        SERVER + "/api/conversazioni",
+        {
+          credentials:
+            "include"
+        }
+      );
+
+
+    const dati =
+      await risposta.json();
+
+
+    const contenitore =
+      document.getElementById(
+        "listaConversazioni"
+      );
+
+
+    if (
+      !risposta.ok
+    ) {
+
+      contenitore.textContent =
+        dati.errore ||
+        "Errore nel caricamento delle conversazioni.";
+
+      return;
+
+    }
+
+
+    const conversazioni =
+      Array.isArray(
+        dati.conversazioni
+      )
+        ? dati.conversazioni
+        : [];
+
+
+    if (
+      conversazioni.length === 0
+    ) {
+
+      contenitore.innerHTML =
+        "";
+
+      const vuoto =
+        document.createElement(
+          "div"
+        );
+
+      vuoto.className =
+        "nessuna";
+
+      vuoto.textContent =
+        "Nessuna conversazione ancora. Vai sul profilo di un giocatore per scrivergli!";
+
+      contenitore.appendChild(
+        vuoto
+      );
+
+      return;
+
+    }
+
+
+    contenitore.innerHTML =
+      "";
+
+
+    conversazioni.forEach(
+      conversazione => {
+
+        const card =
+          document.createElement(
+            "div"
+          );
+
+        card.className =
+          "conversazione";
+
+
+        const altroUid =
+          String(
+            conversazione.altroUid ||
+            ""
+          );
+
+
+        const altroNome =
+          String(
+            conversazione.altroNome ||
+            "Utente"
+          );
+
+
+        const avatar =
+          creaAvatarElemento(
+            altroNome,
+            conversazione.avatar ||
+              null
+          );
+
+
+        const info =
+          document.createElement(
+            "div"
+          );
+
+        info.className =
+          "info";
+
+
+        const nome =
+          document.createElement(
+            "div"
+          );
+
+        nome.className =
+          "nome";
+
+        nome.textContent =
+          altroNome;
+
+
+        const anteprima =
+          document.createElement(
+            "div"
+          );
+
+        anteprima.className =
+          "anteprima";
+
+        anteprima.textContent =
+          String(
+            conversazione.ultimoTesto ||
+            ""
+          );
+
+
+        info.appendChild(
+          nome
+        );
+
+        info.appendChild(
+          anteprima
+        );
+
+
+        card.appendChild(
+          avatar
+        );
+
+        card.appendChild(
+          info
+        );
+
+
+        const nonLetti =
+          Number(
+            conversazione.nonLetti ||
+            0
+          );
+
+
+        if (
+          nonLetti > 0
+        ) {
+
+          const badge =
+            document.createElement(
+              "div"
+            );
+
+          badge.className =
+            "non-letti";
+
+          badge.textContent =
+            nonLetti > 99
+              ? "99+"
+              : String(
+                  nonLetti
+                );
+
+          card.appendChild(
+            badge
+          );
+
+        }
+
+
+        card.addEventListener(
+          "click",
+          () => {
+
+            apriThread(
+              altroUid,
+              altroNome
+            );
+
+          }
+        );
+
+
+        contenitore.appendChild(
+          card
+        );
+
+      }
+    );
+
+  } catch (e) {
+
+    console.error(
+      "Errore inbox:",
+      e
+    );
+
+    const contenitore =
+      document.getElementById(
+        "listaConversazioni"
+      );
+
+    contenitore.textContent =
+      "Errore nel caricamento. Riprova tra poco.";
+
+  }
+
+}
+
+
+/* ============================================================
+   APERTURA THREAD
+   ============================================================ */
+
+async function apriThread(
+  uidDestinatario,
+  nomeDestinatario
+) {
+
+  if (
+    !uidDestinatario
+  ) {
 
     return;
 
   }
 
 
-  container.innerHTML = avvisi.slice().reverse().map(a => `
+  uidConversazioneAperta =
+    String(
+      uidDestinatario
+    );
 
-    <div class="avviso-card">
 
-      <div class="data">
-        ${new Date(a.data).toLocaleString("it-IT")}
-      </div>
+  nomeConversazioneAperta =
+    String(
+      nomeDestinatario ||
+      "Utente"
+    );
 
-      <div class="testo">
-        ⚠️ ${a.motivo}
-      </div>
 
-    </div>
+  const url =
+    "messaggi-privati.html?con=" +
+    encodeURIComponent(
+      uidConversazioneAperta
+    ) +
+    "&nome=" +
+    encodeURIComponent(
+      nomeConversazioneAperta
+    );
 
-  `).join("");
+
+  try {
+
+    window.history.replaceState(
+      {},
+      "",
+      url
+    );
+
+  } catch {}
+
+
+  document.getElementById(
+    "areaInbox"
+  ).style.display =
+    "none";
+
+
+  document.getElementById(
+    "areaThread"
+  ).style.display =
+    "block";
+
+
+  disegnaHeaderThread(
+    nomeConversazioneAperta
+  );
+
+
+  await caricaMessaggiThread();
+
+
+  if (
+    timerAggiornamento
+  ) {
+
+    clearInterval(
+      timerAggiornamento
+    );
+
+  }
+
+
+  timerAggiornamento =
+    setInterval(
+      () => {
+
+        if (
+          document.visibilityState !==
+          "hidden"
+        ) {
+
+          caricaMessaggiThread();
+
+        }
+
+      },
+      2500
+    );
+
+
+  setTimeout(
+    () => {
+
+      const input =
+        document.getElementById(
+          "inputMessaggio"
+        );
+
+      if (input) {
+
+        input.focus();
+
+      }
+
+    },
+    50
+  );
 
 }
 
 
+/* ============================================================
+   HEADER THREAD
+   ============================================================ */
 
-carica();
+function disegnaHeaderThread(
+  nome
+) {
+
+  const header =
+    document.getElementById(
+      "threadHeader"
+    );
+
+
+  header.innerHTML =
+    "";
+
+
+  const avatar =
+    creaAvatarElemento(
+      nome,
+      null
+    );
+
+
+  const identita =
+    document.createElement(
+      "div"
+    );
+
+  identita.className =
+    "thread-identita";
+
+
+  const nomeEl =
+    document.createElement(
+      "div"
+    );
+
+  nomeEl.className =
+    "nomeAltro";
+
+  nomeEl.textContent =
+    nome ||
+    "Utente";
+
+
+  const stato =
+    document.createElement(
+      "div"
+    );
+
+  stato.className =
+    "stato-thread";
+
+  stato.textContent =
+    "Conversazione privata";
+
+
+  identita.appendChild(
+    nomeEl
+  );
+
+  identita.appendChild(
+    stato
+  );
+
+
+  header.appendChild(
+    avatar
+  );
+
+  header.appendChild(
+    identita
+  );
+
+}
+
+
+/* ============================================================
+   THREAD
+   ============================================================ */
+
+async function caricaMessaggiThread() {
+
+  if (
+    !uidConversazioneAperta
+  ) {
+
+    return;
+
+  }
+
+
+  try {
+
+    const risposta =
+      await fetch(
+        SERVER +
+          "/api/messaggi-privati/" +
+          encodeURIComponent(
+            uidConversazioneAperta
+          ),
+        {
+          credentials:
+            "include"
+        }
+      );
+
+
+    const dati =
+      await risposta.json();
+
+
+    if (
+      !risposta.ok
+    ) {
+
+      return;
+
+    }
+
+
+    const messaggi =
+      Array.isArray(
+        dati.messaggi
+      )
+        ? dati.messaggi
+        : [];
+
+
+    const box =
+      document.getElementById(
+        "messaggiThread"
+      );
+
+
+    const eraInFondo =
+      (
+        box.scrollHeight -
+        box.scrollTop -
+        box.clientHeight
+      ) < 80;
+
+
+    const firmaAttuale =
+      Array.from(
+        box.children
+      )
+        .map(
+          el =>
+            el.dataset.messageId ||
+            ""
+        )
+        .join("|");
+
+
+    const firmaNuova =
+      messaggi
+        .map(
+          m =>
+            String(
+              m.id ||
+              ""
+            )
+        )
+        .join("|");
+
+
+    if (
+      firmaAttuale !==
+      firmaNuova
+    ) {
+
+      box.innerHTML =
+        "";
+
+
+      messaggi.forEach(
+        messaggio => {
+
+          aggiungiBolla(
+            messaggio,
+            false
+          );
+
+        }
+      );
+
+
+      if (
+        eraInFondo ||
+        firmaAttuale === ""
+      ) {
+
+        scrollFondo();
+
+      }
+
+    } else if (
+      eraInFondo
+    ) {
+
+      scrollFondo();
+
+    }
+
+  } catch (e) {
+
+    console.error(
+      "Errore caricamento thread:",
+      e
+    );
+
+  }
+
+}
+
+
+/* ============================================================
+   BOLLA MESSAGGIO
+   ============================================================ */
+
+function aggiungiBolla(
+  messaggio,
+  scroll = true
+) {
+
+  if (
+    !messaggio
+  ) {
+
+    return;
+
+  }
+
+
+  const box =
+    document.getElementById(
+      "messaggiThread"
+    );
+
+
+  const mio =
+    String(
+      messaggio.daUid ||
+      ""
+    ) ===
+    String(
+      mioUid ||
+      ""
+    );
+
+
+  const div =
+    document.createElement(
+      "div"
+    );
+
+
+  div.className =
+    "msg " +
+    (
+      mio
+        ? "mio"
+        : "altro"
+    );
+
+
+  if (
+    messaggio.id
+  ) {
+
+    div.dataset.messageId =
+      String(
+        messaggio.id
+      );
+
+  }
+
+
+  const testo =
+    document.createElement(
+      "div"
+    );
+
+  testo.className =
+    "testo-messaggio";
+
+  testo.textContent =
+    String(
+      messaggio.testo ||
+      ""
+    );
+
+
+  const ora =
+    document.createElement(
+      "span"
+    );
+
+  ora.className =
+    "ora";
+
+
+  const timestamp =
+    Number(
+      messaggio.data
+    );
+
+
+  ora.textContent =
+    Number.isFinite(
+      timestamp
+    )
+      ? new Date(
+          timestamp
+        ).toLocaleString(
+          "it-IT"
+        )
+      : "";
+
+
+  if (
+    !mio
+  ) {
+
+    const segnala =
+      document.createElement(
+        "span"
+      );
+
+    segnala.className =
+      "segnala";
+
+    segnala.textContent =
+      "Segnala";
+
+
+    segnala.addEventListener(
+      "click",
+      event => {
+
+        event.stopPropagation();
+
+        segnalaMessaggio(
+          String(
+            messaggio.daNome ||
+            "Giocatore"
+          ),
+          String(
+            messaggio.testo ||
+            ""
+          )
+        );
+
+      }
+    );
+
+
+    ora.appendChild(
+      document.createTextNode(
+        " · "
+      )
+    );
+
+    ora.appendChild(
+      segnala
+    );
+
+  }
+
+
+  div.appendChild(
+    testo
+  );
+
+  div.appendChild(
+    ora
+  );
+
+
+  box.appendChild(
+    div
+  );
+
+
+  if (
+    scroll
+  ) {
+
+    scrollFondo();
+
+  }
+
+}
+
+
+/* ============================================================
+   SCROLL
+   ============================================================ */
+
+function scrollFondo() {
+
+  const box =
+    document.getElementById(
+      "messaggiThread"
+    );
+
+
+  if (!box) {
+    return;
+  }
+
+
+  box.scrollTop =
+    box.scrollHeight;
+
+}
+
+
+/* ============================================================
+   INVIO
+   ============================================================ */
+
+async function inviaMessaggio() {
+
+  if (
+    invioInCorso
+  ) {
+
+    return;
+
+  }
+
+
+  const input =
+    document.getElementById(
+      "inputMessaggio"
+    );
+
+
+  const testo =
+    input.value.trim();
+
+
+  if (
+    !testo ||
+    !uidConversazioneAperta
+  ) {
+
+    return;
+
+  }
+
+
+  invioInCorso =
+    true;
+
+
+  const btn =
+    document.getElementById(
+      "btnInvia"
+    );
+
+
+  if (btn) {
+
+    btn.disabled =
+      true;
+
+  }
+
+
+  try {
+
+    const risposta =
+      await fetch(
+        SERVER +
+          "/api/messaggi-privati",
+        {
+          method:
+            "POST",
+
+          credentials:
+            "include",
+
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
+
+          body:
+            JSON.stringify({
+              destinatarioUid:
+                uidConversazioneAperta,
+
+              testo
+            })
+        }
+      );
+
+
+    const dati =
+      await risposta.json();
+
+
+    if (
+      !risposta.ok
+    ) {
+
+      alert(
+        dati.errore ||
+        "Errore durante l'invio."
+      );
+
+      return;
+
+    }
+
+
+    input.value =
+      "";
+
+
+    aggiungiBolla(
+      dati.messaggio,
+      true
+    );
+
+
+    input.focus();
+
+
+  } catch (e) {
+
+    console.error(
+      "Errore invio:",
+      e
+    );
+
+    alert(
+      "Errore di connessione al server."
+    );
+
+  } finally {
+
+    invioInCorso =
+      false;
+
+
+    if (btn) {
+
+      btn.disabled =
+        false;
+
+    }
+
+  }
+
+}
+
+
+/* ============================================================
+   SEGNALAZIONE
+   ============================================================ */
+
+async function segnalaMessaggio(
+  mittente,
+  testoMessaggio
+) {
+
+  if (
+    !confirm(
+      "Vuoi segnalare questo messaggio allo staff?"
+    )
+  ) {
+
+    return;
+
+  }
+
+
+  try {
+
+    const risposta =
+      await fetch(
+        SERVER +
+          "/api/contatti",
+        {
+          method:
+            "POST",
+
+          credentials:
+            "include",
+
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
+
+          body:
+            JSON.stringify({
+              categoria:
+                "Segnalazione",
+
+              messaggio:
+                `Segnalazione messaggio privato da "${mittente}": "${testoMessaggio}"`
+            })
+        }
+      );
+
+
+    const dati =
+      await risposta.json();
+
+
+    if (
+      !risposta.ok
+    ) {
+
+      alert(
+        dati.errore ||
+        "Errore durante l'invio della segnalazione."
+      );
+
+      return;
+
+    }
+
+
+    alert(
+      "Segnalazione inviata allo staff, grazie."
+    );
+
+  } catch (e) {
+
+    console.error(
+      "Errore segnalazione:",
+      e
+    );
+
+    alert(
+      "Errore durante l'invio della segnalazione."
+    );
+
+  }
+
+}
+
+
+/* ============================================================
+   EVENTI
+   ============================================================ */
+
+document
+  .getElementById(
+    "btnInvia"
+  )
+  .addEventListener(
+    "click",
+    inviaMessaggio
+  );
+
+
+document
+  .getElementById(
+    "inputMessaggio"
+  )
+  .addEventListener(
+    "keydown",
+    event => {
+
+      if (
+        event.key ===
+        "Enter" &&
+        !event.shiftKey
+      ) {
+
+        event.preventDefault();
+
+        inviaMessaggio();
+
+      }
+
+    }
+  );
+
+
+document
+  .getElementById(
+    "btnIndietro"
+  )
+  .addEventListener(
+    "click",
+    () => {
+
+      if (
+        uidConversazioneAperta
+      ) {
+
+        uidConversazioneAperta =
+          null;
+
+        nomeConversazioneAperta =
+          null;
+
+
+        try {
+
+          window.history.replaceState(
+            {},
+            "",
+            "messaggi-privati.html"
+          );
+
+        } catch {}
+
+
+        caricaInbox();
+
+      } else {
+
+        if (
+          document.referrer
+        ) {
+
+          window.history.back();
+
+        } else {
+
+          window.location.href =
+            "https://solfriniluca1.wixstudio.com/giochisocieta";
+
+        }
+
+      }
+
+    }
+  );
+
+
+window.addEventListener(
+  "beforeunload",
+  () => {
+
+    if (
+      timerAggiornamento
+    ) {
+
+      clearInterval(
+        timerAggiornamento
+      );
+
+      timerAggiornamento =
+        null;
+
+    }
+
+  }
+);
+
+
+/* ============================================================
+   AVVIO
+   ============================================================ */
+
+avvia();
 
 </script>
 
