@@ -1069,6 +1069,128 @@ app.post("/api/amici/richiedi", limiteAmici, richiediAuth, async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json({ errore: "Errore del server, riprova." }); }
 });
 
+app.post("/api/amici/accetta-messaggio", limiteAmici, richiediAuth, async (req, res) => {
+  if (!db) {
+    return res.status(500).json({
+      errore: "Servizio non disponibile."
+    });
+  }
+
+  try {
+    const { altroUid } = req.body;
+
+    if (!altroUid) {
+      return res.status(400).json({
+        errore: "Dati mancanti."
+      });
+    }
+
+    const mioUid = req.utente.uid;
+
+    if (altroUid === mioUid) {
+      return res.status(400).json({
+        errore: "Operazione non valida."
+      });
+    }
+
+    const [mioSnap, altroSnap] = await Promise.all([
+      db.ref("utenti/" + mioUid).once("value"),
+      db.ref("utenti/" + altroUid).once("value")
+    ]);
+
+    const mioUtente = mioSnap.val();
+    const altroUtente = altroSnap.val();
+
+    if (!mioUtente || !altroUtente) {
+      return res.status(404).json({
+        errore: "Utente non trovato."
+      });
+    }
+
+    /*
+     * Prima di creare l'amicizia verifichiamo che
+     * l'altro utente abbia davvero inviato almeno
+     * un messaggio a questo utente.
+     */
+    const idConv = idConversazione(mioUid, altroUid);
+
+    const messaggi =
+      (
+        await db
+          .ref("messaggiPrivati/" + idConv)
+          .once("value")
+      ).val() || {};
+
+    const esisteMessaggioRicevuto = Object.values(messaggi).some(
+      m =>
+        m &&
+        m.daUid === altroUid &&
+        m.aUid === mioUid
+    );
+
+    if (!esisteMessaggioRicevuto) {
+      return res.status(400).json({
+        errore: "Non esiste nessun messaggio da questo utente."
+      });
+    }
+
+    const giaAmici = await verificaAmicizia(
+      mioUid,
+      altroUid
+    );
+
+    if (!giaAmici) {
+      const ora = Date.now();
+
+      await db.ref().update({
+        [`utenti/${mioUid}/richiesteRicevute/${altroUid}`]: null,
+        [`utenti/${mioUid}/richiesteInviate/${altroUid}`]: null,
+        [`utenti/${altroUid}/richiesteRicevute/${mioUid}`]: null,
+        [`utenti/${altroUid}/richiesteInviate/${mioUid}`]: null,
+
+        [`utenti/${mioUid}/amici/${altroUid}`]: true,
+        [`utenti/${altroUid}/amici/${mioUid}`]: true
+      });
+
+      await db
+        .ref(
+          "utenti/" +
+          altroUid +
+          "/notifiche"
+        )
+        .push({
+          tipo: "amiciziaAccettata",
+
+          testo:
+            `${mioUtente.nickname} è ora tuo amico`,
+
+          data: ora,
+
+          letta: false,
+
+          daUid: mioUid,
+
+          daNome: mioUtente.nickname
+        });
+    }
+
+    res.json({
+      ok: true,
+      amici: true
+    });
+
+  } catch (err) {
+    console.error(
+      "Errore accettazione amicizia da messaggio:",
+      err
+    );
+
+    res.status(500).json({
+      errore: "Errore durante l'accettazione."
+    });
+  }
+});
+
 app.post("/api/amici/accetta", richiediAuth, async (req, res) => {
   if (!db) return res.status(500).json({ errore: "Servizio non disponibile." });
   try {
