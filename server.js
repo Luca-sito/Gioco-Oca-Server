@@ -319,20 +319,54 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET && GOOGLE_CALLBACK_URL) {
   }));
 }
 
-app.get("/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
+app.get(
+  "/auth/google",
+  passport.authenticate("google", {
+    scope: ["profile", "email"]
+  })
+);
 
-app.get("/auth/google/callback",
-  passport.authenticate("google", { session: false, failureRedirect: "/accedi.html?errore=google" }),
+app.get(
+  "/auth/google/callback",
+  passport.authenticate("google", {
+    session: false,
+    failureRedirect:
+      "https://solfriniluca1.wixstudio.com/accedi?errore=google"
+  }),
   async (req, res) => {
     try {
       const utente = req.user;
-      if (!utente || !utente.uid) return res.redirect("/accedi.html?errore=google");
-      const token = creaToken(utente.uid, utente.nickname, utente.ruolo || "utente");
-      res.cookie("token", token, OPZIONI_COOKIE);
-      res.redirect("/");
+
+      if (!utente || !utente.uid) {
+        return res.redirect(
+          "https://solfriniluca1.wixstudio.com/accedi?errore=google"
+        );
+      }
+
+      const token = creaToken(
+        utente.uid,
+        utente.nickname,
+        utente.ruolo || "utente"
+      );
+
+      res.cookie(
+        "token",
+        token,
+        OPZIONI_COOKIE
+      );
+
+      return res.redirect(
+        "https://solfriniluca1.wixstudio.com/giochisocieta"
+      );
     } catch (errore) {
-      console.error("Errore callback Google:", errore);
-      res.redirect("/accedi.html?errore=google");
+      console.error(
+        "Errore callback Google:",
+        errore
+      );
+
+      return res.redirect(
+        "https://solfriniluca1.wixstudio.com/accedi?errore=google"
+      );
     }
   }
 );
