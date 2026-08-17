@@ -50,7 +50,7 @@ const coloriGiocatori = [
  * In questo modo il nuovo turno viene aperto dal server
  * nello stesso intervallo in cui l'animazione termina sul client.
  */
-const DURATA_LANCIO_DADI_MS = 700;
+const DURATA_LANCIO_DADI_MS = 1200;
 const DURATA_SALTO_MS = 220;
 
 const URL_SERVER_HTTP = "https://gioco-oca-server.onrender.com";
@@ -1232,53 +1232,61 @@ function avviaCountdownTurno(
   durataMs,
   scadenzaTurno = null
 ) {
+  fermaCountdownCompleto();
+
   const inizioNumero = Number(tempoInizio);
   const durataNumero = Number(durataMs);
   const scadenzaNumero = Number(scadenzaTurno);
 
   tempoInizioTurnoAttuale =
-    Number.isFinite(inizioNumero)
+    Number.isFinite(inizioNumero) && inizioNumero > 0
       ? inizioNumero
       : null;
 
   durataMossaMsAttuale =
-    Number.isFinite(durataNumero)
+    Number.isFinite(durataNumero) && durataNumero > 0
       ? durataNumero
       : null;
 
-  scadenzaTurnoAttuale =
-    Number.isFinite(scadenzaNumero)
-      ? scadenzaNumero
-      : (
-        tempoInizioTurnoAttuale != null &&
-        durataMossaMsAttuale != null
-          ? tempoInizioTurnoAttuale +
-            durataMossaMsAttuale
-          : null
-      );
+  if (
+    Number.isFinite(scadenzaNumero) &&
+    scadenzaNumero > 0
+  ) {
+    scadenzaTurnoAttuale =
+      scadenzaNumero;
+  } else if (
+    tempoInizioTurnoAttuale !== null &&
+    durataMossaMsAttuale !== null
+  ) {
+    scadenzaTurnoAttuale =
+      tempoInizioTurnoAttuale +
+      durataMossaMsAttuale;
+  } else {
+    scadenzaTurnoAttuale = null;
+  }
 
   ultimoSecondoAvviso = null;
   turnoLocalmenteCompletato = false;
 
-  fermaCountdownCompleto();
+  if (scadenzaTurnoAttuale === null) {
+    const el =
+      document.getElementById(
+        "countdown-turno"
+      );
 
-  if (
-    scadenzaTurnoAttuale == null &&
-    (
-      tempoInizioTurnoAttuale == null ||
-      durataMossaMsAttuale == null
-    )
-  ) {
+    if (el) {
+      el.textContent = "⏱ --s";
+    }
+
     return;
   }
 
-  intervalCountdown =
-    setInterval(
-      aggiornaCountdownTurno,
-      100
-    );
-
   aggiornaCountdownTurno();
+
+  intervalCountdown = setInterval(
+    aggiornaCountdownTurno,
+    100
+  );
 }
 
 function fermaCountdownPerAzioneLocale() {
@@ -1316,30 +1324,17 @@ function aggiornaCountdownTurno() {
     return;
   }
 
-  if (
-    scadenzaTurnoAttuale == null &&
-    (
-      tempoInizioTurnoAttuale == null ||
-      durataMossaMsAttuale == null
-    )
-  ) {
+  if (scadenzaTurnoAttuale === null) {
+    el.textContent = "⏱ --s";
+    el.classList.remove(
+      "countdown-scaduto"
+    );
     return;
   }
 
-  let restanteMs;
-
-  if (scadenzaTurnoAttuale != null) {
-    restanteMs =
-      scadenzaTurnoAttuale -
-      Date.now();
-  } else {
-    restanteMs =
-      durataMossaMsAttuale -
-      (
-        Date.now() -
-        tempoInizioTurnoAttuale
-      );
-  }
+  const restanteMs =
+    scadenzaTurnoAttuale -
+    Date.now();
 
   const sec =
     Math.max(
@@ -1350,9 +1345,7 @@ function aggiornaCountdownTurno() {
     );
 
   el.textContent =
-    "⏱ " +
-    sec +
-    "s";
+    "⏱ " + sec + "s";
 
   el.classList.toggle(
     "countdown-scaduto",
@@ -1364,8 +1357,8 @@ function aggiornaCountdownTurno() {
   );
 
   if (
-    sec <= 3 &&
     sec >= 1 &&
+    sec <= 3 &&
     sec !== ultimoSecondoAvviso
   ) {
     ultimoSecondoAvviso = sec;
