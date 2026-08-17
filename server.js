@@ -904,22 +904,7 @@ function inviaConteggioStanze() {
 }
 
 const HEARTBEAT_MS = 15000;
-
-// FIX (turno troppo veloce): prima il server aspettava sempre un tempo fisso
-// (1200ms) prima di sbloccare il turno successivo, indipendentemente da
-// quante caselle il giocatore aveva attraversato. Con un tiro lungo (es. un
-// "avanza ancora" a catena, o un rimbalzo vicino al traguardo) l'animazione
-// sul client dura più a lungo di 1200ms, e il prossimo giocatore poteva
-// tirare mentre l'animazione precedente era ancora visibile. Ora il tempo di
-// attesa scala in base al numero di caselle percorse.
-const DURATA_ANIMAZIONE_BASE_MS = 700; // tempo minimo: mostrare il risultato dei dadi
-const DURATA_ANIMAZIONE_PER_CASELLA_MS = 220; // tempo aggiuntivo per ogni casella attraversata
-const DURATA_ANIMAZIONE_MASSIMA_MS = 4500; // tetto di sicurezza, anche per i percorsi più lunghi
-function calcolaDurataAnimazione(numeroCaselleAttraversate) {
-  const caselle = Number.isFinite(numeroCaselleAttraversate) ? Math.max(0, numeroCaselleAttraversate) : 0;
-  const durata = DURATA_ANIMAZIONE_BASE_MS + (caselle * DURATA_ANIMAZIONE_PER_CASELLA_MS);
-  return Math.min(durata, DURATA_ANIMAZIONE_MASSIMA_MS);
-}
+const DURATA_ANIMAZIONE_TIRO_MS = 1200;
 
 // il giocatore ha il tempo di mossa scelto + 2 secondi di tolleranza
 // per compensare eventuali ritardi della rete.
@@ -1000,23 +985,22 @@ function ripristinaTimerTurno(partita, nomeStanza) {
   const tempoRimanenteFinoAllaScadenza =
     partita.scadenzaTurno - Date.now();
 
-  // FIX: la tolleranza di 2s va contata una volta sola. Prima veniva
-  // sommata qui in "ritardo" e poi di nuovo nel setTimeout qui sotto,
-  // risultando in 4s di tolleranza invece di 2 per il turno che era
-  // attivo al momento di un riavvio del server.
   const ritardo =
     Math.max(
       0,
       tempoRimanenteFinoAllaScadenza + TOLLERANZA_MOSSA_MS
     );
 
-    partita.timerTurno = setTimeout(async () => {
+  partita.timerTurno = setTimeout(async () => {
     if (token !== partita.tokenTimerTurno) return;
 
     partita.timerTurno = null;
     partita.animazioneTiroInCorso = false;
 
-    await gestisciScadenzaTurno(partita, nomeStanza);
+    await gestisciScadenzaTurno(
+      partita,
+      nomeStanza
+    );
   }, ritardo);
 }
 
@@ -1117,10 +1101,6 @@ async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, auto
     // tempoInizioTurno preso da Date.now() in quell'istante — mai un valore
     // "spostato in avanti" che il client potrebbe interpretare come tempo già
     // trascorso.
-    // FIX: la durata dell'attesa ora dipende da quante caselle sono state
-    // attraversate in questo tiro (percorso.length), non è più un valore
-    // fisso di 1200ms uguale per tutti i movimenti.
-    const durataAnimazione = calcolaDurataAnimazione(risultato.percorso.length);
     const tokenAnimazione = partita.tokenTimerTurno;
     setTimeout(async () => {
       const trovato = trovaPartita(partita.id);
@@ -1156,7 +1136,7 @@ async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, auto
         tempoInizioTurno: partita.tempoInizioTurno,
         scadenzaTurno: partita.scadenzaTurno
       });
-    }, durataAnimazione);
+    }, DURATA_ANIMAZIONE_TIRO_MS);
 
   } catch (erroreTiro) {
     // FIX (turni): se anche il ripiego locale fallisse per qualche motivo
@@ -1609,7 +1589,7 @@ stanze[stanzaAttuale].giocatoriOnline[socketId] = {
             giocatori: (partita.ordineDeterminazione || []).map(u2 => ({ uid: u2, nome: partita.giocatori[u2] ? partita.giocatori[u2].nome : "?", avatar: partita.giocatori[u2] ? (partita.giocatori[u2].avatar || null) : null, risultato: partita.risultatiDeterminazione && partita.risultatiDeterminazione[u2] != null ? partita.risultatiDeterminazione[u2] : null })),
             turnoInCorsoUid: partita.turnoInCorsoDeterminazione || null,
             gruppoSpareggioAttuale: partita.gruppoSpareggioAttuale || null,
-            tempoInizioTurno: partita.tempoInizioTurno || Date.now(),
+            tempoInizioTurno: partita.tempoInizioTurno || null,
             durataMossaMs: millisecondiMossa(partita),
             chatAttiva: partita.chatAttiva !== false
           }));
