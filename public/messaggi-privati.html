@@ -906,6 +906,79 @@
         font-size: 10px;
     }
 
+    .richiesta-messaggio {
+    width: min(560px, 100%);
+    margin: auto;
+    padding: 30px;
+    border: 1px solid #dfe7e4;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 12px 35px rgba(20, 31, 40, 0.07);
+    text-align: center;
+}
+
+.richiesta-messaggio-icon {
+    width: 62px;
+    height: 62px;
+    margin: 0 auto 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 18px;
+    background: var(--verde-chiaro);
+    color: var(--verde);
+}
+
+.richiesta-messaggio-icon svg {
+    width: 30px;
+    height: 30px;
+}
+
+.richiesta-messaggio h3 {
+    margin: 0 0 9px;
+    color: var(--testo);
+    font-size: 20px;
+    font-weight: 800;
+}
+
+.richiesta-messaggio p {
+    margin: 0 auto;
+    max-width: 430px;
+    color: var(--testo-3);
+    font-size: 13px;
+    line-height: 1.65;
+}
+
+.richiesta-messaggio-azioni {
+    margin-top: 23px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.btn-accetta-messaggio,
+.btn-ignora-messaggio {
+    min-height: 42px;
+    padding: 0 18px;
+    border-radius: 11px;
+    font-size: 13px;
+    font-weight: 750;
+    cursor: pointer;
+}
+
+.btn-accetta-messaggio {
+    background: var(--verde);
+    color: #fff;
+}
+
+.btn-ignora-messaggio {
+    border: 1px solid #dce3e7;
+    background: #f7f9fa;
+    color: #5c6973;
+}
+
     /* =========================================================
        TOAST
        ========================================================= */
@@ -1110,6 +1183,19 @@
        ========================================================= */
 
     @media (max-width: 520px) {
+
+        .richiesta-messaggio {
+    padding: 24px 18px;
+}
+
+.richiesta-messaggio-azioni {
+    flex-direction: column;
+}
+
+.btn-accetta-messaggio,
+.btn-ignora-messaggio {
+    width: 100%;
+}
 
         .sidebar-header {
             padding: 17px 13px 12px;
@@ -1452,7 +1538,13 @@ let conversazioniCache = [];
 let timerAggiornamento =
     null;
 
+let timerAggiornamentoInbox =
+    null;
+
 let caricamentoMessaggiInCorso =
+    false;
+
+let caricamentoInboxInCorso =
     false;
 
 
@@ -1641,9 +1733,11 @@ async function avvia() {
 
         await caricaInbox();
 
-        if (
-            uidConversazioneAperta
-        ) {
+avviaAggiornamentoInbox();
+
+if (
+    uidConversazioneAperta
+) {
 
             const conversazione =
                 conversazioniCache.find(
@@ -1721,6 +1815,26 @@ async function caricaInbox() {
             </div>
         `;
     }
+}
+
+function avviaAggiornamentoInbox() {
+
+    if (timerAggiornamentoInbox) {
+
+        clearInterval(
+            timerAggiornamentoInbox
+        );
+    }
+
+    timerAggiornamentoInbox =
+        setInterval(
+            () => {
+
+                aggiornaInboxSilenziosa();
+
+            },
+            2500
+        );
 }
 
 function renderConversazioni() {
@@ -2136,14 +2250,28 @@ async function caricaMessaggiThread(
         }
 
         const dati =
-            await risposta.json();
+    await risposta.json();
 
-        renderMessaggi(
-            dati.messaggi || [],
-            forzaScroll
-        );
+if (
+    dati.bloccata === true &&
+    dati.richiestaAmicizia === true
+) {
 
-        await aggiornaInboxSilenziosa();
+    renderRichiestaMessaggio(
+        nomeConversazioneAperta
+    );
+
+    await aggiornaInboxSilenziosa();
+
+    return;
+}
+
+renderMessaggi(
+    dati.messaggi || [],
+    forzaScroll
+);
+
+await aggiornaInboxSilenziosa();
 
     } catch (errore) {
 
@@ -2156,6 +2284,85 @@ async function caricaMessaggiThread(
         caricamentoMessaggiInCorso =
             false;
     }
+}
+
+function renderRichiestaMessaggio(
+    nomeMittente
+) {
+
+    const box =
+        document.getElementById(
+            "messaggiChat"
+        );
+
+    box.innerHTML = `
+        <div class="richiesta-messaggio">
+
+            <div class="richiesta-messaggio-icon">
+
+                <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                >
+                    <path d="M21 11.5a8.38 8.38 0 0 1-9 8.5 8.63 8.63 0 0 1-4-.95L3 21l1.75-4.1A8.35 8.35 0 0 1 3 11.5 8.5 8.5 0 0 1 12 3a8.5 8.5 0 0 1 9 8.5Z"></path>
+                </svg>
+
+            </div>
+
+            <h3>
+                Nuovo messaggio
+            </h3>
+
+            <p>
+                <strong>${escapeHtml(nomeMittente || "Questo giocatore")}</strong>
+                ti ha inviato un messaggio.
+                Per leggerlo devi prima diventare suo amico.
+            </p>
+
+            <div class="richiesta-messaggio-azioni">
+
+                <button
+                    type="button"
+                    class="btn-accetta-messaggio"
+                    id="btnAccettaMessaggio"
+                >
+                    Diventa amico e leggi
+                </button>
+
+                <button
+                    type="button"
+                    class="btn-ignora-messaggio"
+                    id="btnIgnoraMessaggio"
+                >
+                    Ignora
+                </button>
+
+            </div>
+
+        </div>
+    `;
+
+    document
+        .getElementById(
+            "btnAccettaMessaggio"
+        )
+        .addEventListener(
+            "click",
+            accettaMessaggioEdiventaAmico
+        );
+
+    document
+        .getElementById(
+            "btnIgnoraMessaggio"
+        )
+        .addEventListener(
+            "click",
+            ignoraRichiestaMessaggio
+        );
 }
 
 function renderMessaggi(
@@ -2378,6 +2585,102 @@ function scrollFondo() {
         box.scrollHeight;
 }
 
+async function accettaMessaggioEdiventaAmico() {
+
+    if (!uidConversazioneAperta) {
+        return;
+    }
+
+    const bottone =
+        document.getElementById(
+            "btnAccettaMessaggio"
+        );
+
+    const bottoneIgnora =
+        document.getElementById(
+            "btnIgnoraMessaggio"
+        );
+
+    if (bottone) {
+        bottone.disabled = true;
+        bottone.textContent = "Accettazione...";
+    }
+
+    if (bottoneIgnora) {
+        bottoneIgnora.disabled = true;
+    }
+
+    try {
+
+        const risposta =
+            await fetch(
+                API_BASE +
+                "/api/amici/accetta-messaggio",
+                {
+                    method: "POST",
+                    credentials: "include",
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+                    body: JSON.stringify({
+                        altroUid:
+                            uidConversazioneAperta
+                    })
+                }
+            );
+
+        const dati =
+            await risposta.json();
+
+        if (!risposta.ok) {
+
+            mostraToast(
+                dati.errore ||
+                "Impossibile accettare il messaggio."
+            );
+
+            if (bottone) {
+                bottone.disabled = false;
+                bottone.textContent =
+                    "Diventa amico e leggi";
+            }
+
+            if (bottoneIgnora) {
+                bottoneIgnora.disabled = false;
+            }
+
+            return;
+        }
+
+        await aggiornaInboxSilenziosa();
+
+        await caricaMessaggiThread(
+            true
+        );
+
+    } catch (errore) {
+
+        mostraToast(
+            "Errore di connessione al server."
+        );
+
+        if (bottone) {
+            bottone.disabled = false;
+            bottone.textContent =
+                "Diventa amico e leggi";
+        }
+
+        if (bottoneIgnora) {
+            bottoneIgnora.disabled = false;
+        }
+    }
+}
+
+function ignoraRichiestaMessaggio() {
+    chiudiThread();
+}
+
 
 /* ============================================================
    INVIO MESSAGGI
@@ -2554,6 +2857,12 @@ async function segnalaMessaggio(
 
 async function aggiornaInboxSilenziosa() {
 
+    if (caricamentoInboxInCorso) {
+        return;
+    }
+
+    caricamentoInboxInCorso = true;
+
     try {
 
         const risposta =
@@ -2561,9 +2870,23 @@ async function aggiornaInboxSilenziosa() {
                 API_BASE +
                 "/api/conversazioni",
                 {
-                    credentials: "include"
+                    credentials: "include",
+                    cache: "no-store"
                 }
             );
+
+        if (
+            risposta.status === 401
+        ) {
+
+            window.location.href =
+                "login.html?redirect=" +
+                encodeURIComponent(
+                    window.location.href
+                );
+
+            return;
+        }
 
         if (!risposta.ok) {
             return;
@@ -2582,7 +2905,13 @@ async function aggiornaInboxSilenziosa() {
         renderConversazioni();
 
     } catch (errore) {
-        /* silenzioso */
+
+        /* aggiornamento silenzioso */
+
+    } finally {
+
+        caricamentoInboxInCorso =
+            false;
     }
 }
 
@@ -2681,6 +3010,15 @@ window.addEventListener(
 
             clearInterval(
                 timerAggiornamento
+            );
+        }
+
+        if (
+            timerAggiornamentoInbox
+        ) {
+
+            clearInterval(
+                timerAggiornamentoInbox
             );
         }
     }
