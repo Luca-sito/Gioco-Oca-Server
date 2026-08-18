@@ -1741,41 +1741,71 @@ async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, auto
     // "spostato in avanti" che il client potrebbe interpretare come tempo già
     // trascorso.
     const tokenAnimazione = partita.tokenTimerTurno;
-    setTimeout(async () => {
-      const trovato = trovaPartita(partita.id);
-      if (!trovato || trovato.partita !== partita) return;
-      if (!partita.iniziata) return;
-      if (tokenAnimazione !== partita.tokenTimerTurno) return;
 
-      partita.animazioneTiroInCorso = false;
-      avviaTimerTurno(partita, nomeStanza);
+const durataAnimazioneCompleta =
+  DURATA_ANIMAZIONE_TIRO_MS +
+  (Array.isArray(risultato.percorso)
+    ? risultato.percorso.length * 220
+    : 0);
 
-      const statoDopoAnimazione = costruisciStatoGiocatori(partita);
-      const idTurnoAttuale = partita.ordineGiocatori[partita.turnoAttuale];
+setTimeout(async () => {
+  const trovato = trovaPartita(partita.id);
+  if (!trovato || trovato.partita !== partita) return;
+  if (!partita.iniziata) return;
+  if (tokenAnimazione !== partita.tokenTimerTurno) return;
 
-      Object.values(partita.giocatori).forEach(g => {
-        if (g.socket && g.socket.readyState === WebSocket.OPEN) {
-          g.socket.send(JSON.stringify({
-            tipo: "statoPartita",
-            giocatori: statoDopoAnimazione,
-            turnoDiId: idTurnoAttuale,
-            punteggiOrdineIniziale: partita.punteggiOrdineIniziale || null,
-            tempoInizioTurno: partita.tempoInizioTurno,
-            durataMossaMs: millisecondiMossa(partita),
-            chatAttiva: partita.chatAttiva !== false
-          }));
-        }
-      });
+  partita.animazioneTiroInCorso = false;
 
-      await aggiornaStatoPartita(partita.id, {
-        turnoAttuale: partita.turnoAttuale,
-        iniziata: partita.iniziata,
-        tiriEffettuatiNelTurno: partita.tiriEffettuatiNelTurno,
-        tiriConsentitiNelTurno: partita.tiriConsentitiNelTurno,
-        tempoInizioTurno: partita.tempoInizioTurno,
-        scadenzaTurno: partita.scadenzaTurno
-      });
-    }, DURATA_ANIMAZIONE_TIRO_MS);
+  avviaTimerTurno(
+    partita,
+    nomeStanza
+  );
+
+  const statoDopoAnimazione =
+    costruisciStatoGiocatori(partita);
+
+  const idTurnoAttuale =
+    partita.ordineGiocatori[
+      partita.turnoAttuale
+    ];
+
+  Object.values(partita.giocatori).forEach(g => {
+    if (
+      g.socket &&
+      g.socket.readyState === WebSocket.OPEN
+    ) {
+      g.socket.send(JSON.stringify({
+        tipo: "statoPartita",
+        giocatori: statoDopoAnimazione,
+        turnoDiId: idTurnoAttuale,
+        punteggiOrdineIniziale:
+          partita.punteggiOrdineIniziale || null,
+        tempoInizioTurno:
+          partita.tempoInizioTurno,
+        durataMossaMs:
+          millisecondiMossa(partita),
+        scadenzaTurno:
+          partita.scadenzaTurno,
+        chatAttiva:
+          partita.chatAttiva !== false
+      }));
+    }
+  });
+
+  await aggiornaStatoPartita(partita.id, {
+    turnoAttuale: partita.turnoAttuale,
+    iniziata: partita.iniziata,
+    tiriEffettuatiNelTurno:
+      partita.tiriEffettuatiNelTurno,
+    tiriConsentitiNelTurno:
+      partita.tiriConsentitiNelTurno,
+    tempoInizioTurno:
+      partita.tempoInizioTurno,
+    scadenzaTurno:
+      partita.scadenzaTurno
+  });
+
+}, durataAnimazioneCompleta);
 
   } catch (erroreTiro) {
     // FIX (turni): se anche il ripiego locale fallisse per qualche motivo
