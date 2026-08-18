@@ -1453,14 +1453,13 @@ function calcolaUidInPartita(nomeStanza) {
     return uidInPartita;
   }
 
-  Object.values(stanze[nomeStanza].partite).forEach(partita => {
+  Object.values(stanze[nomeStanza].partite).forEach(p => {
 
     if (
-      partita.iniziata === true ||
-      partita.fase === "determinazione_ordine" ||
-      partita.fase === "in_corso"
+      p.fase === "in_corso" ||
+      p.fase === "terminata"
     ) {
-      Object.keys(partita.giocatori || {}).forEach(uid => {
+      Object.keys(p.giocatori || {}).forEach(uid => {
         uidInPartita.add(uid);
       });
     }
@@ -1689,22 +1688,56 @@ async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, auto
     const messaggiFinali = automatico ? ["⏱️ Tempo scaduto: mossa automatica."].concat(risultato.messaggi) : risultato.messaggi;
 
     if (risultato.vittoria) {
-      Object.values(partita.giocatori).forEach(g => {
-        if (g.socket && g.socket.readyState === WebSocket.OPEN) {
-          g.socket.send(JSON.stringify({
-            tipo: "aggiornamentoPartita", giocatori: statoGiocatori, dado1, dado2, valoreDado,
-            percorso: risultato.percorso, idGiocatoreCheHaTirato: idGiocatore, automatico: !!automatico,
-            messaggi: messaggiFinali, turnoDiId: null, tempoInizioTurno: null, durataMossaMs: 0,
-            vittoria: true, vincitore: giocatore.nome
-          }));
-        }
-      });
-      await concludiPartita(partita, idGiocatore, nomeStanza, null);
-      await rimuoviPartita(nomeStanza, partita.id);
-      inviaListaPartite(nomeStanza);
-      inviaConteggioStanze();
-      return;
+
+  partita.fase = "terminata";
+  partita.iniziata = true;
+
+  Object.values(partita.giocatori).forEach(g => {
+    if (
+      g.socket &&
+      g.socket.readyState === WebSocket.OPEN
+    ) {
+      g.socket.send(JSON.stringify({
+        tipo: "aggiornamentoPartita",
+        giocatori: statoGiocatori,
+        dado1,
+        dado2,
+        valoreDado,
+        percorso: risultato.percorso,
+        idGiocatoreCheHaTirato: idGiocatore,
+        automatico: !!automatico,
+        messaggi: messaggiFinali,
+        turnoDiId: null,
+        tempoInizioTurno: null,
+        durataMossaMs: 0,
+        vittoria: true,
+        vincitore: giocatore.nome
+      }));
     }
+  });
+
+  await concludiPartita(
+    partita,
+    idGiocatore,
+    nomeStanza,
+    null
+  );
+
+  /*
+   * NON eliminiamo subito la partita.
+   * Rimane temporaneamente in memoria con fase="terminata",
+   * così i giocatori continuano a risultare "In partita"
+   * finché non tornano alla lobby.
+   */
+  partita.timerTurno = null;
+  partita.tempoInizioTurno = null;
+  partita.scadenzaTurno = null;
+
+  inviaListaPartite(nomeStanza);
+  inviaConteggioStanze();
+
+  return;
+}
 
     // FIX (turni): in questa prima fase (mostra il tiro appena avvenuto) NON si
     // rivela più a chi tocca il prossimo turno — prima "turnoDiId" indicava già
@@ -2505,6 +2538,53 @@ if (dati.tipo === "abbandonaPartita") {
           inviaConteggioStanze();
           return;
         }
+
+        if (partita.fase === "terminata") {
+
+  delete partita.giocatori[uid];
+
+  partita.ordineGiocatori =
+    (partita.ordineGiocatori || []).filter(
+      id => id !== uid
+    );
+
+  const restanti =
+    Object.keys(partita.giocatori);
+
+  if (restanti.length === 0) {
+
+    await rimuoviPartita(
+      nomeStanza,
+      partita.id
+    );
+
+  } else {
+
+    await aggiornaStatoPartita(
+      partita.id,
+      {
+        giocatori:
+          preparaGiocatoriPerFirebase(
+            partita.giocatori
+          ),
+
+        ordineGiocatori:
+          partita.ordineGiocatori,
+
+        fase: "terminata",
+        iniziata: true,
+
+        tempoInizioTurno: null,
+        scadenzaTurno: null
+      }
+    );
+  }
+
+  inviaListaPartite(nomeStanza);
+  inviaConteggioStanze();
+
+  return;
+}
 
         // ===== PARTITA IN CORSO =====
         const eraLuiIlGiocatoreAttivo = partita.ordineGiocatori[partita.turnoAttuale] === uid;
