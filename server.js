@@ -1259,6 +1259,169 @@ app.post("/api/notifiche/segna-lette", richiediAuth, async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json({ errore: "Errore del server." }); }
 });
 
+// ===== AVVISI DEL SITO =====
+
+app.get("/api/avvisi", richiediAuth, async (req, res) => {
+  if (!db) {
+    return res.status(500).json({
+      errore: "Servizio non disponibile."
+    });
+  }
+
+  try {
+    const dati =
+      (await db.ref("avvisiSito").once("value")).val() || {};
+
+    const avvisi = Object.entries(dati)
+      .map(([id, avviso]) => ({
+        id,
+        titolo: avviso.titolo || "Avviso",
+        messaggio: avviso.messaggio || "",
+        tipo: avviso.tipo || "Informazione",
+        data: avviso.data || null,
+        pubblicatoDa: avviso.pubblicatoDa || "Staff"
+      }))
+      .sort(
+        (a, b) =>
+          Number(b.data || 0) -
+          Number(a.data || 0)
+      );
+
+    res.json({
+      avvisi
+    });
+
+  } catch (err) {
+    console.error(
+      "Errore caricamento avvisi:",
+      err
+    );
+
+    res.status(500).json({
+      errore: "Errore del server."
+    });
+  }
+});
+
+app.post("/api/admin/avvisi", richiediAdmin, async (req, res) => {
+  if (!db) {
+    return res.status(500).json({
+      errore: "Database non disponibile."
+    });
+  }
+
+  try {
+    const {
+      titolo,
+      messaggio,
+      tipo
+    } = req.body;
+
+    const titoloPulito =
+      pulisciTesto(titolo, 120);
+
+    const messaggioPulito =
+      pulisciTesto(messaggio, 2000);
+
+    const tipoPulito =
+      pulisciTesto(tipo || "Informazione", 40);
+
+    if (!titoloPulito) {
+      return res.status(400).json({
+        errore: "Inserisci un titolo."
+      });
+    }
+
+    if (!messaggioPulito) {
+      return res.status(400).json({
+        errore: "Inserisci il testo dell'avviso."
+      });
+    }
+
+    const nuovoRef =
+      db.ref("avvisiSito").push();
+
+    await nuovoRef.set({
+      titolo: titoloPulito,
+      messaggio: messaggioPulito,
+      tipo: tipoPulito,
+      data: Date.now(),
+      pubblicatoDa:
+        req.utenteAdmin.nickname || "Amministratore"
+    });
+
+    res.json({
+      ok: true,
+      avviso: {
+        id: nuovoRef.key,
+        titolo: titoloPulito,
+        messaggio: messaggioPulito,
+        tipo: tipoPulito,
+        data: Date.now(),
+        pubblicatoDa:
+          req.utenteAdmin.nickname || "Amministratore"
+      }
+    });
+
+  } catch (err) {
+    console.error(
+      "Errore pubblicazione avviso:",
+      err
+    );
+
+    res.status(500).json({
+      errore: "Errore durante la pubblicazione."
+    });
+  }
+});
+
+app.delete("/api/admin/avvisi/:id", richiediAdmin, async (req, res) => {
+  if (!db) {
+    return res.status(500).json({
+      errore: "Database non disponibile."
+    });
+  }
+
+  try {
+    const id =
+      String(req.params.id || "").trim();
+
+    if (!id) {
+      return res.status(400).json({
+        errore: "ID avviso non valido."
+      });
+    }
+
+    const ref =
+      db.ref("avvisiSito/" + id);
+
+    const snap =
+      await ref.once("value");
+
+    if (!snap.exists()) {
+      return res.status(404).json({
+        errore: "Avviso non trovato."
+      });
+    }
+
+    await ref.remove();
+
+    res.json({
+      ok: true
+    });
+
+  } catch (err) {
+    console.error(
+      "Errore eliminazione avviso:",
+      err
+    );
+
+    res.status(500).json({
+      errore: "Errore durante l'eliminazione."
+    });
+  }
+});
+
 // ===== API ADMIN =====
 app.get("/api/admin/utenti", richiediAdmin, async (req, res) => {
   if (!db) return res.status(500).json({ errore: "Database non disponibile." });
