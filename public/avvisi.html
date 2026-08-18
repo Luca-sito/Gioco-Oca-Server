@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Avvisi | Giochi Società</title>
+
+<style>
+
+* {
+    box-sizing: border-box;
+}
+
+:root {
+    --verde: #178861;
+    --verde-scuro: #106d4d;
+    --verde-chiaro: #eaf7f1;
+
+    --testo: #17222b;
+    --testo-2: #55636e;
+    --testo-3: #8b97a1;
+
+    --sfondo: #eef2f5;
+    --superficie: #ffffff;
+
+    --bordo: #e1e7eb;
+
+    --ombra: 0 10px 35px rgba(20, 31, 40, 0.07);
+}
+
+html,
+body {
+    margin: 0;
+    width: 100%;
+    min-height: 100%;
+
+    background:
+        linear-gradient(
+            180deg,
+            #f5f7f9 0%,
+            #eef2f5 100%
+        );
+
+    color: var(--testo);
+
+    font-family:
+        Inter,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        Arial,
+        sans-serif;
+}
+
+body {
+    padding: 28px 18px 50px;
+}
+
+button,
+input,
+textarea,
+select {
+    font: inherit;
+}
+
+button {
+    border: 0;
+}
+
+.contenitore {
+    width: min(1100px, 100%);
+    margin: 0 auto;
+}
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.intestazione {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+
+    margin-bottom: 24px;
+}
+
+.intestazione-sinistra {
+    min-width: 0;
+}
+
+.etichetta {
+    margin-bottom: 7px;
+
+    color: var(--verde);
+
+    font-size: 11px;
+    font-weight: 800;
+
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+}
+
+h1 {
+    margin: 0;
+
+    font-size: 32px;
+    line-height: 1.1;
+    font-weight: 800;
+
+    letter-spacing: -0.8px;
+}
+
+.sottotitolo {
+    margin-top: 8px;
+
+    color: var(--testo-3);
+
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.btn-indietro {
+    width: 44px;
+    height: 44px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    border: 1px solid #e1e6ea;
+    border-radius: 12px;
+
+    background: #ffffff;
+    color: #586570;
+
+    cursor: pointer;
+
+    transition:
+        background .18s ease,
+        border-color .18s ease,
+        transform .18s ease;
+}
+
+.btn-indietro:hover {
+    background: #f3f7f5;
+    border-color: #cfe0d9;
+
+    transform: translateY(-1px);
+}
+
+.btn-indietro svg {
+    width: 19px;
+    height: 19px;
+}
+
+/* =========================================================
+   AMMINISTRAZIONE
+   ========================================================= */
+
+.pannello-admin {
+    display: none;
+
+    margin-bottom: 22px;
+    padding: 22px;
+
+    border: 1px solid #d7e9e1;
+    border-radius: 18px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #f2faf6 0%,
+            #ffffff 100%
+        );
+
+    box-shadow: var(--ombra);
+}
+
+.pannello-admin.visibile {
+    display: block;
+}
+
+.pannello-admin-titolo {
+    margin-bottom: 16px;
+
+    font-size: 18px;
+    font-weight: 800;
+}
+
+.form-gruppo {
+    margin-bottom: 13px;
+}
+
+.form-gruppo label {
+    display: block;
+
+    margin-bottom: 6px;
+
+    color: var(--testo-2);
+
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.form-gruppo input,
+.form-gruppo textarea,
+.form-gruppo select {
+    width: 100%;
+
+    border: 1px solid #dce4e8;
+    border-radius: 11px;
+
+    background: #ffffff;
+    color: var(--testo);
+
+    outline: none;
+}
+
+.form-gruppo input,
+.form-gruppo select {
+    height: 44px;
+    padding: 0 12px;
+}
+
+.form-gruppo textarea {
+    min-height: 130px;
+    padding: 11px 12px;
+    resize: vertical;
+}
+
+.form-gruppo input:focus,
+.form-gruppo textarea:focus,
+.form-gruppo select:focus {
+    border-color: #99d1bb;
+
+    box-shadow:
+        0 0 0 3px rgba(23,136,97,.07);
+}
+
+.btn-pubblica {
+    min-height: 44px;
+
+    padding: 0 19px;
+
+    border-radius: 11px;
+
+    background: var(--verde);
+    color: #ffffff;
+
+    font-size: 13px;
+    font-weight: 800;
+
+    cursor: pointer;
+}
+
+.btn-pubblica:hover {
+    background: var(--verde-scuro);
+}
+
+.btn-pubblica:disabled {
+    opacity: .55;
+    cursor: default;
+}
+
+/* =========================================================
+   AVVISI
+   ========================================================= */
+
+.lista-avvisi {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.avviso {
+    padding: 22px 24px;
+
+    border: 1px solid var(--bordo);
+    border-radius: 18px;
+
+    background: #ffffff;
+
+    box-shadow: var(--ombra);
+}
+
+.avviso.super-importante {
+    border-color: #f0d8a8;
+
+    background:
+        linear-gradient(
+            135deg,
+            #fffaf0,
+            #ffffff
+        );
+}
+
+.avviso-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+
+    gap: 15px;
+}
+
+.avviso-titolo {
+    margin: 0;
+
+    font-size: 19px;
+    line-height: 1.25;
+    font-weight: 800;
+}
+
+.avviso-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    flex-wrap: wrap;
+
+    margin-top: 8px;
+}
+
+.avviso-tipo {
+    padding: 5px 9px;
+
+    border-radius: 999px;
+
+    background: var(--verde-chiaro);
+    color: var(--verde-scuro);
+
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.avviso.super-importante .avviso-tipo {
+    background: #fff0cc;
+    color: #996500;
+}
+
+.avviso-data {
+    color: var(--testo-3);
+    font-size: 11px;
+}
+
+.avviso-testo {
+    margin-top: 17px;
+
+    color: var(--testo-2);
+
+    font-size: 14px;
+    line-height: 1.75;
+
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.avviso-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    gap: 12px;
+
+    margin-top: 18px;
+    padding-top: 13px;
+
+    border-top: 1px solid #edf1f3;
+}
+
+.avviso-autore {
+    color: #98a3ab;
+    font-size: 10px;
+}
+
+.btn-elimina {
+    padding: 6px 9px;
+
+    border-radius: 8px;
+
+    background: #fff3f3;
+    color: #c43b43;
+
+    font-size: 10px;
+    font-weight: 700;
+
+    cursor: pointer;
+}
+
+.btn-elimina:hover {
+    background: #ffe3e3;
+}
+
+.stato {
+    padding: 55px 20px;
+
+    text-align: center;
+
+    color: var(--testo-3);
+}
+
+.stato strong {
+    display: block;
+
+    margin-bottom: 7px;
+
+    color: var(--testo);
+
+    font-size: 15px;
+}
+
+/* =========================================================
+   TOAST
+   ========================================================= */
+
+#toast {
+    position: fixed;
+
+    right: 20px;
+    bottom: 20px;
+
+    z-index: 1000;
+
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.toast {
+    max-width: 360px;
+
+    padding: 12px 15px;
+
+    border-radius: 11px;
+
+    background: #18232d;
+    color: #ffffff;
+
+    box-shadow:
+        0 12px 35px rgba(20,31,40,.2);
+
+    font-size: 13px;
+}
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 600px) {
+
+    body {
+        padding:
+            16px
+            10px
+            35px;
+    }
+
+    .intestazione {
+        margin-bottom: 18px;
+    }
+
+    h1 {
+        font-size: 25px;
+    }
+
+    .sottotitolo {
+        font-size: 12px;
+    }
+
+    .btn-indietro {
+        width: 40px;
+        height: 40px;
+    }
+
+    .pannello-admin {
+        padding: 17px;
+        border-radius: 15px;
+    }
+
+    .avviso {
+        padding: 17px;
+        border-radius: 15px;
+    }
+
+    .avviso-header {
+        flex-direction: column;
+    }
+
+    .avviso-titolo {
+        font-size: 17px;
+    }
+
+    .avviso-testo {
+        font-size: 13px;
+    }
+
+    #toast {
+        right: 10px;
+        bottom: 10px;
+        left: 10px;
+    }
+
+    .toast {
+        max-width: none;
+    }
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="contenitore">
+
+    <header class="intestazione">
+
+        <div class="intestazione-sinistra">
+
+            <div class="etichetta">
+                Giochi Società
+            </div>
+
+            <h1>
+                Avvisi
+            </h1>
+
+            <div class="sottotitolo">
+                Comunicazioni importanti, aggiornamenti
+                e novità della piattaforma.
+            </div>
+
+        </div>
+
+        <button
+            class="btn-indietro"
+            type="button"
+            title="Torna indietro"
+            onclick="history.back()"
+        >
+            <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+            >
+                <path d="M15 18l-6-6 6-6"></path>
+            </svg>
+        </button>
+
+    </header>
+
+
+    <!-- =====================================================
+         PANNELLO ADMIN
+         ===================================================== -->
+
+    <section
+        id="pannelloAdmin"
+        class="pannello-admin"
+    >
+
+        <div class="pannello-admin-titolo">
+            Pubblica un nuovo avviso
+        </div>
+
+        <div class="form-gruppo">
+
+            <label for="titoloAvviso">
+                Titolo
+            </label>
+
+            <input
+                id="titoloAvviso"
+                type="text"
+                maxlength="120"
+                placeholder="Es. Importante aggiornamento del sito"
+            >
+
+        </div>
+
+        <div class="form-gruppo">
+
+            <label for="tipoAvviso">
+                Tipo di avviso
+            </label>
+
+            <select id="tipoAvviso">
+
+                <option value="Informazione">
+                    Informazione
+                </option>
+
+                <option value="Aggiornamento">
+                    Aggiornamento
+                </option>
+
+                <option value="Importante">
+                    Importante
+                </option>
+
+                <option value="Manutenzione">
+                    Manutenzione
+                </option>
+
+                <option value="Novità">
+                    Novità
+                </option>
+
+            </select>
+
+        </div>
+
+        <div class="form-gruppo">
+
+            <label for="testoAvviso">
+                Messaggio
+            </label>
+
+            <textarea
+                id="testoAvviso"
+                maxlength="2000"
+                placeholder="Scrivi qui l'avviso..."
+            ></textarea>
+
+        </div>
+
+        <button
+            id="btnPubblica"
+            type="button"
+            class="btn-pubblica"
+        >
+            Pubblica avviso
+        </button>
+
+    </section>
+
+
+    <!-- =====================================================
+         LISTA
+         ===================================================== -->
+
+    <main id="listaAvvisi" class="lista-avvisi">
+
+        <div class="stato">
+            Caricamento avvisi...
+        </div>
+
+    </main>
+
+</div>
+
+<div id="toast"></div>
+
+
+<script>
+
+const API_BASE =
+    "https://gioco-oca-server.onrender.com";
+
+let sonoAdmin = false;
+
+
+/* =========================================================
+   UTILITY
+   ========================================================= */
+
+function mostraToast(testo) {
+
+    const contenitore =
+        document.getElementById("toast");
+
+    const elemento =
+        document.createElement("div");
+
+    elemento.className = "toast";
+    elemento.textContent = testo;
+
+    contenitore.appendChild(elemento);
+
+    setTimeout(() => {
+        elemento.remove();
+    }, 3500);
+}
+
+function formatoData(timestamp) {
+
+    if (!timestamp) {
+        return "";
+    }
+
+    return new Date(timestamp)
+        .toLocaleDateString(
+            "it-IT",
+            {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit"
+            }
+        );
+}
+
+
+/* =========================================================
+   AUTENTICAZIONE
+   ========================================================= */
+
+async function avvia() {
+
+    try {
+
+        const risposta =
+            await fetch(
+                API_BASE + "/api/me",
+                {
+                    credentials: "include",
+                    cache: "no-store"
+                }
+            );
+
+        if (!risposta.ok) {
+
+            window.location.href =
+                "login.html?redirect=" +
+                encodeURIComponent(
+                    window.location.href
+                );
+
+            return;
+        }
+
+        const utente =
+            await risposta.json();
+
+        sonoAdmin =
+            utente.ruolo === "admin";
+
+        if (sonoAdmin) {
+
+            document
+                .getElementById("pannelloAdmin")
+                .classList.add("visibile");
+
+        }
+
+        await caricaAvvisi();
+
+    } catch (errore) {
+
+        mostraToast(
+            "Errore di connessione."
+        );
+    }
+}
+
+
+/* =========================================================
+   CARICAMENTO
+   ========================================================= */
+
+async function caricaAvvisi() {
+
+    try {
+
+        const risposta =
+            await fetch(
+                API_BASE + "/api/avvisi",
+                {
+                    credentials: "include",
+                    cache: "no-store"
+                }
+            );
+
+        if (!risposta.ok) {
+
+            throw new Error(
+                "Errore caricamento."
+            );
+        }
+
+        const dati =
+            await risposta.json();
+
+        renderAvvisi(
+            Array.isArray(dati.avvisi)
+                ? dati.avvisi
+                : []
+        );
+
+    } catch (errore) {
+
+        document.getElementById(
+            "listaAvvisi"
+        ).innerHTML = `
+            <div class="stato">
+                <strong>Impossibile caricare gli avvisi</strong>
+                Controlla la connessione e riprova.
+            </div>
+        `;
+    }
+}
+
+
+/* =========================================================
+   RENDER
+   ========================================================= */
+
+function renderAvvisi(avvisi) {
+
+    const contenitore =
+        document.getElementById(
+            "listaAvvisi"
+        );
+
+    contenitore.innerHTML = "";
+
+    if (!avvisi.length) {
+
+        contenitore.innerHTML = `
+            <div class="stato">
+                <strong>Nessun avviso</strong>
+                Al momento non ci sono comunicazioni importanti.
+            </div>
+        `;
+
+        return;
+    }
+
+    avvisi.forEach(avviso => {
+
+        const elemento =
+            document.createElement("article");
+
+        elemento.className =
+            "avviso" +
+            (
+                avviso.tipo === "Importante"
+                    ? " super-importante"
+                    : ""
+            );
+
+        const header =
+            document.createElement("div");
+
+        header.className =
+            "avviso-header";
+
+        const sinistra =
+            document.createElement("div");
+
+        const titolo =
+            document.createElement("h2");
+
+        titolo.className =
+            "avviso-titolo";
+
+        titolo.textContent =
+            avviso.titolo || "Avviso";
+
+        const meta =
+            document.createElement("div");
+
+        meta.className =
+            "avviso-meta";
+
+        const tipo =
+            document.createElement("span");
+
+        tipo.className =
+            "avviso-tipo";
+
+        tipo.textContent =
+            avviso.tipo || "Informazione";
+
+        const data =
+            document.createElement("span");
+
+        data.className =
+            "avviso-data";
+
+        data.textContent =
+            formatoData(avviso.data);
+
+        meta.appendChild(tipo);
+        meta.appendChild(data);
+
+        sinistra.appendChild(titolo);
+        sinistra.appendChild(meta);
+
+        header.appendChild(sinistra);
+
+        elemento.appendChild(header);
+
+
+        const testo =
+            document.createElement("div");
+
+        testo.className =
+            "avviso-testo";
+
+        testo.textContent =
+            avviso.messaggio || "";
+
+        elemento.appendChild(testo);
+
+
+        const footer =
+            document.createElement("div");
+
+        footer.className =
+            "avviso-footer";
+
+        const autore =
+            document.createElement("div");
+
+        autore.className =
+            "avviso-autore";
+
+        autore.textContent =
+            "Pubblicato da " +
+            (avviso.pubblicatoDa || "Staff");
+
+        footer.appendChild(autore);
+
+
+        if (sonoAdmin) {
+
+            const elimina =
+                document.createElement("button");
+
+            elimina.type = "button";
+
+            elimina.className =
+                "btn-elimina";
+
+            elimina.textContent =
+                "Elimina";
+
+            elimina.addEventListener(
+                "click",
+                () =>
+                    eliminaAvviso(avviso.id)
+            );
+
+            footer.appendChild(
+                elimina
+            );
+        }
+
+        elemento.appendChild(
+            footer
+        );
+
+        contenitore.appendChild(
+            elemento
+        );
+    });
+}
+
+
+/* =========================================================
+   PUBBLICAZIONE
+   ========================================================= */
+
+document
+    .getElementById("btnPubblica")
+    .addEventListener(
+        "click",
+        pubblicaAvviso
+    );
+
+async function pubblicaAvviso() {
+
+    const bottone =
+        document.getElementById(
+            "btnPubblica"
+        );
+
+    const titolo =
+        document.getElementById(
+            "titoloAvviso"
+        ).value.trim();
+
+    const tipo =
+        document.getElementById(
+            "tipoAvviso"
+        ).value;
+
+    const messaggio =
+        document.getElementById(
+            "testoAvviso"
+        ).value.trim();
+
+    if (!titolo) {
+
+        mostraToast(
+            "Inserisci un titolo."
+        );
+
+        return;
+    }
+
+    if (!messaggio) {
+
+        mostraToast(
+            "Inserisci il testo dell'avviso."
+        );
+
+        return;
+    }
+
+    bottone.disabled = true;
+    bottone.textContent =
+        "Pubblicazione...";
+
+    try {
+
+        const risposta =
+            await fetch(
+                API_BASE +
+                "/api/admin/avvisi",
+                {
+                    method: "POST",
+                    credentials: "include",
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+                    body: JSON.stringify({
+                        titolo,
+                        tipo,
+                        messaggio
+                    })
+                }
+            );
+
+        const dati =
+            await risposta.json();
+
+        if (!risposta.ok) {
+
+            mostraToast(
+                dati.errore ||
+                "Impossibile pubblicare l'avviso."
+            );
+
+            return;
+        }
+
+        document.getElementById(
+            "titoloAvviso"
+        ).value = "";
+
+        document.getElementById(
+            "testoAvviso"
+        ).value = "";
+
+        mostraToast(
+            "Avviso pubblicato."
+        );
+
+        await caricaAvvisi();
+
+    } catch (errore) {
+
+        mostraToast(
+            "Errore di connessione."
+        );
+
+    } finally {
+
+        bottone.disabled = false;
+
+        bottone.textContent =
+            "Pubblica avviso";
+    }
+}
+
+
+/* =========================================================
+   ELIMINAZIONE
+   ========================================================= */
+
+async function eliminaAvviso(id) {
+
+    if (
+        !confirm(
+            "Vuoi davvero eliminare questo avviso?"
+        )
+    ) {
+        return;
+    }
+
+    try {
+
+        const risposta =
+            await fetch(
+                API_BASE +
+                "/api/admin/avvisi/" +
+                encodeURIComponent(id),
+                {
+                    method: "DELETE",
+                    credentials: "include"
+                }
+            );
+
+        const dati =
+            await risposta.json();
+
+        if (!risposta.ok) {
+
+            mostraToast(
+                dati.errore ||
+                "Impossibile eliminare l'avviso."
+            );
+
+            return;
+        }
+
+        mostraToast(
+            "Avviso eliminato."
+        );
+
+        await caricaAvvisi();
+
+    } catch (errore) {
+
+        mostraToast(
+            "Errore di connessione."
+        );
+    }
+}
+
+avvia();
+
+</script>
+
+</body>
+</html>
