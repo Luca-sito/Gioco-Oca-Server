@@ -1317,14 +1317,12 @@ app.post("/api/admin/avvisi", richiediAdmin, async (req, res) => {
       tipo
     } = req.body;
 
-    const titoloPulito =
-      pulisciTesto(titolo, 120);
-
-    const messaggioPulito =
-      pulisciTesto(messaggio, 2000);
-
-    const tipoPulito =
-      pulisciTesto(tipo || "Informazione", 40);
+    const titoloPulito = pulisciTesto(titolo, 120);
+    const messaggioPulito = pulisciTesto(messaggio, 2000);
+    const tipoPulito = pulisciTesto(
+      tipo || "Informazione",
+      40
+    );
 
     if (!titoloPulito) {
       return res.status(400).json({
@@ -1338,39 +1336,76 @@ app.post("/api/admin/avvisi", richiediAdmin, async (req, res) => {
       });
     }
 
-    const nuovoRef =
-      db.ref("avvisiSito").push();
+    const ora = Date.now();
 
-    await nuovoRef.set({
+    const nuovoRef = db.ref("avvisiSito").push();
+
+    const avviso = {
       titolo: titoloPulito,
       messaggio: messaggioPulito,
       tipo: tipoPulito,
-      data: Date.now(),
+      data: ora,
       pubblicatoDa:
         req.utenteAdmin.nickname || "Amministratore"
-    });
+    };
+
+    await nuovoRef.set(avviso);
+
+    /*
+     * Inviamo una notifica a tutti gli utenti registrati.
+     *
+     * La notifica viene salvata nel loro account:
+     *
+     * utenti/{uid}/notifiche
+     *
+     * In questo modo l'avviso resta disponibile
+     * anche se l'utente in quel momento non è online.
+     */
+    const utentiSnap =
+      await db.ref("utenti").once("value");
+
+    const utenti =
+      utentiSnap.val() || {};
+
+    const aggiornamenti = {};
+
+    for (const uid of Object.keys(utenti)) {
+
+      aggiornamenti[
+        `utenti/${uid}/notifiche/${db.ref().push().key}`
+      ] = {
+        tipo: "avvisoSito",
+        titolo: titoloPulito,
+        testo: messaggioPulito,
+        categoria: tipoPulito,
+        data: ora,
+        letta: false,
+        avvisoId: nuovoRef.key
+      };
+    }
+
+    if (Object.keys(aggiornamenti).length > 0) {
+      await db.ref().update(aggiornamenti);
+    }
 
     res.json({
       ok: true,
       avviso: {
         id: nuovoRef.key,
-        titolo: titoloPulito,
-        messaggio: messaggioPulito,
-        tipo: tipoPulito,
-        data: Date.now(),
-        pubblicatoDa:
-          req.utenteAdmin.nickname || "Amministratore"
+        ...avviso
       }
     });
 
   } catch (err) {
+
     console.error(
       "Errore pubblicazione avviso:",
       err
     );
 
     res.status(500).json({
-      errore: "Errore durante la pubblicazione."
+      errore:
+        "Errore durante la pubblicazione dell'avviso."
     });
   }
 });
