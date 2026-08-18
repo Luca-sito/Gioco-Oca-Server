@@ -28,7 +28,7 @@ const coloriGiocatori = [
 ];
 
 const DURATA_LANCIO_DADI_MS = 1300;
-const DURATA_SALTO_MS = 240;
+const DURATA_SALTO_MS = 260;
 
 const URL_SERVER_HTTP = "https://gioco-oca-server.onrender.com";
 const URL_SERVER_WS = "wss://gioco-oca-server.onrender.com";
