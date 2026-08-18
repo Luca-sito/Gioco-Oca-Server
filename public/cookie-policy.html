@@ -1,0 +1,1219 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Cookie Policy | Giochi Società</title>
+
+<style>
+    * {
+        box-sizing: border-box;
+    }
+
+    :root {
+        --verde: #178861;
+        --verde-scuro: #106d4d;
+        --verde-hover: #147954;
+        --verde-chiaro: #eaf7f1;
+        --verde-soft: #f3faf7;
+
+        --testo: #17222b;
+        --testo-2: #55636e;
+        --testo-3: #8b97a1;
+
+        --sfondo: #eef2f5;
+        --superficie: #ffffff;
+        --superficie-2: #f8fafb;
+
+        --bordo: #e1e7eb;
+        --bordo-soft: #edf1f4;
+
+        --ombra-leggera:
+            0 2px 8px rgba(20, 31, 40, 0.05);
+
+        --ombra-media:
+            0 12px 35px rgba(20, 31, 40, 0.08);
+    }
+
+    html,
+    body {
+        width: 100%;
+        min-height: 100%;
+        margin: 0;
+        padding: 0;
+
+        background:
+            linear-gradient(
+                180deg,
+                #f5f7f9 0%,
+                #eef2f5 100%
+            );
+
+        color: var(--testo);
+
+        font-family:
+            Inter,
+            system-ui,
+            -apple-system,
+            BlinkMacSystemFont,
+            "Segoe UI",
+            Arial,
+            Helvetica,
+            sans-serif;
+
+        line-height: 1.65;
+    }
+
+    body {
+        min-height: 100vh;
+    }
+
+    a {
+        color: inherit;
+    }
+
+    /* =========================================================
+       PAGINA
+       ========================================================= */
+
+    .pagina-cookie {
+        width: 100%;
+        min-height: 100vh;
+
+        padding:
+            38px 22px 70px;
+    }
+
+    .contenitore {
+        width: min(100%, 980px);
+
+        margin: 0 auto;
+    }
+
+    /* =========================================================
+       INTESTAZIONE
+       ========================================================= */
+
+    .intestazione {
+        position: relative;
+
+        padding:
+            30px 32px 29px;
+
+        margin-bottom: 22px;
+
+        border: 1px solid var(--bordo);
+
+        border-radius: 22px;
+
+        background:
+            linear-gradient(
+                135deg,
+                #ffffff 0%,
+                #f9fbfc 100%
+            );
+
+        box-shadow: var(--ombra-media);
+
+        overflow: hidden;
+    }
+
+    .intestazione::before {
+        content: "";
+
+        position: absolute;
+
+        left: 0;
+        top: 0;
+
+        width: 100%;
+        height: 4px;
+
+        background:
+            linear-gradient(
+                90deg,
+                var(--verde),
+                #2a9f78
+            );
+    }
+
+    .intestazione-etichetta {
+        margin-bottom: 8px;
+
+        color: var(--verde);
+
+        font-size: 11px;
+        font-weight: 800;
+
+        letter-spacing: 1.25px;
+
+        text-transform: uppercase;
+    }
+
+    .intestazione h1 {
+        margin: 0;
+
+        color: var(--testo);
+
+        font-size: clamp(28px, 4vw, 36px);
+
+        line-height: 1.15;
+
+        font-weight: 850;
+
+        letter-spacing: -0.8px;
+    }
+
+    .intestazione p {
+        margin: 10px 0 0;
+
+        color: var(--testo-3);
+
+        font-size: 13px;
+    }
+
+    .intestazione-sottotitolo {
+        max-width: 700px;
+
+        margin-top: 12px;
+
+        color: var(--testo-2);
+
+        font-size: 14px;
+
+        line-height: 1.6;
+    }
+
+    /* =========================================================
+       INDICE
+       ========================================================= */
+
+    .indice {
+        margin-bottom: 22px;
+
+        padding: 24px 26px;
+
+        border: 1px solid var(--bordo);
+
+        border-radius: 18px;
+
+        background: rgba(255, 255, 255, 0.94);
+
+        box-shadow: var(--ombra-leggera);
+    }
+
+    .indice-header {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+
+        margin-bottom: 16px;
+    }
+
+    .indice-icona {
+        width: 36px;
+        height: 36px;
+        min-width: 36px;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        border-radius: 10px;
+
+        background: var(--verde-chiaro);
+        color: var(--verde);
+
+        font-size: 17px;
+    }
+
+    .indice h2 {
+        margin: 0;
+
+        color: var(--testo);
+
+        font-size: 17px;
+        font-weight: 800;
+    }
+
+    .indice ol {
+        margin: 0;
+        padding-left: 21px;
+
+        columns: 2;
+        column-gap: 42px;
+    }
+
+    .indice li {
+        break-inside: avoid;
+
+        margin-bottom: 8px;
+
+        padding-left: 2px;
+
+        color: var(--testo-2);
+
+        font-size: 13px;
+    }
+
+    .indice a {
+        color: var(--testo-2);
+
+        text-decoration: none;
+
+        transition:
+            color 0.18s ease;
+    }
+
+    .indice a:hover {
+        color: var(--verde);
+    }
+
+    /* =========================================================
+       CONTENUTO
+       ========================================================= */
+
+    .contenuto {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    section {
+        scroll-margin-top: 20px;
+
+        padding: 27px 29px;
+
+        border: 1px solid var(--bordo);
+
+        border-radius: 18px;
+
+        background: rgba(255, 255, 255, 0.96);
+
+        box-shadow: var(--ombra-leggera);
+    }
+
+    .titolo-sezione {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+
+        margin-bottom: 15px;
+    }
+
+    .titolo-sezione-numero {
+        width: 34px;
+        height: 34px;
+        min-width: 34px;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        border-radius: 10px;
+
+        background: var(--verde-chiaro);
+        color: var(--verde);
+
+        font-size: 12px;
+        font-weight: 800;
+    }
+
+    section h2 {
+        margin: 0;
+
+        color: var(--testo);
+
+        font-size: 19px;
+        line-height: 1.3;
+
+        font-weight: 800;
+
+        letter-spacing: -0.25px;
+    }
+
+    section p {
+        margin:
+            0 0 13px;
+
+        color: var(--testo-2);
+
+        font-size: 14px;
+
+        line-height: 1.75;
+    }
+
+    section p:last-child {
+        margin-bottom: 0;
+    }
+
+    section ul {
+        margin:
+            9px 0 0;
+
+        padding-left: 21px;
+    }
+
+    section li {
+        margin-bottom: 9px;
+
+        color: var(--testo-2);
+
+        font-size: 14px;
+
+        line-height: 1.7;
+    }
+
+    section li:last-child {
+        margin-bottom: 0;
+    }
+
+    strong {
+        color: var(--testo);
+    }
+
+    /* =========================================================
+       BOX EVIDENZA
+       ========================================================= */
+
+    .box-evidenza {
+        margin-top: 18px;
+
+        padding: 16px 18px;
+
+        border:
+            1px solid #ccebdd;
+
+        border-radius: 14px;
+
+        background:
+            linear-gradient(
+                135deg,
+                #f2fbf7 0%,
+                #ebf8f2 100%
+            );
+
+        color: #346d58;
+
+        font-size: 13px;
+
+        line-height: 1.65;
+    }
+
+    /* =========================================================
+       TABELLA COOKIE
+       ========================================================= */
+
+    .tabella-wrapper {
+        width: 100%;
+
+        margin-top: 18px;
+
+        overflow-x: auto;
+
+        border:
+            1px solid var(--bordo);
+
+        border-radius: 14px;
+
+        background: #ffffff;
+    }
+
+    .tabella-cookie {
+        width: 100%;
+
+        min-width: 580px;
+
+        border-collapse: collapse;
+
+        font-size: 13px;
+    }
+
+    .tabella-cookie th,
+    .tabella-cookie td {
+        padding:
+            13px 15px;
+
+        border-bottom:
+            1px solid var(--bordo-soft);
+
+        text-align: left;
+
+        vertical-align: top;
+    }
+
+    .tabella-cookie th {
+        background:
+            #f4f8f6;
+
+        color: var(--testo);
+
+        font-size: 12px;
+        font-weight: 800;
+    }
+
+    .tabella-cookie td {
+        color: var(--testo-2);
+
+        line-height: 1.6;
+    }
+
+    .tabella-cookie tbody tr:last-child td {
+        border-bottom: 0;
+    }
+
+    .tabella-cookie tbody tr:hover {
+        background: #fbfdfc;
+    }
+
+    /* =========================================================
+       LINK
+       ========================================================= */
+
+    .link-privacy {
+        color: var(--verde);
+
+        font-weight: 700;
+
+        text-decoration: none;
+    }
+
+    .link-privacy:hover {
+        color: var(--verde-scuro);
+
+        text-decoration: underline;
+    }
+
+    .azioni-finali {
+        display: flex;
+        justify-content: flex-start;
+
+        margin-top: 2px;
+    }
+
+    .link-home {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+
+        min-height: 44px;
+
+        padding: 0 18px;
+
+        border-radius: 11px;
+
+        background: var(--verde);
+
+        color: #ffffff;
+
+        text-decoration: none;
+
+        font-size: 13px;
+        font-weight: 750;
+
+        box-shadow:
+            0 5px 14px rgba(23, 136, 97, 0.17);
+
+        transition:
+            background 0.18s ease,
+            transform 0.18s ease,
+            box-shadow 0.18s ease;
+    }
+
+    .link-home:hover {
+        background: var(--verde-scuro);
+
+        transform: translateY(-1px);
+
+        box-shadow:
+            0 8px 18px rgba(23, 136, 97, 0.21);
+    }
+
+    .link-home:active {
+        transform: scale(0.98);
+    }
+
+    /* =========================================================
+       FOOTER
+       ========================================================= */
+
+    footer {
+        margin-top: 28px;
+
+        padding:
+            22px 10px 0;
+
+        border-top:
+            1px solid var(--bordo);
+
+        text-align: center;
+
+        color: var(--testo-3);
+
+        font-size: 11px;
+    }
+
+    /* =========================================================
+       TABLET
+       ========================================================= */
+
+    @media (max-width: 760px) {
+
+        .pagina-cookie {
+            padding:
+                22px 14px 45px;
+        }
+
+        .intestazione {
+            padding:
+                26px 22px 24px;
+
+            border-radius: 18px;
+        }
+
+        .indice {
+            padding:
+                21px 20px;
+        }
+
+        .indice ol {
+            columns: 1;
+        }
+
+        section {
+            padding:
+                23px 21px;
+        }
+    }
+
+    /* =========================================================
+       MOBILE
+       ========================================================= */
+
+    @media (max-width: 520px) {
+
+        .pagina-cookie {
+            padding:
+                12px 9px 30px;
+        }
+
+        .intestazione {
+            padding:
+                23px 18px 21px;
+
+            margin-bottom: 13px;
+
+            border-radius: 16px;
+        }
+
+        .intestazione h1 {
+            font-size: 25px;
+        }
+
+        .intestazione p {
+            font-size: 11px;
+        }
+
+        .intestazione-sottotitolo {
+            font-size: 12px;
+        }
+
+        .indice {
+            padding:
+                18px 17px;
+
+            margin-bottom: 13px;
+
+            border-radius: 15px;
+        }
+
+        .indice li {
+            font-size: 12px;
+            margin-bottom: 7px;
+        }
+
+        .contenuto {
+            gap: 11px;
+        }
+
+        section {
+            padding:
+                19px 17px;
+
+            border-radius: 15px;
+        }
+
+        .titolo-sezione {
+            gap: 9px;
+
+            margin-bottom: 12px;
+        }
+
+        .titolo-sezione-numero {
+            width: 30px;
+            height: 30px;
+            min-width: 30px;
+
+            border-radius: 9px;
+
+            font-size: 10px;
+        }
+
+        section h2 {
+            font-size: 17px;
+        }
+
+        section p,
+        section li {
+            font-size: 13px;
+        }
+
+        .box-evidenza {
+            padding:
+                14px 15px;
+
+            font-size: 12px;
+
+            border-radius: 12px;
+        }
+
+        .tabella-wrapper {
+            margin-top: 14px;
+
+            border-radius: 12px;
+        }
+
+        .tabella-cookie {
+            min-width: 520px;
+
+            font-size: 12px;
+        }
+
+        .tabella-cookie th,
+        .tabella-cookie td {
+            padding:
+                11px 12px;
+        }
+
+        .link-home {
+            width: 100%;
+        }
+
+        footer {
+            font-size: 10px;
+        }
+    }
+</style>
+</head>
+
+<body>
+
+<div class="pagina-cookie">
+
+    <div class="contenitore">
+
+        <!-- =====================================================
+             INTESTAZIONE
+             ===================================================== -->
+
+        <header class="intestazione">
+
+            <div class="intestazione-etichetta">
+                GIOCHI SOCIETÀ
+            </div>
+
+            <h1>
+                Cookie Policy
+            </h1>
+
+            <p>
+                Ultimo aggiornamento: luglio 2026
+            </p>
+
+            <div class="intestazione-sottotitolo">
+                Informazioni sull'utilizzo dei cookie e delle
+                tecnologie simili all'interno della piattaforma.
+            </div>
+
+        </header>
+
+
+        <!-- =====================================================
+             INDICE
+             ===================================================== -->
+
+        <nav class="indice">
+
+            <div class="indice-header">
+
+                <div class="indice-icona">
+                    ☰
+                </div>
+
+                <h2>
+                    Indice
+                </h2>
+
+            </div>
+
+            <ol>
+
+                <li>
+                    <a href="#cosa">
+                        Cosa sono i cookie
+                    </a>
+                </li>
+
+                <li>
+                    <a href="#utilizzo">
+                        Perché utilizziamo i cookie
+                    </a>
+                </li>
+
+                <li>
+                    <a href="#tipi">
+                        Tipologie di cookie utilizzati
+                    </a>
+                </li>
+
+                <li>
+                    <a href="#tecnici">
+                        Cookie tecnici
+                    </a>
+                </li>
+
+                <li>
+                    <a href="#terze">
+                        Cookie di terze parti
+                    </a>
+                </li>
+
+                <li>
+                    <a href="#gestione">
+                        Gestione dei cookie
+                    </a>
+                </li>
+
+                <li>
+                    <a href="#durata">
+                        Durata dei cookie
+                    </a>
+                </li>
+
+                <li>
+                    <a href="#privacy">
+                        Collegamento con la Privacy Policy
+                    </a>
+                </li>
+
+                <li>
+                    <a href="#modifiche">
+                        Modifiche alla Cookie Policy
+                    </a>
+                </li>
+
+                <li>
+                    <a href="#contatti">
+                        Contatti
+                    </a>
+                </li>
+
+            </ol>
+
+        </nav>
+
+
+        <!-- =====================================================
+             CONTENUTO
+             ===================================================== -->
+
+        <main class="contenuto">
+
+
+            <section id="cosa">
+
+                <div class="titolo-sezione">
+
+                    <div class="titolo-sezione-numero">
+                        01
+                    </div>
+
+                    <h2>
+                        Cosa sono i cookie
+                    </h2>
+
+                </div>
+
+                <p>
+                    I cookie sono piccoli file di testo che vengono salvati
+                    sul dispositivo dell'utente quando visita un sito web.
+                </p>
+
+                <p>
+                    Permettono al sito di ricordare alcune informazioni e
+                    rendere l'esperienza di utilizzo più semplice e sicura.
+                </p>
+
+            </section>
+
+
+            <section id="utilizzo">
+
+                <div class="titolo-sezione">
+
+                    <div class="titolo-sezione-numero">
+                        02
+                    </div>
+
+                    <h2>
+                        Perché utilizziamo i cookie
+                    </h2>
+
+                </div>
+
+                <p>
+                    Giochi Società utilizza cookie e tecnologie simili
+                    principalmente per garantire il corretto funzionamento
+                    della piattaforma.
+                </p>
+
+                <ul>
+
+                    <li>
+                        Permettere l'accesso agli account;
+                    </li>
+
+                    <li>
+                        Mantenere alcune preferenze durante la navigazione;
+                    </li>
+
+                    <li>
+                        Migliorare sicurezza e stabilità del servizio;
+                    </li>
+
+                    <li>
+                        Ridurre utilizzi impropri della piattaforma.
+                    </li>
+
+                </ul>
+
+            </section>
+
+
+            <section id="tipi">
+
+                <div class="titolo-sezione">
+
+                    <div class="titolo-sezione-numero">
+                        03
+                    </div>
+
+                    <h2>
+                        Tipologie di cookie utilizzati
+                    </h2>
+
+                </div>
+
+                <div class="tabella-wrapper">
+
+                    <table class="tabella-cookie">
+
+                        <thead>
+
+                            <tr>
+                                <th>
+                                    Tipo
+                                </th>
+
+                                <th>
+                                    Funzione
+                                </th>
+                            </tr>
+
+                        </thead>
+
+                        <tbody>
+
+                            <tr>
+
+                                <td>
+                                    <strong>
+                                        Cookie tecnici
+                                    </strong>
+                                </td>
+
+                                <td>
+                                    Necessari per il funzionamento del sito
+                                    e delle sue funzioni principali.
+                                </td>
+
+                            </tr>
+
+                            <tr>
+
+                                <td>
+                                    <strong>
+                                        Cookie funzionali
+                                    </strong>
+                                </td>
+
+                                <td>
+                                    Permettono di ricordare alcune impostazioni
+                                    dell'utente.
+                                </td>
+
+                            </tr>
+
+                            <tr>
+
+                                <td>
+                                    <strong>
+                                        Cookie di terze parti
+                                    </strong>
+                                </td>
+
+                                <td>
+                                    Utilizzati eventualmente da servizi esterni
+                                    collegati alla piattaforma.
+                                </td>
+
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </section>
+
+
+            <section id="tecnici">
+
+                <div class="titolo-sezione">
+
+                    <div class="titolo-sezione-numero">
+                        04
+                    </div>
+
+                    <h2>
+                        Cookie tecnici
+                    </h2>
+
+                </div>
+
+                <p>
+                    I cookie tecnici sono necessari per permettere il corretto
+                    funzionamento di Giochi Società.
+                </p>
+
+                <p>
+                    Possono essere utilizzati per gestire sessioni di accesso,
+                    autenticazione, sicurezza e comunicazione tra il browser
+                    dell'utente e i server del servizio.
+                </p>
+
+                <div class="box-evidenza">
+
+                    💡 La disattivazione dei cookie tecnici potrebbe impedire
+                    il corretto utilizzo di alcune funzioni del sito.
+
+                </div>
+
+            </section>
+
+
+            <section id="terze">
+
+                <div class="titolo-sezione">
+
+                    <div class="titolo-sezione-numero">
+                        05
+                    </div>
+
+                    <h2>
+                        Cookie di terze parti
+                    </h2>
+
+                </div>
+
+                <p>
+                    Alcune funzionalità possono utilizzare servizi esterni
+                    necessari alla gestione della piattaforma.
+                </p>
+
+                <p>
+                    Questi servizi potrebbero utilizzare tecnologie proprie
+                    secondo le loro politiche sulla privacy e sui cookie.
+                </p>
+
+            </section>
+
+
+            <section id="gestione">
+
+                <div class="titolo-sezione">
+
+                    <div class="titolo-sezione-numero">
+                        06
+                    </div>
+
+                    <h2>
+                        Gestione dei cookie
+                    </h2>
+
+                </div>
+
+                <p>
+                    L'utente può controllare o eliminare i cookie tramite
+                    le impostazioni del proprio browser.
+                </p>
+
+                <ul>
+
+                    <li>
+                        Google Chrome: impostazioni privacy e sicurezza;
+                    </li>
+
+                    <li>
+                        Mozilla Firefox: impostazioni protezione
+                        antitracciamento;
+                    </li>
+
+                    <li>
+                        Microsoft Edge: impostazioni cookie e autorizzazioni.
+                    </li>
+
+                </ul>
+
+            </section>
+
+
+            <section id="durata">
+
+                <div class="titolo-sezione">
+
+                    <div class="titolo-sezione-numero">
+                        07
+                    </div>
+
+                    <h2>
+                        Durata dei cookie
+                    </h2>
+
+                </div>
+
+                <p>
+                    Alcuni cookie vengono eliminati automaticamente alla
+                    chiusura del browser, mentre altri possono rimanere per
+                    un periodo maggiore per permettere il corretto
+                    funzionamento del servizio.
+                </p>
+
+            </section>
+
+
+            <section id="privacy">
+
+                <div class="titolo-sezione">
+
+                    <div class="titolo-sezione-numero">
+                        08
+                    </div>
+
+                    <h2>
+                        Collegamento con la Privacy Policy
+                    </h2>
+
+                </div>
+
+                <p>
+                    Per maggiori informazioni sul trattamento dei dati
+                    personali consulta la
+                    <a
+                        href="privacy-policy.html"
+                        class="link-privacy"
+                    >
+                        Privacy Policy di Giochi Società
+                    </a>.
+                </p>
+
+            </section>
+
+
+            <section id="modifiche">
+
+                <div class="titolo-sezione">
+
+                    <div class="titolo-sezione-numero">
+                        09
+                    </div>
+
+                    <h2>
+                        Modifiche alla Cookie Policy
+                    </h2>
+
+                </div>
+
+                <p>
+                    Questa Cookie Policy può essere modificata in caso di
+                    cambiamenti tecnici, nuove funzionalità o aggiornamenti
+                    del servizio.
+                </p>
+
+                <p>
+                    La data dell'ultimo aggiornamento viene sempre indicata
+                    nella parte superiore della pagina.
+                </p>
+
+            </section>
+
+
+            <section id="contatti">
+
+                <div class="titolo-sezione">
+
+                    <div class="titolo-sezione-numero">
+                        10
+                    </div>
+
+                    <h2>
+                        Contatti
+                    </h2>
+
+                </div>
+
+                <p>
+                    Per domande relative ai cookie o alla privacy puoi
+                    contattare lo staff tramite i canali indicati sul sito.
+                </p>
+
+                <div class="azioni-finali">
+
+                    <a
+                        href="lobby.html"
+                        class="link-home"
+                    >
+                        ← Torna al gioco
+                    </a>
+
+                </div>
+
+            </section>
+
+
+        </main>
+
+
+        <footer>
+            © 2026 Giochi Società — Tutti i diritti riservati
+        </footer>
+
+    </div>
+
+</div>
+
+</body>
+</html>
