@@ -1690,7 +1690,7 @@ async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, auto
     if (risultato.vittoria) {
 
   partita.fase = "terminata";
-  partita.iniziata = true;
+  partita.iniziata = false;
 
   Object.values(partita.giocatori).forEach(g => {
     if (
@@ -2262,6 +2262,13 @@ for (const partita of Object.values(
         const trovato = trovaPartita(dati.partitaId);
         if (!trovato) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Partita non trovata." })); return; }
         const { partita, nomeStanza } = trovato;
+        if (partita.fase === "terminata") {
+  socket.send(JSON.stringify({
+    tipo: "errore",
+    messaggio: "Questa partita è già terminata."
+  }));
+  return;
+}
         stanzaAttuale = nomeStanza;
         const mioGiocatore = partita.giocatori[uid];
         if (!mioGiocatore) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Non fai parte di questa partita." })); return; }
@@ -2572,7 +2579,7 @@ if (dati.tipo === "abbandonaPartita") {
           partita.ordineGiocatori,
 
         fase: "terminata",
-        iniziata: true,
+        iniziata: false,
 
         tempoInizioTurno: null,
         scadenzaTurno: null
