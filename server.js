@@ -1448,8 +1448,25 @@ function trovaPartitaAttivaPerUid(uid) {
 
 function calcolaUidInPartita(nomeStanza) {
   const uidInPartita = new Set();
-  if (!stanze[nomeStanza]) return uidInPartita;
-  Object.values(stanze[nomeStanza].partite).forEach(p => { if (p.iniziata) Object.keys(p.giocatori).forEach(uid => uidInPartita.add(uid)); });
+
+  if (!stanze[nomeStanza]) {
+    return uidInPartita;
+  }
+
+  Object.values(stanze[nomeStanza].partite).forEach(partita => {
+
+    if (
+      partita.iniziata === true ||
+      partita.fase === "determinazione_ordine" ||
+      partita.fase === "in_corso"
+    ) {
+      Object.keys(partita.giocatori || {}).forEach(uid => {
+        uidInPartita.add(uid);
+      });
+    }
+
+  });
+
   return uidInPartita;
 }
 
