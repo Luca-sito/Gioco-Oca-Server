@@ -20,34 +20,25 @@ app.disable("x-powered-by");
 app.set("trust proxy", 1);
 
 /* =========================================================
-   CONFIGURAZIONE GENERALE
+   UTILITÀ
    ========================================================= */
 
-const ORIGINI_CONSENTITE = [
-  "https://solfriniluca1.wixstudio.com",
-  "https://solfriniluca1-wixstudio-com.filesusr.com",
-  "https://gioco-oca-server.onrender.com"
-];
+function pulisciTesto(testo, massimo = 500) {
+  if (typeof testo !== "string") return "";
 
-const PORT = process.env.PORT || 3000;
-
-const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET) {
-  throw new Error(
-    "JWT_SECRET mancante: impostala nelle variabili d'ambiente su Render prima di avviare il server."
-  );
+  return testo
+    .trim()
+    .replace(/[<>]/g, "")
+    .substring(0, massimo);
 }
 
-const COOKIE_OPTIONS = {
-  httpOnly: true,
-  secure: true,
-  sameSite:
-    process.env.NODE_ENV === "production"
-      ? "none"
-      : "lax",
-  maxAge: 30 * 24 * 60 * 60 * 1000,
-  path: "/"
-};
+function idConversazione(uidA, uidB) {
+  return [uidA, uidB].sort().join("_");
+}
+
+/* =========================================================
+   ELO
+   ========================================================= */
 
 const ELO_INIZIALE = 1500;
 
@@ -57,205 +48,695 @@ const ELO_K_ESPERTO = 24;
 
 const PARTITE_PROVVISORIE_ELO = 10;
 
-const HEARTBEAT_MS = 15000;
-const DURATA_ANIMAZIONE_TIRO_MS = 1200;
-const TOLLERANZA_MOSSA_MS = 2000;
-
-/* =========================================================
-   UTILITÀ GENERALI
-   ========================================================= */
-
-function pulisciTesto(testo, massimo = 500) {
-  if (typeof testo !== "string") return "";
-
-  return testo
-    .trim()
-    .replace(/[<>]/g, "")
-    .replace(/\s+/g, " ")
-    .substring(0, massimo);
-}
-
-function numeroPositivo(valore, fallback) {
-  const numero = Number(valore);
-  return Number.isFinite(numero) && numero > 0
-    ? numero
-    : fallback;
-}
-
-function interoPositivo(valore, fallback) {
-  const numero = parseInt(valore, 10);
-  return Number.isFinite(numero) && numero > 0
-    ? numero
-    : fallback;
-}
-
-function idConversazione(uidA, uidB) {
-  return [uidA, uidB].sort().join("_");
-}
-
 function ratingEloValido(valore) {
   const numero = Number(valore);
-  return Number.isFinite(numero) ? Math.round(numero) : ELO_INIZIALE;
+
+  if (!Number.isFinite(numero)) {
+    return ELO_INIZIALE;
+  }
+
+  return Math.round(numero);
 }
 
 function limitaElo(valore) {
-  return Math.max(100, Math.round(Number(valore) || ELO_INIZIALE));
+  const numero = Math.round(
+    Number(valore)
+  );
+
+  if (!Number.isFinite(numero)) {
+    return ELO_INIZIALE;
+  }
+
+  return Math.max(100, numero);
+}
+
+function calcolaKFactor(partiteClassificate) {
+  const partite = Number(
+    partiteClassificate || 0
+  );
+
+  if (
+    partite <
+    PARTITE_PROVVISORIE_ELO
+  ) {
+    return ELO_K_NUOVO;
+  }
+
+  if (partite < 30) {
+    return ELO_K_INTERMEDIO;
+  }
+
+  return ELO_K_ESPERTO;
+}
+
+function aspettativaElo(
+  ratingGiocatore,
+  ratingAvversario
+) {
+  return (
+    1 /
+    (
+      1 +
+      Math.pow(
+        10,
+        (
+          ratingAvversario -
+          ratingGiocatore
+        ) / 400
+      )
+    )
+  );
+}
+
+function risultatoEloDaPosizioni(
+  posizioneA,
+  posizioneB
+) {
+  if (
+    posizioneA <
+    posizioneB
+  ) {
+    return 1;
+  }
+
+  if (
+    posizioneA >
+    posizioneB
+  ) {
+    return 0;
+  }
+
+  return 0.5;
+}
+
+function calcolaVariazioniElo(
+  giocatori
+) {
+  if (
+    !Array.isArray(giocatori) ||
+    giocatori.length < 2
+  ) {
+    return giocatori || [];
+  }
+
+  const risultati =
+    giocatori.map(
+      (g) => ({
+        ...g,
+        ratingPrima:
+          ratingEloValido(
+            g.ratingPrima
+          ),
+        deltaNonArrotondato: 0
+      })
+    );
+
+  for (
+    let i = 0;
+    i < risultati.length;
+    i++
+  ) {
+    const giocatore =
+      risultati[i];
+
+    const k =
+      calcolaKFactor(
+        giocatore.partiteClassificatePrima
+      );
+
+    for (
+      let j = 0;
+      j < risultati.length;
+      j++
+    ) {
+      if (i === j) continue;
+
+      const avversario =
+        risultati[j];
+
+      const risultato =
+        risultatoEloDaPosizioni(
+          giocatore.posizioneFinale,
+          avversario.posizioneFinale
+        );
+
+      const atteso =
+        aspettativaElo(
+          giocatore.ratingPrima,
+          avversario.ratingPrima
+        );
+
+      giocatore.deltaNonArrotondato +=
+        k *
+        (
+          risultato -
+          atteso
+        );
+    }
+  }
+
+  const numeroAvversari =
+    risultati.length - 1;
+
+  return risultati.map(
+    (g) => {
+      const variazione =
+        Math.round(
+          g.deltaNonArrotondato /
+          numeroAvversari
+        );
+
+      const ratingDopo =
+        limitaElo(
+          g.ratingPrima +
+          variazione
+        );
+
+      return {
+        ...g,
+        variazioneElo:
+          variazione,
+        ratingDopo
+      };
+    }
+  );
+}
+
+async function migraUtenteElo(
+  uid,
+  utente
+) {
+  if (!db || !uid || !utente) {
+    return utente;
+  }
+
+  const aggiornamenti = {};
+
+  let modificato = false;
+
+  if (
+    utente.ratingElo === undefined ||
+    utente.ratingElo === null ||
+    !Number.isFinite(
+      Number(utente.ratingElo)
+    )
+  ) {
+    aggiornamenti.ratingElo =
+      ELO_INIZIALE;
+
+    utente.ratingElo =
+      ELO_INIZIALE;
+
+    modificato = true;
+  } else {
+    utente.ratingElo =
+      ratingEloValido(
+        utente.ratingElo
+      );
+  }
+
+  if (
+    utente.eloMassimo === undefined ||
+    utente.eloMassimo === null ||
+    !Number.isFinite(
+      Number(utente.eloMassimo)
+    )
+  ) {
+    aggiornamenti.eloMassimo =
+      Number(
+        utente.ratingElo ||
+        ELO_INIZIALE
+      );
+
+    utente.eloMassimo =
+      aggiornamenti.eloMassimo;
+
+    modificato = true;
+  } else {
+    utente.eloMassimo =
+      Number(
+        utente.eloMassimo
+      );
+
+    if (
+      utente.eloMassimo <
+      utente.ratingElo
+    ) {
+      utente.eloMassimo =
+        utente.ratingElo;
+
+      aggiornamenti.eloMassimo =
+        utente.ratingElo;
+
+      modificato = true;
+    }
+  }
+
+  const campiNumericiElo = [
+    "partiteClassificate",
+    "vittorieClassificate",
+    "sconfitteClassificate",
+    "pareggiClassificati"
+  ];
+
+  for (
+    const campo of campiNumericiElo
+  ) {
+    if (
+      utente[campo] === undefined ||
+      utente[campo] === null ||
+      !Number.isFinite(
+        Number(utente[campo])
+      )
+    ) {
+      aggiornamenti[campo] = 0;
+      utente[campo] = 0;
+      modificato = true;
+    } else {
+      utente[campo] =
+        Number(utente[campo]);
+    }
+  }
+
+  /* =======================================================
+     RIMOZIONE COMPLETA DEI VECCHI CAMPI XP
+     ======================================================= */
+
+  const campiDaEliminare = [
+    "xp",
+    "livello",
+    "sogliaAttuale",
+    "sogliaProssima",
+    "badge",
+    "streakVittorieAttuale",
+    "streakVittorieMassima",
+    "vittoriaPiuVeloceSecondi"
+  ];
+
+  for (
+    const campo of campiDaEliminare
+  ) {
+    if (
+      Object.prototype.hasOwnProperty.call(
+        utente,
+        campo
+      )
+    ) {
+      aggiornamenti[campo] =
+        null;
+
+      delete utente[campo];
+
+      modificato = true;
+    }
+  }
+
+  if (
+    modificato
+  ) {
+    await db
+      .ref(
+        "utenti/" +
+        uid
+      )
+      .update(
+        aggiornamenti
+      );
+  }
+
+  return utente;
 }
 
 /* =========================================================
-   CORS / SICUREZZA HTTP
+   CORS
    ========================================================= */
+
+const ORIGINI_CONSENTITE = [
+  "https://solfriniluca1.wixstudio.com",
+  "https://solfriniluca1-wixstudio-com.filesusr.com",
+  "https://gioco-oca-server.onrender.com"
+];
 
 app.use(
   cors({
-    origin: function (origin, callback) {
-      if (!origin) return callback(null, true);
-
-      if (ORIGINI_CONSENTITE.includes(origin)) {
-        return callback(null, true);
+    origin: function (
+      origin,
+      callback
+    ) {
+      if (!origin) {
+        return callback(
+          null,
+          true
+        );
       }
 
-      console.log("CORS bloccato:", origin);
-      return callback(null, false);
+      if (
+        ORIGINI_CONSENTITE.includes(
+          origin
+        )
+      ) {
+        return callback(
+          null,
+          true
+        );
+      }
+
+      console.log(
+        "CORS bloccato:",
+        origin
+      );
+
+      callback(
+        null,
+        false
+      );
     },
+
     credentials: true
   })
 );
 
+/* =========================================================
+   SICUREZZA HTTP
+   ========================================================= */
+
 app.use(
   helmet({
-    crossOriginResourcePolicy: false,
-    contentSecurityPolicy: false,
-    frameguard: false
+    crossOriginResourcePolicy:
+      false,
+
+    contentSecurityPolicy:
+      false,
+
+    frameguard:
+      false
   })
 );
 
-app.use(express.json({ limit: "150kb" }));
-app.use(cookieParser());
+app.use(
+  express.json({
+    limit:
+      "150kb"
+  })
+);
+
+app.use(
+  cookieParser()
+);
 
 app.use(
   express.static(
-    path.join(__dirname, "public"),
-    {
-      maxAge: "1h",
-      etag: true
-    }
+    path.join(
+      __dirname,
+      "public"
+    )
   )
 );
 
-app.use(passport.initialize());
+app.use(
+  passport.initialize()
+);
 
 /* =========================================================
-   SERVER HTTP + WEBSOCKET
+   SERVER
    ========================================================= */
 
-const server = http.createServer(app);
+const server =
+  http.createServer(
+    app
+  );
 
-server.requestTimeout = 30000;
-server.headersTimeout = 35000;
-server.keepAliveTimeout = 5000;
+const wss =
+  new WebSocket.Server({
+    server,
+    maxPayload:
+      100 * 1024
+  });
 
-const wss = new WebSocket.Server({
-  server,
-  maxPayload: 100 * 1024
-});
+const PORT =
+  process.env.PORT ||
+  3000;
+
+/* =========================================================
+   JWT
+   ========================================================= */
+
+const JWT_SECRET =
+  process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+  throw new Error(
+    "JWT_SECRET mancante: impostala nelle variabili d'ambiente su Render prima di avviare il server."
+  );
+}
+
+const OPZIONI_COOKIE = {
+  httpOnly:
+    true,
+
+  secure:
+    true,
+
+  sameSite:
+    process.env.NODE_ENV ===
+    "production"
+      ? "none"
+      : "lax",
+
+  maxAge:
+    30 *
+    24 *
+    60 *
+    60 *
+    1000,
+
+  path:
+    "/"
+};
+
+/* =========================================================
+   MULTER
+   ========================================================= */
+
+const uploadAvatar =
+  multer({
+    storage:
+      multer.memoryStorage(),
+
+    limits: {
+      fileSize:
+        3 *
+        1024 *
+        1024
+    },
+
+    fileFilter:
+      (
+        req,
+        file,
+        cb
+      ) => {
+        const tipiConsentiti = [
+          "image/jpeg",
+          "image/png",
+          "image/webp"
+        ];
+
+        if (
+          !tipiConsentiti.includes(
+            file.mimetype
+          )
+        ) {
+          return cb(
+            new Error(
+              "Sono consentite solo immagini JPG, PNG o WEBP."
+            )
+          );
+        }
+
+        cb(
+          null,
+          true
+        );
+      }
+  });
 
 /* =========================================================
    RATE LIMIT
    ========================================================= */
 
-const limiteLogin = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
-  message: {
-    errore: "Troppi tentativi, riprova tra qualche minuto."
-  },
-  standardHeaders: true,
-  legacyHeaders: false
-});
+const limiteLogin =
+  rateLimit({
+    windowMs:
+      15 *
+      60 *
+      1000,
 
-const limiteRegistrazione = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: 5,
-  message: {
-    errore: "Troppe registrazioni effettuate da questo indirizzo."
-  },
-  standardHeaders: true,
-  legacyHeaders: false
-});
+    max:
+      10,
 
-const limiteContatti = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: 5,
-  message: {
-    errore: "Hai inviato troppe richieste, riprova più tardi."
-  },
-  standardHeaders: true,
-  legacyHeaders: false
-});
+    message: {
+      errore:
+        "Troppi tentativi, riprova tra qualche minuto."
+    },
 
-const limiteMessaggiPrivati = rateLimit({
-  windowMs: 60 * 1000,
-  max: 20,
-  message: {
-    errore:
-      "Stai inviando messaggi troppo velocemente, rallenta un po'."
-  },
-  standardHeaders: true,
-  legacyHeaders: false
-});
+    standardHeaders:
+      true,
 
-const limiteAmici = rateLimit({
-  windowMs: 10 * 60 * 1000,
-  max: 30,
-  message: {
-    errore:
-      "Troppe richieste di amicizia in poco tempo, rallenta un po'."
-  },
-  standardHeaders: true,
-  legacyHeaders: false
-});
+    legacyHeaders:
+      false
+  });
 
-const limiteAdmin = rateLimit({
-  windowMs: 10 * 60 * 1000,
-  max: 100,
-  message: {
-    errore:
-      "Troppe operazioni amministrative in poco tempo."
-  },
-  standardHeaders: true,
-  legacyHeaders: false
-});
+const limiteRegistrazione =
+  rateLimit({
+    windowMs:
+      60 *
+      60 *
+      1000,
+
+    max:
+      5,
+
+    message: {
+      errore:
+        "Troppe registrazioni effettuate da questo indirizzo."
+    },
+
+    standardHeaders:
+      true,
+
+    legacyHeaders:
+      false
+  });
+
+const limiteContatti =
+  rateLimit({
+    windowMs:
+      60 *
+      60 *
+      1000,
+
+    max:
+      5,
+
+    message: {
+      errore:
+        "Hai inviato troppe richieste, riprova più tardi."
+    },
+
+    standardHeaders:
+      true,
+
+    legacyHeaders:
+      false
+  });
+
+const limiteMessaggiPrivati =
+  rateLimit({
+    windowMs:
+      60 *
+      1000,
+
+    max:
+      20,
+
+    message: {
+      errore:
+        "Stai inviando messaggi troppo velocemente, rallenta un po'."
+    },
+
+    standardHeaders:
+      true,
+
+    legacyHeaders:
+      false
+  });
+
+const limiteAmici =
+  rateLimit({
+    windowMs:
+      10 *
+      60 *
+      1000,
+
+    max:
+      30,
+
+    message: {
+      errore:
+        "Troppe richieste di amicizia in poco tempo, rallenta un po'."
+    },
+
+    standardHeaders:
+      true,
+
+    legacyHeaders:
+      false
+  });
+
+const limiteAdmin =
+  rateLimit({
+    windowMs:
+      10 *
+      60 *
+      1000,
+
+    max:
+      100,
+
+    message: {
+      errore:
+        "Troppe operazioni amministrative in poco tempo."
+    },
+
+    standardHeaders:
+      true,
+
+    legacyHeaders:
+      false
+  });
 
 /* =========================================================
-   FIREBASE ADMIN
+   FIREBASE
    ========================================================= */
 
-let db = null;
+let db =
+  null;
 
 try {
-  if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
+  if (
+    !process.env.FIREBASE_SERVICE_ACCOUNT
+  ) {
     throw new Error(
       "FIREBASE_SERVICE_ACCOUNT mancante."
     );
   }
 
-  const serviceAccount = JSON.parse(
-    process.env.FIREBASE_SERVICE_ACCOUNT
-  );
+  const serviceAccount =
+    JSON.parse(
+      process.env
+        .FIREBASE_SERVICE_ACCOUNT
+    );
 
   admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
+    credential:
+      admin.credential.cert(
+        serviceAccount
+      ),
+
     databaseURL:
       "https://giochi-societa-e8add-default-rtdb.europe-west1.firebasedatabase.app"
   });
 
-  db = admin.database();
+  db =
+    admin.database();
 
   console.log(
     "Firebase Admin inizializzato correttamente."
   );
-} catch (erroreFirebase) {
+} catch (
+  erroreFirebase
+) {
   console.error(
     "ATTENZIONE: Firebase Admin NON inizializzato:",
     erroreFirebase.message
@@ -263,373 +744,218 @@ try {
 }
 
 /* =========================================================
-   COOKIE / TOKEN
-   ========================================================= */
-
-function creaToken(uid, nickname, ruolo) {
-  return jwt.sign(
-    {
-      uid,
-      nickname,
-      ruolo
-    },
-    JWT_SECRET,
-    {
-      expiresIn: "30d"
-    }
-  );
-}
-
-function verificaToken(token) {
-  if (!token) return null;
-
-  try {
-    return jwt.verify(token, JWT_SECRET);
-  } catch {
-    return null;
-  }
-}
-
-function estraiTokenHeader(req) {
-  if (req.cookies && req.cookies.token) {
-    return req.cookies.token;
-  }
-
-  const header = req.headers.authorization || "";
-  const parti = header.split(" ");
-
-  if (parti.length === 2 && /^Bearer$/i.test(parti[0])) {
-    return parti[1];
-  }
-
-  return null;
-}
-
-function estraiTokenDaCookieHeader(cookieHeaderGrezzo) {
-  if (!cookieHeaderGrezzo) return null;
-
-  const parti = cookieHeaderGrezzo
-    .split(";")
-    .map((p) => p.trim());
-
-  for (const parte of parti) {
-    const indice = parte.indexOf("=");
-
-    if (indice === -1) continue;
-
-    const nome = parte.substring(0, indice);
-
-    if (nome !== "token") continue;
-
-    return decodeURIComponent(
-      parte.substring(indice + 1)
-    );
-  }
-
-  return null;
-}
-
-async function richiediAuth(req, res, next) {
-  try {
-    const dati = verificaToken(
-      estraiTokenHeader(req)
-    );
-
-    if (!dati) {
-      return res.status(401).json({
-        errore: "Devi effettuare il login."
-      });
-    }
-
-    req.utente = dati;
-
-    next();
-  } catch {
-    res.status(401).json({
-      errore: "Sessione non valida."
-    });
-  }
-}
-
-async function richiediAdmin(req, res, next) {
-  try {
-    const dati = verificaToken(
-      estraiTokenHeader(req)
-    );
-
-    if (!dati) {
-      return res.status(401).json({
-        errore: "Devi effettuare il login."
-      });
-    }
-
-    if (dati.ruolo !== "admin") {
-      return res.status(403).json({
-        errore:
-          "Accesso riservato agli amministratori."
-      });
-    }
-
-    req.utenteAdmin = dati;
-
-    next();
-  } catch {
-    res.status(401).json({
-      errore: "Sessione non valida."
-    });
-  }
-}
-
-/* =========================================================
-   MULTER AVATAR
-   ========================================================= */
-
-const uploadAvatar = multer({
-  storage: multer.memoryStorage(),
-
-  limits: {
-    fileSize: 2 * 1024 * 1024
-  },
-
-  fileFilter: (req, file, cb) => {
-    const tipiConsentiti = [
-      "image/jpeg",
-      "image/png",
-      "image/webp"
-    ];
-
-    if (!tipiConsentiti.includes(file.mimetype)) {
-      return cb(
-        new Error(
-          "Sono consentiti solo file JPG, PNG o WEBP."
-        )
-      );
-    }
-
-    cb(null, true);
-  }
-});
-
-/* =========================================================
-   DATABASE UTENTI
-   ========================================================= */
-
-function datiEloPredefiniti() {
-  return {
-    ratingElo: ELO_INIZIALE,
-    eloMassimo: ELO_INIZIALE,
-    partiteClassificate: 0,
-    vittorieClassificate: 0,
-    sconfitteClassificate: 0,
-    pareggiClassificati: 0
-  };
-}
-
-async function assicuratiCampiElo(uid, utente) {
-  if (!uid || !utente) return utente;
-
-  const aggiornamenti = {};
-  let modificato = false;
-
-  const campi = datiEloPredefiniti();
-
-  for (const [campo, valore] of Object.entries(campi)) {
-    if (
-      utente[campo] === undefined ||
-      utente[campo] === null ||
-      !Number.isFinite(Number(utente[campo]))
-    ) {
-      aggiornamenti[campo] = valore;
-      utente[campo] = valore;
-      modificato = true;
-    } else {
-      utente[campo] = Number(utente[campo]);
-    }
-  }
-
-  if (Number(utente.eloMassimo) < Number(utente.ratingElo)) {
-    aggiornamenti.eloMassimo = Number(
-      utente.ratingElo
-    );
-
-    utente.eloMassimo = Number(
-      utente.ratingElo
-    );
-
-    modificato = true;
-  }
-
-  if (modificato && db) {
-    await db
-      .ref("utenti/" + uid)
-      .update(aggiornamenti);
-  }
-
-  return utente;
-}
-
-async function trovaUtentePerEmail(emailLower) {
-  if (!db || !emailLower) return null;
-
-  const snap = await db
-    .ref("utenti")
-    .orderByChild("emailLower")
-    .equalTo(emailLower)
-    .once("value");
-
-  if (!snap.exists()) return null;
-
-  const val = snap.val();
-  const uid = Object.keys(val)[0];
-
-  return {
-    uid,
-    ...val[uid]
-  };
-}
-
-async function trovaUtentePerGoogleId(googleId) {
-  if (!db || !googleId) return null;
-
-  const snap = await db
-    .ref("utenti")
-    .orderByChild("googleId")
-    .equalTo(googleId)
-    .once("value");
-
-  if (!snap.exists()) return null;
-
-  const val = snap.val();
-  const uid = Object.keys(val)[0];
-
-  return {
-    uid,
-    ...val[uid]
-  };
-}
-
-async function trovaUtentePerNickname(nicknameLower) {
-  if (!db || !nicknameLower) return null;
-
-  const snap = await db
-    .ref("utenti")
-    .orderByChild("nicknameLower")
-    .equalTo(nicknameLower)
-    .once("value");
-
-  if (!snap.exists()) return null;
-
-  const val = snap.val();
-  const uid = Object.keys(val)[0];
-
-  return {
-    uid,
-    ...val[uid]
-  };
-}
-
-/* =========================================================
    FIREBASE PARTITE
    ========================================================= */
 
-function preparaGiocatoriPerFirebase(giocatori) {
-  const risultato = {};
+function preparaGiocatoriPerFirebase(
+  giocatori
+) {
+  const risultato =
+    {};
 
-  for (const uid in giocatori || {}) {
-    const giocatore = giocatori[uid];
+  for (
+    const uid in
+    giocatori || {}
+  ) {
+    const g =
+      giocatori[
+        uid
+      ];
 
-    risultato[uid] = {
-      nome: giocatore.nome,
-      avatar: giocatore.avatar || null,
-      posizione: Number(
-        giocatore.posizione || 0
-      ),
-      turniSaltati: Number(
-        giocatore.turniSaltati || 0
-      ),
-      tentativiAutomaticiConsecutivi: Number(
-        giocatore.tentativiAutomaticiConsecutivi || 0
-      )
+    risultato[
+      uid
+    ] = {
+      nome:
+        g.nome,
+
+      avatar:
+        g.avatar ||
+        null,
+
+      posizione:
+        Number(
+          g.posizione ||
+          0
+        ),
+
+      turniSaltati:
+        Number(
+          g.turniSaltati ||
+          0
+        ),
+
+      tentativiAutomaticiConsecutivi:
+        Number(
+          g.tentativiAutomaticiConsecutivi ||
+          0
+        )
     };
   }
 
   return risultato;
 }
 
-async function salvaPartita(partita) {
-  if (!db || !partita) return;
+async function salvaPartita(
+  partita
+) {
+  if (
+    !db ||
+    !partita
+  ) {
+    return;
+  }
 
   await db
-    .ref("partite/" + partita.id)
+    .ref(
+      "partite/" +
+      partita.id
+    )
     .set({
-      id: partita.id,
-      stanza: partita.stanza,
-      creatore: partita.creatore,
-      creatoDa: partita.creatoDa,
-      tempo: partita.tempo,
-      punti: partita.punti,
-      modalita: partita.modalita,
-      classificata: partita.classificata !== false,
-      maxGiocatori: partita.maxGiocatori,
-      chatAttiva: partita.chatAttiva !== false,
-      fase: partita.fase || "attesa_giocatori",
-      giocatori: preparaGiocatoriPerFirebase(
-        partita.giocatori
-      ),
+      id:
+        partita.id,
+
+      stanza:
+        partita.stanza,
+
+      creatore:
+        partita.creatore,
+
+      creatoDa:
+        partita.creatoDa,
+
+      tempo:
+        partita.tempo,
+
+      punti:
+        partita.punti,
+
+      modalita:
+        partita.modalita,
+
+      classificata:
+        partita.classificata !==
+        false,
+
+      maxGiocatori:
+        partita.maxGiocatori,
+
+      chatAttiva:
+        partita.chatAttiva !==
+        false,
+
+      fase:
+        partita.fase ||
+        "attesa_giocatori",
+
+      giocatori:
+        preparaGiocatoriPerFirebase(
+          partita.giocatori
+        ),
+
       ordineGiocatori:
-        partita.ordineGiocatori || [],
+        partita.ordineGiocatori ||
+        [],
+
       partecipantiOriginali:
-        partita.partecipantiOriginali || [],
+        partita.partecipantiOriginali ||
+        [],
+
       abbandonati:
-        partita.abbandonati || {},
+        partita.abbandonati ||
+        {},
+
       turnoAttuale:
-        Number(partita.turnoAttuale || 0),
-      iniziata: partita.iniziata === true,
+        Number(
+          partita.turnoAttuale ||
+          0
+        ),
+
+      iniziata:
+        partita.iniziata ===
+        true,
+
       iniziataIl:
-        partita.iniziataIl || null,
+        partita.iniziataIl ||
+        null,
+
       statoTurno:
-        partita.statoTurno || "attesa",
+        partita.statoTurno ||
+        "attesa",
+
       tiriEffettuatiNelTurno:
         Number(
-          partita.tiriEffettuatiNelTurno || 0
+          partita.tiriEffettuatiNelTurno ||
+          0
         ),
+
       tiriConsentitiNelTurno:
         Number(
-          partita.tiriConsentitiNelTurno || 1
+          partita.tiriConsentitiNelTurno ||
+          1
         ),
+
       tempoInizioTurno:
-        partita.tempoInizioTurno || null,
+        partita.tempoInizioTurno ||
+        null,
+
       scadenzaTurno:
-        partita.scadenzaTurno || null,
+        partita.scadenzaTurno ||
+        null,
+
       punteggiOrdineIniziale:
-        partita.punteggiOrdineIniziale || null,
+        partita.punteggiOrdineIniziale ||
+        null,
+
       conclusioneEseguita:
-        partita.conclusioneEseguita === true,
-      aggiornataIl: Date.now()
+        partita.conclusioneEseguita ===
+        true,
+
+      aggiornataIl:
+        Date.now()
     });
 }
 
 async function caricaPartite() {
-  if (!db) return {};
+  if (!db) {
+    return {};
+  }
 
-  const snap = await db
-    .ref("partite")
-    .once("value");
+  const snap =
+    await db
+      .ref(
+        "partite"
+      )
+      .once(
+        "value"
+      );
 
-  return snap.val() || {};
+  return (
+    snap.val() ||
+    {}
+  );
 }
 
 async function aggiornaStatoPartita(
   partitaId,
   dati
 ) {
-  if (!db || !partitaId) return;
+  if (
+    !db ||
+    !partitaId
+  ) {
+    return;
+  }
 
   await db
-    .ref("partite/" + partitaId)
+    .ref(
+      "partite/" +
+      partitaId
+    )
     .update({
       ...dati,
-      aggiornataIl: Date.now()
+
+      aggiornataIl:
+        Date.now()
     });
 }
 
@@ -638,29 +964,44 @@ async function rimuoviPartita(
   partitaId
 ) {
   if (
-    nomeStanza &&
     stanze[nomeStanza]
   ) {
     const partita =
-      stanze[nomeStanza].partite[
+      stanze[
+        nomeStanza
+      ].partite[
         partitaId
       ];
 
-    if (partita) {
-      fermaTimerTurno(partita);
+    if (
+      partita
+    ) {
+      fermaTimerTurno(
+        partita
+      );
 
-      delete stanze[nomeStanza].partite[
+      delete stanze[
+        nomeStanza
+      ].partite[
         partitaId
       ];
     }
   }
 
-  if (db && partitaId) {
+  if (
+    db &&
+    partitaId
+  ) {
     try {
       await db
-        .ref("partite/" + partitaId)
+        .ref(
+          "partite/" +
+          partitaId
+        )
         .remove();
-    } catch (errore) {
+    } catch (
+      errore
+    ) {
       console.error(
         "Errore rimozione partita da Firebase:",
         errore.message
@@ -670,14 +1011,335 @@ async function rimuoviPartita(
 }
 
 /* =========================================================
-   STATO AMICIZIA
+   TOKEN
+   ========================================================= */
+
+function creaToken(
+  uid,
+  nickname,
+  ruolo
+) {
+  return jwt.sign(
+    {
+      uid,
+      nickname,
+      ruolo
+    },
+    JWT_SECRET,
+    {
+      expiresIn:
+        "30d"
+    }
+  );
+}
+
+function verificaToken(
+  token
+) {
+  if (
+    !token
+  ) {
+    return null;
+  }
+
+  try {
+    return jwt.verify(
+      token,
+      JWT_SECRET
+    );
+  } catch {
+    return null;
+  }
+}
+
+function estraiTokenHeader(
+  req
+) {
+  if (
+    req.cookies &&
+    req.cookies.token
+  ) {
+    return req.cookies.token;
+  }
+
+  const header =
+    req.headers.authorization ||
+    "";
+
+  const parti =
+    header.split(" ");
+
+  if (
+    parti.length ===
+      2 &&
+    /^Bearer$/i.test(
+      parti[0]
+    )
+  ) {
+    return parti[1];
+  }
+
+  return null;
+}
+
+function estraiTokenDaCookieHeader(
+  cookieHeaderGrezzo
+) {
+  if (
+    !cookieHeaderGrezzo
+  ) {
+    return null;
+  }
+
+  const parti =
+    cookieHeaderGrezzo
+      .split(";")
+      .map(
+        p =>
+          p.trim()
+      );
+
+  for (
+    const parte of
+      parti
+  ) {
+    const idx =
+      parte.indexOf(
+        "="
+      );
+
+    if (
+      idx ===
+      -1
+    ) {
+      continue;
+    }
+
+    if (
+      parte.substring(
+        0,
+        idx
+      ) ===
+      "token"
+    ) {
+      return decodeURIComponent(
+        parte.substring(
+          idx + 1
+        )
+      );
+    }
+  }
+
+  return null;
+}
+
+async function richiediAuth(
+  req,
+  res,
+  next
+) {
+  const dati =
+    verificaToken(
+      estraiTokenHeader(
+        req
+      )
+    );
+
+  if (!dati) {
+    return res.status(
+      401
+    ).json({
+      errore:
+        "Devi effettuare il login."
+    });
+  }
+
+  req.utente =
+    dati;
+
+  next();
+}
+
+async function richiediAdmin(
+  req,
+  res,
+  next
+) {
+  const dati =
+    verificaToken(
+      estraiTokenHeader(
+        req
+      )
+    );
+
+  if (!dati) {
+    return res.status(
+      401
+    ).json({
+      errore:
+        "Devi effettuare il login."
+    });
+  }
+
+  if (
+    dati.ruolo !==
+    "admin"
+  ) {
+    return res.status(
+      403
+    ).json({
+      errore:
+        "Accesso riservato agli amministratori."
+    });
+  }
+
+  req.utenteAdmin =
+    dati;
+
+  next();
+}
+
+/* =========================================================
+   UTENTI
+   ========================================================= */
+
+async function trovaUtentePerEmail(
+  emailLower
+) {
+  const snap =
+    await db
+      .ref("utenti")
+      .orderByChild(
+        "emailLower"
+      )
+      .equalTo(
+        emailLower
+      )
+      .once(
+        "value"
+      );
+
+  if (
+    !snap.exists()
+  ) {
+    return null;
+  }
+
+  const val =
+    snap.val();
+
+  const uid =
+    Object.keys(
+      val
+    )[0];
+
+  return {
+    uid,
+    ...val[
+      uid
+    ]
+  };
+}
+
+async function trovaUtentePerGoogleId(
+  googleId
+) {
+  if (
+    !db ||
+    !googleId
+  ) {
+    return null;
+  }
+
+  const snap =
+    await db
+      .ref(
+        "utenti"
+      )
+      .orderByChild(
+        "googleId"
+      )
+      .equalTo(
+        googleId
+      )
+      .once(
+        "value"
+      );
+
+  if (
+    !snap.exists()
+  ) {
+    return null;
+  }
+
+  const val =
+    snap.val();
+
+  const uid =
+    Object.keys(
+      val
+    )[0];
+
+  return {
+    uid,
+    ...val[
+      uid
+    ]
+  };
+}
+
+async function trovaUtentePerNickname(
+  nicknameLower
+) {
+  const snap =
+    await db
+      .ref(
+        "utenti"
+      )
+      .orderByChild(
+        "nicknameLower"
+      )
+      .equalTo(
+        nicknameLower
+      )
+      .once(
+        "value"
+      );
+
+  if (
+    !snap.exists()
+  ) {
+    return null;
+  }
+
+  const val =
+    snap.val();
+
+  const uid =
+    Object.keys(
+      val
+    )[0];
+
+  return {
+    uid,
+    ...val[
+      uid
+    ]
+  };
+}
+
+/* =========================================================
+   AMICIZIA
    ========================================================= */
 
 async function statoAmicizia(
   mioUid,
   altroUid
 ) {
-  if (mioUid === altroUid) {
+  if (
+    mioUid ===
+    altroUid
+  ) {
     return "se_stesso";
   }
 
@@ -685,35 +1347,48 @@ async function statoAmicizia(
     snapAmici,
     snapInviata,
     snapRicevuta
-  ] = await Promise.all([
-    db
-      .ref(
-        `utenti/${mioUid}/amici/${altroUid}`
-      )
-      .once("value"),
+  ] =
+    await Promise.all([
+      db
+        .ref(
+          `utenti/${mioUid}/amici/${altroUid}`
+        )
+        .once(
+          "value"
+        ),
 
-    db
-      .ref(
-        `utenti/${mioUid}/richiesteInviate/${altroUid}`
-      )
-      .once("value"),
+      db
+        .ref(
+          `utenti/${mioUid}/richiesteInviate/${altroUid}`
+        )
+        .once(
+          "value"
+        ),
 
-    db
-      .ref(
-        `utenti/${mioUid}/richiesteRicevute/${altroUid}`
-      )
-      .once("value")
-  ]);
+      db
+        .ref(
+          `utenti/${mioUid}/richiesteRicevute/${altroUid}`
+        )
+        .once(
+          "value"
+        )
+    ]);
 
-  if (snapAmici.exists()) {
+  if (
+    snapAmici.exists()
+  ) {
     return "amici";
   }
 
-  if (snapInviata.exists()) {
+  if (
+    snapInviata.exists()
+  ) {
     return "richiesta_inviata";
   }
 
-  if (snapRicevuta.exists()) {
+  if (
+    snapRicevuta.exists()
+  ) {
     return "richiesta_ricevuta";
   }
 
@@ -724,64 +1399,101 @@ async function verificaAmicizia(
   uidA,
   uidB
 ) {
-  if (!db || !uidA || !uidB) {
+  if (
+    !db ||
+    !uidA ||
+    !uidB
+  ) {
     return false;
   }
 
-  if (uidA === uidB) {
+  if (
+    uidA ===
+    uidB
+  ) {
     return true;
   }
 
-  const snap = await db
-    .ref(`utenti/${uidA}/amici/${uidB}`)
-    .once("value");
+  const snap =
+    await db
+      .ref(
+        `utenti/${uidA}/amici/${uidB}`
+      )
+      .once(
+        "value"
+      );
 
   return (
     snap.exists() &&
-    snap.val() === true
+    snap.val() ===
+      true
   );
 }
 
 /* =========================================================
-   GOOGLE OAUTH
+   GOOGLE
    ========================================================= */
 
 function preparaNicknameGoogle(
   nome,
   email
 ) {
-  let base = pulisciTesto(
-    nome || "",
-    15
-  )
-    .replace(/[^a-zA-Z0-9_ ]/g, "")
-    .trim();
+  let base =
+    pulisciTesto(
+      nome ||
+        "",
+      15
+    )
+      .replace(
+        /[^a-zA-Z0-9_ ]/g,
+        ""
+      )
+      .trim();
 
   if (!base) {
-    base = "Google";
+    base =
+      "Google";
   }
 
-  if (base.length < 5) {
-    const parteEmail = String(
-      email || ""
-    )
-      .split("@")[0]
-      .replace(
-        /[^a-zA-Z0-9_]/g,
+  if (
+    base.length <
+    5
+  ) {
+    const parteEmail =
+      String(
+        email ||
         ""
+      )
+        .split(
+          "@"
+        )[0]
+        .replace(
+          /[^a-zA-Z0-9_]/g,
+          ""
+        );
+
+    base =
+      (
+        base +
+        parteEmail
+      ).substring(
+        0,
+        15
       );
-
-    base = (
-      base +
-      parteEmail
-    ).substring(0, 15);
   }
 
-  if (base.length < 5) {
-    base = "GoogleUser";
+  if (
+    base.length <
+    5
+  ) {
+    base =
+      "GoogleUser";
   }
 
-  return base.substring(0, 15);
+  return base.substring(
+    0,
+    15
+  );
 }
 
 async function generaNicknameGoogleUnico(
@@ -795,29 +1507,42 @@ async function generaNicknameGoogleUnico(
     );
 
   if (
-    !(await trovaUtentePerNickname(
-      base.toLowerCase()
-    ))
+    !(
+      await trovaUtentePerNickname(
+        base.toLowerCase()
+      )
+    )
   ) {
     return base;
   }
 
-  for (let i = 1; i <= 999; i++) {
-    const suffisso = String(i);
+  for (
+    let i = 1;
+    i <= 999;
+    i++
+  ) {
+    const suffisso =
+      String(
+        i
+      );
 
     const massimoBase =
-      15 - suffisso.length;
+      15 -
+      suffisso.length;
 
     const candidato =
       base.substring(
         0,
         massimoBase
-      ) + suffisso;
+      ) +
+      suffisso;
 
     if (
-      !(await trovaUtentePerNickname(
-        candidato.toLowerCase()
-      ))
+      !(
+        await trovaUtentePerNickname(
+          candidato.toLowerCase()
+        )
+      )
     ) {
       return candidato;
     }
@@ -827,7 +1552,9 @@ async function generaNicknameGoogleUnico(
     "Google" +
     Date.now()
       .toString()
-      .slice(-8)
+      .slice(
+        -8
+      )
   );
 }
 
@@ -840,19 +1567,25 @@ const GOOGLE_CLIENT_SECRET =
 const GOOGLE_CALLBACK_URL =
   process.env.GOOGLE_CALLBACK_URL;
 
-if (!GOOGLE_CLIENT_ID) {
+if (
+  !GOOGLE_CLIENT_ID
+) {
   console.warn(
     "GOOGLE_CLIENT_ID non configurato su Render."
   );
 }
 
-if (!GOOGLE_CLIENT_SECRET) {
+if (
+  !GOOGLE_CLIENT_SECRET
+) {
   console.warn(
     "GOOGLE_CLIENT_SECRET non configurato su Render."
   );
 }
 
-if (!GOOGLE_CALLBACK_URL) {
+if (
+  !GOOGLE_CALLBACK_URL
+) {
   console.warn(
     "GOOGLE_CALLBACK_URL non configurato su Render."
   );
@@ -895,14 +1628,20 @@ if (
             profile.id;
 
           const email =
-            profile.emails?.[0]?.value
+            profile
+              .emails?.[0]
+              ?.value
               ?.trim()
               .toLowerCase();
 
           const emailVerificata =
-            profile.emails?.[0]?.verified;
+            profile
+              .emails?.[0]
+              ?.verified;
 
-          if (!googleId) {
+          if (
+            !googleId
+          ) {
             return done(
               new Error(
                 "Google non ha restituito un ID valido."
@@ -910,7 +1649,9 @@ if (
             );
           }
 
-          if (!email) {
+          if (
+            !email
+          ) {
             return done(
               new Error(
                 "Google non ha restituito un indirizzo email."
@@ -919,7 +1660,8 @@ if (
           }
 
           if (
-            emailVerificata === false
+            emailVerificata ===
+            false
           ) {
             return done(
               new Error(
@@ -933,14 +1675,18 @@ if (
               googleId
             );
 
-          if (!utente) {
+          if (
+            !utente
+          ) {
             utente =
               await trovaUtentePerEmail(
                 email
               );
           }
 
-          if (utente) {
+          if (
+            utente
+          ) {
             if (
               utente.stato ===
               "bannato"
@@ -962,17 +1708,17 @@ if (
               return done(
                 new Error(
                   "Account sospeso fino al " +
-                    new Date(
-                      utente.sospesoFino
-                    ).toLocaleString(
-                      "it-IT"
-                    ) +
-                    "."
+                  new Date(
+                    utente.sospesoFino
+                  ).toLocaleString(
+                    "it-IT"
+                  ) +
+                  "."
                 )
               );
             }
 
-            await assicuratiCampiElo(
+            await migraUtenteElo(
               utente.uid,
               utente
             );
@@ -980,7 +1726,7 @@ if (
             await db
               .ref(
                 "utenti/" +
-                  utente.uid
+                utente.uid
               )
               .update({
                 googleId,
@@ -995,8 +1741,10 @@ if (
               {
                 uid:
                   utente.uid,
+
                 nickname:
                   utente.nickname,
+
                 ruolo:
                   utente.ruolo ||
                   "utente"
@@ -1011,29 +1759,38 @@ if (
             );
 
           const nuovoRef =
-            db.ref("utenti").push();
+            db.ref(
+              "utenti"
+            ).push();
 
           const uid =
             nuovoRef.key;
 
           await nuovoRef.set({
-            email,
+            email:
+              email,
+
             emailLower:
               email,
 
-            nickname,
+            nickname:
+              nickname,
+
             nicknameLower:
               nickname.toLowerCase(),
 
             passwordHash:
               null,
 
-            googleId,
+            googleId:
+              googleId,
+
             providerGoogle:
               true,
 
             avatar:
-              profile.photos?.[0]
+              profile
+                .photos?.[0]
                 ?.value ||
               null,
 
@@ -1052,19 +1809,35 @@ if (
             notifiche:
               {},
 
-            creatoIl:
-              Date.now(),
-
-            ultimoAccesso:
-              Date.now(),
-
             partiteVinte:
               0,
 
             partiteGiocate:
               0,
 
-            ...datiEloPredefiniti()
+            ratingElo:
+              ELO_INIZIALE,
+
+            eloMassimo:
+              ELO_INIZIALE,
+
+            partiteClassificate:
+              0,
+
+            vittorieClassificate:
+              0,
+
+            sconfitteClassificate:
+              0,
+
+            pareggiClassificati:
+              0,
+
+            creatoIl:
+              Date.now(),
+
+            ultimoAccesso:
+              Date.now()
           });
 
           return done(
@@ -1072,10 +1845,13 @@ if (
             {
               uid,
               nickname,
-              ruolo: "utente"
+              ruolo:
+                "utente"
             }
           );
-        } catch (errore) {
+        } catch (
+          errore
+        ) {
           console.error(
             "Errore verifica account Google:",
             errore
@@ -1108,13 +1884,18 @@ app.get(
   passport.authenticate(
     "google",
     {
-      session: false,
+      session:
+        false,
+
       failureRedirect:
         "https://solfriniluca1.wixstudio.com/accedi?errore=google"
     }
   ),
 
-  async (req, res) => {
+  async (
+    req,
+    res
+  ) => {
     try {
       const utente =
         req.user;
@@ -1139,13 +1920,15 @@ app.get(
       res.cookie(
         "token",
         token,
-        COOKIE_OPTIONS
+        OPZIONI_COOKIE
       );
 
       return res.redirect(
         "https://solfriniluca1.wixstudio.com/giochisocieta"
       );
-    } catch (errore) {
+    } catch (
+      errore
+    ) {
       console.error(
         "Errore callback Google:",
         errore
@@ -1165,9 +1948,14 @@ app.get(
 app.post(
   "/api/registrati",
   limiteRegistrazione,
-  async (req, res) => {
+  async (
+    req,
+    res
+  ) => {
     if (!db) {
-      return res.status(500).json({
+      return res.status(
+        500
+      ).json({
         errore:
           "Servizio account non disponibile al momento."
       });
@@ -1178,14 +1966,17 @@ app.post(
         email,
         nickname,
         password
-      } = req.body;
+      } =
+        req.body;
 
       if (
         !email ||
         !nickname ||
         !password
       ) {
-        return res.status(400).json({
+        return res.status(
+          400
+        ).json({
           errore:
             "Compila tutti i campi."
         });
@@ -1203,7 +1994,9 @@ app.post(
         nicknamePulito.length >
           15
       ) {
-        return res.status(400).json({
+        return res.status(
+          400
+        ).json({
           errore:
             "Il nickname deve contenere da 5 a 15 caratteri."
         });
@@ -1214,17 +2007,23 @@ app.post(
           nicknamePulito
         )
       ) {
-        return res.status(400).json({
+        return res.status(
+          400
+        ).json({
           errore:
             "Il nickname contiene caratteri non consentiti."
         });
       }
 
       if (
-        password.length < 8 ||
-        password.length > 100
+        password.length <
+          8 ||
+        password.length >
+          100
       ) {
-        return res.status(400).json({
+        return res.status(
+          400
+        ).json({
           errore:
             "La password deve avere tra 8 e 100 caratteri."
         });
@@ -1241,31 +2040,38 @@ app.post(
           emailPulita
         )
       ) {
-        return res.status(400).json({
+        return res.status(
+          400
+        ).json({
           errore:
             "Inserisci un indirizzo email valido."
         });
       }
 
-      const emailEsistente =
+      if (
         await trovaUtentePerEmail(
           emailPulita
-        );
-
-      if (emailEsistente) {
-        return res.status(400).json({
+        )
+      ) {
+        return res.status(
+          400
+        ).json({
           errore:
             "Questa email è già registrata."
         });
       }
 
-      const nicknameEsistente =
-        await trovaUtentePerNickname(
-          nicknamePulito.toLowerCase()
-        );
+      const nicknameLower =
+        nicknamePulito.toLowerCase();
 
-      if (nicknameEsistente) {
-        return res.status(400).json({
+      if (
+        await trovaUtentePerNickname(
+          nicknameLower
+        )
+      ) {
+        return res.status(
+          400
+        ).json({
           errore:
             "Questo nickname è già in uso."
         });
@@ -1278,7 +2084,9 @@ app.post(
         );
 
       const nuovoRef =
-        db.ref("utenti").push();
+        db.ref(
+          "utenti"
+        ).push();
 
       const uid =
         nuovoRef.key;
@@ -1294,9 +2102,10 @@ app.post(
           nicknamePulito,
 
         nicknameLower:
-          nicknamePulito.toLowerCase(),
+          nicknameLower,
 
-        passwordHash,
+        passwordHash:
+          passwordHash,
 
         googleId:
           null,
@@ -1322,19 +2131,35 @@ app.post(
         notifiche:
           {},
 
-        creatoIl:
-          Date.now(),
-
-        ultimoAccesso:
-          Date.now(),
-
         partiteVinte:
           0,
 
         partiteGiocate:
           0,
 
-        ...datiEloPredefiniti()
+        ratingElo:
+          ELO_INIZIALE,
+
+        eloMassimo:
+          ELO_INIZIALE,
+
+        partiteClassificate:
+          0,
+
+        vittorieClassificate:
+          0,
+
+        sconfitteClassificate:
+          0,
+
+        pareggiClassificati:
+          0,
+
+        creatoIl:
+          Date.now(),
+
+        ultimoAccesso:
+          Date.now()
       });
 
       const token =
@@ -1347,7 +2172,7 @@ app.post(
       res.cookie(
         "token",
         token,
-        COOKIE_OPTIONS
+        OPZIONI_COOKIE
       );
 
       return res.json({
@@ -1360,13 +2185,17 @@ app.post(
         ratingElo:
           ELO_INIZIALE
       });
-    } catch (errore) {
+    } catch (
+      errore
+    ) {
       console.error(
         "Errore registrazione:",
         errore
       );
 
-      return res.status(500).json({
+      return res.status(
+        500
+      ).json({
         errore:
           "Errore del server, riprova."
       });
@@ -1381,9 +2210,14 @@ app.post(
 app.post(
   "/api/login",
   limiteLogin,
-  async (req, res) => {
+  async (
+    req,
+    res
+  ) => {
     if (!db) {
-      return res.status(500).json({
+      return res.status(
+        500
+      ).json({
         errore:
           "Servizio account non disponibile al momento."
       });
@@ -1393,13 +2227,16 @@ app.post(
       const {
         email,
         password
-      } = req.body;
+      } =
+        req.body;
 
       if (
         !email ||
         !password
       ) {
-        return res.status(400).json({
+        return res.status(
+          400
+        ).json({
           errore:
             "Inserisci email e password."
         });
@@ -1413,8 +2250,12 @@ app.post(
           ).toLowerCase()
         );
 
-      if (!utente) {
-        return res.status(400).json({
+      if (
+        !utente
+      ) {
+        return res.status(
+          400
+        ).json({
           errore:
             "Email o password errati."
         });
@@ -1423,7 +2264,9 @@ app.post(
       if (
         !utente.passwordHash
       ) {
-        return res.status(400).json({
+        return res.status(
+          400
+        ).json({
           errore:
             "Questo account è stato creato con Google. Usa 'Accedi con Google'."
         });
@@ -1435,8 +2278,12 @@ app.post(
           utente.passwordHash
         );
 
-      if (!passwordCorretta) {
-        return res.status(400).json({
+      if (
+        !passwordCorretta
+      ) {
+        return res.status(
+          400
+        ).json({
           errore:
             "Email o password errati."
         });
@@ -1446,7 +2293,9 @@ app.post(
         utente.stato ===
         "bannato"
       ) {
-        return res.status(403).json({
+        return res.status(
+          403
+        ).json({
           errore:
             "Il tuo account è stato bannato."
         });
@@ -1461,7 +2310,9 @@ app.post(
           utente.sospesoFino >
             Date.now()
         ) {
-          return res.status(403).json({
+          return res.status(
+            403
+          ).json({
             errore:
               "Account sospeso fino al " +
               new Date(
@@ -1476,7 +2327,7 @@ app.post(
         await db
           .ref(
             "utenti/" +
-              utente.uid
+            utente.uid
           )
           .update({
             stato:
@@ -1490,7 +2341,7 @@ app.post(
           "attivo";
       }
 
-      await assicuratiCampiElo(
+      await migraUtenteElo(
         utente.uid,
         utente
       );
@@ -1498,7 +2349,7 @@ app.post(
       await db
         .ref(
           "utenti/" +
-            utente.uid
+          utente.uid
         )
         .update({
           ultimoAccesso:
@@ -1516,7 +2367,7 @@ app.post(
       res.cookie(
         "token",
         token,
-        COOKIE_OPTIONS
+        OPZIONI_COOKIE
       );
 
       return res.json({
@@ -1530,16 +2381,20 @@ app.post(
         ratingElo:
           Number(
             utente.ratingElo ||
-              ELO_INIZIALE
+            ELO_INIZIALE
           )
       });
-    } catch (errore) {
+    } catch (
+      errore
+    ) {
       console.error(
         "Errore login:",
         errore
       );
 
-      return res.status(500).json({
+      return res.status(
+        500
+      ).json({
         errore:
           "Errore del server, riprova."
       });
@@ -1553,56 +2408,88 @@ app.post(
 
 app.post(
   "/api/logout",
-  (req, res) => {
+  (
+    req,
+    res
+  ) => {
     res.clearCookie(
       "token",
-      COOKIE_OPTIONS
+      OPZIONI_COOKIE
     );
 
-    return res.json({
-      ok: true
+    res.json({
+      ok:
+        true
     });
   }
 );
 
 /* =========================================================
-   /API/ME
+   ME
    ========================================================= */
 
 app.get(
   "/api/me",
   richiediAuth,
-  async (req, res) => {
+  async (
+    req,
+    res
+  ) => {
     if (!db) {
-      return res.status(500).json({
+      return res.status(
+        500
+      ).json({
         errore:
           "Servizio account non disponibile."
       });
     }
 
     try {
-      const snap =
-        await db
-          .ref(
-            "utenti/" +
-              req.utente.uid
-          )
-          .once("value");
-
       const utente =
-        snap.val();
+        (
+          await db
+            .ref(
+              "utenti/" +
+              req.utente.uid
+            )
+            .once(
+              "value"
+            )
+        ).val();
 
-      if (!utente) {
-        return res.status(404).json({
+      if (
+        !utente
+      ) {
+        return res.status(
+          404
+        ).json({
           errore:
             "Utente non trovato."
         });
       }
 
-      await assicuratiCampiElo(
+      await migraUtenteElo(
         req.utente.uid,
         utente
       );
+
+      const giocate =
+        Number(
+          utente.partiteGiocate ||
+          0
+        );
+
+      const vinte =
+        Number(
+          utente.partiteVinte ||
+          0
+        );
+
+      const partiteClassificate =
+        Number(
+          utente.partiteClassificate ||
+          0
+        );
 
       return res.json({
         uid:
@@ -1635,16 +2522,21 @@ app.get(
           [],
 
         partiteVinte:
-          Number(
-            utente.partiteVinte ||
-              0
-          ),
+          vinte,
 
         partiteGiocate:
-          Number(
-            utente.partiteGiocate ||
-              0
-          ),
+          giocate,
+
+        winRate:
+          giocate > 0
+            ? Math.round(
+                (
+                  vinte /
+                  giocate
+                ) *
+                100
+              )
+            : 0,
 
         creatoIl:
           utente.creatoIl ||
@@ -1657,53 +2549,51 @@ app.get(
         ratingElo:
           Number(
             utente.ratingElo ||
-              ELO_INIZIALE
+            ELO_INIZIALE
           ),
 
         eloMassimo:
           Number(
             utente.eloMassimo ||
-              ELO_INIZIALE
+            ELO_INIZIALE
           ),
 
         partiteClassificate:
-          Number(
-            utente.partiteClassificate ||
-              0
-          ),
+          partiteClassificate,
 
         vittorieClassificate:
           Number(
             utente.vittorieClassificate ||
-              0
+            0
           ),
 
         sconfitteClassificate:
           Number(
             utente.sconfitteClassificate ||
-              0
+            0
           ),
 
         pareggiClassificati:
           Number(
             utente.pareggiClassificati ||
-              0
+            0
           ),
 
         ratingProvvisorio:
-          Number(
-            utente.partiteClassificate ||
-              0
-          ) <
+          partiteClassificate <
           PARTITE_PROVVISORIE_ELO
       });
-    } catch (errore) {
+    } catch (
+      errore
+    ) {
       console.error(
         "Errore /api/me:",
         errore
       );
 
-      return res.status(500).json({
+      res.status(
+        500
+      ).json({
         errore:
           "Errore del server."
       });
@@ -1718,9 +2608,14 @@ app.get(
 app.post(
   "/api/modifica-nickname",
   richiediAuth,
-  async (req, res) => {
+  async (
+    req,
+    res
+  ) => {
     if (!db) {
-      return res.status(500).json({
+      return res.status(
+        500
+      ).json({
         errore:
           "Servizio non disponibile."
       });
@@ -1729,7 +2624,8 @@ app.post(
     try {
       const {
         nickname
-      } = req.body;
+      } =
+        req.body;
 
       if (
         !nickname ||
@@ -1737,7 +2633,9 @@ app.post(
           nickname
         ).trim()
       ) {
-        return res.status(400).json({
+        return res.status(
+          400
+        ).json({
           errore:
             "Inserisci un nickname."
         });
@@ -1755,7 +2653,9 @@ app.post(
         nuovoNickname.length >
           15
       ) {
-        return res.status(400).json({
+        return res.status(
+          400
+        ).json({
           errore:
             "Il nickname deve contenere da 5 a 15 caratteri."
         });
@@ -1766,7 +2666,9 @@ app.post(
           nuovoNickname
         )
       ) {
-        return res.status(400).json({
+        return res.status(
+          400
+        ).json({
           errore:
             "Nickname non valido."
         });
@@ -1785,7 +2687,9 @@ app.post(
         esistente.uid !==
           req.utente.uid
       ) {
-        return res.status(400).json({
+        return res.status(
+          400
+        ).json({
           errore:
             "Questo nickname è già in uso."
         });
@@ -1794,7 +2698,7 @@ app.post(
       await db
         .ref(
           "utenti/" +
-            req.utente.uid
+          req.utente.uid
         )
         .update({
           nickname:
@@ -1813,20 +2717,24 @@ app.post(
       res.cookie(
         "token",
         nuovoToken,
-        COOKIE_OPTIONS
+        OPZIONI_COOKIE
       );
 
-      return res.json({
+      res.json({
         nickname:
           nuovoNickname
       });
-    } catch (errore) {
+    } catch (
+      errore
+    ) {
       console.error(
         "Errore modifica nickname:",
         errore
       );
 
-      return res.status(500).json({
+      res.status(
+        500
+      ).json({
         errore:
           "Errore del server, riprova."
       });
@@ -1844,17 +2752,26 @@ app.post(
   uploadAvatar.single(
     "avatar"
   ),
-  async (req, res) => {
+  async (
+    req,
+    res
+  ) => {
     if (!db) {
-      return res.status(500).json({
+      return res.status(
+        500
+      ).json({
         errore:
           "Servizio non disponibile."
       });
     }
 
     try {
-      if (!req.file) {
-        return res.status(400).json({
+      if (
+        !req.file
+      ) {
+        return res.status(
+          400
+        ).json({
           errore:
             "Nessuna immagine ricevuta."
         });
@@ -1866,24 +2783,28 @@ app.post(
       await db
         .ref(
           "utenti/" +
-            req.utente.uid
+          req.utente.uid
         )
         .update({
           avatar:
             dataUri
         });
 
-      return res.json({
+      res.json({
         avatar:
           dataUri
       });
-    } catch (errore) {
+    } catch (
+      errore
+    ) {
       console.error(
         "Errore caricamento avatar:",
         errore
       );
 
-      return res.status(400).json({
+      res.status(
+        400
+      ).json({
         errore:
           errore.message ||
           "Errore durante il caricamento."
@@ -1896,178 +2817,41 @@ app.post(
    CLASSIFICA ELO
    ========================================================= */
 
-function calcolaKFactor(
-  partiteClassificate
-) {
-  if (
-    Number(partiteClassificate || 0) <
-    10
-  ) {
-    return ELO_K_NUOVO;
-  }
-
-  if (
-    Number(partiteClassificate || 0) <
-    30
-  ) {
-    return ELO_K_INTERMEDIO;
-  }
-
-  return ELO_K_ESPERTO;
-}
-
-function aspettativaElo(
-  ratingGiocatore,
-  ratingAvversario
-) {
-  return (
-    1 /
-    (
-      1 +
-      Math.pow(
-        10,
-        (
-          ratingAvversario -
-          ratingGiocatore
-        ) / 400
-      )
-    )
-  );
-}
-
-function calcolaRisultatoPairwise(
-  posizioneA,
-  posizioneB
-) {
-  if (
-    posizioneA <
-      posizioneB
-  ) {
-    return 1;
-  }
-
-  if (
-    posizioneA >
-      posizioneB
-  ) {
-    return 0;
-  }
-
-  return 0.5;
-}
-
-function calcolaAggiornamentiElo(
-  risultati
-) {
-  if (
-    !Array.isArray(risultati) ||
-    risultati.length < 2
-  ) {
-    return [];
-  }
-
-  const output = risultati.map(
-    (giocatore) => ({
-      ...giocatore,
-      ratingPrima:
-        ratingEloValido(
-          giocatore.ratingPrima
-        ),
-      deltaRaw: 0
-    })
-  );
-
-  for (
-    let i = 0;
-    i < output.length;
-    i++
-  ) {
-    const giocatore =
-      output[i];
-
-    const kFactor =
-      calcolaKFactor(
-        giocatore.partiteClassificatePrima
-      );
-
-    for (
-      let j = 0;
-      j < output.length;
-      j++
-    ) {
-      if (i === j) continue;
-
-      const avversario =
-        output[j];
-
-      const risultato =
-        calcolaRisultatoPairwise(
-          giocatore.posizioneFinale,
-          avversario.posizioneFinale
-        );
-
-      const atteso =
-        aspettativaElo(
-          giocatore.ratingPrima,
-          avversario.ratingPrima
-        );
-
-      giocatore.deltaRaw +=
-        kFactor *
-        (risultato - atteso);
-    }
-  }
-
-  const divisore =
-    output.length - 1;
-
-  for (const giocatore of output) {
-    const delta =
-      Math.round(
-        giocatore.deltaRaw /
-          divisore
-      );
-
-    giocatore.variazioneElo =
-      delta;
-
-    giocatore.ratingDopo =
-      limitaElo(
-        giocatore.ratingPrima +
-          delta
-      );
-  }
-
-  return output;
-}
-
-/* =========================================================
-   UTENTI PER CLASSIFICA
-   ========================================================= */
-
 app.get(
   "/api/top-giocatori",
-  async (req, res) => {
-    if (!db) {
-      return res.json({
-        giocatori: []
-      });
-    }
-
+  async (
+    req,
+    res
+  ) => {
     try {
+      if (!db) {
+        return res.json({
+          giocatori:
+            []
+        });
+      }
+
       const utenti =
         (
           await db
-            .ref("utenti")
-            .once("value")
-        ).val() || {};
+            .ref(
+              "utenti"
+            )
+            .once(
+              "value"
+            )
+        ).val() ||
+        {};
 
       const top =
         Object.entries(
           utenti
         )
           .map(
-            ([uid, u]) => ({
+            ([
+              uid,
+              u
+            ]) => ({
               uid,
 
               nickname:
@@ -2077,41 +2861,50 @@ app.get(
               ratingElo:
                 Number(
                   u.ratingElo ||
-                    ELO_INIZIALE
+                  ELO_INIZIALE
                 ),
 
               eloMassimo:
                 Number(
                   u.eloMassimo ||
-                    ELO_INIZIALE
+                  ELO_INIZIALE
                 ),
 
               partiteClassificate:
                 Number(
                   u.partiteClassificate ||
-                    0
+                  0
                 ),
 
               vittorieClassificate:
                 Number(
                   u.vittorieClassificate ||
-                    0
+                  0
                 ),
 
               sconfitteClassificate:
                 Number(
                   u.sconfitteClassificate ||
-                    0
+                  0
+                ),
+
+              pareggiClassificati:
+                Number(
+                  u.pareggiClassificati ||
+                  0
                 )
             })
           )
           .filter(
-            (g) =>
+            g =>
               g.partiteClassificate >
               0
           )
           .sort(
-            (a, b) => {
+            (
+              a,
+              b
+            ) => {
               if (
                 b.ratingElo !==
                 a.ratingElo
@@ -2123,36 +2916,43 @@ app.get(
               }
 
               if (
-                b.vittorieClassificate !==
-                a.vittorieClassificate
+                b.partiteClassificate !==
+                a.partiteClassificate
               ) {
                 return (
-                  b.vittorieClassificate -
-                  a.vittorieClassificate
+                  b.partiteClassificate -
+                  a.partiteClassificate
                 );
               }
 
-              return (
-                a.nickname.localeCompare(
-                  b.nickname,
-                  "it"
-                )
+              return a.nickname.localeCompare(
+                b.nickname,
+                "it"
               );
             }
           )
-          .slice(0, 100);
+          .slice(
+            0,
+            100
+          );
 
-      return res.json({
-        giocatori: top
+      res.json({
+        giocatori:
+          top
       });
-    } catch (errore) {
+    } catch (
+      errore
+    ) {
       console.error(
         "Errore classifica ELO:",
         errore
       );
 
-      return res.status(500).json({
-        giocatori: []
+      res.status(
+        500
+      ).json({
+        giocatori:
+          []
       });
     }
   }
@@ -2165,31 +2965,38 @@ app.get(
 app.get(
   "/api/storico-elo",
   richiediAuth,
-  async (req, res) => {
+  async (
+    req,
+    res
+  ) => {
     if (!db) {
-      return res.status(500).json({
+      return res.status(
+        500
+      ).json({
         errore:
           "Servizio non disponibile."
       });
     }
 
     try {
-      const limite = Math.min(
-        Math.max(
-          parseInt(
-            req.query.limite,
-            10
-          ) || 30,
-          1
-        ),
-        100
-      );
+      const limite =
+        Math.min(
+          100,
+          Math.max(
+            1,
+            parseInt(
+              req.query.limite,
+              10
+            ) ||
+            30
+          )
+        );
 
       const snap =
         await db
           .ref(
             "storicoElo/" +
-              req.utente.uid
+            req.utente.uid
           )
           .orderByChild(
             "data"
@@ -2197,41 +3004,56 @@ app.get(
           .limitToLast(
             limite
           )
-          .once("value");
+          .once(
+            "value"
+          );
 
       const dati =
-        snap.val() || {};
+        snap.val() ||
+        {};
 
       const storico =
         Object.entries(
           dati
         )
           .map(
-            ([id, valore]) => ({
+            ([
+              id,
+              valore
+            ]) => ({
               id,
               ...valore
             })
           )
           .sort(
-            (a, b) =>
+            (
+              a,
+              b
+            ) =>
               Number(
-                b.data || 0
+                b.data ||
+                0
               ) -
               Number(
-                a.data || 0
+                a.data ||
+                0
               )
           );
 
-      return res.json({
+      res.json({
         storico
       });
-    } catch (errore) {
+    } catch (
+      errore
+    ) {
       console.error(
         "Errore storico ELO:",
         errore
       );
 
-      return res.status(500).json({
+      res.status(
+        500
+      ).json({
         errore:
           "Errore del server."
       });
@@ -2246,9 +3068,14 @@ app.get(
 app.post(
   "/api/contatti",
   limiteContatti,
-  async (req, res) => {
+  async (
+    req,
+    res
+  ) => {
     if (!db) {
-      return res.status(500).json({
+      return res.status(
+        500
+      ).json({
         errore:
           "Servizio non disponibile al momento."
       });
@@ -2258,12 +3085,14 @@ app.post(
       const {
         categoria,
         messaggio
-      } = req.body;
+      } =
+        req.body;
 
       let {
         nickname,
         email
-      } = req.body;
+      } =
+        req.body;
 
       if (
         !messaggio ||
@@ -2271,7 +3100,9 @@ app.post(
           messaggio
         ).trim()
       ) {
-        return res.status(400).json({
+        return res.status(
+          400
+        ).json({
           errore:
             "Scrivi un messaggio prima di inviare."
         });
@@ -2285,13 +3116,17 @@ app.post(
 
       const datiToken =
         verificaToken(
-          estraiTokenHeader(req)
+          estraiTokenHeader(
+            req
+          )
         );
 
       let uidMittente =
         null;
 
-      if (datiToken) {
+      if (
+        datiToken
+      ) {
         uidMittente =
           datiToken.uid;
 
@@ -2300,12 +3135,16 @@ app.post(
             await db
               .ref(
                 "utenti/" +
-                  datiToken.uid
+                datiToken.uid
               )
-              .once("value")
+              .once(
+                "value"
+              )
           ).val();
 
-        if (utenteDb) {
+        if (
+          utenteDb
+        ) {
           nickname =
             utenteDb.nickname;
 
@@ -2324,33 +3163,31 @@ app.post(
           email
         ).trim()
       ) {
-        return res.status(400).json({
+        return res.status(
+          400
+        ).json({
           errore:
             "Nickname ed email sono obbligatori."
         });
       }
 
       await db
-        .ref("contatti")
+        .ref(
+          "contatti"
+        )
         .push()
         .set({
           nickname:
-            pulisciTesto(
-              nickname,
-              50
-            ),
+            nickname.trim(),
 
           email:
-            pulisciTesto(
-              email,
-              120
-            ),
+            email.trim(),
 
           categoria:
             pulisciTesto(
               categoria ||
-                "Altro",
-              50
+              "Altro",
+              40
             ),
 
           messaggio:
@@ -2365,16 +3202,21 @@ app.post(
             Date.now()
         });
 
-      return res.json({
-        ok: true
+      res.json({
+        ok:
+          true
       });
-    } catch (errore) {
+    } catch (
+      errore
+    ) {
       console.error(
         "Errore contatti:",
         errore
       );
 
-      return res.status(500).json({
+      res.status(
+        500
+      ).json({
         errore:
           "Errore durante l'invio, riprova."
       });
@@ -2389,34 +3231,40 @@ app.post(
 app.get(
   "/api/profilo-pubblico/:nickname",
   richiediAuth,
-  async (req, res) => {
+  async (
+    req,
+    res
+  ) => {
     if (!db) {
-      return res.status(500).json({
+      return res.status(
+        500
+      ).json({
         errore:
           "Servizio non disponibile."
       });
     }
 
     try {
-      const nickname =
-        pulisciTesto(
-          req.params.nickname,
-          20
-        ).toLowerCase();
-
       const utente =
         await trovaUtentePerNickname(
-          nickname
+          pulisciTesto(
+            req.params.nickname,
+            20
+          ).toLowerCase()
         );
 
-      if (!utente) {
-        return res.status(404).json({
+      if (
+        !utente
+      ) {
+        return res.status(
+          404
+        ).json({
           errore:
             "Utente non trovato."
         });
       }
 
-      await assicuratiCampiElo(
+      await migraUtenteElo(
         utente.uid,
         utente
       );
@@ -2424,16 +3272,22 @@ app.get(
       const giocate =
         Number(
           utente.partiteGiocate ||
-            0
+          0
         );
 
       const vinte =
         Number(
           utente.partiteVinte ||
-            0
+          0
         );
 
-      return res.json({
+      const partiteClassificate =
+        Number(
+          utente.partiteClassificate ||
+          0
+        );
+
+      res.json({
         uid:
           utente.uid,
 
@@ -2461,53 +3315,49 @@ app.get(
         winRate:
           giocate > 0
             ? Math.round(
-                (vinte /
-                  giocate) *
-                  100
+                (
+                  vinte /
+                  giocate
+                ) *
+                100
               )
             : 0,
 
         ratingElo:
           Number(
             utente.ratingElo ||
-              ELO_INIZIALE
+            ELO_INIZIALE
           ),
 
         eloMassimo:
           Number(
             utente.eloMassimo ||
-              ELO_INIZIALE
+            ELO_INIZIALE
           ),
 
         partiteClassificate:
-          Number(
-            utente.partiteClassificate ||
-              0
-          ),
+          partiteClassificate,
 
         vittorieClassificate:
           Number(
             utente.vittorieClassificate ||
-              0
+            0
           ),
 
         sconfitteClassificate:
           Number(
             utente.sconfitteClassificate ||
-              0
+            0
           ),
 
         pareggiClassificati:
           Number(
             utente.pareggiClassificati ||
-              0
+            0
           ),
 
         ratingProvvisorio:
-          Number(
-            utente.partiteClassificate ||
-              0
-          ) <
+          partiteClassificate <
           PARTITE_PROVVISORIE_ELO,
 
         statoAmicizia:
@@ -2516,13 +3366,17 @@ app.get(
             utente.uid
           )
       });
-    } catch (errore) {
+    } catch (
+      errore
+    ) {
       console.error(
         "Errore profilo pubblico:",
         errore
       );
 
-      return res.status(500).json({
+      res.status(
+        500
+      ).json({
         errore:
           "Errore del server."
       });
@@ -2537,9 +3391,14 @@ app.get(
 app.get(
   "/api/storico",
   richiediAuth,
-  async (req, res) => {
+  async (
+    req,
+    res
+  ) => {
     if (!db) {
-      return res.status(500).json({
+      return res.status(
+        500
+      ).json({
         errore:
           "Servizio non disponibile."
       });
@@ -2552,7 +3411,9 @@ app.get(
       let nicknameFiltro =
         req.utente.nickname;
 
-      if (req.query.nickname) {
+      if (
+        req.query.nickname
+      ) {
         const u =
           await trovaUtentePerNickname(
             pulisciTesto(
@@ -2561,8 +3422,12 @@ app.get(
             ).toLowerCase()
           );
 
-        if (!u) {
-          return res.status(404).json({
+        if (
+          !u
+        ) {
+          return res.status(
+            404
+          ).json({
             errore:
               "Utente non trovato."
           });
@@ -2574,17 +3439,6 @@ app.get(
         nicknameFiltro =
           u.nickname;
       }
-
-      const limite = Math.min(
-        Math.max(
-          parseInt(
-            req.query.limite,
-            10
-          ) || 50,
-          1
-        ),
-        100
-      );
 
       const tutte =
         (
@@ -2598,38 +3452,45 @@ app.get(
             .limitToLast(
               300
             )
-            .once("value")
-        ).val() || {};
+            .once(
+              "value"
+            )
+        ).val() ||
+        {};
 
       const partite =
         Object.values(
           tutte
         )
           .filter(
-            (partita) =>
-              Array.isArray(
-                partita.partecipanti
-              ) &&
-              partita.partecipanti.some(
-                (p) =>
-                  p.uid === uidFiltro
+            m =>
+              m.partecipanti &&
+              m.partecipanti.some(
+                p =>
+                  p.uid ===
+                  uidFiltro
               )
           )
           .sort(
-            (a, b) =>
+            (
+              a,
+              b
+            ) =>
               Number(
-                b.data || 0
+                b.data ||
+                0
               ) -
               Number(
-                a.data || 0
+                a.data ||
+                0
               )
           )
           .slice(
             0,
-            limite
+            50
           );
 
-      return res.json({
+      res.json({
         uid:
           uidFiltro,
 
@@ -2638,13 +3499,17 @@ app.get(
 
         partite
       });
-    } catch (errore) {
+    } catch (
+      errore
+    ) {
       console.error(
         "Errore storico partite:",
         errore
       );
 
-      return res.status(500).json({
+      res.status(
+        500
+      ).json({
         errore:
           "Errore del server."
       });
@@ -2659,9 +3524,14 @@ app.get(
 app.get(
   "/api/messaggi-privati/:altroUid",
   richiediAuth,
-  async (req, res) => {
+  async (
+    req,
+    res
+  ) => {
     if (!db) {
-      return res.status(500).json({
+      return res.status(
+        500
+      ).json({
         errore:
           "Servizio non disponibile."
       });
@@ -2672,34 +3542,37 @@ app.get(
         req.utente.uid;
 
       const altroUid =
-        String(
-          req.params.altroUid ||
-            ""
-        ).trim();
+        req.params.altroUid;
 
       if (
         !altroUid ||
         altroUid ===
-          mioUid
+        mioUid
       ) {
-        return res.status(400).json({
+        return res.status(
+          400
+        ).json({
           errore:
             "Conversazione non valida."
         });
       }
 
-      const destinatarioSnap =
+      const destinatarioEsiste =
         await db
           .ref(
             "utenti/" +
-              altroUid
+            altroUid
           )
-          .once("value");
+          .once(
+            "value"
+          );
 
       if (
-        !destinatarioSnap.exists()
+        !destinatarioEsiste.exists()
       ) {
-        return res.status(404).json({
+        return res.status(
+          404
+        ).json({
           errore:
             "Utente non trovato."
         });
@@ -2716,28 +3589,39 @@ app.get(
           await db
             .ref(
               "messaggiPrivati/" +
-                idConv
+              idConv
             )
-            .once("value")
-        ).val() || {};
+            .once(
+              "value"
+            )
+        ).val() ||
+        {};
 
       const lista =
         Object.entries(
           messaggi
         )
           .map(
-            ([id, m]) => ({
+            ([
+              id,
+              m
+            ]) => ({
               id,
               ...m
             })
           )
           .sort(
-            (a, b) =>
+            (
+              a,
+              b
+            ) =>
               Number(
-                a.data || 0
+                a.data ||
+                0
               ) -
               Number(
-                b.data || 0
+                b.data ||
+                0
               )
           );
 
@@ -2747,57 +3631,62 @@ app.get(
           altroUid
         );
 
-      if (!amici) {
+      if (
+        !amici
+      ) {
         const esisteMessaggioDaAltro =
           lista.some(
-            (m) =>
+            m =>
               m.daUid ===
                 altroUid &&
-              m.aUid === mioUid
+              m.aUid ===
+                mioUid
           );
 
         if (
           esisteMessaggioDaAltro
         ) {
           return res.json({
-            messaggi: [],
-            bloccata: true,
+            messaggi:
+              [],
+
+            bloccata:
+              true,
+
             richiestaAmicizia:
               true,
+
             altroUid,
+
             messaggio:
               "Questa persona ti ha inviato un messaggio. Per leggerlo devi prima diventare suo amico."
           });
         }
-
-        return res.json({
-          messaggi: [],
-          bloccata: false,
-          richiestaAmicizia:
-            false,
-          altroUid
-        });
       }
 
-      const aggiornamenti = {};
+      const aggiornamenti =
+        {};
 
-      for (
-        const [id, messaggio]
-          of Object.entries(
-            messaggi
-          )
-      ) {
-        if (
-          messaggio.aUid ===
-            mioUid &&
-          !messaggio.letto
-        ) {
-          aggiornamenti[
-            id +
+      Object.entries(
+        messaggi
+      ).forEach(
+        ([
+          id,
+          m
+        ]) => {
+          if (
+            m.aUid ===
+              mioUid &&
+            !m.letto
+          ) {
+            aggiornamenti[
+              id +
               "/letto"
-          ] = true;
+            ] =
+              true;
+          }
         }
-      }
+      );
 
       if (
         Object.keys(
@@ -2807,27 +3696,36 @@ app.get(
         await db
           .ref(
             "messaggiPrivati/" +
-              idConv
+            idConv
           )
           .update(
             aggiornamenti
           );
       }
 
-      return res.json({
-        messaggi: lista,
-        bloccata: false,
+      res.json({
+        messaggi:
+          lista,
+
+        bloccata:
+          false,
+
         richiestaAmicizia:
           false,
+
         altroUid
       });
-    } catch (errore) {
+    } catch (
+      errore
+    ) {
       console.error(
         "Errore caricamento messaggi privati:",
         errore
       );
 
-      return res.status(500).json({
+      res.status(
+        500
+      ).json({
         errore:
           "Errore del server."
       });
@@ -2839,9 +3737,14 @@ app.post(
   "/api/messaggi-privati",
   limiteMessaggiPrivati,
   richiediAuth,
-  async (req, res) => {
+  async (
+    req,
+    res
+  ) => {
     if (!db) {
-      return res.status(500).json({
+      return res.status(
+        500
+      ).json({
         errore:
           "Servizio non disponibile."
       });
@@ -2851,7 +3754,8 @@ app.post(
       const {
         destinatarioUid,
         testo
-      } = req.body;
+      } =
+        req.body;
 
       if (
         !destinatarioUid ||
@@ -2860,7 +3764,9 @@ app.post(
           testo
         ).trim()
       ) {
-        return res.status(400).json({
+        return res.status(
+          400
+        ).json({
           errore:
             "Dati mancanti."
         });
@@ -2870,7 +3776,9 @@ app.post(
         destinatarioUid ===
         req.utente.uid
       ) {
-        return res.status(400).json({
+        return res.status(
+          400
+        ).json({
           errore:
             "Non puoi scrivere a te stesso."
         });
@@ -2882,8 +3790,12 @@ app.post(
           500
         );
 
-      if (!testoPulito) {
-        return res.status(400).json({
+      if (
+        !testoPulito
+      ) {
+        return res.status(
+          400
+        ).json({
           errore:
             "Messaggio vuoto."
         });
@@ -2892,21 +3804,26 @@ app.post(
       const [
         mittenteSnap,
         destinatarioSnap
-      ] = await Promise.all([
-        db
-          .ref(
-            "utenti/" +
+      ] =
+        await Promise.all([
+          db
+            .ref(
+              "utenti/" +
               req.utente.uid
-          )
-          .once("value"),
+            )
+            .once(
+              "value"
+            ),
 
-        db
-          .ref(
-            "utenti/" +
+          db
+            .ref(
+              "utenti/" +
               destinatarioUid
-          )
-          .once("value")
-      ]);
+            )
+            .once(
+              "value"
+            )
+        ]);
 
       const mittente =
         mittenteSnap.val();
@@ -2918,7 +3835,9 @@ app.post(
         !mittente ||
         !destinatario
       ) {
-        return res.status(404).json({
+        return res.status(
+          404
+        ).json({
           errore:
             "Utente non trovato."
         });
@@ -2943,47 +3862,49 @@ app.post(
         db
           .ref(
             "messaggiPrivati/" +
-              idConv
+            idConv
           )
           .push();
 
-      const messaggio = {
-        daUid:
-          req.utente.uid,
+      const messaggio =
+        {
+          daUid:
+            req.utente.uid,
 
-        daNome:
-          mittente.nickname,
+          daNome:
+            mittente.nickname,
 
-        aUid:
-          destinatarioUid,
+          aUid:
+            destinatarioUid,
 
-        aNome:
-          destinatario.nickname,
+          aNome:
+            destinatario.nickname,
 
-        testo:
-          testoPulito,
+          testo:
+            testoPulito,
 
-        data:
-          ora,
+          data:
+            ora,
 
-        letto:
-          false,
+          letto:
+            false,
 
-        richiestaAmicizia:
-          !sonoAmici
-      };
+          richiestaAmicizia:
+            !sonoAmici
+        };
 
-      await novoRefSetSeguro(
-        novoRef,
+      await nuovoRef.set(
         messaggio
       );
 
-      if (!sonoAmici) {
+      if (
+        !sonoAmici
+      ) {
         await db
           .ref(
             "utenti/" +
-              destinatarioUid +
-              "/notifiche"
+            destinatarioUid +
+            "/notifiche"
           )
           .push({
             tipo:
@@ -3009,8 +3930,9 @@ app.post(
           });
       }
 
-      return res.json({
-        ok: true,
+      res.json({
+        ok:
+          true,
 
         messaggio: {
           id:
@@ -3022,13 +3944,17 @@ app.post(
         richiestaAmicizia:
           !sonoAmici
       });
-    } catch (errore) {
+    } catch (
+      errore
+    ) {
       console.error(
         "Errore invio messaggio privato:",
         errore
       );
 
-      return res.status(500).json({
+      res.status(
+        500
+      ).json({
         errore:
           "Errore durante l'invio, riprova."
       });
@@ -3036,19 +3962,17 @@ app.post(
   }
 );
 
-async function novoRefSetSeguro(
-  ref,
-  valore
-) {
-  await ref.set(valore);
-}
-
 app.get(
   "/api/conversazioni",
   richiediAuth,
-  async (req, res) => {
+  async (
+    req,
+    res
+  ) => {
     if (!db) {
-      return res.status(500).json({
+      return res.status(
+        500
+      ).json({
         errore:
           "Servizio non disponibile."
       });
@@ -3061,13 +3985,17 @@ app.get(
             .ref(
               "messaggiPrivati"
             )
-            .once("value")
-        ).val() || {};
+            .once(
+              "value"
+            )
+        ).val() ||
+        {};
 
       const mioUid =
         req.utente.uid;
 
-      const conversazioni = {};
+      const conversazioni =
+        {};
 
       for (
         const [
@@ -3079,28 +4007,40 @@ app.get(
       ) {
         if (
           !idConv
-            .split("_")
-            .includes(mioUid)
+            .split(
+              "_"
+            )
+            .includes(
+              mioUid
+            )
         ) {
           continue;
         }
 
         const lista =
           Object.values(
-            messaggi || {}
+            messaggi ||
+            {}
           );
 
-        if (!lista.length) {
+        if (
+          !lista.length
+        ) {
           continue;
         }
 
         lista.sort(
-          (a, b) =>
+          (
+            a,
+            b
+          ) =>
             Number(
-              b.data || 0
+              b.data ||
+              0
             ) -
             Number(
-              a.data || 0
+              a.data ||
+              0
             )
         );
 
@@ -3127,7 +4067,7 @@ app.get(
 
         const haMessaggiRicevuti =
           lista.some(
-            (m) =>
+            m =>
               m.aUid ===
               mioUid
           );
@@ -3139,12 +4079,14 @@ app.get(
         const ultimoTesto =
           bloccata
             ? "Ti ha inviato un messaggio"
-            : ultimo.testo ||
-              "";
+            : (
+                ultimo.testo ||
+                ""
+              );
 
         const nonLetti =
           lista.filter(
-            (m) =>
+            m =>
               m.aUid ===
                 mioUid &&
               !m.letto
@@ -3154,7 +4096,9 @@ app.get(
           altroUid
         ] = {
           altroUid,
+
           altroNome,
+
           ultimoTesto,
 
           ultimaData:
@@ -3169,29 +4113,36 @@ app.get(
         };
       }
 
-      return res.json({
+      res.json({
         conversazioni:
           Object.values(
             conversazioni
           ).sort(
-            (a, b) =>
+            (
+              a,
+              b
+            ) =>
               Number(
                 b.ultimaData ||
-                  0
+                0
               ) -
               Number(
                 a.ultimaData ||
-                  0
+                0
               )
           )
       });
-    } catch (errore) {
+    } catch (
+      errore
+    ) {
       console.error(
         "Errore caricamento conversazioni:",
         errore
       );
 
-      return res.status(500).json({
+      res.status(
+        500
+      ).json({
         errore:
           "Errore del server."
       });
@@ -3207,9 +4158,14 @@ app.post(
   "/api/amici/richiedi",
   limiteAmici,
   richiediAuth,
-  async (req, res) => {
+  async (
+    req,
+    res
+  ) => {
     if (!db) {
-      return res.status(500).json({
+      return res.status(
+        500
+      ).json({
         errore:
           "Servizio non disponibile."
       });
@@ -3218,10 +4174,15 @@ app.post(
     try {
       const {
         destinatarioUid
-      } = req.body;
+      } =
+        req.body;
 
-      if (!destinatarioUid) {
-        return res.status(400).json({
+      if (
+        !destinatarioUid
+      ) {
+        return res.status(
+          400
+        ).json({
           errore:
             "Dati mancanti."
         });
@@ -3231,7 +4192,9 @@ app.post(
         destinatarioUid ===
         req.utente.uid
       ) {
-        return res.status(400).json({
+        return res.status(
+          400
+        ).json({
           errore:
             "Non puoi inviare una richiesta a te stesso."
         });
@@ -3242,13 +4205,19 @@ app.post(
           await db
             .ref(
               "utenti/" +
-                destinatarioUid
+              destinatarioUid
             )
-            .once("value")
+            .once(
+              "value"
+            )
         ).val();
 
-      if (!destinatario) {
-        return res.status(404).json({
+      if (
+        !destinatario
+      ) {
+        return res.status(
+          404
+        ).json({
           errore:
             "Utente non trovato."
         });
@@ -3261,9 +4230,12 @@ app.post(
         );
 
       if (
-        stato === "amici"
+        stato ===
+        "amici"
       ) {
-        return res.status(400).json({
+        return res.status(
+          400
+        ).json({
           errore:
             "Siete già amici."
         });
@@ -3274,7 +4246,8 @@ app.post(
         "richiesta_inviata"
       ) {
         return res.json({
-          ok: true
+          ok:
+            true
         });
       }
 
@@ -3282,7 +4255,9 @@ app.post(
         stato ===
         "richiesta_ricevuta"
       ) {
-        return res.status(400).json({
+        return res.status(
+          400
+        ).json({
           errore:
             "Questo utente ti ha già inviato una richiesta: accettala dal suo profilo."
         });
@@ -3294,31 +4269,33 @@ app.post(
       const ora =
         Date.now();
 
-      await db.ref().update({
-        [`utenti/${req.utente.uid}/richiesteInviate/${destinatarioUid}`]:
-          {
-            aNome:
-              destinatario.nickname,
+      await db
+        .ref()
+        .update({
+          [`utenti/${req.utente.uid}/richiesteInviate/${destinatarioUid}`]:
+            {
+              aNome:
+                destinatario.nickname,
 
-            data:
-              ora
-          },
+              data:
+                ora
+            },
 
-        [`utenti/${destinatarioUid}/richiesteRicevute/${req.utente.uid}`]:
-          {
-            daNome:
-              mioNickname,
+          [`utenti/${destinatarioUid}/richiesteRicevute/${req.utente.uid}`]:
+            {
+              daNome:
+                mioNickname,
 
-            data:
-              ora
-          }
-      });
+              data:
+                ora
+            }
+        });
 
       await db
         .ref(
           "utenti/" +
-            destinatarioUid +
-            "/notifiche"
+          destinatarioUid +
+          "/notifiche"
         )
         .push({
           tipo:
@@ -3340,115 +4317,21 @@ app.post(
             mioNickname
         });
 
-      return res.json({
-        ok: true
+      res.json({
+        ok:
+          true
       });
-    } catch (errore) {
+    } catch (
+      errore
+    ) {
       console.error(
         "Errore richiesta amicizia:",
         errore
       );
 
-      return res.status(500).json({
-        errore:
-          "Errore del server, riprova."
-      });
-    }
-  }
-);
-
-app.post(
-  "/api/amici/accetta",
-  richiediAuth,
-  async (req, res) => {
-    if (!db) {
-      return res.status(500).json({
-        errore:
-          "Servizio non disponibile."
-      });
-    }
-
-    try {
-      const {
-        daUid
-      } = req.body;
-
-      if (!daUid) {
-        return res.status(400).json({
-          errore:
-            "Dati mancanti."
-        });
-      }
-
-      const richiestaSnap =
-        await db
-          .ref(
-            `utenti/${req.utente.uid}/richiesteRicevute/${daUid}`
-          )
-          .once("value");
-
-      if (
-        !richiestaSnap.exists()
-      ) {
-        return res.status(400).json({
-          errore:
-            "Nessuna richiesta da questo utente."
-        });
-      }
-
-      const mioNickname =
-        req.utente.nickname;
-
-      await db.ref().update({
-        [`utenti/${req.utente.uid}/richiesteRicevute/${daUid}`]:
-          null,
-
-        [`utenti/${daUid}/richiesteInviate/${req.utente.uid}`]:
-          null,
-
-        [`utenti/${req.utente.uid}/amici/${daUid}`]:
-          true,
-
-        [`utenti/${daUid}/amici/${req.utente.uid}`]:
-          true
-      });
-
-      await db
-        .ref(
-          "utenti/" +
-            daUid +
-            "/notifiche"
-        )
-        .push({
-          tipo:
-            "amiciziaAccettata",
-
-          testo:
-            `${mioNickname} ha accettato la tua richiesta di amicizia`,
-
-          data:
-            Date.now(),
-
-          letta:
-            false,
-
-          daUid:
-            req.utente.uid,
-
-          daNome:
-            mioNickname
-        });
-
-      return res.json({
-        ok: true
-      });
-    } catch (errore) {
-      console.error(
-        "Errore accettazione amicizia:",
-        errore
-      );
-
-      return res.status(500).json({
+      res.status(
+        500
+      ).json({
         errore:
           "Errore del server, riprova."
       });
@@ -3460,9 +4343,14 @@ app.post(
   "/api/amici/accetta-messaggio",
   limiteAmici,
   richiediAuth,
-  async (req, res) => {
+  async (
+    req,
+    res
+  ) => {
     if (!db) {
-      return res.status(500).json({
+      return res.status(
+        500
+      ).json({
         errore:
           "Servizio non disponibile."
       });
@@ -3471,16 +4359,30 @@ app.post(
     try {
       const {
         altroUid
-      } = req.body;
+      } =
+        req.body;
+
+      if (
+        !altroUid
+      ) {
+        return res.status(
+          400
+        ).json({
+          errore:
+            "Dati mancanti."
+        });
+      }
 
       const mioUid =
         req.utente.uid;
 
       if (
-        !altroUid ||
-        altroUid === mioUid
+        altroUid ===
+        mioUid
       ) {
-        return res.status(400).json({
+        return res.status(
+          400
+        ).json({
           errore:
             "Operazione non valida."
         });
@@ -3489,21 +4391,26 @@ app.post(
       const [
         mioSnap,
         altroSnap
-      ] = await Promise.all([
-        db
-          .ref(
-            "utenti/" +
+      ] =
+        await Promise.all([
+          db
+            .ref(
+              "utenti/" +
               mioUid
-          )
-          .once("value"),
+            )
+            .once(
+              "value"
+            ),
 
-        db
-          .ref(
-            "utenti/" +
+          db
+            .ref(
+              "utenti/" +
               altroUid
-          )
-          .once("value")
-      ]);
+            )
+            .once(
+              "value"
+            )
+        ]);
 
       const mioUtente =
         mioSnap.val();
@@ -3515,7 +4422,9 @@ app.post(
         !mioUtente ||
         !altroUtente
       ) {
-        return res.status(404).json({
+        return res.status(
+          404
+        ).json({
           errore:
             "Utente non trovato."
         });
@@ -3532,27 +4441,32 @@ app.post(
           await db
             .ref(
               "messaggiPrivati/" +
-                idConv
+              idConv
             )
-            .once("value")
-        ).val() || {};
+            .once(
+              "value"
+            )
+        ).val() ||
+        {};
 
       const esisteMessaggioRicevuto =
         Object.values(
           messaggi
         ).some(
-          (m) =>
+          m =>
             m &&
             m.daUid ===
-              altroUid &&
+            altroUid &&
             m.aUid ===
-              mioUid
+            mioUid
         );
 
       if (
         !esisteMessaggioRicevuto
       ) {
-        return res.status(400).json({
+        return res.status(
+          400
+        ).json({
           errore:
             "Non esiste nessun messaggio da questo utente."
         });
@@ -3564,35 +4478,39 @@ app.post(
           altroUid
         );
 
-      if (!giaAmici) {
+      if (
+        !giaAmici
+      ) {
         const ora =
           Date.now();
 
-        await db.ref().update({
-          [`utenti/${mioUid}/richiesteRicevute/${altroUid}`]:
-            null,
+        await db
+          .ref()
+          .update({
+            [`utenti/${mioUid}/richiesteRicevute/${altroUid}`]:
+              null,
 
-          [`utenti/${mioUid}/richiesteInviate/${altroUid}`]:
-            null,
+            [`utenti/${mioUid}/richiesteInviate/${altroUid}`]:
+              null,
 
-          [`utenti/${altroUid}/richiesteRicevute/${mioUid}`]:
-            null,
+            [`utenti/${altroUid}/richiesteRicevute/${mioUid}`]:
+              null,
 
-          [`utenti/${altroUid}/richiesteInviate/${mioUid}`]:
-            null,
+            [`utenti/${altroUid}/richiesteInviate/${mioUid}`]:
+              null,
 
-          [`utenti/${mioUid}/amici/${altroUid}`]:
-            true,
+            [`utenti/${mioUid}/amici/${altroUid}`]:
+              true,
 
-          [`utenti/${altroUid}/amici/${mioUid}`]:
-            true
-        });
+            [`utenti/${altroUid}/amici/${mioUid}`]:
+              true
+          });
 
         await db
           .ref(
             "utenti/" +
-              altroUid +
-              "/notifiche"
+            altroUid +
+            "/notifiche"
           )
           .push({
             tipo:
@@ -3615,17 +4533,24 @@ app.post(
           });
       }
 
-      return res.json({
-        ok: true,
-        amici: true
+      res.json({
+        ok:
+          true,
+
+        amici:
+          true
       });
-    } catch (errore) {
+    } catch (
+      errore
+    ) {
       console.error(
         "Errore accettazione amicizia da messaggio:",
         errore
       );
 
-      return res.status(500).json({
+      res.status(
+        500
+      ).json({
         errore:
           "Errore durante l'accettazione."
       });
@@ -3634,11 +4559,16 @@ app.post(
 );
 
 app.post(
-  "/api/amici/rifiuta",
+  "/api/amici/accetta",
   richiediAuth,
-  async (req, res) => {
+  async (
+    req,
+    res
+  ) => {
     if (!db) {
-      return res.status(500).json({
+      return res.status(
+        500
+      ).json({
         errore:
           "Servizio non disponibile."
       });
@@ -3647,33 +4577,159 @@ app.post(
     try {
       const {
         daUid
-      } = req.body;
+      } =
+        req.body;
 
-      if (!daUid) {
-        return res.status(400).json({
+      if (
+        !daUid
+      ) {
+        return res.status(
+          400
+        ).json({
           errore:
             "Dati mancanti."
         });
       }
 
-      await db.ref().update({
-        [`utenti/${req.utente.uid}/richiesteRicevute/${daUid}`]:
-          null,
+      const richiesta =
+        await db
+          .ref(
+            `utenti/${req.utente.uid}/richiesteRicevute/${daUid}`
+          )
+          .once(
+            "value"
+          );
 
-        [`utenti/${daUid}/richiesteInviate/${req.utente.uid}`]:
-          null
-      });
+      if (
+        !richiesta.exists()
+      ) {
+        return res.status(
+          400
+        ).json({
+          errore:
+            "Nessuna richiesta da questo utente."
+        });
+      }
 
-      return res.json({
-        ok: true
+      const mioNickname =
+        req.utente.nickname;
+
+      await db
+        .ref()
+        .update({
+          [`utenti/${req.utente.uid}/richiesteRicevute/${daUid}`]:
+            null,
+
+          [`utenti/${daUid}/richiesteInviate/${req.utente.uid}`]:
+            null,
+
+          [`utenti/${req.utente.uid}/amici/${daUid}`]:
+            true,
+
+          [`utenti/${daUid}/amici/${req.utente.uid}`]:
+            true
+        });
+
+      await db
+        .ref(
+          "utenti/" +
+          daUid +
+          "/notifiche"
+        )
+        .push({
+          tipo:
+            "amiciziaAccettata",
+
+          testo:
+            `${mioNickname} ha accettato la tua richiesta di amicizia`,
+
+          data:
+            Date.now(),
+
+          letta:
+            false
+        });
+
+      res.json({
+        ok:
+          true
       });
-    } catch (errore) {
+    } catch (
+      errore
+    ) {
+      console.error(
+        "Errore accettazione amicizia:",
+        errore
+      );
+
+      res.status(
+        500
+      ).json({
+        errore:
+          "Errore del server, riprova."
+      });
+    }
+  }
+);
+
+app.post(
+  "/api/amici/rifiuta",
+  richiediAuth,
+  async (
+    req,
+    res
+  ) => {
+    if (!db) {
+      return res.status(
+        500
+      ).json({
+        errore:
+          "Servizio non disponibile."
+      });
+    }
+
+    try {
+      const {
+        daUid
+      } =
+        req.body;
+
+      if (
+        !daUid
+      ) {
+        return res.status(
+          400
+        ).json({
+          errore:
+            "Dati mancanti."
+        });
+      }
+
+      await db
+        .ref()
+        .update({
+          [`utenti/${req.utente.uid}/richiesteRicevute/${daUid}`]:
+            null,
+
+          [`utenti/${daUid}/richiesteInviate/${req.utente.uid}`]:
+            null
+        });
+
+      res.json({
+        ok:
+          true
+      });
+    } catch (
+      errore
+    ) {
       console.error(
         "Errore rifiuto richiesta:",
         errore
       );
 
-      return res.status(500).json({
+      res.status(
+        500
+      ).json({
         errore:
           "Errore del server, riprova."
       });
@@ -3684,9 +4740,14 @@ app.post(
 app.post(
   "/api/amici/rimuovi",
   richiediAuth,
-  async (req, res) => {
+  async (
+    req,
+    res
+  ) => {
     if (!db) {
-      return res.status(500).json({
+      return res.status(
+        500
+      ).json({
         errore:
           "Servizio non disponibile."
       });
@@ -3695,33 +4756,45 @@ app.post(
     try {
       const {
         altroUid
-      } = req.body;
+      } =
+        req.body;
 
-      if (!altroUid) {
-        return res.status(400).json({
+      if (
+        !altroUid
+      ) {
+        return res.status(
+          400
+        ).json({
           errore:
             "Dati mancanti."
         });
       }
 
-      await db.ref().update({
-        [`utenti/${req.utente.uid}/amici/${altroUid}`]:
-          null,
+      await db
+        .ref()
+        .update({
+          [`utenti/${req.utente.uid}/amici/${altroUid}`]:
+            null,
 
-        [`utenti/${altroUid}/amici/${req.utente.uid}`]:
-          null
-      });
+          [`utenti/${altroUid}/amici/${req.utente.uid}`]:
+            null
+        });
 
-      return res.json({
-        ok: true
+      res.json({
+        ok:
+          true
       });
-    } catch (errore) {
+    } catch (
+      errore
+    ) {
       console.error(
         "Errore rimozione amicizia:",
         errore
       );
 
-      return res.status(500).json({
+      res.status(
+        500
+      ).json({
         errore:
           "Errore del server, riprova."
       });
@@ -3732,27 +4805,34 @@ app.post(
 app.get(
   "/api/amici",
   richiediAuth,
-  async (req, res) => {
+  async (
+    req,
+    res
+  ) => {
     if (!db) {
-      return res.status(500).json({
+      return res.status(
+        500
+      ).json({
         errore:
           "Servizio non disponibile."
       });
     }
 
     try {
-      const amiciObj =
-        (
-          await db
-            .ref(
-              `utenti/${req.utente.uid}/amici`
-            )
-            .once("value")
-        ).val() || {};
-
       const uids =
         Object.keys(
-          amiciObj
+          (
+            await db
+              .ref(
+                "utenti/" +
+                req.utente.uid +
+                "/amici"
+              )
+              .once(
+                "value"
+              )
+          ).val() ||
+          {}
         );
 
       const amici =
@@ -3766,16 +4846,23 @@ app.get(
                   await db
                     .ref(
                       "utenti/" +
-                        uidAmico
+                      uidAmico
                     )
                     .once(
                       "value"
                     )
                 ).val();
 
-              if (!u) {
+              if (
+                !u
+              ) {
                 return null;
               }
+
+              await migraUtenteElo(
+                uidAmico,
+                u
+              );
 
               return {
                 uid:
@@ -3791,24 +4878,30 @@ app.get(
                 ratingElo:
                   Number(
                     u.ratingElo ||
-                      ELO_INIZIALE
+                    ELO_INIZIALE
                   )
               };
             }
           )
         );
 
-      return res.json({
+      res.json({
         amici:
-          amici.filter(Boolean)
+          amici.filter(
+            Boolean
+          )
       });
-    } catch (errore) {
+    } catch (
+      errore
+    ) {
       console.error(
         "Errore caricamento amici:",
         errore
       );
 
-      return res.status(500).json({
+      res.status(
+        500
+      ).json({
         errore:
           "Errore del server."
       });
@@ -3823,9 +4916,14 @@ app.get(
 app.get(
   "/api/notifiche",
   richiediAuth,
-  async (req, res) => {
+  async (
+    req,
+    res
+  ) => {
     if (!db) {
-      return res.status(500).json({
+      return res.status(
+        500
+      ).json({
         errore:
           "Servizio non disponibile."
       });
@@ -3837,48 +4935,65 @@ app.get(
           (
             await db
               .ref(
-                `utenti/${req.utente.uid}/notifiche`
+                "utenti/" +
+                req.utente.uid +
+                "/notifiche"
               )
-              .once("value")
-          ).val() || {}
+              .once(
+                "value"
+              )
+          ).val() ||
+          {}
         )
           .map(
-            ([id, n]) => ({
+            ([
+              id,
+              n
+            ]) => ({
               id,
               ...n
             })
           )
           .sort(
-            (a, b) =>
+            (
+              a,
+              b
+            ) =>
               Number(
-                b.data || 0
+                b.data ||
+                0
               ) -
               Number(
-                a.data || 0
+                a.data ||
+                0
               )
           )
           .slice(
             0,
-            50
+            30
           );
 
-      return res.json({
+      res.json({
         notifiche:
           lista,
 
         nonLette:
           lista.filter(
-            (n) =>
+            n =>
               !n.letta
           ).length
       });
-    } catch (errore) {
+    } catch (
+      errore
+    ) {
       console.error(
         "Errore notifiche:",
         errore
       );
 
-      return res.status(500).json({
+      res.status(
+        500
+      ).json({
         errore:
           "Errore del server."
       });
@@ -3889,9 +5004,14 @@ app.get(
 app.post(
   "/api/notifiche/segna-lette",
   richiediAuth,
-  async (req, res) => {
+  async (
+    req,
+    res
+  ) => {
     if (!db) {
-      return res.status(500).json({
+      return res.status(
+        500
+      ).json({
         errore:
           "Servizio non disponibile."
       });
@@ -3900,26 +5020,37 @@ app.post(
     try {
       const ref =
         db.ref(
-          `utenti/${req.utente.uid}/notifiche`
+          "utenti/" +
+          req.utente.uid +
+          "/notifiche"
         );
 
       const tutte =
         (
-          await ref.once(
-            "value"
-          )
-        ).val() || {};
+          await ref
+            .once(
+              "value"
+            )
+        ).val() ||
+        {};
 
-      const aggiornamenti = {};
+      const aggiornamenti =
+        {};
 
-      Object.entries(
+      Object.keys(
         tutte
       ).forEach(
-        ([id, notifica]) => {
-          if (!notifica.letta) {
+        id => {
+          if (
+            !tutte[
+              id
+            ].letta
+          ) {
             aggiornamenti[
-              id + "/letta"
-            ] = true;
+              id +
+              "/letta"
+            ] =
+              true;
           }
         }
       );
@@ -3934,16 +5065,21 @@ app.post(
         );
       }
 
-      return res.json({
-        ok: true
+      res.json({
+        ok:
+          true
       });
-    } catch (errore) {
+    } catch (
+      errore
+    ) {
       console.error(
-        "Errore segnatura notifiche:",
+        "Errore notifiche lette:",
         errore
       );
 
-      return res.status(500).json({
+      res.status(
+        500
+      ).json({
         errore:
           "Errore del server."
       });
@@ -3958,9 +5094,14 @@ app.post(
 app.get(
   "/api/avvisi",
   richiediAuth,
-  async (req, res) => {
+  async (
+    req,
+    res
+  ) => {
     if (!db) {
-      return res.status(500).json({
+      return res.status(
+        500
+      ).json({
         errore:
           "Servizio non disponibile."
       });
@@ -3973,15 +5114,21 @@ app.get(
             .ref(
               "avvisiSito"
             )
-            .once("value")
-        ).val() || {};
+            .once(
+              "value"
+            )
+        ).val() ||
+        {};
 
       const avvisi =
         Object.entries(
           dati
         )
           .map(
-            ([id, avviso]) => ({
+            ([
+              id,
+              avviso
+            ]) => ({
               id,
 
               titolo:
@@ -4006,25 +5153,34 @@ app.get(
             })
           )
           .sort(
-            (a, b) =>
+            (
+              a,
+              b
+            ) =>
               Number(
-                b.data || 0
+                b.data ||
+                0
               ) -
               Number(
-                a.data || 0
+                a.data ||
+                0
               )
           );
 
-      return res.json({
+      res.json({
         avvisi
       });
-    } catch (errore) {
+    } catch (
+      errore
+    ) {
       console.error(
         "Errore caricamento avvisi:",
         errore
       );
 
-      return res.status(500).json({
+      res.status(
+        500
+      ).json({
         errore:
           "Errore del server."
       });
@@ -4036,9 +5192,14 @@ app.post(
   "/api/admin/avvisi",
   limiteAdmin,
   richiediAdmin,
-  async (req, res) => {
+  async (
+    req,
+    res
+  ) => {
     if (!db) {
-      return res.status(500).json({
+      return res.status(
+        500
+      ).json({
         errore:
           "Database non disponibile."
       });
@@ -4049,7 +5210,8 @@ app.post(
         titolo,
         messaggio,
         tipo
-      } = req.body;
+      } =
+        req.body;
 
       const titoloPulito =
         pulisciTesto(
@@ -4066,19 +5228,27 @@ app.post(
       const tipoPulito =
         pulisciTesto(
           tipo ||
-            "Informazione",
+          "Informazione",
           40
         );
 
-      if (!titoloPulito) {
-        return res.status(400).json({
+      if (
+        !titoloPulito
+      ) {
+        return res.status(
+          400
+        ).json({
           errore:
             "Inserisci un titolo."
         });
       }
 
-      if (!messaggioPulito) {
-        return res.status(400).json({
+      if (
+        !messaggioPulito
+      ) {
+        return res.status(
+          400
+        ).json({
           errore:
             "Inserisci il testo dell'avviso."
         });
@@ -4089,27 +5259,30 @@ app.post(
 
       const nuovoRef =
         db
-          .ref("avvisiSito")
+          .ref(
+            "avvisiSito"
+          )
           .push();
 
-      const avviso = {
-        titolo:
-          titoloPulito,
+      const avviso =
+        {
+          titolo:
+            titoloPulito,
 
-        messaggio:
-          messaggioPulito,
+          messaggio:
+            messaggioPulito,
 
-        tipo:
-          tipoPulito,
+          tipo:
+            tipoPulito,
 
-        data:
-          ora,
+          data:
+            ora,
 
-        pubblicatoDa:
-          req.utenteAdmin
-            .nickname ||
-          "Amministratore"
-      };
+          pubblicatoDa:
+            req.utenteAdmin
+              .nickname ||
+            "Amministratore"
+        };
 
       await nuovoRef.set(
         avviso
@@ -4117,8 +5290,12 @@ app.post(
 
       const utentiSnap =
         await db
-          .ref("utenti")
-          .once("value");
+          .ref(
+            "utenti"
+          )
+          .once(
+            "value"
+          );
 
       const utenti =
         utentiSnap.val() ||
@@ -4127,17 +5304,20 @@ app.post(
       const aggiornamenti =
         {};
 
-      for (const uid of Object.keys(
-        utenti
-      )) {
-        const notificationKey =
+      for (
+        const uid of
+          Object.keys(
+            utenti
+          )
+      ) {
+        const key =
           db
             .ref()
             .push()
             .key;
 
         aggiornamenti[
-          `utenti/${uid}/notifiche/${notificationKey}`
+          `utenti/${uid}/notifiche/${key}`
         ] = {
           tipo:
             "avvisoSito",
@@ -4174,8 +5354,9 @@ app.post(
           );
       }
 
-      return res.json({
-        ok: true,
+      res.json({
+        ok:
+          true,
 
         avviso: {
           id:
@@ -4184,13 +5365,17 @@ app.post(
           ...avviso
         }
       });
-    } catch (errore) {
+    } catch (
+      errore
+    ) {
       console.error(
         "Errore pubblicazione avviso:",
         errore
       );
 
-      return res.status(500).json({
+      res.status(
+        500
+      ).json({
         errore:
           "Errore durante la pubblicazione dell'avviso."
       });
@@ -4202,9 +5387,14 @@ app.delete(
   "/api/admin/avvisi/:id",
   limiteAdmin,
   richiediAdmin,
-  async (req, res) => {
+  async (
+    req,
+    res
+  ) => {
     if (!db) {
-      return res.status(500).json({
+      return res.status(
+        500
+      ).json({
         errore:
           "Database non disponibile."
       });
@@ -4214,11 +5404,15 @@ app.delete(
       const id =
         String(
           req.params.id ||
-            ""
+          ""
         ).trim();
 
-      if (!id) {
-        return res.status(400).json({
+      if (
+        !id
+      ) {
+        return res.status(
+          400
+        ).json({
           errore:
             "ID avviso non valido."
         });
@@ -4227,7 +5421,7 @@ app.delete(
       const ref =
         db.ref(
           "avvisiSito/" +
-            id
+          id
         );
 
       const snap =
@@ -4235,8 +5429,12 @@ app.delete(
           "value"
         );
 
-      if (!snap.exists()) {
-        return res.status(404).json({
+      if (
+        !snap.exists()
+      ) {
+        return res.status(
+          404
+        ).json({
           errore:
             "Avviso non trovato."
         });
@@ -4244,16 +5442,21 @@ app.delete(
 
       await ref.remove();
 
-      return res.json({
-        ok: true
+      res.json({
+        ok:
+          true
       });
-    } catch (errore) {
+    } catch (
+      errore
+    ) {
       console.error(
         "Errore eliminazione avviso:",
         errore
       );
 
-      return res.status(500).json({
+      res.status(
+        500
+      ).json({
         errore:
           "Errore durante l'eliminazione."
       });
@@ -4262,16 +5465,21 @@ app.delete(
 );
 
 /* =========================================================
-   API ADMIN UTENTI
+   ADMIN UTENTI
    ========================================================= */
 
 app.get(
   "/api/admin/utenti",
   limiteAdmin,
   richiediAdmin,
-  async (req, res) => {
+  async (
+    req,
+    res
+  ) => {
     if (!db) {
-      return res.status(500).json({
+      return res.status(
+        500
+      ).json({
         errore:
           "Database non disponibile."
       });
@@ -4281,69 +5489,95 @@ app.get(
       const val =
         (
           await db
-            .ref("utenti")
-            .once("value")
-        ).val() || {};
+            .ref(
+              "utenti"
+            )
+            .once(
+              "value"
+            )
+        ).val() ||
+        {};
 
       const utenti =
         Object.keys(
           val
         ).map(
-          (uid) => ({
+          uid => ({
             uid,
 
             email:
-              val[uid].email,
+              val[
+                uid
+              ].email,
 
             nickname:
-              val[uid].nickname,
+              val[
+                uid
+              ].nickname,
 
             stato:
-              val[uid].stato,
+              val[
+                uid
+              ].stato,
 
             sospesoFino:
-              val[uid].sospesoFino ||
+              val[
+                uid
+              ].sospesoFino ||
               null,
 
             avvisi:
-              val[uid].avvisi ||
+              val[
+                uid
+              ].avvisi ||
               [],
 
             ruolo:
-              val[uid].ruolo ||
+              val[
+                uid
+              ].ruolo ||
               "utente",
 
             ratingElo:
               Number(
-                val[uid].ratingElo ||
-                  ELO_INIZIALE
+                val[
+                  uid
+                ].ratingElo ||
+                ELO_INIZIALE
               ),
 
             eloMassimo:
               Number(
-                val[uid].eloMassimo ||
-                  ELO_INIZIALE
+                val[
+                  uid
+                ].eloMassimo ||
+                ELO_INIZIALE
               ),
 
             partiteClassificate:
               Number(
-                val[uid]
-                  .partiteClassificate ||
-                  0
+                val[
+                  uid
+                ].partiteClassificate ||
+                0
               )
           })
         );
 
-      return res.json({
+      res.json({
         utenti
       });
-    } catch (errore) {
+    } catch (
+      errore
+    ) {
       console.error(
         "Errore admin utenti:",
         errore
       );
 
-      return res.status(500).json({
+      res.status(
+        500
+      ).json({
         errore:
           "Errore del server."
       });
@@ -4355,9 +5589,14 @@ app.post(
   "/api/admin/avviso",
   limiteAdmin,
   richiediAdmin,
-  async (req, res) => {
+  async (
+    req,
+    res
+  ) => {
     if (!db) {
-      return res.status(500).json({
+      return res.status(
+        500
+      ).json({
         errore:
           "Database non disponibile."
       });
@@ -4367,65 +5606,49 @@ app.post(
       const {
         uid,
         motivo
-      } = req.body;
+      } =
+        req.body;
 
-      if (!uid || !motivo) {
-        return res.status(400).json({
+      if (
+        !uid ||
+        !motivo
+      ) {
+        return res.status(
+          400
+        ).json({
           errore:
             "Dati mancanti."
         });
       }
 
-      const utenteSnap =
-        await db
-          .ref(
-            "utenti/" +
-              uid
-          )
-          .once("value");
-
-      if (
-        !utenteSnap.exists()
-      ) {
-        return res.status(404).json({
-          errore:
-            "Utente non trovato."
-        });
-      }
-
-      const motivoPulito =
-        pulisciTesto(
-          motivo,
-          500
-        );
-
       const ref =
         db.ref(
           "utenti/" +
-            uid +
-            "/avvisi"
+          uid +
+          "/avvisi"
         );
 
       const avvisiAttuali =
         (
-          await ref.once(
-            "value"
-          )
-        ).val() || [];
+          await ref
+            .once(
+              "value"
+            )
+        ).val() ||
+        [];
 
       avvisiAttuali.push({
         data:
           Date.now(),
 
         motivo:
-          motivoPulito,
+          pulisciTesto(
+            motivo,
+            500
+          ),
 
         adminUid:
-          req.utenteAdmin.uid,
-
-        adminNickname:
-          req.utenteAdmin.nickname ||
-          "Amministratore"
+          req.utenteAdmin.uid
       });
 
       await ref.set(
@@ -4435,8 +5658,8 @@ app.post(
       await db
         .ref(
           "utenti/" +
-            uid +
-            "/notifiche"
+          uid +
+          "/notifiche"
         )
         .push({
           tipo:
@@ -4452,16 +5675,21 @@ app.post(
             false
         });
 
-      return res.json({
-        ok: true
+      res.json({
+        ok:
+          true
       });
-    } catch (errore) {
+    } catch (
+      errore
+    ) {
       console.error(
         "Errore avviso admin:",
         errore
       );
 
-      return res.status(500).json({
+      res.status(
+        500
+      ).json({
         errore:
           "Errore del server."
       });
@@ -4473,9 +5701,14 @@ app.post(
   "/api/admin/sospendi",
   limiteAdmin,
   richiediAdmin,
-  async (req, res) => {
+  async (
+    req,
+    res
+  ) => {
     if (!db) {
-      return res.status(500).json({
+      return res.status(
+        500
+      ).json({
         errore:
           "Database non disponibile."
       });
@@ -4486,10 +5719,16 @@ app.post(
         uid,
         giorni,
         motivo
-      } = req.body;
+      } =
+        req.body;
 
-      if (!uid) {
-        return res.status(400).json({
+      if (
+        !uid ||
+        !giorni
+      ) {
+        return res.status(
+          400
+        ).json({
           errore:
             "Dati mancanti."
         });
@@ -4499,14 +5738,18 @@ app.post(
         uid ===
         req.utenteAdmin.uid
       ) {
-        return res.status(400).json({
+        return res.status(
+          400
+        ).json({
           errore:
             "Non puoi sospendere il tuo stesso account."
         });
       }
 
       const giorniNumero =
-        Number(giorni);
+        Number(
+          giorni
+        );
 
       if (
         !Number.isInteger(
@@ -4517,33 +5760,18 @@ app.post(
         giorniNumero >
           3650
       ) {
-        return res.status(400).json({
+        return res.status(
+          400
+        ).json({
           errore:
             "Il numero di giorni non è valido."
-        });
-      }
-
-      const targetSnap =
-        await db
-          .ref(
-            "utenti/" +
-              uid
-          )
-          .once("value");
-
-      if (
-        !targetSnap.exists()
-      ) {
-        return res.status(404).json({
-          errore:
-            "Utente non trovato."
         });
       }
 
       await db
         .ref(
           "utenti/" +
-            uid
+          uid
         )
         .update({
           stato:
@@ -4551,36 +5779,43 @@ app.post(
 
           sospesoFino:
             Date.now() +
-            giorniNumero *
+            (
+              giorniNumero *
               24 *
               60 *
               60 *
-              1000,
+              1000
+            ),
 
           motivoSospensione:
             pulisciTesto(
               motivo ||
-                "",
+              "",
               500
             ),
 
-          ultimoAggiornamentoModerazione:
-            Date.now(),
-
           ultimoAdminModeratore:
-            req.utenteAdmin.uid
+            req.utenteAdmin.uid,
+
+          ultimoAggiornamentoModerazione:
+            Date.now()
         });
 
-      return res.json({
-        ok: true
+      res.json({
+        ok:
+          true
       });
-    } catch (errore) {
+    } catch (
+      errore
+    ) {
       console.error(
         "Errore sospensione:",
         errore
       );
 
-      return res.status(500).json({
+      res.status(
+        500
+      ).json({
         errore:
           "Errore del server."
       });
@@ -4592,9 +5827,14 @@ app.post(
   "/api/admin/rimuovi-sospensione",
   limiteAdmin,
   richiediAdmin,
-  async (req, res) => {
+  async (
+    req,
+    res
+  ) => {
     if (!db) {
-      return res.status(500).json({
+      return res.status(
+        500
+      ).json({
         errore:
           "Database non disponibile."
       });
@@ -4603,34 +5843,24 @@ app.post(
     try {
       const {
         uid
-      } = req.body;
+      } =
+        req.body;
 
-      if (!uid) {
-        return res.status(400).json({
+      if (
+        !uid
+      ) {
+        return res.status(
+          400
+        ).json({
           errore:
             "Dati mancanti."
-        });
-      }
-
-      const snap =
-        await db
-          .ref(
-            "utenti/" +
-              uid
-          )
-          .once("value");
-
-      if (!snap.exists()) {
-        return res.status(404).json({
-          errore:
-            "Utente non trovato."
         });
       }
 
       await db
         .ref(
           "utenti/" +
-            uid
+          uid
         )
         .update({
           stato:
@@ -4639,23 +5869,28 @@ app.post(
           sospesoFino:
             null,
 
-          ultimoAggiornamentoModerazione:
-            Date.now(),
-
           ultimoAdminModeratore:
-            req.utenteAdmin.uid
+            req.utenteAdmin.uid,
+
+          ultimoAggiornamentoModerazione:
+            Date.now()
         });
 
-      return res.json({
-        ok: true
+      res.json({
+        ok:
+          true
       });
-    } catch (errore) {
+    } catch (
+      errore
+    ) {
       console.error(
         "Errore rimozione sospensione:",
         errore
       );
 
-      return res.status(500).json({
+      res.status(
+        500
+      ).json({
         errore:
           "Errore del server."
       });
@@ -4667,9 +5902,14 @@ app.post(
   "/api/admin/banna",
   limiteAdmin,
   richiediAdmin,
-  async (req, res) => {
+  async (
+    req,
+    res
+  ) => {
     if (!db) {
-      return res.status(500).json({
+      return res.status(
+        500
+      ).json({
         errore:
           "Database non disponibile."
       });
@@ -4679,10 +5919,15 @@ app.post(
       const {
         uid,
         motivo
-      } = req.body;
+      } =
+        req.body;
 
-      if (!uid) {
-        return res.status(400).json({
+      if (
+        !uid
+      ) {
+        return res.status(
+          400
+        ).json({
           errore:
             "Dati mancanti."
         });
@@ -4692,31 +5937,18 @@ app.post(
         uid ===
         req.utenteAdmin.uid
       ) {
-        return res.status(400).json({
+        return res.status(
+          400
+        ).json({
           errore:
             "Non puoi bannare il tuo stesso account."
-        });
-      }
-
-      const snap =
-        await db
-          .ref(
-            "utenti/" +
-              uid
-          )
-          .once("value");
-
-      if (!snap.exists()) {
-        return res.status(404).json({
-          errore:
-            "Utente non trovato."
         });
       }
 
       await db
         .ref(
           "utenti/" +
-            uid
+          uid
         )
         .update({
           stato:
@@ -4725,27 +5957,32 @@ app.post(
           motivoBan:
             pulisciTesto(
               motivo ||
-                "",
+              "",
               500
             ),
 
-          ultimoAggiornamentoModerazione:
-            Date.now(),
-
           ultimoAdminModeratore:
-            req.utenteAdmin.uid
+            req.utenteAdmin.uid,
+
+          ultimoAggiornamentoModerazione:
+            Date.now()
         });
 
-      return res.json({
-        ok: true
+      res.json({
+        ok:
+          true
       });
-    } catch (errore) {
+    } catch (
+      errore
+    ) {
       console.error(
         "Errore ban:",
         errore
       );
 
-      return res.status(500).json({
+      res.status(
+        500
+      ).json({
         errore:
           "Errore del server."
       });
@@ -4757,9 +5994,14 @@ app.post(
   "/api/admin/riattiva",
   limiteAdmin,
   richiediAdmin,
-  async (req, res) => {
+  async (
+    req,
+    res
+  ) => {
     if (!db) {
-      return res.status(500).json({
+      return res.status(
+        500
+      ).json({
         errore:
           "Database non disponibile."
       });
@@ -4768,34 +6010,24 @@ app.post(
     try {
       const {
         uid
-      } = req.body;
+      } =
+        req.body;
 
-      if (!uid) {
-        return res.status(400).json({
+      if (
+        !uid
+      ) {
+        return res.status(
+          400
+        ).json({
           errore:
             "Dati mancanti."
-        });
-      }
-
-      const snap =
-        await db
-          .ref(
-            "utenti/" +
-              uid
-          )
-          .once("value");
-
-      if (!snap.exists()) {
-        return res.status(404).json({
-          errore:
-            "Utente non trovato."
         });
       }
 
       await db
         .ref(
           "utenti/" +
-            uid
+          uid
         )
         .update({
           stato:
@@ -4804,23 +6036,28 @@ app.post(
           sospesoFino:
             null,
 
-          ultimoAggiornamentoModerazione:
-            Date.now(),
-
           ultimoAdminModeratore:
-            req.utenteAdmin.uid
+            req.utenteAdmin.uid,
+
+          ultimoAggiornamentoModerazione:
+            Date.now()
         });
 
-      return res.json({
-        ok: true
+      res.json({
+        ok:
+          true
       });
-    } catch (errore) {
+    } catch (
+      errore
+    ) {
       console.error(
         "Errore riattivazione:",
         errore
       );
 
-      return res.status(500).json({
+      res.status(
+        500
+      ).json({
         errore:
           "Errore del server."
       });
@@ -4834,25 +6071,29 @@ app.post(
 
 function tiraDadoRandomOrg() {
   return new Promise(
-    (resolve) => {
+    resolve => {
       const url =
         "https://www.random.org/integers/?num=2&min=1&max=6&col=1&base=10&format=plain&rnd=new";
 
-      let completato =
+      let conclusa =
         false;
 
-      const chiudi = (
+      function completa(
         risultato
-      ) => {
-        if (completato) return;
+      ) {
+        if (
+          conclusa
+        ) {
+          return;
+        }
 
-        completato =
+        conclusa =
           true;
 
         resolve(
           risultato
         );
-      };
+      }
 
       const richiesta =
         https.get(
@@ -4862,57 +6103,64 @@ function tiraDadoRandomOrg() {
               1500
           },
 
-          (response) => {
-            let dati = "";
+          res => {
+            let dati =
+              "";
 
-            response.setEncoding(
-              "utf8"
-            );
-
-            response.on(
+            res.on(
               "data",
-              (chunk) => {
-                dati += chunk;
+              chunk => {
+                dati +=
+                  chunk;
               }
             );
 
-            response.on(
+            res.on(
               "end",
               () => {
                 try {
                   const numeri =
                     dati
                       .trim()
-                      .split(/\s+/)
+                      .split(
+                        /\s+/
+                      )
                       .map(
-                        (n) =>
+                        n =>
                           parseInt(
                             n,
                             10
                           )
                       )
                       .filter(
-                        (n) =>
+                        n =>
                           Number.isInteger(
                             n
                           ) &&
-                          n >= 1 &&
-                          n <= 6
+                          n >=
+                            1 &&
+                          n <=
+                            6
                       );
 
-                  chiudi(
+                  completa(
                     numeri.length ===
                       2
                       ? {
                           dado1:
-                            numeri[0],
+                            numeri[
+                              0
+                            ],
+
                           dado2:
-                            numeri[1]
+                            numeri[
+                              1
+                            ]
                         }
                       : null
                   );
                 } catch {
-                  chiudi(
+                  completa(
                     null
                   );
                 }
@@ -4925,15 +6173,18 @@ function tiraDadoRandomOrg() {
         "timeout",
         () => {
           richiesta.destroy();
-          chiudi(null);
+          completa(
+            null
+          );
         }
       );
 
       richiesta.on(
         "error",
-        () => {
-          chiudi(null);
-        }
+        () =>
+          completa(
+            null
+          )
       );
     }
   );
@@ -4943,8 +6194,12 @@ async function lanciaDueDadiSicuri() {
   const risultato =
     await tiraDadoRandomOrg();
 
-  if (risultato) {
-    return risultato;
+  if (
+    risultato
+  ) {
+    return resultadoSeguro(
+      risultato
+    );
   }
 
   console.warn(
@@ -4954,18 +6209,38 @@ async function lanciaDueDadiSicuri() {
   return {
     dado1:
       Math.floor(
-        Math.random() * 6
+        Math.random() *
+        6
       ) + 1,
 
     dado2:
       Math.floor(
-        Math.random() * 6
+        Math.random() *
+        6
       ) + 1
   };
 }
 
+function resultadoSeguro(
+  risultato
+) {
+  if (
+    risultato &&
+    Number.isInteger(
+      risultato.dado1
+    ) &&
+    Number.isInteger(
+      risultato.dado2
+    )
+  ) {
+    return risultato;
+  }
+
+  return null;
+}
+
 /* =========================================================
-   LOGICA DI GIOCO
+   LOGICA GIOCO
    ========================================================= */
 
 const CASELLE_AVANZA_ANCORA = [
@@ -4987,9 +6262,14 @@ const CASELLE_SALTA_UN_TURNO = [
 ];
 
 const CASELLE_TORNA_A = {
-  42: 38,
-  50: 1,
-  58: 1
+  42:
+    38,
+
+  50:
+    1,
+
+  58:
+    1
 };
 
 const CASELLA_TIRA_ANCORA =
@@ -4998,31 +6278,278 @@ const CASELLA_TIRA_ANCORA =
 const CASELLA_VITTORIA =
   63;
 
-const stanze = {
+let stanze = {
   BAR: {
-    giocatoriOnline: {},
-    partite: {}
+    giocatoriOnline:
+      {},
+
+    partite:
+      {}
   },
 
   PUB: {
-    giocatoriOnline: {},
-    partite: {}
+    giocatoriOnline:
+      {},
+
+    partite:
+      {}
   },
 
   DISCOPUB: {
-    giocatoriOnline: {},
-    partite: {}
+    giocatoriOnline:
+      {},
+
+    partite:
+      {}
   },
 
   SERATE: {
-    giocatoriOnline: {},
-    partite: {}
+    giocatoriOnline:
+      {},
+
+    partite:
+      {}
   }
 };
 
 /* =========================================================
-   FUNZIONI STATO PARTITA
+   CONNESSIONI
    ========================================================= */
+
+let contatoreId =
+  0;
+
+const socketsPerId =
+  {};
+
+/* =========================================================
+   HEARTBEAT
+   ========================================================= */
+
+const HEARTBEAT_MS =
+  15000;
+
+const DURATA_ANIMAZIONE_TIRO_MS =
+  1200;
+
+const TOLLERANZA_MOSSA_MS =
+  2000;
+
+const heartbeatInterval =
+  setInterval(
+    () => {
+      wss.clients.forEach(
+        socket => {
+          if (
+            socket.isAlive ===
+            false
+          ) {
+            try {
+              socket.terminate();
+            } catch {}
+
+            return;
+          }
+
+          socket.isAlive =
+            false;
+
+          try {
+            socket.ping();
+          } catch {
+            try {
+              socket.terminate();
+            } catch {}
+          }
+        }
+      );
+    },
+    HEARTBEAT_MS
+  );
+
+wss.on(
+  "close",
+  () => {
+    clearInterval(
+      heartbeatInterval
+    );
+  }
+);
+
+/* =========================================================
+   DISPOSITIVO
+   ========================================================= */
+
+function rilevaTipoDispositivo(
+  userAgent
+) {
+  const ua =
+    userAgent ||
+    "";
+
+  if (
+    /iPad/i.test(
+      ua
+    ) ||
+    (
+      /Android/i.test(
+        ua
+      ) &&
+      !/Mobile/i.test(
+        ua
+      )
+    )
+  ) {
+    return "tablet";
+  }
+
+  if (
+    /iPhone|iPod/i.test(
+      ua
+    ) ||
+    (
+      /Android/i.test(
+        ua
+      ) &&
+      /Mobile/i.test(
+        ua
+      )
+    )
+  ) {
+    return "cellulare";
+  }
+
+  return "computer";
+}
+
+/* =========================================================
+   TROVA PARTITA
+   ========================================================= */
+
+function trovaPartita(
+  partitaId
+) {
+  for (
+    const nomeStanza in
+      stanze
+  ) {
+    if (
+      stanze[
+        nomeStanza
+      ].partite[
+        partitaId
+      ]
+    ) {
+      return {
+        partita:
+          stanze[
+            nomeStanza
+          ].partite[
+            partitaId
+          ],
+
+        nomeStanza
+      };
+    }
+  }
+
+  return null;
+}
+
+function trovaPartitaAttivaPerUid(
+  uid
+) {
+  for (
+    const nomeStanza in
+      stanze
+  ) {
+    for (
+      const pid in
+        stanze[
+          nomeStanza
+        ].partite
+    ) {
+      const p =
+        stanze[
+          nomeStanza
+        ].partite[
+          pid
+        ];
+
+      if (
+        p.giocatori &&
+        p.giocatori[
+          uid
+        ]
+      ) {
+        if (
+          p.fase ===
+            "attesa_giocatori" ||
+          p.fase ===
+            "determinazione_ordine" ||
+          p.fase ===
+            "in_corso"
+        ) {
+          return {
+            partitaId:
+              pid,
+
+            stanza:
+              nomeStanza
+          };
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+/* =========================================================
+   PRESENZA PARTITA
+   ========================================================= */
+
+function calcolaUidInPartita(
+  nomeStanza
+) {
+  const uidInPartita =
+    new Set();
+
+  if (
+    !stanze[
+      nomeStanza
+    ]
+  ) {
+    return uidInPartita;
+  }
+
+  Object.values(
+    stanze[
+      nomeStanza
+    ].partite
+  ).forEach(
+    p => {
+      if (
+        p.fase ===
+          "in_corso" ||
+        p.fase ===
+          "terminata"
+      ) {
+        Object.keys(
+          p.giocatori ||
+          {}
+        ).forEach(
+          uid =>
+            uidInPartita.add(
+              uid
+            )
+        );
+      }
+    }
+  );
+
+  return uidInPartita;
+}
 
 function costruisciStatoGiocatori(
   partita
@@ -5032,11 +6559,17 @@ function costruisciStatoGiocatori(
     []
   )
     .map(
-      (id) => {
+      id => {
         const g =
-          partita.giocatori[id];
+          partita.giocatori[
+            id
+          ];
 
-        if (!g) return null;
+        if (
+          !g
+        ) {
+          return null;
+        }
 
         return {
           id,
@@ -5051,133 +6584,14 @@ function costruisciStatoGiocatori(
           posizione:
             Number(
               g.posizione ||
-                0
+              0
             )
         };
       }
     )
-    .filter(Boolean);
-}
-
-function trovaPartita(
-  partitaId
-) {
-  for (
-    const nomeStanza in
-      stanze
-  ) {
-    const partita =
-      stanze[
-        nomeStanza
-      ].partite[
-        partitaId
-      ];
-
-    if (partita) {
-      return {
-        partita,
-        nomeStanza
-      };
-    }
-  }
-
-  return null;
-}
-
-function trovaPartitaAttivaPerUid(
-  uid
-) {
-  if (!uid) return null;
-
-  for (
-    const nomeStanza in
-      stanze
-  ) {
-    for (
-      const pid in
-        stanze[
-          nomeStanza
-        ].partite
-    ) {
-      const partita =
-        stanze[
-          nomeStanza
-        ].partite[
-          pid
-        ];
-
-      if (
-        partita.giocatori &&
-        partita.giocatori[
-          uid
-        ]
-      ) {
-        if (
-          partita.fase ===
-            "attesa_giocatori" ||
-          partita.fase ===
-            "determinazione_ordine" ||
-          partita.fase ===
-            "in_corso"
-        ) {
-          return {
-            partitaId:
-              pid,
-
-            stanza:
-              nomeStanza,
-
-            fase:
-              partita.fase
-          };
-        }
-      }
-    }
-  }
-
-  return null;
-}
-
-function calcolaUidInPartita(
-  nomeStanza
-) {
-  const uidInPartita =
-    new Set();
-
-  if (
-    !stanze[nomeStanza]
-  ) {
-    return uidInPartita;
-  }
-
-  Object.values(
-    stanze[
-      nomeStanza
-    ].partite
-  ).forEach(
-    (partita) => {
-      if (
-        partita.fase ===
-          "determinazione_ordine" ||
-        partita.fase ===
-          "in_corso" ||
-        partita.fase ===
-          "terminata"
-      ) {
-        Object.keys(
-          partita.giocatori ||
-            {}
-        ).forEach(
-          (uid) =>
-            uidInPartita.add(
-              uid
-            )
-        );
-      }
-    }
-  );
-
-  return uidInPartita;
+    .filter(
+      Boolean
+    );
 }
 
 function inviaAllaStanza(
@@ -5185,7 +6599,9 @@ function inviaAllaStanza(
   messaggio
 ) {
   if (
-    !stanze[nomeStanza]
+    !stanze[
+      nomeStanza
+    ]
   ) {
     return;
   }
@@ -5195,19 +6611,19 @@ function inviaAllaStanza(
       nomeStanza
     ].giocatoriOnline
   ).forEach(
-    (id) => {
-      const socket =
+    id => {
+      const s =
         socketsPerId[
           id
         ];
 
       if (
-        socket &&
-        socket.readyState ===
+        s &&
+        s.readyState ===
           WebSocket.OPEN
       ) {
         try {
-          socket.send(
+          s.send(
             JSON.stringify(
               messaggio
             )
@@ -5222,7 +6638,9 @@ function inviaListaPartite(
   nomeStanza
 ) {
   if (
-    !stanze[nomeStanza]
+    !stanze[
+      nomeStanza
+    ]
   ) {
     return;
   }
@@ -5232,71 +6650,71 @@ function inviaListaPartite(
       stanze[
         nomeStanza
       ].partite
-    ).map(
-      (p) => ({
-        id:
-          p.id,
+    )
+      .map(
+        p => ({
+          id:
+            p.id,
 
-        creatore:
-          p.creatore,
+          creatore:
+            p.creatore,
 
-        creatoDa:
-          p.creatoDa,
+          creatoDa:
+            p.creatoDa,
 
-        tempo:
-          p.tempo,
+          tempo:
+            p.tempo,
 
-        punti:
-          p.punti,
+          punti:
+            p.punti,
 
-        modalita:
-          p.modalita,
+          modalita:
+            p.modalita,
 
-        classificata:
-          p.classificata !==
-          false,
+          classificata:
+            p.classificata !==
+            false,
 
-        maxGiocatori:
-          p.maxGiocatori,
+          maxGiocatori:
+            p.maxGiocatori,
 
-        numGiocatoriAttuali:
-          Object.keys(
-            p.giocatori ||
+          numGiocatoriAttuali:
+            Object.keys(
+              p.giocatori ||
               {}
-          ).length,
+            ).length,
 
-        chatAttiva:
-          p.chatAttiva !==
-          false,
+          chatAttiva:
+            p.chatAttiva !==
+            false,
 
-        iniziata:
-          p.iniziata !==
-          false,
+          /* IMPORTANTE:
+             il client può sapere se deve mostrare RIPRENDI */
+          iniziata:
+            p.iniziata !==
+            false,
 
-        fase:
-          p.fase,
-
-        giocatori:
-          Object.entries(
-            p.giocatori ||
+          giocatori:
+            Object.entries(
+              p.giocatori ||
               {}
-          ).map(
-            ([
-              uid,
-              g
-            ]) => ({
-              uid,
+            ).map(
+              ([
+                uid,
+                g
+              ]) => ({
+                uid,
 
-              nome:
-                g.nome,
+                nome:
+                  g.nome,
 
-              avatar:
-                g.avatar ||
-                null
-            })
-          )
-      })
-    );
+                avatar:
+                  g.avatar ||
+                  null
+              })
+            )
+        })
+      );
 
   inviaAllaStanza(
     nomeStanza,
@@ -5308,6 +6726,83 @@ function inviaListaPartite(
         lista
     }
   );
+}
+
+function rimuoviVecchieConnessioniOnline(
+  nomeStanza,
+  uid,
+  socketIdDaConservare
+) {
+  if (
+    !stanze[
+      nomeStanza
+    ] ||
+    !uid
+  ) {
+    return;
+  }
+
+  for (
+    const [
+      sid,
+      giocatoreOnline
+    ] of Object.entries(
+      stanze[
+        nomeStanza
+      ].giocatoriOnline
+    )
+  ) {
+    if (
+      giocatoreOnline.uid ===
+        uid &&
+      sid !==
+        socketIdDaConservare
+    ) {
+      delete stanze[
+        nomeStanza
+      ].giocatoriOnline[
+        sid
+      ];
+    }
+  }
+}
+
+function aggiornaSocketGiocatoreOnline(
+  nomeStanza,
+  uid,
+  socket
+) {
+  if (
+    !stanze[
+      nomeStanza
+    ] ||
+    !uid ||
+    !socket
+  ) {
+    return;
+  }
+
+  for (
+    const sid in
+      stanze[
+        nomeStanza
+      ].giocatoriOnline
+  ) {
+    const g =
+      stanze[
+        nomeStanza
+      ].giocatoriOnline[
+        sid
+      ];
+
+    if (
+      g.uid ===
+      uid
+    ) {
+      g.socket =
+        socket;
+    }
+  }
 }
 
 function inviaConteggioStanze() {
@@ -5323,8 +6818,9 @@ function inviaConteggioStanze() {
   ) {
     const valori =
       Object.values(
-        stanze[nome]
-          .giocatoriOnline
+        stanze[
+          nome
+        ].giocatoriOnline
       );
 
     const uidInPartita =
@@ -5336,18 +6832,11 @@ function inviaConteggioStanze() {
       new Map();
 
     valori.forEach(
-      (g) => {
-        if (
-          !vistiUid.has(
-            g.uid
-          )
-        ) {
-          vistiUid.set(
-            g.uid,
-            g
-          );
-        }
-      }
+      g =>
+        vistiUid.set(
+          g.uid,
+          g
+        )
     );
 
     const valoriUnici =
@@ -5355,14 +6844,16 @@ function inviaConteggioStanze() {
         vistiUid.values()
       );
 
-    conteggi[nome] =
+    conteggi[
+      nome
+    ] =
       valoriUnici.length;
 
     giocatoriPerStanza[
       nome
     ] =
       valoriUnici.map(
-        (g) => ({
+        g => ({
           uid:
             g.uid,
 
@@ -5400,7 +6891,7 @@ function inviaConteggioStanze() {
     });
 
   wss.clients.forEach(
-    (client) => {
+    client => {
       if (
         client.readyState ===
         WebSocket.OPEN
@@ -5416,86 +6907,6 @@ function inviaConteggioStanze() {
 }
 
 /* =========================================================
-   CONNESSIONI ONLINE
-   ========================================================= */
-
-function rimuoviVecchieConnessioniOnline(
-  nomeStanza,
-  uid,
-  socketIdDaConservare
-) {
-  if (
-    !stanze[nomeStanza] ||
-    !uid
-  ) {
-    return;
-  }
-
-  for (
-    const [
-      sid,
-      giocatoreOnline
-    ] of Object.entries(
-      stanze[
-        nomeStanza
-      ].giocatoriOnline
-    )
-  ) {
-    if (
-      giocatoreOnline.uid ===
-        uid &&
-      sid !==
-        socketIdDaConservare
-    ) {
-      delete stanze[
-        nomeStanza
-      ].giocatoriOnline[
-        sid
-      ];
-    }
-  }
-}
-
-function rilevaTipoDispositivo(
-  userAgent
-) {
-  const ua =
-    userAgent || "";
-
-  if (
-    /iPad/i.test(ua) ||
-    (
-      /Android/i.test(
-        ua
-      ) &&
-      !/Mobile/i.test(
-        ua
-      )
-    )
-  ) {
-    return "tablet";
-  }
-
-  if (
-    /iPhone|iPod/i.test(
-      ua
-    ) ||
-    (
-      /Android/i.test(
-        ua
-      ) &&
-      /Mobile/i.test(
-        ua
-      )
-    )
-  ) {
-    return "cellulare";
-  }
-
-  return "computer";
-}
-
-/* =========================================================
    MOVIMENTO
    ========================================================= */
 
@@ -5503,13 +6914,15 @@ function calcolaMovimento(
   posizioneAttuale,
   valoreDado
 ) {
-  let percorso = [];
+  let percorso =
+    [];
 
   let nuovaPosizione =
     posizioneAttuale +
     valoreDado;
 
-  let messaggi = [];
+  let messaggi =
+    [];
 
   let turniDaSaltare =
     0;
@@ -5530,11 +6943,13 @@ function calcolaMovimento(
         1;
 
       p <=
-      CASELLA_VITTORIA;
+        CASELLA_VITTORIA;
 
       p++
     ) {
-      percorso.push(p);
+      percorso.push(
+        p
+      );
     }
 
     const eccesso =
@@ -5551,11 +6966,13 @@ function calcolaMovimento(
         1;
 
       p >=
-      nuovaPosizione;
+        nuovaPosizione;
 
       p--
     ) {
-      percorso.push(p);
+      percorso.push(
+        p
+      );
     }
 
     messaggi.push(
@@ -5568,11 +6985,13 @@ function calcolaMovimento(
         1;
 
       p <=
-      nuovaPosizione;
+        nuovaPosizione;
 
       p++
     ) {
-      percorso.push(p);
+      percorso.push(
+        p
+      );
     }
   }
 
@@ -5580,7 +6999,8 @@ function calcolaMovimento(
     nuovaPosizione ===
     CASELLA_VITTORIA
   ) {
-    vittoria = true;
+    vittoria =
+      true;
 
     messaggi.push(
       "🎉 Hai vinto!"
@@ -5588,15 +7008,10 @@ function calcolaMovimento(
 
     return {
       nuovaPosizione,
-
       percorso,
-
       messaggi,
-
       turniDaSaltare,
-
       vittoria,
-
       tiraAncora
     };
   }
@@ -5605,7 +7020,8 @@ function calcolaMovimento(
     nuovaPosizione ===
     CASELLA_TIRA_ANCORA
   ) {
-    tiraAncora = true;
+    tiraAncora =
+      true;
 
     messaggi.push(
       "Sali sul ponte! Tira ancora i dadi."
@@ -5681,36 +7097,32 @@ function calcolaMovimento(
   if (
     CASELLE_TORNA_A[
       nuovaPosizione
-    ] !== undefined
+    ] !==
+    undefined
   ) {
-    const casellaFinale =
+    const cf =
       CASELLE_TORNA_A[
         nuovaPosizione
       ];
 
     messaggi.push(
-      `Torni alla casella ${casellaFinale}!`
+      `Torni alla casella ${cf}!`
     );
 
     percorso.push(
-      casellaFinale
+      cf
     );
 
     nuovaPosizione =
-      casellaFinale;
+      cf;
   }
 
   return {
     nuovaPosizione,
-
     percorso,
-
     messaggi,
-
     turniDaSaltare,
-
     vittoria,
-
     tiraAncora
   };
 }
@@ -5735,13 +7147,18 @@ function millisecondiMossa(
     secondi > 0
       ? secondi
       : 30
-  ) * 1000;
+  ) *
+  1000;
 }
 
 function fermaTimerTurno(
   partita
 ) {
-  if (!partita) return;
+  if (
+    !partita
+  ) {
+    return;
+  }
 
   if (
     partita.timerTurno
@@ -5758,7 +7175,8 @@ function fermaTimerTurno(
     (
       partita.tokenTimerTurno ||
       0
-    ) + 1;
+    ) +
+    1;
 }
 
 function avviaTimerTurno(
@@ -5822,8 +7240,9 @@ function avviaTimerTurno(
           nomeStanza
         );
       },
+
       durata +
-        TOLLERANZA_MOSSA_MS
+      TOLLERANZA_MOSSA_MS
     );
 }
 
@@ -5841,18 +7260,21 @@ function ripristinaTimerTurno(
   partita.animazioneTiroInCorso =
     false;
 
+  partita.elaborandoTiro =
+    false;
+
+  partita.lockTiro =
+    false;
+
   if (
-    !partita.statoTurno
+    !partita.statoTurno ||
+    partita.statoTurno ===
+      "elaborazione" ||
+    partita.statoTurno ===
+      "animazione"
   ) {
     partita.statoTurno =
       "attivo";
-  }
-
-  if (
-    partita.statoTurno !==
-    "attivo"
-  ) {
-    return;
   }
 
   if (
@@ -5881,7 +7303,7 @@ function ripristinaTimerTurno(
     Math.max(
       0,
       tempoRimanente +
-        TOLLERANZA_MOSSA_MS
+      TOLLERANZA_MOSSA_MS
     );
 
   partita.timerTurno =
@@ -5904,9 +7326,6 @@ function ripristinaTimerTurno(
         partita.timerTurno =
           null;
 
-        partita.animazioneTiroInCorso =
-          false;
-
         partita.statoTurno =
           "scaduto";
 
@@ -5915,6 +7334,7 @@ function ripristinaTimerTurno(
           nomeStanza
         );
       },
+
       ritardo
     );
 }
@@ -5923,13 +7343,11 @@ function passaAlProssimoTurno(
   partita
 ) {
   const numeroGiocatori =
-    (
-      partita.ordineGiocatori ||
-      []
-    ).length;
+    partita.ordineGiocatori.length;
 
   if (
-    numeroGiocatori <= 1
+    numeroGiocatori <=
+    1
   ) {
     return;
   }
@@ -5960,15 +7378,18 @@ function passaAlProssimoTurno(
         idGiocatore
       ];
 
-    if (!giocatore) {
+    if (
+      !giocatore
+    ) {
       continue;
     }
 
     if (
       Number(
         giocatore.turniSaltati ||
-          0
-      ) > 0
+        0
+      ) >
+      0
     ) {
       giocatore.turniSaltati--;
 
@@ -6004,18 +7425,22 @@ function passaAlProssimoTurno(
 }
 
 /* =========================================================
-   LOCK PER PARTITA
+   LOCK PARTITA
    ========================================================= */
 
 async function conLockPartita(
   partita,
   callback
 ) {
-  if (!partita) {
+  if (
+    !partita
+  ) {
     return false;
   }
 
-  if (partita.lockTiro) {
+  if (
+    partita.lockTiro
+  ) {
     return false;
   }
 
@@ -6033,10 +7458,10 @@ async function conLockPartita(
 }
 
 /* =========================================================
-   ELO + CONCLUSIONE PARTITA
+   CLASSIFICA FINALE
    ========================================================= */
 
-function costruisciRisultatiFinali(
+function costruisciClassificaFinale(
   partita,
   vincitoreUid
 ) {
@@ -6047,10 +7472,10 @@ function costruisciRisultatiFinali(
       ? partita.partecipantiOriginali
       : [];
 
-  const dati =
+  const giocatori =
     partecipanti.map(
-      (p) => {
-        const giocatore =
+      p => {
+        const g =
           partita.giocatori[
             p.uid
           ];
@@ -6064,10 +7489,10 @@ function costruisciRisultatiFinali(
           );
 
         let posizioneBoard =
-          giocatore
+          g
             ? Number(
-                giocatore.posizione ||
-                  0
+                g.posizione ||
+                0
               )
             : 0;
 
@@ -6086,8 +7511,8 @@ function costruisciRisultatiFinali(
           nome:
             p.nome ||
             (
-              giocatore
-                ? giocatore.nome
+              g
+                ? g.nome
                 : "Giocatore"
             ),
 
@@ -6098,8 +7523,11 @@ function costruisciRisultatiFinali(
       }
     );
 
-  dati.sort(
-    (a, b) => {
+  giocatori.sort(
+    (
+      a,
+      b
+    ) => {
       if (
         a.uid ===
         vincitoreUid
@@ -6137,15 +7565,23 @@ function costruisciRisultatiFinali(
     }
   );
 
-  return dati.map(
-    (g, indice) => ({
-      ...g,
+  return giocatori.map(
+    (
+      giocatore,
+      indice
+    ) => ({
+      ...giocatore,
 
       posizioneFinale:
-        indice + 1
+        indice +
+        1
     })
   );
 }
+
+/* =========================================================
+   CONCLUSIONE PARTITA / ELO
+   ========================================================= */
 
 async function concludiPartita(
   partita,
@@ -6153,172 +7589,215 @@ async function concludiPartita(
   nomeStanza
 ) {
   if (
-    !partita ||
-    !db
+    !db ||
+    !partita
   ) {
-    return;
+    return null;
   }
 
   if (
     partita.conclusioneEseguita
   ) {
-    return;
+    return partita.risultatiEloFinali ||
+      null;
   }
 
   partita.conclusioneEseguita =
     true;
 
   try {
-    const risultatiFinali =
-      costruisciRisultatiFinali(
+    const classifica =
+      costruisciClassificaFinale(
         partita,
         vincitoreUid
       );
 
-    const aggiornamentiUtenti =
+    const datiElo =
+      [];
+
+    for (
+      const partecipante of
+        classifica
+    ) {
+      const snap =
+        await db
+          .ref(
+            "utenti/" +
+            partecipante.uid
+          )
+          .once(
+            "value"
+          );
+
+      const utente =
+        snap.val();
+
+      if (
+        !utente
+      ) {
+        continue;
+      }
+
+      await migraUtenteElo(
+        partecipante.uid,
+        utente
+      );
+
+      datiElo.push({
+        uid:
+          partecipante.uid,
+
+        nome:
+          partecipante.nome,
+
+        posizioneFinale:
+          partecipante.posizioneFinale,
+
+        posizioneBoard:
+          partecipante.posizioneBoard,
+
+        abbandonato:
+          partecipante.abbandonato,
+
+        ratingPrima:
+          Number(
+            utente.ratingElo ||
+            ELO_INIZIALE
+          ),
+
+        partiteClassificatePrima:
+          Number(
+            utente.partiteClassificate ||
+            0
+          )
+      });
+    }
+
+    let risultatiElo =
+      [];
+
+    if (
+      partita.classificata !==
+      false &&
+      datiElo.length >=
+      2
+    ) {
+      risultatiElo =
+        calcolaVariazioniElo(
+          datiElo
+        );
+    } else {
+      risultatiElo =
+        datiElo.map(
+          g => ({
+            ...g,
+
+            variazioneElo:
+              0,
+
+            ratingDopo:
+              g.ratingPrima
+          })
+        );
+    }
+
+    const aggiornamenti =
       {};
 
     const storicoEloOutput =
       [];
 
-    if (
-      partita.classificata !==
-      false
+    for (
+      const risultato of
+        risultatiElo
     ) {
-      for (
-        const risultato
-          of risultatiFinali
-      ) {
-        const snap =
-          await db
-            .ref(
-              "utenti/" +
-                risultato.uid
-            )
-            .once(
-              "value"
-            );
+      const vinto =
+        risultato.uid ===
+        vincitoreUid;
 
-        const utente =
-          snap.val();
+      const pareggio =
+        classifica.length ===
+          2 &&
+        classifica[0]
+          .posizioneFinale ===
+          classifica[1]
+            .posizioneFinale;
 
-        if (!utente) {
-          continue;
-        }
+      const utentePath =
+        "utenti/" +
+        risultato.uid;
 
-        await assicuratiCampiElo(
-          risultato.uid,
-          utente
+      const partitaGiocataPath =
+        `${utentePath}/partiteGiocate`;
+
+      aggiornamenti[
+        partitaGiocataPath
+      ] =
+        admin.database.ServerValue.increment(
+          1
         );
 
-        risultato.ratingPrima =
-          Number(
-            utente.ratingElo ||
-              ELO_INIZIALE
-          );
-
-        risultato.partiteClassificatePrima =
-          Number(
-            utente.partiteClassificate ||
-              0
-          );
-
-        risultato.partiteGiocatePrima =
-          Number(
-            utente.partiteGiocate ||
-              0
+      if (
+        vinto
+      ) {
+        aggiornamenti[
+          `${utentePath}/partiteVinte`
+        ] =
+          admin.database.ServerValue.increment(
+            1
           );
       }
 
-      const aggiornamentiElo =
-        calcolaAggiornamentiElo(
-          risultatiFinali
-        );
-
-      for (
-        const risultato
-          of aggiornamentiElo
+      if (
+        partita.classificata !==
+        false
       ) {
-        const isWinner =
-          risultato.uid ===
-          vincitoreUid;
-
-        const isDraw =
-          risultato.variazioneElo ===
-            0 &&
-          risultatiFinali.length ===
-            2 &&
-          false;
-
-        const nuovoRating =
+        aggiornamenti[
+          `${utentePath}/ratingElo`
+        ] =
           risultato.ratingDopo;
 
-        const nuovoMassimo =
+        aggiornamenti[
+          `${utentePath}/eloMassimo`
+        ] =
           Math.max(
-            Number(
-              risultato.ratingPrima
-            ),
-            nuovoRating
+            risultato.ratingPrima,
+            risultato.ratingDopo
           );
 
-        const path =
-          `utenti/${risultato.uid}`;
-
-        const aggiornamento = {
-          partiteGiocate:
-            admin.database.ServerValue.increment(
-              1
-            ),
-
-          ratingElo:
-            nuovoRating,
-
-          eloMassimo:
-            nuovoMassimo,
-
-          partiteClassificate:
-            admin.database.ServerValue.increment(
-              1
-            )
-        };
+        aggiornamenti[
+          `${utentePath}/partiteClassificate`
+        ] =
+          admin.database.ServerValue.increment(
+            1
+          );
 
         if (
-          isWinner
+          vinto
         ) {
-          aggiornamento.vittorieClassificate =
+          aggiornamenti[
+            `${utentePath}/vittorieClassificate`
+          ] =
             admin.database.ServerValue.increment(
               1
             );
         } else if (
-          isDraw
+          pareggio
         ) {
-          aggiornamento.pareggiClassificati =
+          aggiornamenti[
+            `${utentePath}/pareggiClassificati`
+          ] =
             admin.database.ServerValue.increment(
               1
             );
         } else {
-          aggiornamento.sconfitteClassificate =
+          aggiornamenti[
+            `${utentePath}/sconfitteClassificate`
+          ] =
             admin.database.ServerValue.increment(
               1
             );
         }
-
-        if (
-          !aggiornamentiUtenti[
-            path
-          ]
-        ) {
-          aggiornamentiUtenti[
-            path
-          ] = {};
-        }
-
-        Object.assign(
-          aggiornamentiUtenti[
-            path
-          ],
-          aggiornamento
-        );
 
         const storicoKey =
           db
@@ -6326,7 +7805,27 @@ async function concludiPartita(
             .push()
             .key;
 
-        aggiornamentiUtenti[
+        const avversari =
+          risultatiElo
+            .filter(
+              g =>
+                g.uid !==
+                risultato.uid
+            )
+            .map(
+              g => ({
+                uid:
+                  g.uid,
+
+                nome:
+                  g.nome,
+
+                posizione:
+                  g.posizioneFinale
+              })
+            );
+
+        aggiornamenti[
           `storicoElo/${risultato.uid}/${storicoKey}`
         ] = {
           data:
@@ -6338,56 +7837,11 @@ async function concludiPartita(
           stanza:
             nomeStanza,
 
-          classificata:
-            true,
-
           posizione:
             risultato.posizioneFinale,
 
           partecipanti:
-            risultatiFinali.length,
-
-          eloPrima:
-            risultato.ratingPrima,
-
-          variazioneElo:
-            risultato.variazioneElo,
-
-          eloDopo:
-            resultadoEloSeguro(
-              risultato.ratingDopo
-            ),
-
-          adversari:
-            risultatiFinali
-              .filter(
-                (p) =>
-                  p.uid !==
-                  risultato.uid
-              )
-              .map(
-                (p) => ({
-                  uid:
-                    p.uid,
-
-                  nome:
-                    p.nome,
-
-                  posizione:
-                    p.posizioneFinale
-                })
-              )
-        };
-
-        storicoEloOutput.push({
-          uid:
-            risultato.uid,
-
-          nome:
-            risultato.nome,
-
-          posizione:
-            risultato.posizioneFinale,
+            classifica.length,
 
           eloPrima:
             risultato.ratingPrima,
@@ -6398,43 +7852,42 @@ async function concludiPartita(
           eloDopo:
             risultato.ratingDopo,
 
-          abbandonato:
-            risultato.abbandonato
-        });
+          classificata:
+            true,
+
+          avversari
+        };
       }
-    } else {
-      for (
-        const risultato
-          of risultatiFinali
-      ) {
-        aggiornamentiUtenti[
-          `utenti/${risultato.uid}/partiteGiocate`
-        ] =
-          admin.database.ServerValue.increment(
-            1
-          );
-      }
+
+      storicoEloOutput.push({
+        uid:
+          risultato.uid,
+
+        nome:
+          risultato.nome,
+
+        posizione:
+          risultato.posizioneFinale,
+
+        eloPrima:
+          risultato.ratingPrima,
+
+        variazioneElo:
+          partita.classificata !==
+          false
+            ? risultato.variazioneElo
+            : 0,
+
+        eloDopo:
+          partita.classificata !==
+          false
+            ? risultato.ratingDopo
+            : risultato.ratingPrima,
+
+        abbandonato:
+          risultato.abbandonato
+      });
     }
-
-    const partecipantiStorico =
-      risultatiFinali.map(
-        (r) => ({
-          uid:
-            r.uid,
-
-          nome:
-            r.nome,
-
-          posizione:
-            r.posizioneFinale,
-
-          posizioneBoard:
-            r.posizioneBoard,
-
-          abbandonato:
-            r.abbandonato
-        })
-      );
 
     const durataSecondi =
       partita.iniziataIl
@@ -6444,10 +7897,18 @@ async function concludiPartita(
               (
                 Date.now() -
                 partita.iniziataIl
-              ) / 1000
+              ) /
+              1000
             )
           )
         : null;
+
+    const vincitore =
+      classifica.find(
+        p =>
+          p.uid ===
+          vincitoreUid
+      );
 
     const storicoPartita =
       {
@@ -6465,14 +7926,9 @@ async function concludiPartita(
           null,
 
         vincitoreNome:
-          (
-            risultatiFinali.find(
-              (r) =>
-                r.uid ===
-                vincitoreUid
-            ) || {}
-          ).nome ||
-          null,
+          vincitore
+            ? vincitore.nome
+            : null,
 
         durataSecondi,
 
@@ -6481,15 +7937,27 @@ async function concludiPartita(
           false,
 
         partecipanti:
-          partecipantiStorico,
+          classifica.map(
+            p => ({
+              uid:
+                p.uid,
+
+              nome:
+                p.nome,
+
+              posizione:
+                p.posizioneFinale,
+
+              posizioneBoard:
+                p.posizioneBoard,
+
+              abbandonato:
+                p.abbandonato
+            })
+          ),
 
         risultatiElo:
           storicoEloOutput
-      };
-
-    const aggiornamentiFirebase =
-      {
-        ...aggiornamentiUtenti
       };
 
     const storicoPartitaKey =
@@ -6500,22 +7968,22 @@ async function concludiPartita(
         .push()
         .key;
 
-    aggiornamentiFirebase[
+    aggiornamenti[
       `storicoPartite/${storicoPartitaKey}`
     ] =
       storicoPartita;
 
-    aggiornamentiFirebase[
+    aggiornamenti[
       `partite/${partita.id}/conclusioneEseguita`
     ] =
       true;
 
-    aggiornamentiFirebase[
+    aggiornamenti[
       `partite/${partita.id}/fase`
     ] =
       "terminata";
 
-    aggiornamentiFirebase[
+    aggiornamenti[
       `partite/${partita.id}/iniziata`
     ] =
       false;
@@ -6523,34 +7991,33 @@ async function concludiPartita(
     await db
       .ref()
       .update(
-        aggiornamentiFirebase
+        aggiornamenti
       );
+
+    partita.risultatiEloFinali =
+      storicoEloOutput;
 
     partita.conclusioneEseguita =
       true;
-  } catch (errore) {
+
+    return storicoEloOutput;
+  } catch (
+    errore
+  ) {
+    partita.conclusioneEseguita =
+      false;
+
     console.error(
       "Errore conclusione partita:",
       errore
     );
 
-    partita.conclusioneEseguita =
-      false;
-
     throw errore;
   }
 }
 
-function resultadoEloSeguro(
-  valore
-) {
-  return limitaElo(
-    valore
-  );
-}
-
 /* =========================================================
-   TIMER / INATTIVITÀ
+   TIMER SCADENZA
    ========================================================= */
 
 async function gestisciScadenzaTurno(
@@ -6558,6 +8025,7 @@ async function gestisciScadenzaTurno(
   nomeStanza
 ) {
   if (
+    !partita ||
     !partita.iniziata
   ) {
     return;
@@ -6581,15 +8049,18 @@ async function gestisciScadenzaTurno(
       idGiocatoreDiTurno
     ];
 
-  if (!giocatore) {
+  if (
+    !giocatore
+  ) {
     return;
   }
 
   giocatore.tentativiAutomaticiConsecutivi =
     Number(
       giocatore.tentativiAutomaticiConsecutivi ||
-        0
-    ) + 1;
+      0
+    ) +
+    1;
 
   if (
     giocatore.tentativiAutomaticiConsecutivi >
@@ -6612,172 +8083,421 @@ async function gestisciScadenzaTurno(
   );
 }
 
+/* =========================================================
+   TIRO DADI
+   ========================================================= */
+
 async function eseguiTiroDadiPerGiocatore(
   partita,
   nomeStanza,
   idGiocatore,
   automatico
 ) {
-  if (!partita) {
-    return;
-  }
+  return conLockPartita(
+    partita,
+    async () => {
+      if (
+        !partita.iniziata
+      ) {
+        return;
+      }
 
-  const eseguito =
-    await conLockPartita(
-      partita,
-      async () => {
-        if (
-          !partita.iniziata
-        ) {
-          return;
-        }
+      if (
+        partita.animazioneTiroInCorso
+      ) {
+        return;
+      }
 
-        if (
-          partita.animazioneTiroInCorso
-        ) {
-          return;
-        }
+      if (
+        partita.ordineGiocatori[
+          partita.turnoAttuale
+        ] !==
+        idGiocatore
+      ) {
+        return;
+      }
 
-        if (
-          partita.ordineGiocatori[
-            partita.turnoAttuale
-          ] !==
-          idGiocatore
-        ) {
-          return;
-        }
+      if (
+        partita.statoTurno !==
+          "attivo" &&
+        !(
+          automatico &&
+          partita.statoTurno ===
+            "scaduto"
+        )
+      ) {
+        return;
+      }
 
-        if (
-          partita.statoTurno !==
-            "attivo" &&
-          !(
-            automatico &&
-            partita.statoTurno ===
-              "scaduto"
-          )
-        ) {
-          return;
-        }
-
-        const tiriEffettuati =
-          Number(
-            partita.tiriEffettuatiNelTurno ||
-              0
-          );
-
-        const tiriConsentiti =
-          Number(
-            partita.tiriConsentitiNelTurno ||
-              1
-          );
-
-        if (
-          tiriEffettuati >=
-          tiriConsentiti
-        ) {
-          return;
-        }
-
-        const giocatore =
-          partita.giocatori[
-            idGiocatore
-          ];
-
-        if (!giocatore) {
-          return;
-        }
-
-        partita.tiriEffettuatiNelTurno =
-          tiriEffettuati + 1;
-
-        partita.elaborandoTiro =
-          true;
-
-        partita.animazioneTiroInCorso =
-          true;
-
-        partita.statoTurno =
-          "elaborazione";
-
-        fermaTimerTurno(
-          partita
+      const tiriEffettuati =
+        Number(
+          partita.tiriEffettuatiNelTurno ||
+          0
         );
 
-        try {
-          const {
-            dado1,
-            dado2
-          } =
-            await lanciaDueDadiSicuri();
+      const tiriConsentiti =
+        Number(
+          partita.tiriConsentitiNelTurno ||
+          1
+        );
 
-          const valoreDado =
-            dado1 +
-            dado2;
+      if (
+        tiriEffettuati >=
+        tiriConsentiti
+      ) {
+        return;
+      }
 
-          const risultato =
-            calcolaMovimento(
-              giocatore.posizione,
-              valoreDado
-            );
+      const giocatore =
+        partita.giocatori[
+          idGiocatore
+        ];
 
-          if (
-            risultato.tiraAncora
-          ) {
-            partita.tiriConsentitiNelTurno =
-              partita.tiriEffettuatiNelTurno +
-              1;
+      if (
+        !giocatore
+      ) {
+        return;
+      }
+
+      partita.tiriEffettuatiNelTurno =
+        tiriEffettuati +
+        1;
+
+      partita.elaborandoTiro =
+        true;
+
+      partita.animazioneTiroInCorso =
+        true;
+
+      partita.statoTurno =
+        "elaborazione";
+
+      fermaTimerTurno(
+        partita
+      );
+
+      try {
+        const {
+          dado1,
+          dado2
+        } =
+          await lanciaDueDadiSicuri();
+
+        const valoreDado =
+          dado1 +
+          dado2;
+
+        const risultato =
+          calcolaMovimento(
+            giocatore.posizione,
+            valoreDado
+          );
+
+        if (
+          risultato.tiraAncora
+        ) {
+          partita.tiriConsentitiNelTurno =
+            partita.tiriEffettuatiNelTurno +
+            1;
+        }
+
+        giocatore.posizione =
+          risultato.nuovaPosizione;
+
+        if (
+          risultato.turniDaSaltare >
+          0
+        ) {
+          giocatore.turniSaltati =
+            risultato.turniDaSaltare;
+        }
+
+        if (
+          !risultato.tiraAncora &&
+          !risultato.vittoria
+        ) {
+          passaAlProssimoTurno(
+            partita
+          );
+        }
+
+        const statoGiocatori =
+          costruisciStatoGiocatori(
+            partita
+          );
+
+        const messaggiFinali =
+          automatico
+            ? [
+                "⏱️ Tempo scaduto: mossa automatica."
+              ].concat(
+                risultato.messaggi
+              )
+            : risultato.messaggi;
+
+        if (
+          risultato.vittoria
+        ) {
+          partita.fase =
+            "terminata";
+
+          partita.iniziata =
+            false;
+
+          partita.statoTurno =
+            "attesa";
+
+          fermaTimerTurno(
+            partita
+          );
+
+          partita.tempoInizioTurno =
+            null;
+
+          partita.scadenzaTurno =
+            null;
+
+          Object.values(
+            partita.giocatori
+          ).forEach(
+            g => {
+              if (
+                g.socket &&
+                g.socket.readyState ===
+                  WebSocket.OPEN
+              ) {
+                try {
+                  g.socket.send(
+                    JSON.stringify({
+                      tipo:
+                        "aggiornamentoPartita",
+
+                      giocatori:
+                        statoGiocatori,
+
+                      dado1,
+
+                      dado2,
+
+                      valoreDado,
+
+                      percorso:
+                        risultato.percorso,
+
+                      idGiocatoreCheHaTirato:
+                        idGiocatore,
+
+                      automatico:
+                        !!automatico,
+
+                      messaggi:
+                        messaggiFinali,
+
+                      turnoDiId:
+                        null,
+
+                      tempoInizioTurno:
+                        null,
+
+                      durataMossaMs:
+                        0,
+
+                      vittoria:
+                        true,
+
+                      vincitore:
+                        giocatore.nome
+                    })
+                  );
+                } catch {}
+              }
+            }
+          );
+
+          await concludiPartita(
+            partita,
+            idGiocatore,
+            nomeStanza
+          );
+
+          inviaListaPartite(
+            nomeStanza
+          );
+
+          inviaConteggioStanze();
+
+          return;
+        }
+
+        partita.statoTurno =
+          "animazione";
+
+        Object.values(
+          partita.giocatori
+        ).forEach(
+          g => {
+            if (
+              g.socket &&
+              g.socket.readyState ===
+                WebSocket.OPEN
+            ) {
+              try {
+                g.socket.send(
+                  JSON.stringify({
+                    tipo:
+                      "aggiornamentoPartita",
+
+                    giocatori:
+                      statoGiocatori,
+
+                    dado1,
+
+                    dado2,
+
+                    valoreDado,
+
+                    percorso:
+                      risultato.percorso,
+
+                    idGiocatoreCheHaTirato:
+                      idGiocatore,
+
+                    automatico:
+                      !!automatico,
+
+                    messaggi:
+                      messaggiFinali,
+
+                    turnoDiId:
+                      null,
+
+                    tempoInizioTurno:
+                      null,
+
+                    durataMossaMs:
+                      0,
+
+                    vittoria:
+                      false,
+
+                    vincitore:
+                      null
+                  })
+                );
+              } catch {}
+            }
           }
+        );
 
-          giocatore.posizione =
-            risultato.nuovaPosizione;
+        await aggiornaStatoPartita(
+          partita.id,
+          {
+            giocatori:
+              preparaGiocatoriPerFirebase(
+                partita.giocatori
+              ),
 
-          if (
-            risultato.turniDaSaltare >
-            0
-          ) {
-            giocatore.turniSaltati =
-              risultato.turniDaSaltare;
+            ordineGiocatori:
+              partita.ordineGiocatori,
+
+            turnoAttuale:
+              partita.turnoAttuale,
+
+            iniziata:
+              partita.iniziata,
+
+            statoTurno:
+              partita.statoTurno,
+
+            tiriEffettuatiNelTurno:
+              partita.tiriEffettuatiNelTurno,
+
+            tiriConsentitiNelTurno:
+              partita.tiriConsentitiNelTurno,
+
+            tempoInizioTurno:
+              null,
+
+            scadenzaTurno:
+              null
           }
+        );
 
-          if (
-            !risultato.tiraAncora &&
-            !risultato.vittoria
-          ) {
-            passaAlProssimoTurno(
-              partita
-            );
-          }
+        const tokenAnimazione =
+          partita.tokenTimerTurno;
 
-          const statoGiocatori =
-            costruisciStatoGiocatori(
-              partita
-            );
+        const durataAnimazioneCompleta =
+          DURATA_ANIMAZIONE_TIRO_MS +
+          (
+            Array.isArray(
+              risultato.percorso
+            )
+              ? risultato.percorso.length *
+                220
+              : 0
+          );
 
-          const messaggiFinali =
-            automatico
-              ? [
-                  "⏱️ Tempo scaduto: mossa automatica."
-                ].concat(
-                  risultato.messaggi
-                )
-              : risultato.messaggi;
+        setTimeout(
+          async () => {
+            const trovato =
+              trovaPartita(
+                partita.id
+              );
 
-          if (
-            risultato.vittoria
-          ) {
-            partita.fase =
-              "terminata";
+            if (
+              !trovato ||
+              trovato.partita !==
+                partita
+            ) {
+              return;
+            }
 
-            partita.iniziata =
+            if (
+              !partita.iniziata
+            ) {
+              return;
+            }
+
+            if (
+              tokenAnimazione !==
+              partita.tokenTimerTurno
+            ) {
+              return;
+            }
+
+            if (
+              partita.statoTurno !==
+              "animazione"
+            ) {
+              return;
+            }
+
+            partita.animazioneTiroInCorso =
               false;
 
             partita.statoTurno =
               "attesa";
 
+            avviaTimerTurno(
+              partita,
+              nomeStanza
+            );
+
+            const statoDopoAnimazione =
+              costruisciStatoGiocatori(
+                partita
+              );
+
+            const idTurnoAttuale =
+              partita
+                .ordineGiocatori[
+                partita.turnoAttuale
+              ];
+
             Object.values(
               partita.giocatori
             ).forEach(
-              (g) => {
+              g => {
                 if (
                   g.socket &&
                   g.socket.readyState ===
@@ -6785,392 +8505,24 @@ async function eseguiTiroDadiPerGiocatore(
                 ) {
                   try {
                     g.socket.send(
-                      JSON.stringify(
-                        {
-                          tipo:
-                            "aggiornamentoPartita",
-
-                          giocatori:
-                            statoGiocatori,
-
-                          dado1,
-
-                          dado2,
-
-                          valoreDado,
-
-                          percorso:
-                            risultato.percorso,
-
-                          idGiocatoreCheHaTirato:
-                            idGiocatore,
-
-                          automatico:
-                            !!automatico,
-
-                          messaggi:
-                            messaggiFinali,
-
-                          turnoDiId:
-                            null,
-
-                          tempoInizioTurno:
-                            null,
-
-                          durataMossaMs:
-                            0,
-
-                          vittoria:
-                            true,
-
-                          vincitore:
-                            giocatore.nome
-                        }
-                      )
-                    );
-                  } catch {}
-                }
-              }
-            );
-
-            fermaTimerTurno(
-              partita
-            );
-
-            partita.tempoInizioTurno =
-              null;
-
-            partita.scadenzaTurno =
-              null;
-
-            await concludiPartita(
-              partita,
-              idGiocatore,
-              nomeStanza
-            );
-
-            return;
-          }
-
-          partita.statoTurno =
-            "animazione";
-
-          Object.values(
-            partita.giocatori
-          ).forEach(
-            (g) => {
-              if (
-                g.socket &&
-                g.socket.readyState ===
-                  WebSocket.OPEN
-              ) {
-                try {
-                  g.socket.send(
-                    JSON.stringify(
-                      {
-                        tipo:
-                          "aggiornamentoPartita",
-
-                        giocatori:
-                          statoGiocatori,
-
-                        dado1,
-
-                        dado2,
-
-                        valoreDado,
-
-                        percorso:
-                          risultato.percorso,
-
-                        idGiocatoreCheHaTirato:
-                          idGiocatore,
-
-                        automatico:
-                          !!automatico,
-
-                        messaggi:
-                          messaggiFinali,
-
-                        turnoDiId:
-                          null,
-
-                        tempoInizioTurno:
-                          null,
-
-                        durataMossaMs:
-                          0,
-
-                        vittoria:
-                          false,
-
-                        vincitore:
-                          null
-                      }
-                    )
-                  );
-                } catch {}
-              }
-            }
-          );
-
-          await aggiornaStatoPartita(
-            partita.id,
-            {
-              giocatori:
-                preparaGiocatoriPerFirebase(
-                  partita.giocatori
-                ),
-
-              ordineGiocatori:
-                partita.ordineGiocatori,
-
-              turnoAttuale:
-                partita.turnoAttuale,
-
-              iniziata:
-                partita.iniziata,
-
-              statoTurno:
-                partita.statoTurno,
-
-              tiriEffettuatiNelTurno:
-                partita.tiriEffettuatiNelTurno,
-
-              tiriConsentitiNelTurno:
-                partita.tiriConsentitiNelTurno,
-
-              tempoInizioTurno:
-                null,
-
-              scadenzaTurno:
-                null
-            }
-          );
-
-          const tokenAnimazione =
-            partita.tokenTimerTurno;
-
-          const durataAnimazioneCompleta =
-            DURATA_ANIMAZIONE_TIRO_MS +
-            (
-              Array.isArray(
-                risultato.percorso
-              )
-                ? risultato
-                    .percorso.length *
-                  220
-                : 0
-            );
-
-          setTimeout(
-            async () => {
-              const trovato =
-                trovaPartita(
-                  partita.id
-                );
-
-              if (
-                !trovato ||
-                trovato.partita !==
-                  partita
-              ) {
-                return;
-              }
-
-              if (
-                !partita.iniziata
-              ) {
-                return;
-              }
-
-              if (
-                tokenAnimazione !==
-                partita.tokenTimerTurno
-              ) {
-                return;
-              }
-
-              if (
-                partita.statoTurno !==
-                "animazione"
-              ) {
-                return;
-              }
-
-              partita.animazioneTiroInCorso =
-                false;
-
-              partita.statoTurno =
-                "attesa";
-
-              avviaTimerTurno(
-                partita,
-                nomeStanza
-              );
-
-              const statoDopoAnimazione =
-                costruisciStatoGiocatori(
-                  partita
-                );
-
-              const idTurnoAttuale =
-                partita
-                  .ordineGiocatori[
-                  partita.turnoAttuale
-                ];
-
-              Object.values(
-                partita.giocatori
-              ).forEach(
-                (g) => {
-                  if (
-                    g.socket &&
-                    g.socket.readyState ===
-                      WebSocket.OPEN
-                  ) {
-                    try {
-                      g.socket.send(
-                        JSON.stringify(
-                          {
-                            tipo:
-                              "statoPartita",
-
-                            giocatori:
-                              statoDopoAnimazione,
-
-                            turnoDiId:
-                              idTurnoAttuale,
-
-                            punteggiOrdineIniziale:
-                              partita.punteggiOrdineIniziale ||
-                              null,
-
-                            tempoInizioTurno:
-                              partita.tempoInizioTurno,
-
-                            durataMossaMs:
-                              millisecondiMossa(
-                                partita
-                              ),
-
-                            scadenzaTurno:
-                              partita.scadenzaTurno,
-
-                            tiriEffettuatiNelTurno:
-                              partita.tiriEffettuatiNelTurno,
-
-                            tiriConsentitiNelTurno:
-                              partita.tiriConsentitiNelTurno,
-
-                            statoTurno:
-                              partita.statoTurno,
-
-                            chatAttiva:
-                              partita.chatAttiva !==
-                              false
-                          }
-                        )
-                      );
-                    } catch {}
-                  }
-                }
-              );
-
-              await aggiornaStatoPartita(
-                partita.id,
-                {
-                  turnoAttuale:
-                    partita.turnoAttuale,
-
-                  iniziata:
-                    partita.iniziata,
-
-                  statoTurno:
-                    partita.statoTurno,
-
-                  tiriEffettuatiNelTurno:
-                    partita.tiriEffettuatiNelTurno,
-
-                  tiriConsentitiNelTurno:
-                    partita.tiriConsentitiNelTurno,
-
-                  tempoInizioTurno:
-                    partita.tempoInizioTurno,
-
-                  scadenzaTurno:
-                    partita.scadenzaTurno
-                }
-              );
-            },
-            durataAnimazioneCompleta
-          );
-        } catch (erroreTiro) {
-          console.error(
-            "Errore durante il tiro dei dadi:",
-            erroreTiro
-          );
-
-          partita.tiriEffettuatiNelTurno =
-            Math.max(
-              0,
-              Number(
-                partita
-                  .tiriEffettuatiNelTurno ||
-                  0
-              ) - 1
-            );
-
-          partita.animazioneTiroInCorso =
-            false;
-
-          partita.statoTurno =
-            "attivo";
-
-          avviaTimerTurno(
-            partita,
-            nomeStanza
-          );
-
-          const idAttuale =
-            partita
-              .ordineGiocatori[
-              partita.turnoAttuale
-            ];
-
-          const statoGiocatori =
-            costruisciStatoGiocatori(
-              partita
-            );
-
-          Object.values(
-            partita.giocatori
-          ).forEach(
-            (g) => {
-              if (
-                g.socket &&
-                g.socket.readyState ===
-                  WebSocket.OPEN
-              ) {
-                try {
-                  g.socket.send(
-                    JSON.stringify(
-                      {
+                      JSON.stringify({
                         tipo:
                           "statoPartita",
 
                         giocatori:
-                          statoGiocatori,
+                          statoDopoAnimazione,
 
                         turnoDiId:
-                          idAttuale,
+                          idTurnoAttuale,
 
-                        messaggi: [
-                          "Errore nel tiro dei dadi, riprova."
-                        ],
+                        punteggiOrdineIniziale:
+                          partita
+                            .punteggiOrdineIniziale ||
+                          null,
 
                         tempoInizioTurno:
-                          partita.tempoInizioTurno,
+                          partita
+                            .tempoInizioTurno,
 
                         durataMossaMs:
                           millisecondiMossa(
@@ -7178,30 +8530,167 @@ async function eseguiTiroDadiPerGiocatore(
                           ),
 
                         scadenzaTurno:
-                          partita.scadenzaTurno,
+                          partita
+                            .scadenzaTurno,
+
+                        tiriEffettuatiNelTurno:
+                          partita
+                            .tiriEffettuatiNelTurno,
+
+                        tiriConsentitiNelTurno:
+                          partita
+                            .tiriConsentitiNelTurno,
 
                         statoTurno:
-                          "attivo",
+                          partita
+                            .statoTurno,
+
+                        classificata:
+                          partita.classificata !==
+                          false,
 
                         chatAttiva:
                           partita.chatAttiva !==
                           false
-                      }
-                    )
-                  );
-                } catch {}
+                      })
+                    );
+                  } catch {}
+                }
               }
-            }
-          );
-        } finally {
-          partita.elaborandoTiro =
-            false;
-        }
-      }
-    );
+            );
 
-  return eseguito;
+            await aggiornaStatoPartita(
+              partita.id,
+              {
+                turnoAttuale:
+                  partita.turnoAttuale,
+
+                iniziata:
+                  partita.iniziata,
+
+                statoTurno:
+                  partita.statoTurno,
+
+                tiriEffettuatiNelTurno:
+                  partita
+                    .tiriEffettuatiNelTurno,
+
+                tiriConsentitiNelTurno:
+                  partita
+                    .tiriConsentitiNelTurno,
+
+                tempoInizioTurno:
+                  partita
+                    .tempoInizioTurno,
+
+                scadenzaTurno:
+                  partita
+                    .scadenzaTurno
+              }
+            );
+          },
+
+          durataAnimazioneCompleta
+        );
+      } catch (
+        erroreTiro
+      ) {
+        console.error(
+          "Errore durante il tiro dei dadi:",
+          erroreTiro
+        );
+
+        partita.tiriEffettuatiNelTurno =
+          Math.max(
+            0,
+            tiriEffettuati
+          );
+
+        partita.animazioneTiroInCorso =
+          false;
+
+        partita.statoTurno =
+          "attivo";
+
+        avviaTimerTurno(
+          partita,
+          nomeStanza
+        );
+
+        const idAttuale =
+          partita
+            .ordineGiocatori[
+            partita.turnoAttuale
+          ];
+
+        const statoGiocatori =
+          costruisciStatoGiocatori(
+            partita
+          );
+
+        Object.values(
+          partita.giocatori
+        ).forEach(
+          g => {
+            if (
+              g.socket &&
+              g.socket.readyState ===
+                WebSocket.OPEN
+            ) {
+              try {
+                g.socket.send(
+                  JSON.stringify({
+                    tipo:
+                      "statoPartita",
+
+                    giocatori:
+                      statoGiocatori,
+
+                    turnoDiId:
+                      idAttuale,
+
+                    messaggi: [
+                      "Errore nel tiro dei dadi, riprova."
+                    ],
+
+                    tempoInizioTurno:
+                      partita.tempoInizioTurno,
+
+                    durataMossaMs:
+                      millisecondiMossa(
+                        partita
+                      ),
+
+                    scadenzaTurno:
+                      partita.scadenzaTurno,
+
+                    statoTurno:
+                      "attivo",
+
+                    classificata:
+                      partita.classificata !==
+                      false,
+
+                    chatAttiva:
+                      partita.chatAttiva !==
+                      false
+                  })
+                );
+              } catch {}
+            }
+          }
+        );
+      } finally {
+        partita.elaborandoTiro =
+          false;
+      }
+    }
+  );
 }
+
+/* =========================================================
+   ABBANDONO AUTOMATICO
+   ========================================================= */
 
 async function forzaAbbandonoPerInattivita(
   partita,
@@ -7225,7 +8714,9 @@ async function forzaAbbandonoPerInattivita(
       idGiocatore
     ].nome;
 
-  if (!partita.abbandonati) {
+  if (
+    !partita.abbandonati
+  ) {
     partita.abbandonati =
       {};
   }
@@ -7248,11 +8739,8 @@ async function forzaAbbandonoPerInattivita(
   ];
 
   partita.ordineGiocatori =
-    (
-      partita.ordineGiocatori ||
-      []
-    ).filter(
-      (id) =>
+    partita.ordineGiocatori.filter(
+      id =>
         id !==
         idGiocatore
     );
@@ -7261,6 +8749,14 @@ async function forzaAbbandonoPerInattivita(
     Object.keys(
       partita.giocatori
     );
+
+  if (
+    partita.turnoAttuale >=
+    partita.ordineGiocatori.length
+  ) {
+    partita.turnoAttuale =
+      0;
+  }
 
   if (
     restanti.length ===
@@ -7278,14 +8774,6 @@ async function forzaAbbandonoPerInattivita(
     inviaConteggioStanze();
 
     return;
-  }
-
-  if (
-    partita.turnoAttuale >=
-    partita.ordineGiocatori.length
-  ) {
-    partita.turnoAttuale =
-      0;
   }
 
   if (
@@ -7308,7 +8796,7 @@ async function forzaAbbandonoPerInattivita(
     Object.values(
       partita.giocatori
     ).forEach(
-      (g) => {
+      g => {
         if (
           g.socket &&
           g.socket.readyState ===
@@ -7316,29 +8804,27 @@ async function forzaAbbandonoPerInattivita(
         ) {
           try {
             g.socket.send(
-              JSON.stringify(
-                {
-                  tipo:
-                    "statoPartita",
+              JSON.stringify({
+                tipo:
+                  "statoPartita",
 
-                  giocatori:
-                    statoGiocatori,
+                giocatori:
+                  statoGiocatori,
 
-                  turnoDiId:
-                    vincitoreId,
+                turnoDiId:
+                  vincitoreId,
 
-                  vittoria:
-                    true,
+                vittoria:
+                  true,
 
-                  vincitore:
-                    vincitoreNome,
+                vincitore:
+                  vincitoreNome,
 
-                  messaggi: [
-                    nomeUscente +
-                      " è stato rimosso per inattività prolungata."
-                  ]
-                }
-              )
+                messaggi: [
+                  nomeUscente +
+                  " è stato rimosso per inattività prolungata."
+                ]
+              })
             );
           } catch {}
         }
@@ -7377,9 +8863,14 @@ async function forzaAbbandonoPerInattivita(
     partita.tiriConsentitiNelTurno =
       1;
 
-    partidaEstadoSeguro(
-      partita
-    );
+    partita.animazioneTiroInCorso =
+      false;
+
+    partita.elaborandoTiro =
+      false;
+
+    partita.statoTurno =
+      "attesa";
 
     avviaTimerTurno(
       partita,
@@ -7394,7 +8885,7 @@ async function forzaAbbandonoPerInattivita(
     Object.values(
       partita.giocatori
     ).forEach(
-      (g) => {
+      g => {
         if (
           g.socket &&
           g.socket.readyState ===
@@ -7402,37 +8893,35 @@ async function forzaAbbandonoPerInattivita(
         ) {
           try {
             g.socket.send(
-              JSON.stringify(
-                {
-                  tipo:
-                    "statoPartita",
+              JSON.stringify({
+                tipo:
+                  "statoPartita",
 
-                  giocatori:
-                    statoGiocatori,
+                giocatori:
+                  statoGiocatori,
 
-                  turnoDiId:
-                    idAttuale,
+                turnoDiId:
+                  idAttuale,
 
-                  messaggi: [
-                    nomeUscente +
-                      " è stato rimosso per inattività prolungata."
-                  ],
+                messaggi: [
+                  nomeUscente +
+                  " è stato rimosso per inattività prolungata."
+                ],
 
-                  tempoInizioTurno:
-                    partita.tempoInizioTurno,
+                tempoInizioTurno:
+                  partita.tempoInizioTurno,
 
-                  durataMossaMs:
-                    millisecondiMossa(
-                      partita
-                    ),
+                durataMossaMs:
+                  millisecondiMossa(
+                    partita
+                  ),
 
-                  scadenzaTurno:
-                    partita.scadenzaTurno,
+                scadenzaTurno:
+                  partita.scadenzaTurno,
 
-                  statoTurno:
-                    partita.statoTurno
-                }
-              )
+                statoTurno:
+                  partita.statoTurno
+              })
             );
           } catch {}
         }
@@ -7449,6 +8938,9 @@ async function forzaAbbandonoPerInattivita(
 
         ordineGiocatori:
           partita.ordineGiocatori,
+
+        abbandonati:
+          partita.abbandonati,
 
         turnoAttuale:
           partita.turnoAttuale,
@@ -7478,26 +8970,6 @@ async function forzaAbbandonoPerInattivita(
   inviaConteggioStanze();
 }
 
-function partidaEstadoSeguro(
-  partita
-) {
-  if (
-    !partita ||
-    !partita.iniziata
-  ) {
-    return;
-  }
-
-  partita.animazioneTiroInCorso =
-    false;
-
-  partita.elaborandoTiro =
-    false;
-
-  partita.statoTurno =
-    "attesa";
-}
-
 /* =========================================================
    DETERMINAZIONE ORDINE
    ========================================================= */
@@ -7508,7 +8980,7 @@ function calcolaOrdineDaiRisultati(
 ) {
   const coppie =
     tuttiGliUid.map(
-      (uid) => ({
+      uid => ({
         uid,
 
         punteggio:
@@ -7521,7 +8993,10 @@ function calcolaOrdineDaiRisultati(
     );
 
   coppie.sort(
-    (a, b) =>
+    (
+      a,
+      b
+    ) =>
       b.punteggio -
       a.punteggio
   );
@@ -7532,14 +9007,18 @@ function calcolaOrdineDaiRisultati(
     i++
   ) {
     let j =
-      i + 1;
+      i +
+      1;
 
     while (
-      j < coppie.length &&
-      coppie[j]
-        .punteggio ===
-        coppie[i]
-          .punteggio
+      j <
+        coppie.length &&
+      coppie[
+        j
+      ].punteggio ===
+        coppie[
+          i
+        ].punteggio
     ) {
       j++;
     }
@@ -7559,20 +9038,21 @@ function calcolaOrdineDaiRisultati(
               j
             )
             .map(
-              (c) =>
+              c =>
                 c.uid
             )
       };
     }
 
     i =
-      j - 1;
+      j -
+      1;
   }
 
   return {
     ordineFinale:
       coppie.map(
-        (c) =>
+        c =>
           c.uid
       ),
 
@@ -7594,8 +9074,9 @@ function rimuoviGiocatoreDaDeterminazione(
       partita.ordineDeterminazione ||
       []
     ).filter(
-      (u2) =>
-        u2 !== uid
+      u2 =>
+        u2 !==
+        uid
     );
 
   partita.codaDeterminazione =
@@ -7603,17 +9084,17 @@ function rimuoviGiocatoreDaDeterminazione(
       partita.codaDeterminazione ||
       []
     ).filter(
-      (u2) =>
-        u2 !== uid
+      u2 =>
+        u2 !==
+        uid
     );
 
   if (
     partita.risultatiDeterminazione
   ) {
-    delete partita
-      .risultatiDeterminazione[
-        uid
-      ];
+    delete partita.risultatiDeterminazione[
+      uid
+    ];
   }
 
   if (
@@ -7621,8 +9102,9 @@ function rimuoviGiocatoreDaDeterminazione(
   ) {
     partita.gruppoSpareggioAttuale =
       partita.gruppoSpareggioAttuale.filter(
-        (u2) =>
-          u2 !== uid
+        u2 =>
+          u2 !==
+          uid
       );
   }
 }
@@ -7636,16 +9118,17 @@ function inviaStatoDeterminazione(
       partita.ordineDeterminazione ||
       []
     ).map(
-      (uid) => ({
+      uid => ({
         uid,
 
         nome:
           partita.giocatori[
             uid
           ]
-            ? partita.giocatori[
+            ? partidaNome(
+                partita,
                 uid
-              ].nome
+              )
             : "?",
 
         avatar:
@@ -7666,7 +9149,8 @@ function inviaStatoDeterminazione(
           partita
             .risultatiDeterminazione[
               uid
-            ] != null
+            ] !=
+            null
             ? partita
                 .risultatiDeterminazione[
                   uid
@@ -7698,17 +9182,13 @@ function inviaStatoDeterminazione(
       durataMossaMs:
         millisecondiMossa(
           partita
-        ),
-
-      chatAttiva:
-        partita.chatAttiva !==
-        false
+        )
     });
 
   Object.values(
     partita.giocatori
   ).forEach(
-    (g) => {
+    g => {
       if (
         g.socket &&
         g.socket.readyState ===
@@ -7722,6 +9202,16 @@ function inviaStatoDeterminazione(
       }
     }
   );
+}
+
+function partidaNome(
+  partita,
+  uid
+) {
+  return partita
+    .giocatori[
+      uid
+    ].nome;
 }
 
 function avviaTimerDeterminazione(
@@ -7742,17 +9232,18 @@ function avviaTimerDeterminazione(
           partita,
           nomeStanza
         ).catch(
-          (errore) =>
+          errore =>
             console.error(
               "Errore scadenza determinazione:",
               errore
             )
         );
       },
+
       millisecondiMossa(
         partita
       ) +
-        TOLLERANZA_MOSSA_MS
+      TOLLERANZA_MOSSA_MS
     );
 }
 
@@ -7771,26 +9262,34 @@ async function gestisciScadenzaDeterminazione(
     partita
       .turnoInCorsoDeterminazione;
 
-  if (!uid) return;
+  if (
+    !uid
+  ) {
+    return;
+  }
 
   const giocatore =
     partita.giocatori[
       uid
     ];
 
-  if (!giocatore) {
+  if (
+    !giocatore
+  ) {
     return;
   }
 
   giocatore.tentativiAutomaticiConsecutivi =
-    Number(
+    (
       giocatore.tentativiAutomaticiConsecutivi ||
-        0
-    ) + 1;
+      0
+    ) +
+    1;
 
   if (
-    giocatore.tentativiAutomaticiConsecutivi >
-    3
+    jogadorLimite(
+      giocatore
+    )
   ) {
     await espelliPerInattivitaDuranteDeterminazione(
       partita,
@@ -7806,6 +9305,19 @@ async function gestisciScadenzaDeterminazione(
     nomeStanza,
     uid,
     true
+  );
+}
+
+function jogadorLimite(
+  giocatore
+) {
+  return (
+    Number(
+      giocatore
+        .tentativiAutomaticiConsecutivi ||
+      0
+    ) >
+    3
   );
 }
 
@@ -7892,7 +9404,7 @@ async function eseguiTiroDeterminazionePerGiocatore(
     Object.values(
       partita.giocatori
     ).forEach(
-      (g) => {
+      g => {
         if (
           g.socket &&
           g.socket.readyState ===
@@ -7913,27 +9425,15 @@ async function eseguiTiroDeterminazionePerGiocatore(
           partita,
           nomeStanza
         ).catch(
-          (errore) =>
+          errore =>
             console.error(
               "Errore avanzamento determinazione:",
               errore
             )
         );
       },
+
       1600
-    );
-  } catch (errore) {
-    console.error(
-      "Errore tiro determinazione:",
-      errore
-    );
-
-    partita.turnoInCorsoDeterminazione =
-      uid;
-
-    avviaTimerDeterminazione(
-      partita,
-      nomeStanza
     );
   } finally {
     partita.elaborandoTiro =
@@ -7947,9 +9447,6 @@ function iniziaFaseDeterminazione(
 ) {
   partita.fase =
     "determinazione_ordine";
-
-  partita.statoTurno =
-    "attesa";
 
   partita.ordineDeterminazione =
     Object.keys(
@@ -7974,7 +9471,7 @@ function iniziaFaseDeterminazione(
     partita,
     nomeStanza
   ).catch(
-    (errore) =>
+    errore =>
       console.error(
         "Errore avvio determinazione:",
         errore
@@ -8026,12 +9523,9 @@ async function avanzaDeterminazione(
     partita.gruppoSpareggioAttuale =
       null;
 
-    const ordineFinale =
-      esito.ordineFinale;
-
     const nomiOrdineFinale =
-      ordineFinale.map(
-        (uid) =>
+      esito.ordineFinale.map(
+        uid =>
           partita.giocatori[
             uid
           ].nome
@@ -8040,16 +9534,17 @@ async function avanzaDeterminazione(
     const punteggiOrdineFinale =
       {};
 
-    ordineFinale.forEach(
-      (uid) => {
+    esito.ordineFinale.forEach(
+      uid => {
         punteggiOrdineFinale[
           partita.giocatori[
             uid
           ].nome
         ] =
-          partita.risultatiDeterminazione[
-            uid
-          ];
+          partita
+            .risultatiDeterminazione[
+              uid
+            ];
       }
     );
 
@@ -8068,7 +9563,7 @@ async function avanzaDeterminazione(
     Object.values(
       partita.giocatori
     ).forEach(
-      (g) => {
+      g => {
         if (
           g.socket &&
           g.socket.readyState ===
@@ -8088,15 +9583,16 @@ async function avanzaDeterminazione(
         completaDeterminazione(
           partita,
           nomeStanza,
-          ordineFinale
+          esito.ordineFinale
         ).catch(
-          (errore) =>
+          errore =>
             console.error(
               "Errore completamento determinazione:",
               errore
             )
         );
       },
+
       2600
     );
 
@@ -8135,7 +9631,9 @@ async function espelliPerInattivitaDuranteDeterminazione(
         ].nome
       : "?";
 
-  if (!partita.abbandonati) {
+  if (
+    !partita.abbandonati
+  ) {
     partita.abbandonati =
       {};
   }
@@ -8200,9 +9698,6 @@ async function espelliPerInattivitaDuranteDeterminazione(
       ordineGiocatori:
         partita.ordineGiocatori,
 
-      partecipantiOriginali:
-        partita.partecipantiOriginali,
-
       abbandonati:
         partita.abbandonati,
 
@@ -8224,7 +9719,6 @@ async function completaDeterminazione(
   ordineFinale
 ) {
   if (
-    !partita ||
     !ordineFinale ||
     !ordineFinale.length
   ) {
@@ -8264,15 +9758,8 @@ async function completaDeterminazione(
   const punteggiPerNome =
     {};
 
-  ordemFinalSafe(
-    ordemFinalSafeArgs(
-      ordemFinale,
-      partidaSeguro
-    )
-  );
-
-  ordemFinale.forEach(
-    (uid) => {
+  ordineFinale.forEach(
+    uid => {
       punteggiPerNome[
         partita.giocatori[
           uid
@@ -8280,8 +9767,8 @@ async function completaDeterminazione(
       ] =
         partita
           .risultatiDeterminazione[
-          uid
-        ];
+            uid
+          ];
     }
   );
 
@@ -8289,9 +9776,7 @@ async function completaDeterminazione(
     punteggiPerNome;
 
   const primoUid =
-    ordemPrimeiro(
-      ordineFinale
-    );
+    ordineFinale[0];
 
   const primoGiocatore =
     partita.giocatori[
@@ -8316,7 +9801,7 @@ async function completaDeterminazione(
   Object.values(
     partita.giocatori
   ).forEach(
-    (g) => {
+    g => {
       if (
         g.socket &&
         g.socket.readyState ===
@@ -8330,7 +9815,7 @@ async function completaDeterminazione(
 
               ordineGiocatori:
                 ordineFinale.map(
-                  (id) =>
+                  id =>
                     partita.giocatori[
                       id
                     ].nome
@@ -8378,13 +9863,6 @@ async function completaDeterminazione(
               scadenzaTurno:
                 partita.scadenzaTurno,
 
-              statoTurno:
-                partita.statoTurno,
-
-              classificata:
-                partita.classificata !==
-                false,
-
               vittoria:
                 false,
 
@@ -8399,6 +9877,7 @@ async function completaDeterminazione(
 
   await salvaPartita({
     ...partita,
+
     stanza:
       nomeStanza
   });
@@ -8408,36 +9887,6 @@ async function completaDeterminazione(
   );
 
   inviaConteggioStanze();
-}
-
-/*
- * Piccole funzioni di sicurezza per evitare
- * riferimenti accidentali a nomi errati
- * durante la ricostruzione dello stato.
- */
-
-function ordemFinalSafeArgs(
-  valore
-) {
-  return valore;
-}
-
-function ordemFinalSafe(
-  valore
-) {
-  return valore;
-}
-
-function ordemPrimeiro(
-  array
-) {
-  return array[0];
-}
-
-function partidaSeguro(
-  valore
-) {
-  return valore;
 }
 
 async function avviaPartitaAutomaticamente(
@@ -8462,19 +9911,13 @@ async function avviaPartitaAutomaticamente(
     ...partita,
 
     stanza:
-      nomeStanza,
-
-    fase:
-      partita.fase,
-
-    iniziata:
-      partita.iniziata
+      nomeStanza
   });
 
   Object.values(
     partita.giocatori
   ).forEach(
-    (g) => {
+    g => {
       if (
         g.socket &&
         g.socket.readyState ===
@@ -8487,11 +9930,7 @@ async function avviaPartitaAutomaticamente(
                 "partitaAvviata",
 
               partitaId:
-                partita.id,
-
-              classificata:
-                partita.classificata !==
-                false
+                partita.id
             })
           );
         } catch {}
@@ -8507,7 +9946,7 @@ async function avviaPartitaAutomaticamente(
 }
 
 /* =========================================================
-   USCITA PARTITA IN ATTESA
+   USCITA DA PARTITA IN ATTESA
    ========================================================= */
 
 async function esciDaPartitaInAttesa(
@@ -8534,7 +9973,9 @@ async function esciDaPartitaInAttesa(
       uid
     ];
 
-  if (!giocatoreUscente) {
+  if (
+    !giocatoreUscente
+  ) {
     return false;
   }
 
@@ -8555,8 +9996,18 @@ async function esciDaPartitaInAttesa(
       partita.ordineGiocatori ||
       []
     ).filter(
-      (id) =>
+      id =>
         id !==
+        uid
+    );
+
+  partita.partecipantiOriginali =
+    (
+      partita.partecipantiOriginali ||
+      []
+    ).filter(
+      p =>
+        p.uid !==
         uid
     );
 
@@ -8586,9 +10037,12 @@ async function esciDaPartitaInAttesa(
     return true;
   }
 
-  if (eraCreatore) {
+  if (
+    eraCreatore
+  ) {
     const nuovoCreatoreUid =
-      partita.ordineGiocatori[
+      partita
+        .ordineGiocatori[
         0
       ];
 
@@ -8648,7 +10102,9 @@ async function esciDaPartitaInAttesa(
       partitaId:
         partita.id,
 
-      uid,
+      uid:
+
+        uid,
 
       nome:
         nomeUscente,
@@ -8668,7 +10124,7 @@ async function esciDaPartitaInAttesa(
 }
 
 /* =========================================================
-   RIPRISTINO PARTITE FIREBASE
+   RIPRISTINO PARTITE
    ========================================================= */
 
 async function ripristinaPartiteDaFirebase() {
@@ -8680,16 +10136,21 @@ async function ripristinaPartiteDaFirebase() {
       partiteFirebase
   ) {
     const p =
-      partiteFirebase[id];
+      partiteFirebase[
+        id
+      ];
 
     if (
-      !stanze[p.stanza]
+      !stanze[
+        p.stanza
+      ]
     ) {
       continue;
     }
 
     const giocatori =
-      p.giocatori || {};
+      p.giocatori ||
+      {};
 
     const partecipantiOriginali =
       Array.isArray(
@@ -8699,7 +10160,10 @@ async function ripristinaPartiteDaFirebase() {
         : Object.entries(
             giocatori
           ).map(
-            ([uid, g]) => ({
+            ([
+              uid,
+              g
+            ]) => ({
               uid,
 
               nome:
@@ -8710,10 +10174,10 @@ async function ripristinaPartiteDaFirebase() {
 
     stanze[
       p.stanza
-    ].partite[id] = {
+    ].partite[
+      id
+    ] = {
       ...p,
-
-      id,
 
       maxGiocatori:
         p.maxGiocatori ||
@@ -8732,7 +10196,12 @@ async function ripristinaPartiteDaFirebase() {
         p.classificata !==
         false,
 
-      giocatori,
+      giocatori:
+        giocatori,
+
+      ordineGiocatori:
+        p.ordineGiocatori ||
+        [],
 
       partecipantiOriginali,
 
@@ -8740,16 +10209,10 @@ async function ripristinaPartiteDaFirebase() {
         p.abbandonati ||
         {},
 
-      ordineGiocatori:
-        p.ordineGiocatori ||
-        Object.keys(
-          giocatori
-        ),
-
       turnoAttuale:
         Number(
           p.turnoAttuale ||
-            0
+          0
         ),
 
       iniziata:
@@ -8771,13 +10234,13 @@ async function ripristinaPartiteDaFirebase() {
       tiriEffettuatiNelTurno:
         Number(
           p.tiriEffettuatiNelTurno ||
-            0
+          0
         ),
 
       tiriConsentitiNelTurno:
         Number(
           p.tiriConsentitiNelTurno ||
-            1
+          1
         ),
 
       tempoInizioTurno:
@@ -8806,26 +10269,33 @@ async function ripristinaPartiteDaFirebase() {
       lockTiro:
         false,
 
+      punteggiOrdineIniziale:
+        p.punteggiOrdineIniziale ||
+        null,
+
       coppieAudioApprovate:
         new Set(),
-
-      conclusioneEseguita:
-        p.conclusioneEseguita ===
-        true,
 
       fase:
         p.fase ||
         (
-          p.iniziata
+          p.iniziata ===
+          true
             ? "in_corso"
             : "attesa_giocatori"
-        )
+        ),
+
+      conclusioneEseguita:
+        p.conclusioneEseguita ===
+        true
     };
 
     const partitaRipristinata =
       stanze[
         p.stanza
-      ].partite[id];
+      ].partite[
+        id
+      ];
 
     for (
       const uid in
@@ -8841,11 +10311,11 @@ async function ripristinaPartiteDaFirebase() {
       partitaRipristinata.fase ===
       "terminata"
     ) {
-      partitaRipristinata.statoTurno =
-        "attesa";
-
       partitaRipristinata.iniziata =
         false;
+
+      partitaRipristinata.statoTurno =
+        "attesa";
 
       continue;
     }
@@ -8883,7 +10353,7 @@ async function ripristinaPartiteDaFirebase() {
       Object.keys(
         partitaRipristinata.giocatori
       ).length ===
-        partitaRipristinata.maxGiocatori
+      partitaRipristinata.maxGiocatori
     ) {
       iniziaFaseDeterminazione(
         partitaRipristinata,
@@ -8904,31 +10374,12 @@ async function ripristinaPartiteDaFirebase() {
    WEBSOCKET
    ========================================================= */
 
-let contatoreId = 0;
-
-const socketsPerId =
-  {};
-
 wss.on(
   "connection",
-  (socket, request) => {
-    const origin =
-      request.headers.origin;
-
-    if (
-      origin &&
-      !ORIGINI_CONSENTITE.includes(
-        origin
-      )
-    ) {
-      socket.close(
-        1008,
-        "Origin non consentita"
-      );
-
-      return;
-    }
-
+  (
+    socket,
+    request
+  ) => {
     socket.isAlive =
       true;
 
@@ -8982,34 +10433,15 @@ wss.on(
 
     socket.on(
       "message",
-      async (message) => {
+      async message => {
         try {
-          if (
-            typeof message !==
-            "string" &&
-            !Buffer.isBuffer(
-              message
-            )
-          ) {
-            return;
-          }
-
-          if (
-            Buffer.isBuffer(
-              message
-            ) &&
-            message.length >
-              100 * 1024
-          ) {
-            return;
-          }
-
           let dati;
 
           try {
-            dati = JSON.parse(
-              message.toString()
-            );
+            dati =
+              JSON.parse(
+                message.toString()
+              );
           } catch {
             return;
           }
@@ -9022,9 +10454,9 @@ wss.on(
             return;
           }
 
-          /* ======================
-             CONTEGGIO STANZE
-             ====================== */
+          /* =================================================
+             CONTEGGIO
+             ================================================= */
 
           if (
             dati.tipo ===
@@ -9035,9 +10467,9 @@ wss.on(
             return;
           }
 
-          /* ======================
+          /* =================================================
              AUDIO / WEBRTC
-             ====================== */
+             ================================================= */
 
           if (
             dati.tipo ===
@@ -9051,7 +10483,9 @@ wss.on(
             dati.tipo ===
               "webrtc-ice-candidate"
           ) {
-            if (!uid) {
+            if (
+              !uid
+            ) {
               return;
             }
 
@@ -9060,13 +10494,16 @@ wss.on(
                 dati.partitaId
               );
 
-            if (!trovato) {
+            if (
+              !trovato
+            ) {
               return;
             }
 
             const {
               partita
-            } = trovato;
+            } =
+              trovato;
 
             if (
               !partita.giocatori[
@@ -9161,15 +10598,13 @@ wss.on(
             }
 
             const coppiaApprovata =
-              partita
-                .coppieAudioApprovate &&
-              partita
-                .coppieAudioApprovate.has(
-                  idConversazione(
-                    uid,
-                    destinatarioUid
-                  )
-                );
+              partita.coppieAudioApprovate &&
+              partita.coppieAudioApprovate.has(
+                idConversazione(
+                  uid,
+                  destinatarioUid
+                )
+              );
 
             if (
               !coppiaApprovata
@@ -9198,9 +10633,9 @@ wss.on(
             return;
           }
 
-          /* ======================
+          /* =================================================
              ENTRA LOBBY
-             ====================== */
+             ================================================= */
 
           if (
             dati.tipo ===
@@ -9220,7 +10655,9 @@ wss.on(
               return;
             }
 
-            if (!uid) {
+            if (
+              !uid
+            ) {
               socket.send(
                 JSON.stringify({
                   tipo:
@@ -9231,16 +10668,10 @@ wss.on(
               return;
             }
 
-            const nomeStanza =
-              String(
-                dati.stanza ||
-                  ""
-              ).trim();
-
             if (
-              !nomeStanza ||
+              !dati.stanza ||
               !stanze[
-                nomeStanza
+                dati.stanza
               ]
             ) {
               socket.send(
@@ -9261,14 +10692,16 @@ wss.on(
                 await db
                   .ref(
                     "utenti/" +
-                      uid
+                    uid
                   )
                   .once(
                     "value"
                   )
               ).val();
 
-            if (!utenteDb) {
+            if (
+              !utenteDb
+            ) {
               socket.send(
                 JSON.stringify({
                   tipo:
@@ -9322,13 +10755,13 @@ wss.on(
               return;
             }
 
-            await assicuratiCampiElo(
+            await migraUtenteElo(
               uid,
               utenteDb
             );
 
             stanzaAttuale =
-              nomeStanza;
+              dati.stanza;
 
             nickname =
               utenteDb.nickname;
@@ -9361,11 +10794,12 @@ wss.on(
             };
 
             for (
-              const partita of Object.values(
-                stanze[
-                  stanzaAttuale
-                ].partite
-              )
+              const partita of
+                Object.values(
+                  stanze[
+                    stanzaAttuale
+                  ].partite
+                )
             ) {
               if (
                 partita.giocatori &&
@@ -9416,15 +10850,17 @@ wss.on(
             return;
           }
 
-          /* ======================
-             RIPRENDI PARTITA
-             ====================== */
+          /* =================================================
+             RIPRENDI
+             ================================================= */
 
           if (
             dati.tipo ===
             "riprendiPartita"
           ) {
-            if (!uid) {
+            if (
+              !uid
+            ) {
               socket.send(
                 JSON.stringify({
                   tipo:
@@ -9440,7 +10876,9 @@ wss.on(
                 dati.partitaId
               );
 
-            if (!trovato) {
+            if (
+              !trovato
+            ) {
               socket.send(
                 JSON.stringify({
                   tipo:
@@ -9482,7 +10920,9 @@ wss.on(
                 uid
               ];
 
-            if (!mioGiocatore) {
+            if (
+              !mioGiocatore
+            ) {
               socket.send(
                 JSON.stringify({
                   tipo:
@@ -9496,21 +10936,25 @@ wss.on(
               return;
             }
 
-            if (db) {
+            if (
+              db
+            ) {
               try {
                 const u =
                   (
                     await db
                       .ref(
                         "utenti/" +
-                          uid
+                        uid
                       )
                       .once(
                         "value"
                       )
                   ).val();
 
-                if (u) {
+                if (
+                  u
+                ) {
                   mioGiocatore.avatar =
                     u.avatar ||
                     null;
@@ -9556,10 +11000,6 @@ wss.on(
 
             inviaConteggioStanze();
 
-            inviaListaPartite(
-              nomeStanza
-            );
-
             if (
               partita.fase ===
               "determinazione_ordine"
@@ -9574,25 +11014,29 @@ wss.on(
                       partita.ordineDeterminazione ||
                       []
                     ).map(
-                      (u2) => ({
+                      u2 => ({
                         uid:
                           u2,
 
                         nome:
-                          partita.giocatori[
+                          partita
+                            .giocatori[
                             u2
                           ]
-                            ? partita.giocatori[
+                            ? partita
+                                .giocatori[
                                 u2
                               ].nome
                             : "?",
 
                         avatar:
-                          partita.giocatori[
+                          partita
+                            .giocatori[
                             u2
                           ]
                             ? (
-                                partita.giocatori[
+                                partita
+                                  .giocatori[
                                   u2
                                 ].avatar ||
                                 null
@@ -9604,26 +11048,30 @@ wss.on(
                             .risultatiDeterminazione &&
                           partita
                             .risultatiDeterminazione[
-                              u2
-                            ] != null
+                            u2
+                          ] !=
+                            null
                             ? partita
                                 .risultatiDeterminazione[
-                                  u2
-                                ]
+                                u2
+                              ]
                             : null
                       })
                     ),
 
                   turnoInCorsoUid:
-                    partita.turnoInCorsoDeterminazione ||
+                    partita
+                      .turnoInCorsoDeterminazione ||
                     null,
 
                   gruppoSpareggioAttuale:
-                    partita.gruppoSpareggioAttuale ||
+                    partita
+                      .gruppoSpareggioAttuale ||
                     null,
 
                   tempoInizioTurno:
-                    partita.tempoInizioTurno ||
+                    partita
+                      .tempoInizioTurno ||
                     null,
 
                   durataMossaMs:
@@ -9633,10 +11081,6 @@ wss.on(
 
                   chatAttiva:
                     partita.chatAttiva !==
-                    false,
-
-                  classificata:
-                    partita.classificata !==
                     false
                 })
               );
@@ -9658,11 +11102,13 @@ wss.on(
                     ],
 
                   punteggiOrdineIniziale:
-                    partita.punteggiOrdineIniziale ||
+                    partita
+                      .punteggiOrdineIniziale ||
                     null,
 
                   tempoInizioTurno:
-                    partita.tempoInizioTurno ||
+                    partita
+                      .tempoInizioTurno ||
                     null,
 
                   durataMossaMs:
@@ -9671,28 +11117,25 @@ wss.on(
                     ),
 
                   scadenzaTurno:
-                    partita.scadenzaTurno ||
+                    partita
+                      .scadenzaTurno ||
                     null,
 
                   tiriEffettuatiNelTurno:
                     Number(
                       partita.tiriEffettuatiNelTurno ||
-                        0
+                      0
                     ),
 
                   tiriConsentitiNelTurno:
                     Number(
                       partita.tiriConsentitiNelTurno ||
-                        1
+                      1
                     ),
 
                   statoTurno:
                     partita.statoTurno ||
                     "attivo",
-
-                  classificata:
-                    partita.classificata !==
-                    false,
 
                   chatAttiva:
                     partita.chatAttiva !==
@@ -9704,9 +11147,9 @@ wss.on(
             return;
           }
 
-          /* ======================
+          /* =================================================
              CREA PARTITA
-             ====================== */
+             ================================================= */
 
           if (
             dati.tipo ===
@@ -9737,21 +11180,21 @@ wss.on(
               return;
             }
 
-            const esistePartitaCreata =
+            const esistePartita =
               Object.values(
                 stanze[
                   stanzaAttuale
                 ].partite
               ).some(
-                (p) =>
+                p =>
                   p.creatoDa ===
                   uid &&
                   p.fase !==
-                    "terminata"
+                  "terminata"
               );
 
             if (
-              esistePartitaCreata
+              esistePartita
             ) {
               socket.send(
                 JSON.stringify({
@@ -9771,7 +11214,7 @@ wss.on(
               Date.now() +
               Math.floor(
                 Math.random() *
-                  1000
+                1000
               );
 
             const max =
@@ -9779,13 +11222,6 @@ wss.on(
                 dati.maxGiocatori,
                 10
               );
-
-            const maxGiocatori =
-              !max ||
-              max < 2 ||
-              max > 8
-                ? 2
-                : max;
 
             const classificata =
               dati.classificata !==
@@ -9802,21 +11238,23 @@ wss.on(
                 uid,
 
               tempo:
-                interoPositivo(
-                  dati.tempo,
-                  30
-                ),
+                dati.tempo,
 
               punti:
                 dati.punti,
 
               modalita:
-                dati.modalita ||
-                "pubblica",
+                dati.modalita,
 
-              classificata,
+              classificata:
+                classificata,
 
-              maxGiocatori,
+              maxGiocatori:
+                !max ||
+                max < 2 ||
+                max > 8
+                  ? 2
+                  : max,
 
               chatAttiva:
                 dati.chatAttiva !==
@@ -9846,20 +11284,23 @@ wss.on(
                 }
               },
 
-              partecipantiOriginali: [
-                {
-                  uid,
+              partecipantiOriginali:
+                [
+                  {
+                    uid,
 
-                  nome:
-                    nickname
-                }
-              ],
+                    nome:
+                      nickname
+                  }
+                ],
 
               abbandonati:
                 {},
 
               ordineGiocatori:
-                [uid],
+                [
+                  uid
+                ],
 
               turnoAttuale:
                 0,
@@ -9867,17 +11308,17 @@ wss.on(
               iniziata:
                 false,
 
-              iniziataIl:
-                null,
-
-              statoTurno:
-                "attesa",
-
               elaborandoTiro:
                 false,
 
               animazioneTiroInCorso:
                 false,
+
+              estadoTurno:
+                "attesa",
+
+              statoTurno:
+                "attesa",
 
               tiriEffettuatiNelTurno:
                 0,
@@ -9906,11 +11347,11 @@ wss.on(
               scadenzaTurno:
                 null,
 
-              lockTiro:
-                false,
-
               punteggiOrdineIniziale:
                 null,
+
+              lockTiro:
+                false,
 
               coppieAudioApprovate:
                 new Set(),
@@ -9942,9 +11383,9 @@ wss.on(
             return;
           }
 
-          /* ======================
+          /* =================================================
              ENTRA PARTITA
-             ====================== */
+             ================================================= */
 
           if (
             dati.tipo ===
@@ -9964,13 +11405,15 @@ wss.on(
                 dati.id
               ];
 
-            if (!partita) {
+            if (
+              !partita
+            ) {
               return;
             }
 
             if (
               partita.fase !==
-                "attesa_giocatori"
+              "attesa_giocatori"
             ) {
               socket.send(
                 JSON.stringify({
@@ -10107,15 +11550,17 @@ wss.on(
             return;
           }
 
-          /* ======================
-             INVITA PARTITA
-             ====================== */
+          /* =================================================
+             INVITO
+             ================================================= */
 
           if (
             dati.tipo ===
             "invitaPartita"
           ) {
-            if (!uid) {
+            if (
+              !uid
+            ) {
               return;
             }
 
@@ -10124,7 +11569,9 @@ wss.on(
                 dati.partitaId
               );
 
-            if (!trovato) {
+            if (
+              !trovato
+            ) {
               return;
             }
 
@@ -10161,7 +11608,7 @@ wss.on(
                     "errore",
 
                   messaggio:
-                    "Non puoi invitare giocatori dopo l'inizio della partita."
+                    "La partita è già iniziata."
                 })
               );
 
@@ -10200,29 +11647,11 @@ wss.on(
             if (
               !destinatarioUid ||
               destinatarioUid ===
-                uid ||
+              uid ||
               partita.giocatori[
                 destinatarioUid
               ]
             ) {
-              return;
-            }
-
-            if (
-              trovaPartitaAttivaPerUid(
-                destinatarioUid
-              )
-            ) {
-              socket.send(
-                JSON.stringify({
-                  tipo:
-                    "errore",
-
-                  messaggio:
-                    "Questo giocatore è già impegnato in un'altra partita."
-                })
-              );
-
               return;
             }
 
@@ -10231,15 +11660,18 @@ wss.on(
                 nomeStanza
               ];
 
-            if (!stanzaOggetto) {
+            if (
+              !stanzaOggetto
+            ) {
               return;
             }
 
             const socketIdDestinatario =
               Object.keys(
-                stanzaOggetto.giocatoriOnline
+                stanzaOggetto
+                  .giocatoriOnline
               ).find(
-                (sid) =>
+                sid =>
                   stanzaOggetto
                     .giocatoriOnline[
                     sid
@@ -10306,46 +11738,46 @@ wss.on(
                     uid,
 
                   daNome:
-                    nickname,
-
-                  classificata:
-                    partita.classificata !==
-                    false
+                    nickname
                 })
               );
             }
 
-            await db
-              .ref(
-                "utenti/" +
+            if (
+              db
+            ) {
+              await db
+                .ref(
+                  "utenti/" +
                   destinatarioUid +
                   "/notifiche"
-              )
-              .push({
-                tipo:
-                  "invitoPartita",
+                )
+                .push({
+                  tipo:
+                    "invitoPartita",
 
-                testo:
-                  `${nickname} ti ha invitato a giocare nella stanza ${nomeStanza}`,
+                  testo:
+                    `${nickname} ti ha invitato a giocare nella stanza ${nomeStanza}`,
 
-                data:
-                  Date.now(),
+                  data:
+                    Date.now(),
 
-                letta:
-                  false,
+                  letta:
+                    false,
 
-                daUid:
-                  uid,
+                  daUid:
+                    uid,
 
-                daNome:
-                  nickname,
+                  daNome:
+                    nickname,
 
-                stanza:
-                  nomeStanza,
+                  stanza:
+                    nomeStanza,
 
-                partitaId:
-                  partita.id
-              });
+                  partitaId:
+                    partita.id
+                });
+            }
 
             socket.send(
               JSON.stringify({
@@ -10354,22 +11786,25 @@ wss.on(
 
                 destinatarioUid,
 
-                destinatarioNome
+                destinatarioNome:
+                  nomeDestinatario
               })
             );
 
             return;
           }
 
-          /* ======================
+          /* =================================================
              RISPOSTA INVITO
-             ====================== */
+             ================================================= */
 
           if (
             dati.tipo ===
             "rispostaInvito"
           ) {
-            if (!uid) {
+            if (
+              !uid
+            ) {
               return;
             }
 
@@ -10378,7 +11813,9 @@ wss.on(
                 dati.partitaId
               );
 
-            if (!trovato) {
+            if (
+              !trovato
+            ) {
               return;
             }
 
@@ -10434,41 +11871,6 @@ wss.on(
                 uid
               ]
             ) {
-              return;
-            }
-
-            if (
-              partita.fase !==
-              "attesa_giocatori"
-            ) {
-              socket.send(
-                JSON.stringify({
-                  tipo:
-                    "errore",
-
-                  messaggio:
-                    "La partita è già iniziata."
-                })
-              );
-
-              return;
-            }
-
-            if (
-              trovaPartitaAttivaPerUid(
-                uid
-              )
-            ) {
-              socket.send(
-                JSON.stringify({
-                  tipo:
-                    "errore",
-
-                  messaggio:
-                    "Sei già in una partita attiva."
-                })
-              );
-
               return;
             }
 
@@ -10568,9 +11970,9 @@ wss.on(
             return;
           }
 
-          /* ======================
+          /* =================================================
              ELIMINA PARTITA
-             ====================== */
+             ================================================= */
 
           if (
             dati.tipo ===
@@ -10589,7 +11991,7 @@ wss.on(
                   stanzaAttuale
                 ].partite
               ).find(
-                (pid) =>
+                pid =>
                   stanze[
                     stanzaAttuale
                   ].partite[
@@ -10604,7 +12006,9 @@ wss.on(
                     "attesa_giocatori"
               );
 
-            if (!idDaEliminare) {
+            if (
+              !idDaEliminare
+            ) {
               socket.send(
                 JSON.stringify({
                   tipo:
@@ -10632,16 +12036,17 @@ wss.on(
             return;
           }
 
-          /* ======================
-             CHAT LOBBY
-             ====================== */
+          /* =================================================
+             CHAT
+             ================================================= */
 
           if (
             dati.tipo ===
             "chat"
           ) {
             if (
-              !stanzaAttuale
+              !stanzaAttuale ||
+              !uid
             ) {
               return;
             }
@@ -10659,7 +12064,9 @@ wss.on(
                 300
               );
 
-            if (!testo) {
+            if (
+              !testo
+            ) {
               return;
             }
 
@@ -10681,15 +12088,17 @@ wss.on(
             return;
           }
 
-          /* ======================
+          /* =================================================
              CHAT PARTITA
-             ====================== */
+             ================================================= */
 
           if (
             dati.tipo ===
             "chatPartita"
           ) {
-            if (!uid) {
+            if (
+              !uid
+            ) {
               return;
             }
 
@@ -10706,7 +12115,9 @@ wss.on(
                 300
               );
 
-            if (!testo) {
+            if (
+              !testo
+            ) {
               return;
             }
 
@@ -10715,14 +12126,14 @@ wss.on(
                 dati.partitaId
               );
 
-            if (!trovato) {
+            if (
+              !trovato
+            ) {
               return;
             }
 
-            const {
-              partita
-            } =
-              trovato;
+            const partita =
+              trovato.partita;
 
             if (
               partita.chatAttiva ===
@@ -10746,14 +12157,16 @@ wss.on(
                 uid
               ];
 
-            if (!mittente) {
+            if (
+              !mittente
+            ) {
               return;
             }
 
             Object.values(
               partita.giocatori
             ).forEach(
-              (g) => {
+              g => {
                 if (
                   g.socket &&
                   g.socket.readyState ===
@@ -10761,17 +12174,15 @@ wss.on(
                 ) {
                   try {
                     g.socket.send(
-                      JSON.stringify(
-                        {
-                          tipo:
-                            "chatPartita",
+                      JSON.stringify({
+                        tipo:
+                          "chatPartita",
 
-                          nome:
-                            mittente.nome,
+                        nome:
+                          mittente.nome,
 
-                          testo
-                        }
-                      )
+                        testo
+                      })
                     );
                   } catch {}
                 }
@@ -10781,15 +12192,17 @@ wss.on(
             return;
           }
 
-          /* ======================
-             TIRA DETERMINAZIONE
-             ====================== */
+          /* =================================================
+             DETERMINAZIONE
+             ================================================= */
 
           if (
             dati.tipo ===
             "tiraDeterminazione"
           ) {
-            if (!uid) {
+            if (
+              !uid
+            ) {
               return;
             }
 
@@ -10798,7 +12211,9 @@ wss.on(
                 dati.partitaId
               );
 
-            if (!trovato) {
+            if (
+              !trovato
+            ) {
               return;
             }
 
@@ -10853,15 +12268,17 @@ wss.on(
             return;
           }
 
-          /* ======================
-             TIRA DADI
-             ====================== */
+          /* =================================================
+             TIRO DADI
+             ================================================= */
 
           if (
             dati.tipo ===
             "tiraDadi"
           ) {
-            if (!uid) {
+            if (
+              !uid
+            ) {
               return;
             }
 
@@ -10870,7 +12287,9 @@ wss.on(
                 dati.partitaId
               );
 
-            if (!trovato) {
+            if (
+              !trovato
+            ) {
               return;
             }
 
@@ -10931,7 +12350,7 @@ wss.on(
               partita.scadenzaTurno &&
               Date.now() >=
                 partita.scadenzaTurno +
-                  TOLLERANZA_MOSSA_MS
+                TOLLERANZA_MOSSA_MS
             ) {
               partita.statoTurno =
                 "scaduto";
@@ -10965,15 +12384,17 @@ wss.on(
             return;
           }
 
-          /* ======================
-             ABBANDONA PARTITA
-             ====================== */
+          /* =================================================
+             ABBANDONA
+             ================================================= */
 
           if (
             dati.tipo ===
             "abbandonaPartita"
           ) {
-            if (!uid) {
+            if (
+              !uid
+            ) {
               return;
             }
 
@@ -10982,7 +12403,9 @@ wss.on(
                 dati.partitaId
               );
 
-            if (!trovato) {
+            if (
+              !trovato
+            ) {
               return;
             }
 
@@ -11018,7 +12441,8 @@ wss.on(
               "determinazione_ordine"
             ) {
               const eraIlSuoTurno =
-                partita.turnoInCorsoDeterminazione ===
+                partita
+                  .turnoInCorsoDeterminazione ===
                 uid;
 
               fermaTimerTurno(
@@ -11092,23 +12516,84 @@ wss.on(
               partita.fase ===
               "terminata"
             ) {
+              delete partita.giocatori[
+                uid
+              ];
+
+              partita.ordineGiocatori =
+                (
+                  partita.ordineGiocatori ||
+                  []
+                ).filter(
+                  id =>
+                    id !==
+                    uid
+                );
+
+              const restanti =
+                Object.keys(
+                  partita.giocatori
+                );
+
+              if (
+                restanti.length ===
+                0
+              ) {
+                await rimuoviPartita(
+                  nomeStanza,
+                  partita.id
+                );
+              } else {
+                await aggiornaStatoPartita(
+                  partita.id,
+                  {
+                    giocatori:
+                      preparaGiocatoriPerFirebase(
+                        partita.giocatori
+                      ),
+
+                    ordineGiocatori:
+                      partita.ordineGiocatori,
+
+                    fase:
+                      "terminata",
+
+                    iniziata:
+                      false,
+
+                    statoTurno:
+                      "attesa",
+
+                    tempoInizioTurno:
+                      null,
+
+                    scadenzaTurno:
+                      null
+                  }
+                );
+              }
+
+              inviaListaPartite(
+                nomeStanza
+              );
+
+              inviaConteggioStanze();
+
               return;
             }
 
-            if (
-              partita.fase !==
-              "in_corso"
-            ) {
-              return;
-            }
+            /* =================================================
+               PARTITA IN CORSO
+               ================================================= */
 
             const eraLuiIlGiocatoreAttivo =
               partita
                 .ordineGiocatori[
                 partita.turnoAttuale
-              ] === uid;
+              ] ===
+              uid;
 
-            const idGiocatoreAttivoPrimaDiRimuovere =
+            const idGiocatoreAttivoPrima =
               eraLuiIlGiocatoreAttivo
                 ? null
                 : partita
@@ -11120,6 +12605,33 @@ wss.on(
               partita.giocatori[
                 uid
               ].nome;
+
+            const elencoPartecipantiOriginali =
+              Array.isArray(
+                partita.partecipantiOriginali
+              )
+                ? partita.partecipantiOriginali.map(
+                    p => ({
+                      ...p
+                    })
+                  )
+                : partita.ordineGiocatori.map(
+                    id => ({
+                      uid:
+                        id,
+
+                      nome:
+                        partita
+                          .giocatori[
+                          id
+                        ]
+                          ? partita
+                              .giocatori[
+                              id
+                            ].nome
+                          : "?"
+                    })
+                  );
 
             if (
               !partita.abbandonati
@@ -11147,7 +12659,7 @@ wss.on(
 
             partita.ordineGiocatori =
               partita.ordineGiocatori.filter(
-                (id) =>
+                id =>
                   id !==
                   uid
               );
@@ -11182,7 +12694,7 @@ wss.on(
                 partita
                   .ordineGiocatori
                   .indexOf(
-                    idGiocatoreAttivoPrimaDiRimuovere
+                    idGiocatoreAttivoPrima
                   );
 
               partita.turnoAttuale =
@@ -11200,16 +12712,21 @@ wss.on(
 
             if (
               restanti.length ===
-                1 &&
-              partita.iniziata
+              1
             ) {
               const vincitoreId =
-                restanti[0];
+                restanti[
+                  0
+                ];
 
               const vincitoreNome =
                 partita.giocatori[
                   vincitoreId
                 ].nome;
+
+              fermaTimerTurno(
+                partita
+              );
 
               partita.fase =
                 "terminata";
@@ -11220,10 +12737,6 @@ wss.on(
               partita.statoTurno =
                 "attesa";
 
-              fermaTimerTurno(
-                partita
-              );
-
               const statoGiocatori =
                 costruisciStatoGiocatori(
                   partita
@@ -11232,7 +12745,7 @@ wss.on(
               Object.values(
                 partita.giocatori
               ).forEach(
-                (g) => {
+                g => {
                   if (
                     g.socket &&
                     g.socket.readyState ===
@@ -11258,7 +12771,7 @@ wss.on(
 
                           messaggi: [
                             nomeUscente +
-                              " ha abbandonato la partita."
+                            " ha abbandonato la partita."
                           ]
                         })
                       );
@@ -11273,122 +12786,18 @@ wss.on(
                 nomeStanza
               );
 
-              for (
-                const g of Object.values(
-                  partita.giocatori
-                )
-              ) {
-                if (
-                  g.socket &&
-                  g.socket.readyState ===
-                    WebSocket.OPEN
-                ) {
-                  g.socket.send(
-                    JSON.stringify({
-                      tipo:
-                        "partitaTerminata",
-
-                      partitaId:
-                        partita.id
-                    })
-                  );
-                }
-              }
-
-              await rimuoviPartita(
-                nomeStanza,
-                partita.id
-              );
-            } else {
-              if (
-                eraLuiIlGiocatoreAttivo
-              ) {
-                partita.tiriEffettuatiNelTurno =
-                  0;
-
-                partita.tiriConsentitiNelTurno =
-                  1;
-
-                partita.animazioneTiroInCorso =
-                  false;
-
-                partita.statoTurno =
-                  "attesa";
-
-                avviaTimerTurno(
-                  partita,
-                  nomeStanza
-                );
-              }
-
-              const idAttuale =
-                partita
-                  .ordineGiocatori[
-                  partita.turnoAttuale
-                ];
-
-              const statoGiocatori =
-                costruisciStatoGiocatori(
-                  partita
-                );
-
-              Object.values(
-                partita.giocatori
-              ).forEach(
-                (g) => {
-                  if (
-                    g.socket &&
-                    g.socket.readyState ===
-                      WebSocket.OPEN
-                  ) {
-                    try {
-                      g.socket.send(
-                        JSON.stringify({
-                          tipo:
-                            "statoPartita",
-
-                          giocatori:
-                            statoGiocatori,
-
-                          turnoDiId:
-                            idAttuale,
-
-                          messaggi: [
-                            nomeUscente +
-                              " ha abbandonato la partita."
-                          ],
-
-                          tempoInizioTurno:
-                            partita.tempoInizioTurno ||
-                            null,
-
-                          scadenzaTurno:
-                            partita.scadenzaTurno ||
-                            null,
-
-                          durataMossaMs:
-                            millisecondiMossa(
-                              partita
-                            ),
-
-                          tiriEffettuatiNelTurno:
-                            partita.tiriEffettuatiNelTurno,
-
-                          tiriConsentitiNelTurno:
-                            partita.tiriConsentitiNelTurno,
-
-                          statoTurno:
-                            partita.statoTurno
-                        })
-                      );
-                    } catch {}
-                  }
-                }
-              );
-
               await aggiornaStatoPartita(
                 partita.id,
                 {
+                  fase:
+                    "terminata",
+
+                  iniziata:
+                    false,
+
+                  statoTurno:
+                    "attesa",
+
                   giocatori:
                     preparaGiocatoriPerFirebase(
                       partita.giocatori
@@ -11397,37 +12806,155 @@ wss.on(
                   ordineGiocatori:
                     partita.ordineGiocatori,
 
-                  partecipantiOriginali:
-                    partita.partecipantiOriginali,
-
                   abbandonati:
-                    partita.abbandonati,
-
-                  turnoAttuale:
-                    partita.turnoAttuale,
-
-                  tiriEffettuatiNelTurno:
-                    partita.tiriEffettuatiNelTurno,
-
-                  tiriConsentitiNelTurno:
-                    partita.tiriConsentitiNelTurno,
-
-                  tempoInizioTurno:
-                    partita.tempoInizioTurno ||
-                    null,
-
-                  scadenzaTurno:
-                    partita.scadenzaTurno ||
-                    null,
-
-                  statoTurno:
-                    partita.statoTurno,
-
-                  iniziata:
-                    partita.iniziata
+                    partita.abbandonati
                 }
               );
+
+              inviaListaPartite(
+                nomeStanza
+              );
+
+              inviaConteggioStanze();
+
+              return;
             }
+
+            if (
+              eraLuiIlGiocatoreAttivo
+            ) {
+              partita.tiriEffettuatiNelTurno =
+                0;
+
+              partita.tiriConsentitiNelTurno =
+                1;
+
+              partita.animazioneTiroInCorso =
+                false;
+
+              partita.elaborandoTiro =
+                false;
+
+              partita.statoTurno =
+                "attesa";
+
+              avviaTimerTurno(
+                partita,
+                nomeStanza
+              );
+            }
+
+            const idAttuale =
+              partita
+                .ordineGiocatori[
+                partita.turnoAttuale
+              ];
+
+            const statoGiocatori =
+              costruisciStatoGiocatori(
+                partita
+              );
+
+            Object.values(
+              partita.giocatori
+            ).forEach(
+              g => {
+                if (
+                  g.socket &&
+                  g.socket.readyState ===
+                    WebSocket.OPEN
+                ) {
+                  try {
+                    g.socket.send(
+                      JSON.stringify({
+                        tipo:
+                          "statoPartita",
+
+                        giocatori:
+                          statoGiocatori,
+
+                        turnoDiId:
+                          idAttuale,
+
+                        messaggi: [
+                          nomeUscente +
+                          " ha abbandonato la partita."
+                        ],
+
+                        tempoInizioTurno:
+                          partita
+                            .tempoInizioTurno ||
+                          null,
+
+                        scadenzaTurno:
+                          partita
+                            .scadenzaTurno ||
+                          null,
+
+                        durataMossaMs:
+                          millisecondiMossa(
+                            partita
+                          ),
+
+                        tiriEffettuatiNelTurno:
+                          partita
+                            .tiriEffettuatiNelTurno,
+
+                        tiriConsentitiNelTurno:
+                          partita
+                            .tiriConsentitiNelTurno
+                      })
+                    );
+                  } catch {}
+                }
+              }
+            );
+
+            await aggiornaStatoPartita(
+              partita.id,
+              {
+                giocatori:
+                  preparaGiocatoriPerFirebase(
+                    partita.giocatori
+                  ),
+
+                ordineGiocatori:
+                  partita.ordineGiocatori,
+
+                partecipantiOriginali:
+                  partita.partecipantiOriginali,
+
+                abbandonati:
+                  partita.abbandonati,
+
+                turnoAttuale:
+                  partita.turnoAttuale,
+
+                tiriEffettuatiNelTurno:
+                  partita
+                    .tiriEffettuatiNelTurno,
+
+                tiriConsentitiNelTurno:
+                  partita
+                    .tiriConsentitiNelTurno,
+
+                statoTurno:
+                  partita.statoTurno,
+
+                tempoInizioTurno:
+                  partita
+                    .tempoInizioTurno ||
+                  null,
+
+                scadenzaTurno:
+                  partita
+                    .scadenzaTurno ||
+                  null,
+
+                iniziata:
+                  partita.iniziata
+              }
+            );
 
             inviaListaPartite(
               nomeStanza
@@ -11437,14 +12964,20 @@ wss.on(
 
             return;
           }
-        } catch (erroreInterno) {
+        } catch (
+          erroreInterno
+        ) {
           console.error(
-            "Errore nella gestione di un messaggio WebSocket:",
+            "Errore nella gestione di un messaggio:",
             erroreInterno
           );
         }
       }
     );
+
+    /* =====================================================
+       CHIUSURA SOCKET
+       ===================================================== */
 
     socket.on(
       "close",
@@ -11531,7 +13064,9 @@ wss.on(
                 uid
               ];
 
-            if (!giocatore) {
+            if (
+              !giocatore
+            ) {
               continue;
             }
 
@@ -11555,7 +13090,9 @@ wss.on(
           );
 
           inviaConteggioStanze();
-        } catch (erroreInterno) {
+        } catch (
+          erroreInterno
+        ) {
           console.error(
             "Errore nella chiusura di una connessione:",
             erroreInterno
@@ -11572,15 +13109,22 @@ wss.on(
 
 app.get(
   "/health",
-  async (req, res) => {
-    return res.json({
-      ok: true,
+  async (
+    req,
+    res
+  ) => {
+    res.json({
+      ok:
+        true,
 
       server:
         "online",
 
       database:
         !!db,
+
+      eloIniziale:
+        ELO_INIZIALE,
 
       timestamp:
         Date.now()
@@ -11589,83 +13133,123 @@ app.get(
 );
 
 /* =========================================================
-   GESTORE ERRORI MULTER / EXPRESS
+   MIGRAZIONE ELO ALL'AVVIO
+   ========================================================= */
+
+async function migraTuttiGliUtentiElo() {
+  if (!db) {
+    return;
+  }
+
+  try {
+    const snap =
+      await db
+        .ref(
+          "utenti"
+        )
+        .once(
+          "value"
+        );
+
+    const utenti =
+      snap.val() ||
+      {};
+
+    let migrati =
+      0;
+
+    for (
+      const uid of
+        Object.keys(
+          utenti
+        )
+    ) {
+      const prima =
+        JSON.stringify(
+          utenti[
+            uid
+          ]
+        );
+
+      await migraUtenteElo(
+        uid,
+        utenti[
+          uid
+        ]
+      );
+
+      const dopo =
+        JSON.stringify(
+          utenti[
+            uid
+          ]
+        );
+
+      if (
+        prima !==
+        dopo
+      ) {
+        migrati++;
+      }
+    }
+
+    console.log(
+      "Migrazione ELO completata. Account controllati:",
+      Object.keys(
+        utenti
+      ).length,
+      "Account aggiornati:",
+      migrati
+    );
+  } catch (
+    errore
+  ) {
+    console.error(
+      "Errore migrazione ELO:",
+      errore
+    );
+  }
+}
+
+/* =========================================================
+   GESTORE ERRORI
    ========================================================= */
 
 app.use(
-  (err, req, res, next) => {
+  (
+    errore,
+    req,
+    res,
+    next
+  ) => {
     console.error(
       "Errore Express:",
-      err
+      errore
     );
 
     if (
-      err &&
-      err.name ===
-        "MulterError"
+      errore &&
+      errore.name ===
+      "MulterError"
     ) {
-      return res.status(400).json({
+      return res.status(
+        400
+      ).json({
         errore:
-          err.message ||
+          errore.message ||
           "Errore caricamento file."
       });
     }
 
-    if (
-      err &&
-      err.message
-    ) {
-      return res.status(500).json({
-        errore:
-          err.message
-      });
-    }
-
-    return res.status(500).json({
+    return res.status(
+      500
+    ).json({
       errore:
-        "Errore interno del server."
+        errore &&
+        errore.message
+          ? errore.message
+          : "Errore interno del server."
     });
-  }
-);
-
-/* =========================================================
-   HEARTBEAT WEBSOCKET
-   ========================================================= */
-
-const heartbeatInterval =
-  setInterval(
-    () => {
-      wss.clients.forEach(
-        (socket) => {
-          if (
-            socket.isAlive ===
-            false
-          ) {
-            return socket.terminate();
-          }
-
-          socket.isAlive =
-            false;
-
-          try {
-            socket.ping();
-          } catch {
-            try {
-              socket.terminate();
-            } catch {}
-          }
-        }
-      );
-    },
-    HEARTBEAT_MS
-  );
-
-wss.on(
-  "close",
-  () => {
-    clearInterval(
-      heartbeatInterval
-    );
   }
 );
 
@@ -11678,33 +13262,42 @@ server.listen(
   async () => {
     console.log(
       "Server avviato sulla porta " +
-        PORT
+      PORT
     );
 
     console.log(
-      "ELO iniziale nuovi account: " +
-        ELO_INIZIALE
+      "Sistema ELO attivo."
     );
 
     console.log(
-      "K-factor ELO:",
-      {
-        nuovo:
-          ELO_K_NUOVO,
+      "ELO iniziale:",
+      ELO_INIZIALE
+    );
 
-        intermedio:
-          ELO_K_INTERMEDIO,
+    console.log(
+      "K nuovo:",
+      ELO_K_NUOVO
+    );
 
-        esperto:
-          ELO_K_ESPERTO
-      }
+    console.log(
+      "K intermedio:",
+      ELO_K_INTERMEDIO
+    );
+
+    console.log(
+      "K esperto:",
+      ELO_K_ESPERTO
     );
 
     try {
+      await migraTuttiGliUtentiElo();
+
       await ripristinaPartiteDaFirebase();
-    } catch (errore) {
+    } catch (
+      errore
+    ) {
       console.error(
-        "Errore durante il ripristino delle partite:",
+        "Errore inizializzazione server:",
         errore
       );
     }
@@ -11712,7 +13305,7 @@ server.listen(
 );
 
 /* =========================================================
-   GESTIONE CHIUSURA PROCESSO
+   CHIUSURA PROCESSO
    ========================================================= */
 
 async function chiudiServer(
@@ -11724,7 +13317,7 @@ async function chiudiServer(
 
   try {
     wss.clients.forEach(
-      (socket) => {
+      socket => {
         try {
           socket.close(
             1001,
@@ -11754,7 +13347,9 @@ async function chiudiServer(
       },
       10000
     );
-  } catch (errore) {
+  } catch (
+    errore
+  ) {
     console.error(
       "Errore chiusura server:",
       errore
@@ -11784,7 +13379,7 @@ process.on(
 
 process.on(
   "unhandledRejection",
-  (errore) => {
+  errore => {
     console.error(
       "UNHANDLED REJECTION:",
       errore
@@ -11794,7 +13389,7 @@ process.on(
 
 process.on(
   "uncaughtException",
-  (errore) => {
+  errore => {
     console.error(
       "UNCAUGHT EXCEPTION:",
       errore
