@@ -4,805 +4,1195 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Termini e Condizioni - Giochi Società</title>
+<title>Termini e Condizioni | Giochi Società</title>
 
 <style>
-* {
-  box-sizing: border-box;
-}
+    * {
+        box-sizing: border-box;
+    }
 
-body {
-  margin: 0;
-  background: #101820;
-  color: #e8e8e8;
-  font-family: Arial, sans-serif;
-  line-height: 1.6;
-}
+    :root {
+        --verde: #178861;
+        --verde-scuro: #106d4d;
+        --verde-hover: #147954;
+        --verde-chiaro: #eaf7f1;
+        --verde-soft: #f3faf7;
 
-.contenitore {
-  max-width: 820px;
-  margin: 0 auto;
-  padding: 40px 24px 80px;
-}
+        --testo: #17222b;
+        --testo-2: #55636e;
+        --testo-3: #8b97a1;
 
-.intestazione {
-  text-align: center;
-  margin-bottom: 40px;
-  padding-bottom: 24px;
-  border-bottom: 2px solid #ffd700;
-}
+        --sfondo: #eef2f5;
+        --superficie: #ffffff;
+        --superficie-2: #f8fafb;
 
-.intestazione h1 {
-  color: #ffd700;
-  font-size: 30px;
-  margin: 0 0 8px;
-}
+        --bordo: #e1e7eb;
+        --bordo-soft: #edf1f4;
 
-.intestazione p {
-  color: #999;
-  font-size: 14px;
-  margin: 0;
-}
+        --ombra-leggera:
+            0 2px 8px rgba(20, 31, 40, 0.05);
 
-.indice {
-  background: #1e2a38;
-  border: 1px solid #333;
-  border-radius: 10px;
-  padding: 20px 24px;
-  margin-bottom: 36px;
-}
+        --ombra-media:
+            0 12px 35px rgba(20, 31, 40, 0.08);
+    }
 
-.indice h2 {
-  color: #ffd700;
-  font-size: 16px;
-  margin: 0 0 12px;
-}
+    html,
+    body {
+        width: 100%;
+        min-height: 100%;
+        margin: 0;
+        padding: 0;
 
-.indice ol {
-  margin: 0;
-  padding-left: 20px;
-  font-size: 14px;
-}
+        background:
+            linear-gradient(
+                180deg,
+                #f5f7f9 0%,
+                #eef2f5 100%
+            );
 
-.indice a {
-  color: #cde;
-  text-decoration: none;
-}
+        color: var(--testo);
 
-.indice a:hover {
-  color: #ffd700;
-}
+        font-family:
+            Inter,
+            system-ui,
+            -apple-system,
+            BlinkMacSystemFont,
+            "Segoe UI",
+            Arial,
+            Helvetica,
+            sans-serif;
 
-section {
-  margin-bottom: 34px;
-  scroll-margin-top: 20px;
-}
+        line-height: 1.65;
+    }
 
-section h2 {
-  color: #ffd700;
-  font-size: 20px;
-  border-left: 4px solid #ffd700;
-  padding-left: 12px;
-  margin-bottom: 14px;
-}
+    body {
+        min-height: 100vh;
+    }
 
-section p,
-section li {
-  font-size: 15px;
-  color: #ddd;
-}
+    a {
+        color: inherit;
+    }
 
-section ul,
-section ol {
-  padding-left: 22px;
-}
+    /* =========================================================
+       CONTENITORE
+       ========================================================= */
 
-section li {
-  margin-bottom: 8px;
-}
+    .pagina-termini {
+        width: 100%;
+        min-height: 100vh;
 
-.box-evidenza {
-  background: #1e2a38;
-  border: 1px solid #ffd700;
-  border-radius: 10px;
-  padding: 16px 20px;
-  margin-top: 14px;
-  font-size: 14px;
-  color: #ffe9a8;
-}
+        padding:
+            38px 22px 70px;
+    }
 
-.tabella-termini {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 15px;
-  font-size: 14px;
-}
+    .contenitore {
+        width: min(100%, 980px);
 
-.tabella-termini th,
-.tabella-termini td {
-  border: 1px solid #333;
-  padding: 10px 14px;
-  text-align: left;
-}
+        margin: 0 auto;
+    }
 
-.tabella-termini th {
-  background: #1e2a38;
-  color: #ffd700;
-}
+    /* =========================================================
+       HEADER
+       ========================================================= */
 
-.tabella-termini tr:nth-child(even) {
-  background: #16202b;
-}
+    .intestazione {
+        position: relative;
 
-.link-home {
-  display: inline-block;
-  margin-top: 10px;
-  padding: 10px 20px;
-  background: #ffd700;
-  color: #111;
-  text-decoration: none;
-  border-radius: 8px;
-  font-weight: bold;
-  font-size: 14px;
-}
+        padding:
+            30px 32px 29px;
 
-.link-home:hover {
-  background: #ffaa00;
-}
+        margin-bottom: 22px;
 
-footer {
-  text-align: center;
-  margin-top: 50px;
-  padding-top: 20px;
-  border-top: 1px solid #333;
-  color: #777;
-  font-size: 13px;
-}
+        border: 1px solid var(--bordo);
 
-@media (max-width: 600px) {
+        border-radius: 22px;
 
-  .contenitore {
-    padding: 28px 16px 60px;
-  }
+        background:
+            linear-gradient(
+                135deg,
+                #ffffff 0%,
+                #f9fbfc 100%
+            );
 
-  .intestazione h1 {
-    font-size: 25px;
-  }
+        box-shadow: var(--ombra-media);
 
-  .indice {
-    padding: 18px;
-  }
+        overflow: hidden;
+    }
 
-  section h2 {
-    font-size: 18px;
-  }
+    .intestazione::before {
+        content: "";
 
-  section p,
-  section li {
-    font-size: 14px;
-  }
+        position: absolute;
 
-  .tabella-termini {
-    font-size: 13px;
-  }
+        left: 0;
+        top: 0;
 
-  .tabella-termini th,
-  .tabella-termini td {
-    padding: 9px 10px;
-  }
-}
+        width: 100%;
+        height: 4px;
+
+        background:
+            linear-gradient(
+                90deg,
+                var(--verde),
+                #2a9f78
+            );
+    }
+
+    .intestazione-etichetta {
+        margin-bottom: 8px;
+
+        color: var(--verde);
+
+        font-size: 11px;
+        font-weight: 800;
+
+        letter-spacing: 1.25px;
+
+        text-transform: uppercase;
+    }
+
+    .intestazione h1 {
+        margin: 0;
+
+        color: var(--testo);
+
+        font-size: clamp(28px, 4vw, 36px);
+
+        line-height: 1.15;
+
+        font-weight: 850;
+
+        letter-spacing: -0.8px;
+    }
+
+    .intestazione p {
+        margin: 10px 0 0;
+
+        color: var(--testo-3);
+
+        font-size: 13px;
+    }
+
+    .intestazione-sottotitolo {
+        max-width: 700px;
+
+        margin-top: 12px;
+
+        color: var(--testo-2);
+
+        font-size: 14px;
+
+        line-height: 1.6;
+    }
+
+    /* =========================================================
+       INDICE
+       ========================================================= */
+
+    .indice {
+        margin-bottom: 22px;
+
+        padding: 24px 26px;
+
+        border: 1px solid var(--bordo);
+
+        border-radius: 18px;
+
+        background: rgba(255, 255, 255, 0.94);
+
+        box-shadow: var(--ombra-leggera);
+    }
+
+    .indice-header {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+
+        margin-bottom: 16px;
+    }
+
+    .indice-icona {
+        width: 36px;
+        height: 36px;
+        min-width: 36px;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        border-radius: 10px;
+
+        background: var(--verde-chiaro);
+        color: var(--verde);
+
+        font-size: 17px;
+    }
+
+    .indice h2 {
+        margin: 0;
+
+        color: var(--testo);
+
+        font-size: 17px;
+        font-weight: 800;
+    }
+
+    .indice ol {
+        margin: 0;
+        padding-left: 21px;
+
+        columns: 2;
+        column-gap: 42px;
+    }
+
+    .indice li {
+        break-inside: avoid;
+
+        margin-bottom: 8px;
+
+        padding-left: 2px;
+
+        color: var(--testo-2);
+
+        font-size: 13px;
+    }
+
+    .indice a {
+        color: var(--testo-2);
+
+        text-decoration: none;
+
+        transition:
+            color 0.18s ease;
+    }
+
+    .indice a:hover {
+        color: var(--verde);
+    }
+
+    /* =========================================================
+       CONTENUTO
+       ========================================================= */
+
+    .contenuto {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    section {
+        scroll-margin-top: 20px;
+
+        padding: 27px 29px;
+
+        border: 1px solid var(--bordo);
+
+        border-radius: 18px;
+
+        background: rgba(255, 255, 255, 0.96);
+
+        box-shadow: var(--ombra-leggera);
+    }
+
+    .titolo-sezione {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+
+        margin-bottom: 15px;
+    }
+
+    .titolo-sezione-numero {
+        width: 34px;
+        height: 34px;
+        min-width: 34px;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        border-radius: 10px;
+
+        background: var(--verde-chiaro);
+        color: var(--verde);
+
+        font-size: 12px;
+        font-weight: 800;
+    }
+
+    section h2 {
+        margin: 0;
+
+        color: var(--testo);
+
+        font-size: 19px;
+        line-height: 1.3;
+
+        font-weight: 800;
+
+        letter-spacing: -0.25px;
+    }
+
+    section p {
+        margin:
+            0 0 13px;
+
+        color: var(--testo-2);
+
+        font-size: 14px;
+
+        line-height: 1.75;
+    }
+
+    section p:last-child {
+        margin-bottom: 0;
+    }
+
+    section ul,
+    section ol {
+        margin:
+            9px 0 0;
+
+        padding-left: 21px;
+    }
+
+    section li {
+        margin-bottom: 9px;
+
+        color: var(--testo-2);
+
+        font-size: 14px;
+
+        line-height: 1.7;
+    }
+
+    section li:last-child {
+        margin-bottom: 0;
+    }
+
+    strong {
+        color: var(--testo);
+    }
+
+    /* =========================================================
+       BOX EVIDENZA
+       ========================================================= */
+
+    .box-evidenza {
+        margin-top: 18px;
+
+        padding: 16px 18px;
+
+        border:
+            1px solid #ccebdd;
+
+        border-radius: 14px;
+
+        background:
+            linear-gradient(
+                135deg,
+                #f2fbf7 0%,
+                #ebf8f2 100%
+            );
+
+        color: #346d58;
+
+        font-size: 13px;
+
+        line-height: 1.65;
+    }
+
+    /* =========================================================
+       LINK INTERNI
+       ========================================================= */
+
+    .link-privacy,
+    .link-regolamento {
+        color: var(--verde);
+
+        text-decoration: none;
+
+        font-weight: 750;
+
+        transition:
+            color 0.18s ease;
+    }
+
+    .link-privacy:hover,
+    .link-regolamento:hover {
+        color: var(--verde-scuro);
+
+        text-decoration: underline;
+    }
+
+    /* =========================================================
+       AZIONI FINALI
+       ========================================================= */
+
+    .azioni-finali {
+        display: flex;
+        justify-content: flex-start;
+
+        margin-top: 2px;
+    }
+
+    .link-home {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+
+        min-height: 44px;
+
+        padding: 0 18px;
+
+        border-radius: 11px;
+
+        background: var(--verde);
+
+        color: #ffffff;
+
+        text-decoration: none;
+
+        font-size: 13px;
+        font-weight: 750;
+
+        box-shadow:
+            0 5px 14px rgba(23, 136, 97, 0.17);
+
+        transition:
+            background 0.18s ease,
+            transform 0.18s ease,
+            box-shadow 0.18s ease;
+    }
+
+    .link-home:hover {
+        background: var(--verde-scuro);
+
+        transform: translateY(-1px);
+
+        box-shadow:
+            0 8px 18px rgba(23, 136, 97, 0.21);
+    }
+
+    .link-home:active {
+        transform: scale(0.98);
+    }
+
+    /* =========================================================
+       FOOTER
+       ========================================================= */
+
+    footer {
+        margin-top: 28px;
+
+        padding:
+            22px 10px 0;
+
+        border-top:
+            1px solid var(--bordo);
+
+        text-align: center;
+
+        color: var(--testo-3);
+
+        font-size: 11px;
+    }
+
+    /* =========================================================
+       TABLET
+       ========================================================= */
+
+    @media (max-width: 760px) {
+
+        .pagina-termini {
+            padding:
+                22px 14px 45px;
+        }
+
+        .intestazione {
+            padding:
+                26px 22px 24px;
+
+            border-radius: 18px;
+        }
+
+        .indice {
+            padding:
+                21px 20px;
+        }
+
+        .indice ol {
+            columns: 1;
+        }
+
+        section {
+            padding:
+                23px 21px;
+        }
+    }
+
+    /* =========================================================
+       MOBILE
+       ========================================================= */
+
+    @media (max-width: 520px) {
+
+        .pagina-termini {
+            padding:
+                12px 9px 30px;
+        }
+
+        .intestazione {
+            padding:
+                23px 18px 21px;
+
+            margin-bottom: 13px;
+
+            border-radius: 16px;
+        }
+
+        .intestazione h1 {
+            font-size: 25px;
+        }
+
+        .intestazione p {
+            font-size: 11px;
+        }
+
+        .intestazione-sottotitolo {
+            font-size: 12px;
+        }
+
+        .indice {
+            padding:
+                18px 17px;
+
+            margin-bottom: 13px;
+
+            border-radius: 15px;
+        }
+
+        .indice li {
+            font-size: 12px;
+            margin-bottom: 7px;
+        }
+
+        .contenuto {
+            gap: 11px;
+        }
+
+        section {
+            padding:
+                19px 17px;
+
+            border-radius: 15px;
+        }
+
+        .titolo-sezione {
+            gap: 9px;
+
+            margin-bottom: 12px;
+        }
+
+        .titolo-sezione-numero {
+            width: 30px;
+            height: 30px;
+            min-width: 30px;
+
+            border-radius: 9px;
+
+            font-size: 10px;
+        }
+
+        section h2 {
+            font-size: 17px;
+        }
+
+        section p,
+        section li {
+            font-size: 13px;
+        }
+
+        .box-evidenza {
+            padding:
+                14px 15px;
+
+            font-size: 12px;
+
+            border-radius: 12px;
+        }
+
+        .link-home {
+            width: 100%;
+        }
+
+        footer {
+            font-size: 10px;
+        }
+    }
 </style>
-
 </head>
 
 <body>
 
-<div class="contenitore">
+<div class="pagina-termini">
+
+    <div class="contenitore">
+
+        <!-- =====================================================
+             INTESTAZIONE
+             ===================================================== -->
+
+        <header class="intestazione">
+
+            <div class="intestazione-etichetta">
+                GIOCHI SOCIETÀ
+            </div>
+
+            <h1>
+                Termini e Condizioni
+            </h1>
 
+            <p>
+                Ultimo aggiornamento: luglio 2026
+            </p>
 
-<div class="intestazione">
+            <div class="intestazione-sottotitolo">
+                Le condizioni che regolano l'utilizzo della piattaforma
+                Giochi Società e dei relativi servizi online.
+            </div>
 
-<h1>📜 Termini e Condizioni di Giochi Società</h1>
+        </header>
 
-<p>
-Ultimo aggiornamento: agosto 2026
-</p>
 
-</div>
+        <!-- =====================================================
+             INDICE
+             ===================================================== -->
 
+        <nav class="indice">
 
+            <div class="indice-header">
 
-<div class="indice">
+                <div class="indice-icona">
+                    ☰
+                </div>
 
-<h2>Indice</h2>
+                <h2>
+                    Indice
+                </h2>
 
-<ol>
+            </div>
 
-<li>
-<a href="#accettazione">
-Accettazione dei termini
-</a>
-</li>
+            <ol>
 
-<li>
-<a href="#servizio">
-Utilizzo del servizio
-</a>
-</li>
+                <li>
+                    <a href="#accettazione">
+                        Accettazione dei termini
+                    </a>
+                </li>
 
-<li>
-<a href="#account">
-Account e sicurezza
-</a>
-</li>
+                <li>
+                    <a href="#servizio">
+                        Utilizzo del servizio
+                    </a>
+                </li>
 
-<li>
-<a href="#responsabilita">
-Responsabilità dell'utente
-</a>
-</li>
+                <li>
+                    <a href="#account">
+                        Account e sicurezza
+                    </a>
+                </li>
 
-<li>
-<a href="#contenuti">
-Contenuti inviati dagli utenti
-</a>
-</li>
+                <li>
+                    <a href="#responsabilita">
+                        Responsabilità dell'utente
+                    </a>
+                </li>
 
-<li>
-<a href="#partite">
-Partite online
-</a>
-</li>
+                <li>
+                    <a href="#contenuti">
+                        Contenuti inviati dagli utenti
+                    </a>
+                </li>
 
-<li>
-<a href="#fairplay">
-Fair play e correttezza
-</a>
-</li>
+                <li>
+                    <a href="#disponibilita">
+                        Disponibilità del servizio
+                    </a>
+                </li>
 
-<li>
-<a href="#disponibilita">
-Disponibilità del servizio
-</a>
-</li>
+                <li>
+                    <a href="#sospensione">
+                        Sospensione degli account
+                    </a>
+                </li>
 
-<li>
-<a href="#sospensione">
-Sospensione e chiusura degli account
-</a>
-</li>
+                <li>
+                    <a href="#privacy">
+                        Privacy e dati personali
+                    </a>
+                </li>
 
-<li>
-<a href="#privacy">
-Privacy e dati personali
-</a>
-</li>
+                <li>
+                    <a href="#modifiche">
+                        Modifiche ai termini
+                    </a>
+                </li>
 
-<li>
-<a href="#modifiche">
-Modifiche ai termini
-</a>
-</li>
+                <li>
+                    <a href="#contatti">
+                        Contatti
+                    </a>
+                </li>
 
-<li>
-<a href="#contatti">
-Contatti
-</a>
-</li>
+            </ol>
 
-</ol>
+        </nav>
 
-</div>
 
+        <!-- =====================================================
+             CONTENUTO
+             ===================================================== -->
 
+        <main class="contenuto">
 
 
-<section id="accettazione">
+            <section id="accettazione">
 
-<h2>1. Accettazione dei termini</h2>
+                <div class="titolo-sezione">
 
-<p>
-Registrandoti, accedendo o utilizzando Giochi Società accetti i presenti
-Termini e Condizioni e ti impegni a rispettarli.
-</p>
+                    <div class="titolo-sezione-numero">
+                        01
+                    </div>
 
-<p>
-Se non accetti una o più disposizioni dei presenti termini, non utilizzare
-la piattaforma e i relativi servizi.
-</p>
+                    <h2>
+                        Accettazione dei termini
+                    </h2>
 
-<div class="box-evidenza">
+                </div>
 
-💡 L'utilizzo continuato della piattaforma implica la presa visione e
-l'accettazione dei Termini e Condizioni applicabili al servizio.
+                <p>
+                    Registrandoti e utilizzando Giochi Società accetti
+                    i presenti Termini e Condizioni.
+                </p>
 
-</div>
+                <p>
+                    Se non accetti una o più disposizioni del presente
+                    documento, ti invitiamo a non utilizzare la piattaforma
+                    e i servizi collegati.
+                </p>
 
-</section>
+                <div class="box-evidenza">
+                    💡 L'utilizzo della piattaforma implica l'accettazione
+                    dei presenti Termini e Condizioni.
+                </div>
 
+            </section>
 
 
+            <section id="servizio">
 
-<section id="servizio">
+                <div class="titolo-sezione">
 
-<h2>2. Utilizzo del servizio</h2>
+                    <div class="titolo-sezione-numero">
+                        02
+                    </div>
 
-<p>
-Giochi Società è una piattaforma online dedicata al gioco multiplayer
-tra persone reali direttamente dal browser.
-</p>
+                    <h2>
+                        Utilizzo del servizio
+                    </h2>
 
-<p>
-Il servizio può comprendere funzionalità quali:
+                </div>
 
-</p>
+                <p>
+                    Giochi Società è una piattaforma online destinata
+                    all'intrattenimento e al gioco multiplayer tra utenti.
+                </p>
 
-<ul>
+                <p>
+                    Il servizio può comprendere partite online, lobby,
+                    sistemi di classificazione, statistiche, chat,
+                    messaggi privati, profili e altre funzionalità sociali.
+                </p>
 
-<li>
-partite multiplayer in tempo reale;
-</li>
+                <p>
+                    L'utilizzo della piattaforma deve avvenire nel rispetto
+                    degli altri giocatori, delle funzionalità disponibili
+                    e delle regole stabilite da Giochi Società.
+                </p>
 
-<li>
-stanze pubbliche e private;
-</li>
+                <div class="box-evidenza">
+                    💡 Giochi Società è pensato per offrire un ambiente
+                    online corretto, sicuro e rispettoso per tutti i giocatori.
+                </div>
 
-<li>
-chat e comunicazione tra giocatori;
-</li>
+            </section>
 
-<li>
-profili e statistiche degli utenti;
-</li>
 
-<li>
-classifiche, livelli, XP e altri elementi del sistema di gioco;
-</li>
+            <section id="account">
 
-<li>
-funzionalità sociali e di interazione tra utenti.
-</li>
+                <div class="titolo-sezione">
 
-</ul>
+                    <div class="titolo-sezione-numero">
+                        03
+                    </div>
 
-</section>
+                    <h2>
+                        Account e sicurezza
+                    </h2>
 
+                </div>
 
+                <p>
+                    Per utilizzare alcune funzionalità della piattaforma
+                    può essere necessario creare un account personale.
+                </p>
 
+                <ul>
 
-<section id="account">
+                    <li>
+                        L'utente è responsabile delle informazioni inserite
+                        durante la registrazione.
+                    </li>
 
-<h2>3. Account e sicurezza</h2>
+                    <li>
+                        Le credenziali di accesso devono essere mantenute
+                        riservate e non devono essere condivise con altre persone.
+                    </li>
 
-<p>
-Alcune funzionalità della piattaforma richiedono la creazione di un account.
-L'utente è responsabile delle informazioni fornite durante la registrazione
-e della corretta gestione del proprio account.
-</p>
+                    <li>
+                        È vietato utilizzare account appartenenti ad altri utenti
+                        senza autorizzazione.
+                    </li>
 
-<ul>
+                    <li>
+                        È vietata la creazione di account multipli finalizzata
+                        ad aggirare limitazioni, sospensioni o sanzioni.
+                    </li>
 
-<li>
-Le credenziali di accesso devono essere mantenute riservate.
-</li>
+                    <li>
+                        L'utente è responsabile delle attività effettuate
+                        tramite il proprio account.
+                    </li>
 
-<li>
-Non è consentito utilizzare l'account di un'altra persona.
-</li>
+                </ul>
 
-<li>
-Non è consentito condividere intenzionalmente le proprie credenziali
-con altri utenti.
-</li>
+                <div class="box-evidenza">
+                    🛡️ In caso di accessi non autorizzati o attività sospette,
+                    l'utente è invitato a contattare tempestivamente lo staff.
+                </div>
 
-<li>
-Non è consentito creare account multipli allo scopo di aggirare
-limitazioni, sospensioni o ban.
-</li>
+            </section>
 
-<li>
-L'utente deve comunicare tempestivamente allo staff eventuali accessi
-non autorizzati o problemi di sicurezza riguardanti il proprio account.
-</li>
 
-</ul>
+            <section id="responsabilita">
 
-</section>
+                <div class="titolo-sezione">
 
+                    <div class="titolo-sezione-numero">
+                        04
+                    </div>
 
+                    <h2>
+                        Responsabilità dell'utente
+                    </h2>
 
+                </div>
 
-<section id="responsabilita">
+                <p>
+                    L'utente si impegna a utilizzare il servizio in modo corretto,
+                    lecito e conforme ai presenti Termini e Condizioni.
+                </p>
 
-<h2>4. Responsabilità dell'utente</h2>
+                <ul>
 
-<p>
-L'utente si impegna a utilizzare Giochi Società in modo corretto,
-responsabile e conforme alle leggi applicabili e alle regole della
-piattaforma.
-</p>
+                    <li>
+                        Non tentare di modificare o compromettere il funzionamento
+                        della piattaforma.
+                    </li>
 
-<p>
-È vietato utilizzare il servizio per danneggiare altri utenti,
-compromettere la sicurezza della piattaforma o alterarne il normale
-funzionamento.
-</p>
+                    <li>
+                        Non utilizzare bot, script o strumenti automatici
+                        non autorizzati.
+                    </li>
 
-<ul>
+                    <li>
+                        Non sfruttare deliberatamente errori o problemi tecnici
+                        per ottenere vantaggi ingiusti.
+                    </li>
 
-<li>
-Non tentare di modificare, alterare o compromettere il funzionamento
-del sito o dei server.
-</li>
+                    <li>
+                        Non tentare di accedere senza autorizzazione agli account,
+                        alle partite o ai dati di altri utenti.
+                    </li>
 
-<li>
-Non utilizzare strumenti automatici, bot o sistemi non autorizzati
-per ottenere vantaggi.
-</li>
+                    <li>
+                        Non utilizzare il servizio per attività illegali,
+                        fraudolente o dannose.
+                    </li>
 
-<li>
-Non effettuare accessi o richieste non autorizzate ai sistemi della
-piattaforma.
-</li>
+                </ul>
 
-<li>
-Non sfruttare intenzionalmente bug, errori o vulnerabilità per ottenere
-vantaggi durante le partite.
-</li>
+            </section>
 
-</ul>
 
-</section>
+            <section id="contenuti">
 
+                <div class="titolo-sezione">
 
+                    <div class="titolo-sezione-numero">
+                        05
+                    </div>
 
+                    <h2>
+                        Contenuti inviati dagli utenti
+                    </h2>
 
-<section id="contenuti">
+                </div>
 
-<h2>5. Contenuti inviati dagli utenti</h2>
+                <p>
+                    Gli utenti possono inviare contenuti attraverso le funzionalità
+                    disponibili sulla piattaforma, incluse chat, messaggi privati,
+                    profili e sistemi di contatto.
+                </p>
 
-<p>
-Gli utenti possono inviare contenuti attraverso le funzionalità disponibili
-sulla piattaforma, comprese chat, messaggi privati, segnalazioni e moduli
-di contatto.
-</p>
+                <p>
+                    L'utente è responsabile dei contenuti che pubblica o invia
+                    e garantisce che tali contenuti non violino leggi,
+                    diritti di altre persone o le regole della piattaforma.
+                </p>
 
-<p>
-L'utente è responsabile dei contenuti che pubblica o invia tramite
-Giochi Società.
-</p>
+                <ul>
 
-<p>
-Non è consentito pubblicare o inviare contenuti:
+                    <li>
+                        Non sono consentiti contenuti offensivi, minacciosi
+                        o gravemente molesti.
+                    </li>
 
-</p>
+                    <li>
+                        Non è consentita la diffusione di contenuti illegali
+                        o che violino i diritti di terzi.
+                    </li>
 
-<ul>
+                    <li>
+                        Non è consentito utilizzare le funzionalità di comunicazione
+                        per effettuare spam o attività indesiderate.
+                    </li>
 
-<li>
-offensivi, minacciosi o molesti;
-</li>
+                </ul>
 
-<li>
-discriminatori;
-</li>
+                <div class="box-evidenza">
+                    ⚠️ I contenuti che violano le regole possono essere rimossi
+                    e possono comportare provvedimenti sull'account.
+                </div>
 
-<li>
-sessualmente espliciti o inappropriati;
-</li>
+            </section>
 
-<li>
-illeciti o finalizzati a violare i diritti altrui;
-</li>
 
-<li>
-contenenti dati personali di altre persone senza autorizzazione;
-</li>
+            <section id="disponibilita">
 
-<li>
-destinati a diffondere spam, pubblicità non autorizzata o contenuti
-pericolosi.
-</li>
+                <div class="titolo-sezione">
 
-</ul>
+                    <div class="titolo-sezione-numero">
+                        06
+                    </div>
 
-</section>
+                    <h2>
+                        Disponibilità del servizio
+                    </h2>
 
+                </div>
 
+                <p>
+                    Giochi Società si impegna a mantenere il servizio operativo
+                    e accessibile, ma non può garantire una disponibilità continua
+                    e priva di interruzioni.
+                </p>
 
+                <p>
+                    Potrebbero verificarsi interruzioni temporanee dovute a
+                    manutenzione, aggiornamenti, problemi tecnici, malfunzionamenti
+                    della rete o indisponibilità di servizi esterni utilizzati
+                    dalla piattaforma.
+                </p>
 
-<section id="partite">
+                <p>
+                    Alcune funzionalità potrebbero quindi essere temporaneamente
+                    non disponibili o subire modifiche.
+                </p>
 
-<h2>6. Partite online</h2>
+            </section>
 
-<p>
-Le partite disponibili sulla piattaforma sono pensate per consentire
-agli utenti di giocare insieme in tempo reale.
-</p>
 
-<ul>
+            <section id="sospensione">
 
-<li>
-Le partite pubbliche possono essere accessibili agli altri giocatori
-presenti nella relativa stanza.
-</li>
+                <div class="titolo-sezione">
 
-<li>
-Le partite private possono prevedere limitazioni all'accesso e inviti
-specifici.
-</li>
+                    <div class="titolo-sezione-numero">
+                        07
+                    </div>
 
-<li>
-Ogni partecipante deve rispettare gli altri giocatori durante tutta
-la partita.
-</li>
+                    <h2>
+                        Sospensione degli account
+                    </h2>
 
-<li>
-Non è consentito utilizzare account multipli nella stessa partita per
-ottenere vantaggi.
-</li>
+                </div>
 
-</ul>
+                <p>
+                    Lo staff di Giochi Società può limitare, sospendere
+                    o interrompere l'accesso a un account in caso di violazione
+                    dei presenti Termini e Condizioni o delle regole della
+                    piattaforma.
+                </p>
 
-<div class="box-evidenza">
+                <ul>
 
-🎮 Giochi Società è progettato per offrire partite multiplayer tra
-persone reali: il fair play e il rispetto degli altri giocatori sono
-parte fondamentale dell'esperienza.
+                    <li>
+                        Le violazioni gravi possono comportare la sospensione
+                        immediata dell'account.
+                    </li>
 
-</div>
+                    <li>
+                        In caso di comportamenti particolarmente gravi o ripetuti
+                        può essere applicato un ban definitivo.
+                    </li>
 
-</section>
+                    <li>
+                        Le misure adottate possono variare in base alla gravità,
+                        alla natura e alla reiterazione della violazione.
+                    </li>
 
+                    <li>
+                        Gli utenti possono contattare lo staff per chiedere
+                        chiarimenti o presentare una contestazione.
+                    </li>
 
+                </ul>
 
+                <div class="box-evidenza">
+                    🛡️ Le misure adottate dallo staff vengono valutate
+                    in relazione alla situazione e alla gravità del comportamento.
+                </div>
 
-<section id="fairplay">
+            </section>
 
-<h2>7. Fair play e correttezza</h2>
 
-<p>
-Gli utenti devono partecipare alle partite rispettando le regole del
-gioco e gli altri partecipanti.
-</p>
+            <section id="privacy">
 
-<ul>
+                <div class="titolo-sezione">
 
-<li>
-È vietato sfruttare volontariamente bug o malfunzionamenti.
-</li>
+                    <div class="titolo-sezione-numero">
+                        08
+                    </div>
 
-<li>
-È vietato manipolare richieste, dati o comunicazioni con il server
-per ottenere vantaggi.
-</li>
+                    <h2>
+                        Privacy e dati personali
+                    </h2>
 
-<li>
-È vietato utilizzare software o strumenti non autorizzati che alterino
-l'esperienza di gioco.
-</li>
+                </div>
 
-<li>
-Abbandoni ripetuti e intenzionali delle partite possono essere valutati
-dallo staff come comportamento scorretto.
-</li>
+                <p>
+                    I dati personali degli utenti vengono trattati per permettere
+                    il funzionamento del servizio, la gestione degli account,
+                    la sicurezza della piattaforma e l'assistenza agli utenti.
+                </p>
 
-</ul>
+                <p>
+                    Le modalità di raccolta, utilizzo, conservazione e protezione
+                    dei dati personali sono descritte nella
+                    <a
+                        href="privacy-policy.html"
+                        class="link-privacy"
+                    >
+                        Privacy Policy
+                    </a>
+                    di Giochi Società.
+                </p>
 
-</section>
+                <p>
+                    Utilizzando la piattaforma, l'utente prende visione anche
+                    delle disposizioni relative alla protezione dei dati personali.
+                </p>
 
+            </section>
 
 
+            <section id="modifiche">
 
-<section id="disponibilita">
+                <div class="titolo-sezione">
 
-<h2>8. Disponibilità del servizio</h2>
+                    <div class="titolo-sezione-numero">
+                        09
+                    </div>
 
-<p>
-Giochi Società si impegna a mantenere il servizio disponibile e funzionante,
-ma non può garantire un funzionamento continuo e privo di interruzioni.
-</p>
+                    <h2>
+                        Modifiche ai termini
+                    </h2>
 
-<p>
-Potrebbero verificarsi temporaneamente interruzioni o limitazioni dovute,
-ad esempio, a:
+                </div>
 
-</p>
+                <p>
+                    Giochi Società può modificare i presenti Termini e Condizioni
+                    per introdurre nuove funzionalità, migliorare il servizio,
+                    aggiornare le regole della piattaforma o adeguarsi a eventuali
+                    cambiamenti normativi.
+                </p>
 
-<ul>
+                <p>
+                    La data dell'ultimo aggiornamento viene sempre indicata
+                    nella parte superiore della pagina.
+                </p>
 
-<li>
-manutenzione;
-</li>
+                <p>
+                    Continuando a utilizzare la piattaforma dopo eventuali
+                    modifiche, l'utente accetta i Termini e Condizioni aggiornati.
+                </p>
 
-<li>
-aggiornamenti del sistema;
-</li>
+            </section>
 
-<li>
-problemi tecnici;
-</li>
 
-<li>
-malfunzionamenti di servizi esterni;
-</li>
+            <section id="contatti">
 
-<li>
-problemi di rete o di connessione dell'utente.
-</li>
+                <div class="titolo-sezione">
 
-</ul>
+                    <div class="titolo-sezione-numero">
+                        10
+                    </div>
 
-</section>
+                    <h2>
+                        Contatti
+                    </h2>
 
+                </div>
 
+                <p>
+                    Per domande, richieste o chiarimenti relativi ai presenti
+                    Termini e Condizioni è possibile contattare lo staff tramite
+                    i canali di contatto disponibili sul sito.
+                </p>
 
+                <div class="azioni-finali">
 
-<section id="sospensione">
+                    <a
+                        href="lobby.html"
+                        class="link-home"
+                    >
+                        ← Torna al gioco
+                    </a>
 
-<h2>9. Sospensione e chiusura degli account</h2>
+                </div>
 
-<p>
-Lo staff può adottare provvedimenti nei confronti degli account che
-violano i presenti Termini e Condizioni, il Regolamento o le regole
-della piattaforma.
-</p>
+            </section>
 
-<table class="tabella-termini">
+        </main>
 
-<thead>
 
-<tr>
+        <footer>
+            © 2026 Giochi Società — Tutti i diritti riservati
+        </footer>
 
-<th>
-Provvedimento
-</th>
-
-<th>
-Descrizione
-</th>
-
-</tr>
-
-</thead>
-
-<tbody>
-
-<tr>
-
-<td>
-<strong>Avviso</strong>
-</td>
-
-<td>
-Comunicazione formale relativa a una violazione o a un comportamento
-non conforme alle regole della piattaforma.
-</td>
-
-</tr>
-
-<tr>
-
-<td>
-<strong>Sospensione temporanea</strong>
-</td>
-
-<td>
-Limitazione temporanea dell'accesso all'account per un periodo
-stabilito in base alla situazione.
-</td>
-
-</tr>
-
-<tr>
-
-<td>
-<strong>Ban</strong>
-</td>
-
-<td>
-Disattivazione dell'account in caso di violazioni particolarmente
-gravi o ripetute.
-</td>
-
-</tr>
-
-</tbody>
-
-</table>
-
-<p>
-La gravità e la durata del provvedimento possono dipendere dalla natura
-della violazione, dalla sua eventuale reiterazione e dalle circostanze
-del caso.
-</p>
-
-</section>
-
-
-
-
-<section id="privacy">
-
-<h2>10. Privacy e dati personali</h2>
-
-<p>
-Il trattamento dei dati personali degli utenti avviene secondo quanto
-descritto nella
-<strong>Privacy Policy</strong> di Giochi Società.
-</p>
-
-<p>
-Per il funzionamento della piattaforma possono essere trattati dati
-necessari alla gestione dell'account, all'autenticazione, alle partite,
-alle comunicazioni e alla sicurezza del servizio.
-</p>
-
-<p>
-Le password degli utenti non vengono conservate in formato leggibile
-e vengono adottate misure tecniche per proteggerne la sicurezza.
-</p>
-
-</section>
-
-
-
-
-<section id="modifiche">
-
-<h2>11. Modifiche ai termini</h2>
-
-<p>
-Giochi Società può modificare o aggiornare i presenti Termini e Condizioni
-per riflettere cambiamenti del servizio, nuove funzionalità, modifiche
-organizzative o aggiornamenti delle regole della piattaforma.
-</p>
-
-<p>
-La versione aggiornata sarà pubblicata su questa pagina e la data
-dell'ultimo aggiornamento sarà indicata nella parte superiore del documento.
-</p>
-
-<div class="box-evidenza">
-
-📌 Ti consigliamo di controllare periodicamente questa pagina per
-rimanere informato sulle eventuali modifiche alle condizioni di utilizzo.
-
-</div>
-
-</section>
-
-
-
-
-<section id="contatti">
-
-<h2>12. Contatti</h2>
-
-<p>
-Per domande, richieste di chiarimento o comunicazioni relative ai presenti
-Termini e Condizioni puoi contattare lo staff di Giochi Società tramite
-i canali di contatto disponibili sul sito.
-</p>
-
-<a
-  href="/lobby"
-  class="link-home"
->
-← Torna al gioco
-</a>
-
-</section>
-
-
-
-
-<footer>
-
-© 2026 Giochi Società — Tutti i diritti riservati
-
-</footer>
-
+    </div>
 
 </div>
 
