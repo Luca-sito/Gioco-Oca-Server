@@ -1402,7 +1402,7 @@ body.tema-scuro .giocatore-online{
     <h2 id="nomeStanza">STANZA</h2>
     <h3 style="text-align:center;">👤 <span id="online">0</span>  &nbsp; 👥 <span id="amiciOnline">0</span></h3>
     <div id="areaUtente"></div>
-    <h2>🟢 Online in questa stanza</h2>
+    <h2>Online in questa stanza</h2>
     <div id="listaOnline"></div>
   </div>
 </div>
@@ -1932,18 +1932,18 @@ function mostraGiocatori(lista) {
     const altri = listaOrdinata.filter(g => !mieiAmiciUid.has(g.uid));
     let html = "";
     if (amici.length) {
-      html += "<h3 style='margin:10px;color:#43a047;'>👥 Amici online</h3>";
+      html += "<h3 style='margin:10px;color:#43a047;'>Amici online</h3>";
       html += amici.map(g => creaRigaGiocatore(g)).join("");
     }
     if (altri.length) {
-      html += "<h3 style='margin:10px;color:#666;'>🟢 Altri giocatori</h3>";
+      html += "<h3 style='margin:10px;color:#666;'>Altri giocatori</h3>";
       html += altri.map(g => creaRigaGiocatore(g)).join("");
     }
     contenitore.innerHTML = html;
   }
   const contenutoMobile = document.getElementById("contenutoMobile");
   if (contenutoMobile && contenutoMobile.dataset.vista === "online") {
-    contenutoMobile.innerHTML = `<h2>👥 Giocatori online</h2>${contenitore.innerHTML}`;
+    contenutoMobile.innerHTML = `<h2>GIOCATORI ONLINE</h2>${contenitore.innerHTML}`;
   }
 }
 function creaRigaGiocatore(g) {
@@ -1979,7 +1979,7 @@ async function caricaTopGiocatori() {
     if (!dati.giocatori || dati.giocatori.length === 0) { contenitore.innerHTML = "Nessun giocatore ancora."; return; }
     contenitore.innerHTML = dati.giocatori.map((g, index) => {
       let medaglia = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : "🏅";
-      return `<div class="top-player">${medaglia} <b><a href="profilo-pubblico.html?nickname=${encodeURIComponent(g.nickname)}" style="color:inherit;">${g.nickname}</a></b><br>🎯 Vittorie: ${g.vinte}<br>🎮 Partite: ${g.giocate}</div><br>`;
+      return `<div class="top-player">${medaglia} <b><a href="profilo-pubblico.html?nickname=${encodeURIComponent(g.nickname)}" style="color:inherit;">${g.nickname}</a></b><br>Vittorie: ${g.vinte}<br>Partite: ${g.giocate}</div><br>`;
     }).join("");
   } catch (e) {
     document.getElementById("top").innerHTML = "Errore caricamento classifica";
@@ -2058,9 +2058,9 @@ function disegnaPopupGiocatore(dati) {
   document.getElementById("popupGiocatoreContenuto").innerHTML = `
     <div class="popup-avatar-container">${immagine}</div>
     <div class="popup-nickname">${dati.nickname}</div>
-    <div class="popup-stato-online">${online ? "🟢 Online ora in questa stanza" : "⚫ Non online in questa stanza al momento"}</div>
+    <div class="popup-stato-online">${online ? "Online ora in questa stanza" : "⚫ Non online in questa stanza al momento"}</div>
     <div class="popup-azioni">${azioneHtml}</div>
-    <a href="profilo-pubblico.html?nickname=${encodeURIComponent(dati.nickname)}" class="popup-link-profilo">👤 Vedi profilo completo</a>
+    <a href="profilo-pubblico.html?nickname=${encodeURIComponent(dati.nickname)}" class="popup-link-profilo">VEDI PROFILO COMPLETO</a>
   `;
 }
 async function inviaRichiestaAmicizia(destinatarioUid) {
