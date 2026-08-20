@@ -122,6 +122,82 @@ button:disabled{
     color:white;
 }
 /* =========================================================
+   SELETTORE TIPO PARTITA (Classifica / Divertimento)
+========================================================= */
+.selettore-tipo-partita{
+    display:flex;
+    gap:6px;
+    margin-bottom:10px;
+}
+.opzione-tipo-partita{
+    flex:1;
+    padding:10px 6px;
+    border:2px solid #ddd;
+    border-radius:6px;
+    background:#fafafa;
+    text-align:center;
+    font-size:13px;
+    font-weight:bold;
+    color:#555;
+    cursor:pointer;
+    user-select:none;
+}
+.opzione-tipo-partita.selezionata{
+    border-color:#ff6600;
+    background:#fff1e6;
+    color:#ff6600;
+}
+.opzione-tipo-partita.selezionata.divertimento{
+    border-color:#43a047;
+    background:#eafaf0;
+    color:#2e7d32;
+}
+.riga-microfono{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:10px;
+    margin-bottom:10px;
+    border-radius:6px;
+    background:#fafafa;
+    border:1px solid #ddd;
+}
+.riga-microfono input[type="checkbox"]{
+    width:auto;
+    margin:0;
+    padding:0;
+}
+.riga-microfono label{
+    font-size:13px;
+    font-weight:bold;
+    color:#333;
+    cursor:pointer;
+}
+.badge-tipo-partita{
+    display:inline-block;
+    padding:2px 8px;
+    border-radius:20px;
+    font-size:11px;
+    font-weight:bold;
+    margin-left:6px;
+}
+.badge-tipo-partita.classifica{
+    background:#fff1e6;
+    color:#ff6600;
+}
+.badge-tipo-partita.divertimento{
+    background:#eafaf0;
+    color:#2e7d32;
+}
+.badge-microfono{
+    font-size:12px;
+}
+.elo-mini{
+    font-size:11px;
+    color:#777;
+    font-weight:normal;
+}
+/* =========================================================
    ELENCO PARTITE
 ========================================================= */
 #partite{
@@ -297,6 +373,12 @@ button:disabled{
     font-size:14px;
     color:#555;
     font-weight:bold;
+}
+.elo-utente{
+    margin-top:6px;
+    font-size:13px;
+    font-weight:bold;
+    color:#ff6600;
 }
 /* =========================================================
    LISTA ONLINE
@@ -1295,6 +1377,17 @@ body.tema-scuro .giocatore-online{
 </style>
 </head>
 <body>
+<div id="contenitoreNotifiche"></div>
+<div id="areaCampanella">
+  <button id="btnCampanella" onclick="toggleNotifiche()">
+    🔔
+    <span id="badgeNotifiche" class="badge-notifiche" style="display:none;">0</span>
+  </button>
+  <div id="pannelloNotifiche" class="pannello-notifiche nascosto">
+    <div class="notifiche-titolo">Notifiche</div>
+    <div id="listaNotifiche"></div>
+  </div>
+</div>
 <div id="cardInvitoRicevuto" class="nascosto">
   <div id="testoInvitoRicevuto"></div>
   <div class="invito-bottoni">
@@ -1321,6 +1414,16 @@ body.tema-scuro .giocatore-online{
   <div class="sinistra">
     <h2>Opzioni di gioco</h2>
     <div class="box">
+      <p>Tipo partita</p>
+      <div class="selettore-tipo-partita">
+        <div class="opzione-tipo-partita selezionata" id="optClassifica" onclick="selezionaTipoPartita('classifica')">🏆 Classifica</div>
+        <div class="opzione-tipo-partita divertimento" id="optDivertimento" onclick="selezionaTipoPartita('divertimento')">🎉 Divertimento</div>
+      </div>
+      <input type="hidden" id="tipoPartitaSelezionato" value="classifica">
+      <div class="riga-microfono">
+        <input type="checkbox" id="microfonoAttivo">
+        <label for="microfonoAttivo">🎤 Chat vocale (microfono attivo in partita)</label>
+      </div>
       <p>Numero giocatori</p>
       <select id="numeroGiocatori">
         <option value="2">2 giocatori</option>
@@ -1339,7 +1442,7 @@ body.tema-scuro .giocatore-online{
       </select>
 <p>Punti partita</p>
       <select id="punti"><option>100</option><option>150</option><option>200</option></select>
-      <p>Tipo partita</p>
+      <p>Modalità partita</p>
       <select id="tipoPartita">
         <option value="pubblica">🔓 Pubblica</option>
         <option value="privata">🔒 Privata (solo su invito)</option>
@@ -1412,6 +1515,7 @@ const parametri = new URLSearchParams(window.location.search);
 const stanza = parametri.get("stanza") || "BAR";
 document.getElementById("nomeStanza").innerHTML = stanza;
 let mioUid = null;
+let mioElo = 1000;
 let mieiAmiciUid = new Set();
 let ultimaListaOnlineStanza = [];
 let aspettaPropriaPartitaPrivata = false;
@@ -1445,6 +1549,20 @@ function rilevaTipoDispositivoClient() {
   if (/iPhone|iPod/i.test(ua) || (/Android/i.test(ua) && /Mobile/i.test(ua))) return "cellulare";
   return "computer";
 }
+// ===== SELETTORE CLASSIFICA / DIVERTIMENTO =====
+function selezionaTipoPartita(tipo) {
+  document.getElementById("tipoPartitaSelezionato").value = tipo;
+  document.getElementById("optClassifica").classList.toggle("selezionata", tipo === "classifica");
+  document.getElementById("optDivertimento").classList.toggle("selezionata", tipo === "divertimento");
+}
+function selezionaTipoPartitaMobile(tipo) {
+  const campo = document.getElementById("tipoPartitaSelezionatoMobile");
+  if (campo) campo.value = tipo;
+  const optC = document.getElementById("optClassificaMobile");
+  const optD = document.getElementById("optDivertimentoMobile");
+  if (optC) optC.classList.toggle("selezionata", tipo === "classifica");
+  if (optD) optD.classList.toggle("selezionata", tipo === "divertimento");
+}
 // ===== MENU MOBILE =====
 function apriCreaMobile(){
 const popup = document.getElementById("popupMobile");
@@ -1454,6 +1572,16 @@ document.getElementById("contenutoMobile").innerHTML=`
 <h2 style="margin-bottom:15px;">
 CREA TAVOLO
 </h2>
+<p>Tipo partita</p>
+<div class="selettore-tipo-partita">
+  <div class="opzione-tipo-partita selezionata" id="optClassificaMobile" onclick="selezionaTipoPartitaMobile('classifica')">🏆 Classifica</div>
+  <div class="opzione-tipo-partita divertimento" id="optDivertimentoMobile" onclick="selezionaTipoPartitaMobile('divertimento')">🎉 Divertimento</div>
+</div>
+<input type="hidden" id="tipoPartitaSelezionatoMobile" value="classifica">
+<div class="riga-microfono">
+  <input type="checkbox" id="microfonoAttivoMobile">
+  <label for="microfonoAttivoMobile">🎤 Chat vocale (microfono attivo)</label>
+</div>
 <p>Numero giocatori</p>
 <select id="numeroGiocatoriMobile">
 <option value="2">2 giocatori</option>
@@ -1476,7 +1604,7 @@ CREA TAVOLO
 <option value="150">150</option>
 <option value="200">200</option>
 </select>
-<p>Tipo partita</p>
+<p>Modalità partita</p>
 <select id="tipoPartitaMobile">
 <option value="pubblica">
 🔓 Pubblica
@@ -1498,11 +1626,15 @@ apriMobile();
 }
 function creaPartitaMobile() {
   const tipo = document.getElementById("tipoPartitaMobile").value;
+  const tipoPartita = document.getElementById("tipoPartitaSelezionatoMobile").value;
+  const microfonoAttivo = document.getElementById("microfonoAttivoMobile").checked;
   socket.send(JSON.stringify({
     tipo: "creaPartita",
     tempo: document.getElementById("tempoMobile").value,
     punti: document.getElementById("puntiMobile").value,
     modalita: tipo,
+    tipoPartita: tipoPartita,
+    microfonoAttivo: microfonoAttivo,
     maxGiocatori: document.getElementById("numeroGiocatoriMobile").value
   }));
   if (tipo === "privata") aspettaPropriaPartitaPrivata = true;
@@ -1699,6 +1831,7 @@ async function verificaSessione() {
     if (!risposta.ok) { window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href); return; }
     const dati = await risposta.json();
     mioUid = dati.uid;
+    mioElo = dati.elo != null ? dati.elo : 1000;
     const immagineAvatar = dati.avatar
       ? `<img class="avatar" src="${dati.avatar}">`
       : `<div class="avatar" style="background:${coloreDaNome(dati.nickname)};">${iniziale(dati.nickname)}</div>`;
@@ -1706,6 +1839,7 @@ async function verificaSessione() {
       <div class="utente-box">
         <div class="avatar-container">${immagineAvatar}</div>
         <div class="nickname">${dati.nickname}</div>
+        <div class="elo-utente">🏆 ${mioElo} ELO</div>
         <div class="dispositivo">${iconaDispositivo(rilevaTipoDispositivoClient())}</div>
       </div>
     `;
@@ -1742,16 +1876,26 @@ socket.onclose = () => { setTimeout(() => location.reload(), 3000); };
     if (dati.tipo === "invitoRicevuto") mostraInvitoRicevuto(dati);
     if (dati.tipo === "invitoInviato") segnaInvitatoNelModal(dati.destinatarioUid);
     if (dati.tipo === "invitoRifiutato") mostraNotifica((dati.destinatarioNome || "Il giocatore") + " ha rifiutato l'invito.");
+    // La connessione vocale automatica vera e propria (WebRTC) avviene nella pagina
+    // di gioco (gioco.html): qui in lobby avvisiamo solo che il microfono verrà
+    // collegato in automatico non appena la partita comincia.
+    if (dati.tipo === "vocaleAutoAvvio" && dati.peer && dati.peer.length) {
+      mostraNotifica("🎤 Chat vocale attiva con " + dati.peer.map(p => p.nome).join(", "));
+    }
   };
 }
 // ===== CREAZIONE / LISTA PARTITE =====
 function creaPartita() {
   const tipo = document.getElementById("tipoPartita").value;
+  const tipoPartita = document.getElementById("tipoPartitaSelezionato").value;
+  const microfonoAttivo = document.getElementById("microfonoAttivo").checked;
   socket.send(JSON.stringify({
     tipo: "creaPartita",
     tempo: document.getElementById("tempo").value,
     punti: document.getElementById("punti").value,
     modalita: tipo,
+    tipoPartita: tipoPartita,
+    microfonoAttivo: microfonoAttivo,
     maxGiocatori: document.getElementById("numeroGiocatori").value
   }));
   if (tipo === "privata") aspettaPropriaPartitaPrivata = true;
@@ -1815,10 +1959,16 @@ const eMia =
       azioniHtml = `<button onclick="entraPartita('${partita.id}')" ${piena ? 'disabled' : ''}>${piena ? 'Piena' : 'Entra'}</button>`;
     }
 
+    const tipoPartitaTag = partita.tipoPartita === "divertimento"
+      ? `<span class="badge-tipo-partita divertimento">🎉 Divertimento</span>`
+      : `<span class="badge-tipo-partita classifica">🏆 Classifica</span>`;
+    const eloCreatore = partita.creatoreElo != null ? ` <span class="elo-mini">(${partita.creatoreElo} ELO)</span>` : "";
+
     html += `
     <div class="scheda-partita">
       <div class="info-partita">
-        🎲 ${partita.creatore}<br>
+        🎲 ${partita.creatore}${eloCreatore}<br>
+        ${tipoPartitaTag}<br>
         ${partita.modalita === "privata" ? "🔒 Privata" : "🔓 Pubblica"}<br>
         ⏱ ${partita.tempo} secondi<br>
         🏆 ${partita.punti} punti
@@ -1979,7 +2129,7 @@ async function caricaTopGiocatori() {
     if (!dati.giocatori || dati.giocatori.length === 0) { contenitore.innerHTML = "Nessun giocatore ancora."; return; }
     contenitore.innerHTML = dati.giocatori.map((g, index) => {
       let medaglia = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : "🏅";
-      return `<div class="top-player">${medaglia} <b><a href="profilo-pubblico.html?nickname=${encodeURIComponent(g.nickname)}" style="color:inherit;">${g.nickname}</a></b><br>Vittorie: ${g.vinte}<br>Partite: ${g.giocate}</div><br>`;
+      return `<div class="top-player">${medaglia} <b><a href="profilo-pubblico.html?nickname=${encodeURIComponent(g.nickname)}" style="color:inherit;">${g.nickname}</a></b><br>ELO: ${g.elo}<br>Vittorie: ${g.vinte}<br>Partite: ${g.giocate}</div><br>`;
     }).join("");
   } catch (e) {
     document.getElementById("top").innerHTML = "Errore caricamento classifica";
@@ -2032,10 +2182,12 @@ function creaGiocatoriPartita(partita){
     : `<div class="avatar-partita-mini" style="background:${coloreDaNome(g.nome)}">
         ${iniziale(g.nome)}
        </div>`;
+    const elo = g.elo != null ? `<span class="elo-mini">${g.elo} ELO</span>` : "";
+    const microfono = g.microfonoAttivo ? `<span class="badge-microfono" title="Microfono attivo">🎤</span>` : "";
     return `
       <div class="mini-giocatore">
         ${avatar}
-        ${g.nome} 🟢
+        <span>${g.nome} 🟢 ${microfono}<br>${elo}</span>
       </div>
     `;
   }).join("");
@@ -2058,6 +2210,7 @@ function disegnaPopupGiocatore(dati) {
   document.getElementById("popupGiocatoreContenuto").innerHTML = `
     <div class="popup-avatar-container">${immagine}</div>
     <div class="popup-nickname">${dati.nickname}</div>
+    <div class="elo-mini" style="text-align:center;margin-bottom:6px;">🏆 ${dati.elo != null ? dati.elo : "-"} ELO</div>
     <div class="popup-stato-online">${online ? "Online ora in questa stanza" : "⚫ Non online in questa stanza al momento"}</div>
     <div class="popup-azioni">${azioneHtml}</div>
     <a href="profilo-pubblico.html?nickname=${encodeURIComponent(dati.nickname)}" class="popup-link-profilo">VEDI PROFILO COMPLETO</a>
