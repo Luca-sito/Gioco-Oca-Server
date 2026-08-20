@@ -111,24 +111,27 @@ section li {
   color: #ffe9a8;
 }
 
-.link-privacy {
+.tabella-termini {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+  font-size: 14px;
+}
+
+.tabella-termini th,
+.tabella-termini td {
+  border: 1px solid #333;
+  padding: 10px 14px;
+  text-align: left;
+}
+
+.tabella-termini th {
+  background: #1e2a38;
   color: #ffd700;
-  text-decoration: none;
-  font-weight: bold;
 }
 
-.link-privacy:hover {
-  color: #ffaa00;
-}
-
-.link-regolamento {
-  color: #ffd700;
-  text-decoration: none;
-  font-weight: bold;
-}
-
-.link-regolamento:hover {
-  color: #ffaa00;
+.tabella-termini tr:nth-child(even) {
+  background: #16202b;
 }
 
 .link-home {
@@ -156,10 +159,6 @@ footer {
   font-size: 13px;
 }
 
-/* =========================================================
-   MOBILE
-   ========================================================= */
-
 @media (max-width: 600px) {
 
   .contenitore {
@@ -170,17 +169,8 @@ footer {
     font-size: 25px;
   }
 
-  .intestazione p {
-    font-size: 12px;
-  }
-
   .indice {
-    padding: 18px 18px;
-  }
-
-  .indice ol {
-    padding-left: 18px;
-    font-size: 13px;
+    padding: 18px;
   }
 
   section h2 {
@@ -192,435 +182,627 @@ footer {
     font-size: 14px;
   }
 
-  .box-evidenza {
-    padding: 14px 16px;
+  .tabella-termini {
     font-size: 13px;
   }
 
-  .link-home {
-    width: 100%;
-    text-align: center;
+  .tabella-termini th,
+  .tabella-termini td {
+    padding: 9px 10px;
   }
 }
 </style>
+
 </head>
 
 <body>
 
 <div class="contenitore">
 
-  <!-- =========================================================
-       INTESTAZIONE
-       ========================================================= -->
-
-  <div class="intestazione">
-
-    <h1>
-      📜 Termini e Condizioni di Giochi Società
-    </h1>
-
-    <p>
-      Ultimo aggiornamento: luglio 2026
-    </p>
-
-  </div>
-
-
-  <!-- =========================================================
-       INDICE
-       ========================================================= -->
 
-  <div class="indice">
-
-    <h2>
-      Indice
-    </h2>
+<div class="intestazione">
 
-    <ol>
+<h1>📜 Termini e Condizioni di Giochi Società</h1>
 
-      <li>
-        <a href="#accettazione">
-          Accettazione dei termini
-        </a>
-      </li>
-
-      <li>
-        <a href="#servizio">
-          Utilizzo del servizio
-        </a>
-      </li>
-
-      <li>
-        <a href="#account">
-          Account e sicurezza
-        </a>
-      </li>
+<p>
+Ultimo aggiornamento: agosto 2026
+</p>
 
-      <li>
-        <a href="#responsabilita">
-          Responsabilità dell'utente
-        </a>
-      </li>
+</div>
 
-      <li>
-        <a href="#contenuti">
-          Contenuti inviati dagli utenti
-        </a>
-      </li>
 
-      <li>
-        <a href="#disponibilita">
-          Disponibilità del servizio
-        </a>
-      </li>
 
-      <li>
-        <a href="#sospensione">
-          Sospensione degli account
-        </a>
-      </li>
+<div class="indice">
 
-      <li>
-        <a href="#privacy">
-          Privacy e dati personali
-        </a>
-      </li>
+<h2>Indice</h2>
 
-      <li>
-        <a href="#modifiche">
-          Modifiche ai termini
-        </a>
-      </li>
+<ol>
 
-      <li>
-        <a href="#contatti">
-          Contatti
-        </a>
-      </li>
+<li>
+<a href="#accettazione">
+Accettazione dei termini
+</a>
+</li>
 
-    </ol>
+<li>
+<a href="#servizio">
+Utilizzo del servizio
+</a>
+</li>
 
-  </div>
+<li>
+<a href="#account">
+Account e sicurezza
+</a>
+</li>
 
+<li>
+<a href="#responsabilita">
+Responsabilità dell'utente
+</a>
+</li>
 
-  <!-- =========================================================
-       1. ACCETTAZIONE
-       ========================================================= -->
+<li>
+<a href="#contenuti">
+Contenuti inviati dagli utenti
+</a>
+</li>
 
-  <section id="accettazione">
+<li>
+<a href="#partite">
+Partite online
+</a>
+</li>
 
-    <h2>
-      1. Accettazione dei termini
-    </h2>
+<li>
+<a href="#fairplay">
+Fair play e correttezza
+</a>
+</li>
 
-    <p>
-      Registrandoti e utilizzando Giochi Società accetti questi
-      Termini e Condizioni.
-      Se non accetti una o più parti del presente documento,
-      ti invitiamo a non utilizzare il servizio.
-    </p>
+<li>
+<a href="#disponibilita">
+Disponibilità del servizio
+</a>
+</li>
 
-    <div class="box-evidenza">
-      💡 L'utilizzo della piattaforma implica l'accettazione
-      dei presenti Termini e Condizioni.
-    </div>
+<li>
+<a href="#sospensione">
+Sospensione e chiusura degli account
+</a>
+</li>
 
-  </section>
+<li>
+<a href="#privacy">
+Privacy e dati personali
+</a>
+</li>
 
+<li>
+<a href="#modifiche">
+Modifiche ai termini
+</a>
+</li>
 
-  <!-- =========================================================
-       2. UTILIZZO DEL SERVIZIO
-       ========================================================= -->
+<li>
+<a href="#contatti">
+Contatti
+</a>
+</li>
 
-  <section id="servizio">
+</ol>
 
-    <h2>
-      2. Utilizzo del servizio
-    </h2>
+</div>
 
-    <p>
-      Giochi Società è una piattaforma di gioco online creata
-      per offrire un'esperienza di intrattenimento tra utenti.
-      Il servizio può includere partite online, classifiche,
-      statistiche e funzionalità sociali.
-    </p>
 
-    <div class="box-evidenza">
-      💡 L'utilizzo del sito deve avvenire sempre nel rispetto
-      degli altri giocatori e delle regole della piattaforma.
-    </div>
 
-  </section>
 
+<section id="accettazione">
 
-  <!-- =========================================================
-       3. ACCOUNT E SICUREZZA
-       ========================================================= -->
+<h2>1. Accettazione dei termini</h2>
 
-  <section id="account">
+<p>
+Registrandoti, accedendo o utilizzando Giochi Società accetti i presenti
+Termini e Condizioni e ti impegni a rispettarli.
+</p>
 
-    <h2>
-      3. Account e sicurezza
-    </h2>
+<p>
+Se non accetti una o più disposizioni dei presenti termini, non utilizzare
+la piattaforma e i relativi servizi.
+</p>
 
-    <ul>
+<div class="box-evidenza">
 
-      <li>
-        Ogni utente è responsabile delle informazioni inserite
-        durante la registrazione.
-      </li>
+💡 L'utilizzo continuato della piattaforma implica la presa visione e
+l'accettazione dei Termini e Condizioni applicabili al servizio.
 
-      <li>
-        Le credenziali di accesso devono essere mantenute private.
-      </li>
+</div>
 
-      <li>
-        È vietato utilizzare account appartenenti ad altre persone.
-      </li>
+</section>
 
-      <li>
-        È vietata la creazione di account multipli per aggirare
-        limitazioni o sanzioni.
-      </li>
 
-      <li>
-        L'utente è responsabile delle attività effettuate tramite
-        il proprio account.
-      </li>
 
-    </ul>
 
-  </section>
+<section id="servizio">
 
+<h2>2. Utilizzo del servizio</h2>
 
-  <!-- =========================================================
-       4. RESPONSABILITÀ
-       ========================================================= -->
+<p>
+Giochi Società è una piattaforma online dedicata al gioco multiplayer
+tra persone reali direttamente dal browser.
+</p>
 
-  <section id="responsabilita">
+<p>
+Il servizio può comprendere funzionalità quali:
 
-    <h2>
-      4. Responsabilità dell'utente
-    </h2>
+</p>
 
-    <p>
-      L'utente si impegna a utilizzare il servizio in modo corretto
-      e conforme alle regole della piattaforma.
-      È responsabile delle azioni effettuate tramite il proprio account.
-    </p>
+<ul>
 
-    <ul>
+<li>
+partite multiplayer in tempo reale;
+</li>
 
-      <li>
-        Non tentare di modificare il funzionamento del sito.
-      </li>
+<li>
+stanze pubbliche e private;
+</li>
 
-      <li>
-        Non utilizzare strumenti automatici non autorizzati.
-      </li>
+<li>
+chat e comunicazione tra giocatori;
+</li>
 
-      <li>
-        Non cercare di ottenere vantaggi tramite errori o problemi tecnici.
-      </li>
+<li>
+profili e statistiche degli utenti;
+</li>
 
-      <li>
-        Non tentare di accedere senza autorizzazione agli account
-        o ai dati di altri utenti.
-      </li>
+<li>
+classifiche, livelli, XP e altri elementi del sistema di gioco;
+</li>
 
-    </ul>
+<li>
+funzionalità sociali e di interazione tra utenti.
+</li>
 
-  </section>
+</ul>
 
+</section>
 
-  <!-- =========================================================
-       5. CONTENUTI
-       ========================================================= -->
 
-  <section id="contenuti">
 
-    <h2>
-      5. Contenuti inviati dagli utenti
-    </h2>
 
-    <p>
-      Gli utenti possono inviare messaggi tramite la sezione
-      Contatti, le chat private o altre funzionalità disponibili
-      sulla piattaforma.
-    </p>
+<section id="account">
 
-    <p>
-      L'utente garantisce che i contenuti inviati non violino
-      leggi, diritti di altre persone o le regole della piattaforma.
-    </p>
+<h2>3. Account e sicurezza</h2>
 
-    <div class="box-evidenza">
-      ⚠️ I contenuti che violano le regole possono essere rimossi
-      e possono comportare provvedimenti sull'account.
-    </div>
+<p>
+Alcune funzionalità della piattaforma richiedono la creazione di un account.
+L'utente è responsabile delle informazioni fornite durante la registrazione
+e della corretta gestione del proprio account.
+</p>
 
-  </section>
+<ul>
 
+<li>
+Le credenziali di accesso devono essere mantenute riservate.
+</li>
 
-  <!-- =========================================================
-       6. DISPONIBILITÀ
-       ========================================================= -->
+<li>
+Non è consentito utilizzare l'account di un'altra persona.
+</li>
 
-  <section id="disponibilita">
+<li>
+Non è consentito condividere intenzionalmente le proprie credenziali
+con altri utenti.
+</li>
 
-    <h2>
-      6. Disponibilità del servizio
-    </h2>
+<li>
+Non è consentito creare account multipli allo scopo di aggirare
+limitazioni, sospensioni o ban.
+</li>
 
-    <p>
-      Ci impegniamo a mantenere il servizio funzionante,
-      ma potrebbero verificarsi interruzioni dovute a manutenzione,
-      aggiornamenti, problemi tecnici o malfunzionamenti di servizi
-      esterni utilizzati dalla piattaforma.
-    </p>
+<li>
+L'utente deve comunicare tempestivamente allo staff eventuali accessi
+non autorizzati o problemi di sicurezza riguardanti il proprio account.
+</li>
 
-    <p>
-      Alcune funzionalità potrebbero quindi essere temporaneamente
-      non disponibili.
-    </p>
+</ul>
 
-  </section>
+</section>
 
 
-  <!-- =========================================================
-       7. SOSPENSIONE
-       ========================================================= -->
 
-  <section id="sospensione">
 
-    <h2>
-      7. Sospensione degli account
-    </h2>
+<section id="responsabilita">
 
-    <p>
-      Lo staff può limitare o sospendere un account in caso di
-      violazioni dei Termini e Condizioni o delle regole della
-      piattaforma.
-    </p>
+<h2>4. Responsabilità dell'utente</h2>
 
-    <ul>
+<p>
+L'utente si impegna a utilizzare Giochi Società in modo corretto,
+responsabile e conforme alle leggi applicabili e alle regole della
+piattaforma.
+</p>
 
-      <li>
-        Violazioni gravi possono comportare la sospensione immediata.
-      </li>
+<p>
+È vietato utilizzare il servizio per danneggiare altri utenti,
+compromettere la sicurezza della piattaforma o alterarne il normale
+funzionamento.
+</p>
 
-      <li>
-        In caso di comportamenti particolarmente gravi può essere
-        applicato un ban definitivo.
-      </li>
+<ul>
 
-      <li>
-        Gli utenti possono contattare lo staff per eventuali
-        chiarimenti o contestazioni.
-      </li>
+<li>
+Non tentare di modificare, alterare o compromettere il funzionamento
+del sito o dei server.
+</li>
 
-    </ul>
+<li>
+Non utilizzare strumenti automatici, bot o sistemi non autorizzati
+per ottenere vantaggi.
+</li>
 
-    <div class="box-evidenza">
-      🛡️ Le misure adottate dallo staff possono variare in base
-      alla gravità e alla natura della violazione.
-    </div>
+<li>
+Non effettuare accessi o richieste non autorizzate ai sistemi della
+piattaforma.
+</li>
 
-  </section>
+<li>
+Non sfruttare intenzionalmente bug, errori o vulnerabilità per ottenere
+vantaggi durante le partite.
+</li>
 
+</ul>
 
-  <!-- =========================================================
-       8. PRIVACY
-       ========================================================= -->
+</section>
 
-  <section id="privacy">
 
-    <h2>
-      8. Privacy e dati personali
-    </h2>
 
-    <p>
-      I dati personali degli utenti vengono trattati per permettere
-      il funzionamento del servizio, la gestione degli account,
-      la sicurezza e l'assistenza.
-    </p>
 
-    <p>
-      Le password non vengono conservate in chiaro e vengono
-      adottate misure tecniche per proteggere le informazioni
-      degli utenti.
-    </p>
+<section id="contenuti">
 
-    <p>
-      Per maggiori informazioni consulta la
-      <a
-        href="privacy-policy.html"
-        class="link-privacy"
-      >
-        Privacy Policy
-      </a>
-      di Giochi Società.
-    </p>
+<h2>5. Contenuti inviati dagli utenti</h2>
 
-  </section>
+<p>
+Gli utenti possono inviare contenuti attraverso le funzionalità disponibili
+sulla piattaforma, comprese chat, messaggi privati, segnalazioni e moduli
+di contatto.
+</p>
 
+<p>
+L'utente è responsabile dei contenuti che pubblica o invia tramite
+Giochi Società.
+</p>
 
-  <!-- =========================================================
-       9. MODIFICHE
-       ========================================================= -->
+<p>
+Non è consentito pubblicare o inviare contenuti:
 
-  <section id="modifiche">
+</p>
 
-    <h2>
-      9. Modifiche ai termini
-    </h2>
+<ul>
 
-    <p>
-      Giochi Società può modificare questi Termini e Condizioni
-      per introdurre nuove funzionalità, migliorare il servizio
-      o aggiornare le regole della piattaforma.
-    </p>
+<li>
+offensivi, minacciosi o molesti;
+</li>
 
-    <p>
-      La data dell'ultimo aggiornamento viene sempre indicata
-      nella parte superiore della pagina.
-    </p>
+<li>
+discriminatori;
+</li>
 
-  </section>
+<li>
+sessualmente espliciti o inappropriati;
+</li>
 
+<li>
+illeciti o finalizzati a violare i diritti altrui;
+</li>
 
-  <!-- =========================================================
-       10. CONTATTI
-       ========================================================= -->
+<li>
+contenenti dati personali di altre persone senza autorizzazione;
+</li>
 
-  <section id="contatti">
+<li>
+destinati a diffondere spam, pubblicità non autorizzata o contenuti
+pericolosi.
+</li>
 
-    <h2>
-      10. Contatti
-    </h2>
+</ul>
 
-    <p>
-      Per domande, richieste o chiarimenti puoi contattare lo staff
-      tramite la sezione Contatti presente sul sito.
-    </p>
+</section>
 
-    <a
-      href="/lobby"
-      class="link-home"
-    >
-      ← Torna al gioco
-    </a>
 
-  </section>
 
 
-  <!-- =========================================================
-       FOOTER
-       ========================================================= -->
+<section id="partite">
 
-  <footer>
-    © 2026 Giochi Società — Tutti i diritti riservati
-  </footer>
+<h2>6. Partite online</h2>
+
+<p>
+Le partite disponibili sulla piattaforma sono pensate per consentire
+agli utenti di giocare insieme in tempo reale.
+</p>
+
+<ul>
+
+<li>
+Le partite pubbliche possono essere accessibili agli altri giocatori
+presenti nella relativa stanza.
+</li>
+
+<li>
+Le partite private possono prevedere limitazioni all'accesso e inviti
+specifici.
+</li>
+
+<li>
+Ogni partecipante deve rispettare gli altri giocatori durante tutta
+la partita.
+</li>
+
+<li>
+Non è consentito utilizzare account multipli nella stessa partita per
+ottenere vantaggi.
+</li>
+
+</ul>
+
+<div class="box-evidenza">
+
+🎮 Giochi Società è progettato per offrire partite multiplayer tra
+persone reali: il fair play e il rispetto degli altri giocatori sono
+parte fondamentale dell'esperienza.
+
+</div>
+
+</section>
+
+
+
+
+<section id="fairplay">
+
+<h2>7. Fair play e correttezza</h2>
+
+<p>
+Gli utenti devono partecipare alle partite rispettando le regole del
+gioco e gli altri partecipanti.
+</p>
+
+<ul>
+
+<li>
+È vietato sfruttare volontariamente bug o malfunzionamenti.
+</li>
+
+<li>
+È vietato manipolare richieste, dati o comunicazioni con il server
+per ottenere vantaggi.
+</li>
+
+<li>
+È vietato utilizzare software o strumenti non autorizzati che alterino
+l'esperienza di gioco.
+</li>
+
+<li>
+Abbandoni ripetuti e intenzionali delle partite possono essere valutati
+dallo staff come comportamento scorretto.
+</li>
+
+</ul>
+
+</section>
+
+
+
+
+<section id="disponibilita">
+
+<h2>8. Disponibilità del servizio</h2>
+
+<p>
+Giochi Società si impegna a mantenere il servizio disponibile e funzionante,
+ma non può garantire un funzionamento continuo e privo di interruzioni.
+</p>
+
+<p>
+Potrebbero verificarsi temporaneamente interruzioni o limitazioni dovute,
+ad esempio, a:
+
+</p>
+
+<ul>
+
+<li>
+manutenzione;
+</li>
+
+<li>
+aggiornamenti del sistema;
+</li>
+
+<li>
+problemi tecnici;
+</li>
+
+<li>
+malfunzionamenti di servizi esterni;
+</li>
+
+<li>
+problemi di rete o di connessione dell'utente.
+</li>
+
+</ul>
+
+</section>
+
+
+
+
+<section id="sospensione">
+
+<h2>9. Sospensione e chiusura degli account</h2>
+
+<p>
+Lo staff può adottare provvedimenti nei confronti degli account che
+violano i presenti Termini e Condizioni, il Regolamento o le regole
+della piattaforma.
+</p>
+
+<table class="tabella-termini">
+
+<thead>
+
+<tr>
+
+<th>
+Provvedimento
+</th>
+
+<th>
+Descrizione
+</th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+<tr>
+
+<td>
+<strong>Avviso</strong>
+</td>
+
+<td>
+Comunicazione formale relativa a una violazione o a un comportamento
+non conforme alle regole della piattaforma.
+</td>
+
+</tr>
+
+<tr>
+
+<td>
+<strong>Sospensione temporanea</strong>
+</td>
+
+<td>
+Limitazione temporanea dell'accesso all'account per un periodo
+stabilito in base alla situazione.
+</td>
+
+</tr>
+
+<tr>
+
+<td>
+<strong>Ban</strong>
+</td>
+
+<td>
+Disattivazione dell'account in caso di violazioni particolarmente
+gravi o ripetute.
+</td>
+
+</tr>
+
+</tbody>
+
+</table>
+
+<p>
+La gravità e la durata del provvedimento possono dipendere dalla natura
+della violazione, dalla sua eventuale reiterazione e dalle circostanze
+del caso.
+</p>
+
+</section>
+
+
+
+
+<section id="privacy">
+
+<h2>10. Privacy e dati personali</h2>
+
+<p>
+Il trattamento dei dati personali degli utenti avviene secondo quanto
+descritto nella
+<strong>Privacy Policy</strong> di Giochi Società.
+</p>
+
+<p>
+Per il funzionamento della piattaforma possono essere trattati dati
+necessari alla gestione dell'account, all'autenticazione, alle partite,
+alle comunicazioni e alla sicurezza del servizio.
+</p>
+
+<p>
+Le password degli utenti non vengono conservate in formato leggibile
+e vengono adottate misure tecniche per proteggerne la sicurezza.
+</p>
+
+</section>
+
+
+
+
+<section id="modifiche">
+
+<h2>11. Modifiche ai termini</h2>
+
+<p>
+Giochi Società può modificare o aggiornare i presenti Termini e Condizioni
+per riflettere cambiamenti del servizio, nuove funzionalità, modifiche
+organizzative o aggiornamenti delle regole della piattaforma.
+</p>
+
+<p>
+La versione aggiornata sarà pubblicata su questa pagina e la data
+dell'ultimo aggiornamento sarà indicata nella parte superiore del documento.
+</p>
+
+<div class="box-evidenza">
+
+📌 Ti consigliamo di controllare periodicamente questa pagina per
+rimanere informato sulle eventuali modifiche alle condizioni di utilizzo.
+
+</div>
+
+</section>
+
+
+
+
+<section id="contatti">
+
+<h2>12. Contatti</h2>
+
+<p>
+Per domande, richieste di chiarimento o comunicazioni relative ai presenti
+Termini e Condizioni puoi contattare lo staff di Giochi Società tramite
+i canali di contatto disponibili sul sito.
+</p>
+
+<a
+  href="/lobby"
+  class="link-home"
+>
+← Torna al gioco
+</a>
+
+</section>
+
+
+
+
+<footer>
+
+© 2026 Giochi Società — Tutti i diritti riservati
+
+</footer>
+
 
 </div>
 
