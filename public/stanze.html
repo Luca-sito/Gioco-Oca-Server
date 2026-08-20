@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+
+<meta charset="UTF-8">
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+>
+
+<title>Gioco dell'Oca | Stanze</title>
+
+
+<style>
+
+* {
+    box-sizing: border-box;
+}
+
+
+html,
+body {
+    width: 100%;
+    min-height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+
+body {
+
+    background: #f5f5f5;
+
+    color: #111;
+
+    font-family:
+        Arial,
+        Helvetica,
+        sans-serif;
+
+    line-height: 1.5;
+}
+
+
+/* =========================================================
+   CONTENITORE
+   ========================================================= */
+
+.contenitore {
+
+    width: min(
+        100%,
+        980px
+    );
+
+    margin: 0 auto;
+
+    padding:
+        32px 20px 60px;
+}
+
+
+/* =========================================================
+   TITOLO
+   ========================================================= */
+
+.titolo-gioco-oca {
+
+    position: relative;
+
+    width: 100%;
+
+    margin:
+        0 0 34px;
+
+    padding:
+        18px 10px;
+
+    background:
+        #ffffff;
+
+    border-bottom:
+        3px solid #ff6600;
+
+    border-radius:
+        10px;
+
+    box-shadow:
+        0 2px 8px
+        rgba(
+            0,
+            0,
+            0,
+            .05
+        );
+
+    color:
+        #111;
+
+    font-size:
+        32px;
+
+    font-weight:
+        900;
+
+    line-height:
+        1.2;
+
+    letter-spacing:
+        1px;
+
+    text-align:
+        center;
+}
+
+
+/* =========================================================
+   LISTA STANZE
+   ========================================================= */
+
+#lista-stanze {
+
+    width: 100%;
+}
+
+
+/* =========================================================
+   RIGA STANZA
+   ========================================================= */
+
+.stanza-riga {
+
+    display:
+        flex;
+
+    flex-direction:
+        column;
+
+    width: 100%;
+
+    margin-bottom:
+        15px;
+
+    padding:
+        18px 26px;
+
+    background:
+        #ffffff;
+
+    border:
+        1px solid #e0e0e0;
+
+    border-radius:
+        8px;
+
+    cursor:
+        pointer;
+
+    user-select:
+        none;
+
+    transition:
+        .2s ease;
+
+}
+
+
+/* =========================================================
+   HOVER
+   ========================================================= */
+
+.stanza-riga:hover {
+
+    transform:
+        translateY(
+            -1px
+        );
+
+    box-shadow:
+        0 4px 12px
+        rgba(
+            0,
+            0,
+            0,
+            .15
+        );
+
+}
+
+
+/* =========================================================
+   TOP STANZA
+   ========================================================= */
+
+.stanza-riga-top {
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    width: 100%;
+}
+
+
+/* =========================================================
+   ICONA
+   ========================================================= */
+
+.stanza-icona {
+
+    flex-shrink:
+        0;
+
+    margin-right:
+        20px;
+
+    font-size:
+        25px;
+
+    line-height:
+        1;
+}
+
+
+/* =========================================================
+   INFO STANZA
+   ========================================================= */
+
+.stanza-info {
+
+    flex:
+        1;
+
+    min-width:
+        0;
+}
+
+
+.stanza-nome {
+
+    margin:
+        0;
+
+    color:
+        #111;
+
+    font-size:
+        20px;
+
+    font-weight:
+        bold;
+
+    line-height:
+        1.25;
+
+}
+
+
+.stanza-sottotitolo {
+
+    margin:
+        2px 0 0;
+
+    color:
+        #888;
+
+    font-size:
+        13px;
+
+    line-height:
+        1.4;
+
+}
+
+
+/* =========================================================
+   ONLINE
+   ========================================================= */
+
+.stanza-online {
+
+    flex-shrink:
+        0;
+
+    margin-left:
+        15px;
+
+    color:
+        #222;
+
+    font-size:
+        14px;
+
+    font-weight:
+        bold;
+
+    white-space:
+        nowrap;
+
+}
+
+
+/* =========================================================
+   GIOCATORI
+   ========================================================= */
+
+.stanza-giocatori {
+
+    display:
+        flex;
+
+    flex-wrap:
+        wrap;
+
+    gap:
+        6px;
+
+    width: 100%;
+
+    margin-top:
+        10px;
+
+    padding-left:
+        45px;
+
+}
+
+
+/* =========================================================
+   CHIP GIOCATORE
+   ========================================================= */
+
+.chip-giocatore {
+
+    display:
+        inline-flex;
+
+    align-items:
+        center;
+
+    min-height:
+        26px;
+
+    padding:
+        4px 10px;
+
+    background:
+        #f4f4f4;
+
+    border-radius:
+        15px;
+
+    color:
+        #555;
+
+    font-size:
+        12px;
+
+    line-height:
+        1;
+
+}
+
+
+/* =========================================================
+   STATO CARICAMENTO
+   ========================================================= */
+
+.stato-caricamento {
+
+    padding:
+        20px;
+
+    background:
+        #ffffff;
+
+    border:
+        1px solid #e0e0e0;
+
+    border-radius:
+        8px;
+
+    color:
+        #777;
+
+    font-size:
+        14px;
+
+    text-align:
+        center;
+}
+
+
+/* =========================================================
+   STATO ERRORE
+   ========================================================= */
+
+.stato-errore {
+
+    padding:
+        20px;
+
+    background:
+        #ffffff;
+
+    border:
+        1px solid #e0e0e0;
+
+    border-radius:
+        8px;
+
+    color:
+        #b44;
+
+    font-size:
+        14px;
+
+    text-align:
+        center;
+}
+
+
+/* =========================================================
+   FRECCIA MOBILE
+   ========================================================= */
+
+.freccia-indietro-mobile {
+
+    display:
+        none;
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 600px) {
+
+    .contenitore {
+
+        padding:
+            20px 12px 40px;
+
+    }
+
+
+    .titolo-gioco-oca {
+
+        font-size:
+            23px;
+
+        padding:
+            13px 55px;
+
+        margin-bottom:
+            28px;
+
+        border-radius:
+            8px;
+
+    }
+
+
+    .stanza-riga {
+
+        padding:
+            15px 16px;
+
+        margin-bottom:
+            12px;
+
+        border-radius:
+            9px;
+
+    }
+
+
+    .stanza-riga-top {
+
+        align-items:
+            flex-start;
+
+    }
+
+
+    .stanza-icona {
+
+        margin-right:
+            13px;
+
+        padding-top:
+            2px;
+
+        font-size:
+            22px;
+
+    }
+
+
+    .stanza-nome {
+
+        font-size:
+            17px;
+
+    }
+
+
+    .stanza-sottotitolo {
+
+        font-size:
+            12px;
+
+    }
+
+
+    .stanza-online {
+
+        margin-left:
+            9px;
+
+        padding-top:
+            2px;
+
+        font-size:
+            12px;
+
+    }
+
+
+    .stanza-giocatori {
+
+        padding-left:
+            35px;
+
+        margin-top:
+            9px;
+
+    }
+
+
+    .chip-giocatore {
+
+        font-size:
+            11px;
+
+        min-height:
+            24px;
+
+        padding:
+            4px 8px;
+
+    }
+
+}
+
+
+/* =========================================================
+   MOBILE STRETTO
+   ========================================================= */
+
+@media (max-width: 380px) {
+
+    .titolo-gioco-oca {
+
+        font-size:
+            21px;
+
+        padding-left:
+            35px;
+
+        padding-right:
+            35px;
+
+    }
+
+
+    .stanza-riga {
+
+        padding:
+            14px 13px;
+
+    }
+
+
+    .stanza-icona {
+
+        margin-right:
+            10px;
+
+        font-size:
+            20px;
+
+    }
+
+
+    .stanza-nome {
+
+        font-size:
+            16px;
+
+    }
+
+
+    .stanza-online {
+
+        font-size:
+            11px;
+
+    }
+
+
+    .stanza-giocatori {
+
+        padding-left:
+            30px;
+
+    }
+
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+
+<div class="contenitore">
+
+
+    <!-- =====================================================
+         TITOLO
+         ===================================================== -->
+
+    <div class="titolo-gioco-oca">
+        GIOCO DELL'OCA
+    </div>
+
+
+    <!-- =====================================================
+         LISTA STANZE
+         ===================================================== -->
+
+    <div id="lista-stanze">
+
+        <div class="stato-caricamento">
+            Caricamento stanze...
+        </div>
+
+    </div>
+
+
+</div>
+
+
+<script>
+
+/* =========================================================
+   SERVER
+   ========================================================= */
+
+const SERVER =
+    "https://gioco-oca-server.onrender.com";
+
+
+/* =========================================================
+   STANZE DISPONIBILI
+   ========================================================= */
+
+const stanze = [
+
+    {
+        nome:
+            "BAR",
+
+        icona:
+            "🍺"
+    },
+
+    {
+        nome:
+            "PUB",
+
+        icona:
+            "🍻"
+    },
+
+    {
+        nome:
+            "DISCOPUB",
+
+        icona:
+            "🎧"
+    },
+
+    {
+        nome:
+            "SERATE",
+
+        icona:
+            "🎉"
+    }
+
+];
+
+
+/* =========================================================
+   CONTAINER
+   ========================================================= */
+
+const container =
+    document.getElementById(
+        "lista-stanze"
+    );
+
+
+/* =========================================================
+   ELEMENTI ONLINE
+   ========================================================= */
+
+const online = {};
+
+
+/* =========================================================
+   SOCKET
+   ========================================================= */
+
+let socket = null;
+
+
+/* =========================================================
+   CREAZIONE STANZE
+   ========================================================= */
+
+function creaStanze() {
+
+    container.innerHTML = "";
+
+
+    stanze.forEach(
+        stanza => {
+
+
+            const div =
+                document.createElement(
+                    "div"
+                );
+
+
+            div.className =
+                "stanza-riga";
+
+
+            div.innerHTML = `
+
+                <div class="stanza-riga-top">
+
+
+                    <div class="stanza-icona">
+
+                        ${stanza.icona}
+
+                    </div>
+
+
+                    <div class="stanza-info">
+
+                        <p class="stanza-nome">
+
+                            ${stanza.nome}
+
+                        </p>
+
+
+                        <p class="stanza-sottotitolo">
+
+                            Accesso libero
+
+                        </p>
+
+                    </div>
+
+
+                    <div
+                        class="stanza-online"
+                        id="on-${stanza.nome}"
+                    >
+
+                        👤 0
+
+                    </div>
+
+
+                </div>
+
+
+                <div
+                    class="stanza-giocatori"
+                    id="players-${stanza.nome}"
+                >
+
+                </div>
+
+            `;
+
+
+            /* =============================================
+               CLICK STANZA
+               ============================================= */
+
+            div.addEventListener(
+                "click",
+                () => {
+
+                    window.location.href =
+                        SERVER +
+                        "/lobby.html?stanza=" +
+                        encodeURIComponent(
+                            stanza.nome
+                        );
+
+                }
+            );
+
+
+            /* =============================================
+               AGGIUNTA
+               ============================================= */
+
+            container.appendChild(
+                div
+            );
+
+
+            /* =============================================
+               MEMORIZZA ELEMENTO ONLINE
+               ============================================= */
+
+            online[
+                stanza.nome
+            ] =
+                document.getElementById(
+                    "on-" +
+                    stanza.nome
+                );
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   AVVIO
+   ========================================================= */
+
+creaStanze();
+
+
+/* =========================================================
+   WEBSOCKET
+   ========================================================= */
+
+function collegaWebSocket() {
+
+    try {
+
+
+        socket =
+            new WebSocket(
+                "wss://gioco-oca-server.onrender.com"
+            );
+
+
+        /* =============================================
+           APERTURA
+           ============================================= */
+
+        socket.onopen = () => {
+
+
+            console.log(
+                "WebSocket connesso"
+            );
+
+
+            socket.send(
+                JSON.stringify({
+
+                    tipo:
+                        "richiediConteggio"
+
+                })
+            );
+
+        };
+
+
+        /* =============================================
+           MESSAGGI
+           ============================================= */
+
+        socket.onmessage = (
+            evento
+        ) => {
+
+
+            try {
+
+
+                const dati =
+                    JSON.parse(
+                        evento.data
+                    );
+
+
+                if (
+                    dati.tipo ===
+                    "conteggioStanze"
+                ) {
+
+
+                    for (
+                        const stanza
+                        in dati.stanze
+                    ) {
+
+
+                        if (
+                            online[
+                                stanza
+                            ]
+                        ) {
+
+
+                            online[
+                                stanza
+                            ].innerHTML =
+                                "👤 " +
+                                dati.stanze[
+                                    stanza
+                                ];
+
+                        }
+
+                    }
+
+                }
+
+
+            } catch (errore) {
+
+                console.error(
+                    "Errore nella lettura del messaggio WebSocket:",
+                    errore
+                );
+
+            }
+
+        };
+
+
+        /* =============================================
+           ERRORE
+           ============================================= */
+
+        socket.onerror = (
+            errore
+        ) => {
+
+            console.warn(
+                "WebSocket non disponibile",
+                errore
+            );
+
+        };
+
+
+        /* =============================================
+           CHIUSURA
+           ============================================= */
+
+        socket.onclose = () => {
+
+            console.log(
+                "WebSocket disconnesso"
+            );
+
+        };
+
+    }
+
+
+    catch (errore) {
+
+        console.error(
+            "Impossibile creare il WebSocket:",
+            errore
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   AVVIO WEBSOCKET
+   ========================================================= */
+
+collegaWebSocket();
+
+
+/* =========================================================
+   VISIBILITÀ PAGINA
+   ========================================================= */
+
+document.addEventListener(
+    "visibilitychange",
+    () => {
+
+
+        if (
+            document.visibilityState ===
+            "visible"
+        ) {
+
+
+            if (
+                !socket ||
+                socket.readyState !==
+                WebSocket.OPEN
+            ) {
+
+                collegaWebSocket();
+
+            }
+
+        }
+
+    }
+);
+
+</script>
+
+
+</body>
+</html>
