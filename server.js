@@ -142,7 +142,7 @@ function programmaRimozioneAutomaticaPartitaTerminata(partita, nomeStanza) {
 }
 
 // ===== LIVELLI, ELO, BADGE =====
-const ELO_INIZIALE = 1000;
+const ELO_INIZIALE = 1500;
 const SOGLIE_LIVELLO = [0, 900, 1000, 1100, 1250, 1400, 1600, 1850, 2150, 2500];
 const SOGLIA_VELOCISTA_SECONDI = 300;
 const PENALITA_ELO_ABBANDONO_AUTOMATICO = 25;
