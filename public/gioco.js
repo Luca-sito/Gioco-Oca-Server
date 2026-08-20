@@ -293,47 +293,153 @@ function rilevaEImpostaModalitaDesktop() {
 function aggiornaLayoutTabellone() {
   const areaTabellone = document.getElementById("area-tabellone");
   const immagine = document.getElementById("immagine-tabellone");
+
   if (!areaTabellone || !immagine) return;
 
-  const rapportoNaturale = (immagine.naturalWidth && immagine.naturalHeight) ? immagine.naturalWidth / immagine.naturalHeight : 1.48;
-  const eDesktop = document.body.classList.contains("modalita-desktop");
-  const eLandscape = eSchermoInLandscape();
-  const larghezzaFinestra = window.visualViewport ? window.visualViewport.width : window.innerWidth;
-  const altezzaReale = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+  const rapportoNaturale =
+    (immagine.naturalWidth && immagine.naturalHeight)
+      ? immagine.naturalWidth / immagine.naturalHeight
+      : 1.48;
+
+  const eDesktop =
+    document.body.classList.contains("modalita-desktop");
+
+  const eLandscape =
+    eSchermoInLandscape();
+
+  const larghezzaFinestra =
+    window.visualViewport
+      ? window.visualViewport.width
+      : window.innerWidth;
+
+  const altezzaReale =
+    window.visualViewport
+      ? window.visualViewport.height
+      : window.innerHeight;
 
   let Wc;
   let Hc;
 
+
+  /* =====================================================
+     DESKTOP
+     ===================================================== */
+
   if (eDesktop) {
-    const margineOrizzontale = Math.max(16, larghezzaFinestra * 0.03);
-    const margineVerticale = Math.max(16, altezzaReale * 0.03);
-    const larghezzaDisponibile = larghezzaFinestra - margineOrizzontale * 2;
-    const altezzaDisponibile = altezzaReale - margineVerticale * 2;
-    Wc = Math.max(120, Math.min(larghezzaDisponibile, altezzaDisponibile * rapportoNaturale));
-    Hc = Wc / rapportoNaturale;
-  } else if (eLandscape) {
+
     const margineOrizzontale = 8;
     const margineVerticale = 8;
-    const larghezzaDisponibile = larghezzaFinestra - margineOrizzontale * 2;
-    const altezzaDisponibile = altezzaReale - margineVerticale * 2;
-    Wc = Math.min(larghezzaDisponibile, altezzaDisponibile * rapportoNaturale);
-    Hc = Wc / rapportoNaturale;
+
+    const larghezzaDisponibile =
+      larghezzaFinestra -
+      margineOrizzontale * 2;
+
+    const altezzaDisponibile =
+      altezzaReale -
+      margineVerticale * 2;
+
+    Wc = Math.max(
+      120,
+      Math.min(
+        larghezzaDisponibile,
+        altezzaDisponibile * rapportoNaturale
+      )
+    );
+
+    Hc =
+      Wc /
+      rapportoNaturale;
+
+
+  /* =====================================================
+     LANDSCAPE
+     ===================================================== */
+
+  } else if (eLandscape) {
+
+    const margineOrizzontale = 8;
+    const margineVerticale = 8;
+
+    const larghezzaDisponibile =
+      larghezzaFinestra -
+      margineOrizzontale * 2;
+
+    const altezzaDisponibile =
+      altezzaReale -
+      margineVerticale * 2;
+
+    Wc =
+      Math.min(
+        larghezzaDisponibile,
+        altezzaDisponibile * rapportoNaturale
+      );
+
+    Hc =
+      Wc /
+      rapportoNaturale;
+
+
+  /* =====================================================
+     PORTRAIT / MOBILE
+     ===================================================== */
+
   } else {
+
     const margine = 8;
-    const spazioOrizzontale = larghezzaFinestra - margine * 2;
-    const spazioVerticale = altezzaReale - margine * 2;
-    Hc = spazioOrizzontale;
-    Wc = Hc * rapportoNaturale;
+
+    const spazioOrizzontale =
+      larghezzaFinestra -
+      margine * 2;
+
+    const spazioVerticale =
+      altezzaReale -
+      margine * 2;
+
+    Hc =
+      spazioOrizzontale;
+
+    Wc =
+      Hc *
+      rapportoNaturale;
+
     if (Wc > spazioVerticale) {
-      Wc = spazioVerticale;
-      Hc = Wc / rapportoNaturale;
+
+      Wc =
+        spazioVerticale;
+
+      Hc =
+        Wc /
+        rapportoNaturale;
     }
   }
 
-  if (!Number.isFinite(Wc) || !Number.isFinite(Hc)) return;
 
-  areaTabellone.style.width = Wc + "px";
-  areaTabellone.style.height = Hc + "px";
+  /* =====================================================
+     SICUREZZA
+     ===================================================== */
+
+  if (
+    !Number.isFinite(Wc) ||
+    !Number.isFinite(Hc)
+  ) {
+    return;
+  }
+
+
+  /* =====================================================
+     APPLICA DIMENSIONI
+     ===================================================== */
+
+  areaTabellone.style.width =
+    Wc + "px";
+
+  areaTabellone.style.height =
+    Hc + "px";
+
+
+  /* =====================================================
+     RIPOSIZIONA PEDINE
+     ===================================================== */
 
   riposizionaTuttePedine();
 }
