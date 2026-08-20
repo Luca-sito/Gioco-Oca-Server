@@ -443,8 +443,7 @@ body {
     .contenitore {
 
         padding:
-            20px 12px 40px;
-
+            18px 10px 40px;
     }
 
 
@@ -454,50 +453,111 @@ body {
             23px;
 
         padding:
-            13px 55px;
+            14px 40px;
 
         margin-bottom:
-            28px;
+            25px;
 
         border-radius:
-            8px;
+            9px;
 
+        letter-spacing:
+            .7px;
     }
 
+
+    /* =====================================================
+       RIGA STANZA
+       ===================================================== */
 
     .stanza-riga {
 
         padding:
-            15px 16px;
+            17px 15px 15px;
 
         margin-bottom:
             12px;
 
         border-radius:
-            9px;
-
+            11px;
     }
 
+
+    /* =====================================================
+       PARTE SUPERIORE
+       ===================================================== */
 
     .stanza-riga-top {
 
-        align-items:
-            flex-start;
+        display:
+            flex;
 
+        align-items:
+            center;
+
+        min-height:
+            48px;
     }
 
 
+    /* =====================================================
+       ICONA
+       ===================================================== */
+
     .stanza-icona {
+
+        width:
+            45px;
+
+        height:
+            45px;
+
+        min-width:
+            45px;
+
+        display:
+            flex;
+
+        align-items:
+            center;
+
+        justify-content:
+            center;
 
         margin-right:
             13px;
 
-        padding-top:
-            2px;
+        padding:
+            0;
+
+        border-radius:
+            12px;
+
+        background:
+            #f7f7f7;
 
         font-size:
-            22px;
+            24px;
 
+        line-height:
+            1;
+    }
+
+
+    /* =====================================================
+       INFORMAZIONI
+       ===================================================== */
+
+    .stanza-info {
+
+        flex:
+            1;
+
+        min-width:
+            0;
+
+        padding:
+            0;
     }
 
 
@@ -506,53 +566,117 @@ body {
         font-size:
             17px;
 
+        line-height:
+            1.2;
+
+        margin:
+            0;
     }
 
 
     .stanza-sottotitolo {
 
-        font-size:
-            12px;
-
-    }
-
-
-    .stanza-online {
-
-        margin-left:
-            9px;
-
-        padding-top:
-            2px;
-
-        font-size:
-            12px;
-
-    }
-
-
-    .stanza-giocatori {
-
-        padding-left:
-            35px;
-
-        margin-top:
-            9px;
-
-    }
-
-
-    .chip-giocatore {
+        margin:
+            4px 0 0;
 
         font-size:
             11px;
 
-        min-height:
-            24px;
+        line-height:
+            1.25;
+    }
+
+
+    /* =====================================================
+       CONTATORE ONLINE
+       ===================================================== */
+
+    .stanza-online {
+
+        display:
+            inline-flex;
+
+        align-items:
+            center;
+
+        justify-content:
+            center;
+
+        min-width:
+            64px;
+
+        height:
+            34px;
+
+        margin-left:
+            9px;
 
         padding:
-            4px 8px;
+            0 9px;
 
+        border-radius:
+            10px;
+
+        background:
+            #eef8f4;
+
+        color:
+            #106d4d;
+
+        font-size:
+            14px;
+
+        font-weight:
+            800;
+
+        line-height:
+            1;
+
+        white-space:
+            nowrap;
+    }
+
+
+    /* =====================================================
+       GIOCATORI
+       ===================================================== */
+
+    .stanza-giocatori {
+
+        display:
+            flex;
+
+        flex-wrap:
+            wrap;
+
+        gap:
+            6px;
+
+        margin-top:
+            11px;
+
+        padding-left:
+            58px;
+    }
+
+
+    /* =====================================================
+       CHIP GIOCATORE
+       ===================================================== */
+
+    .chip-giocatore {
+
+        min-height:
+            25px;
+
+        padding:
+            4px 9px;
+
+        border-radius:
+            13px;
+
+        font-size:
+            11px;
     }
 
 }
@@ -562,38 +686,64 @@ body {
    MOBILE STRETTO
    ========================================================= */
 
-@media (max-width: 380px) {
+@media (max-width: 390px) {
+
+    .contenitore {
+
+        padding:
+            15px 8px 35px;
+    }
+
 
     .titolo-gioco-oca {
 
         font-size:
             21px;
 
-        padding-left:
-            35px;
+        padding:
+            13px 30px;
 
-        padding-right:
-            35px;
-
+        margin-bottom:
+            22px;
     }
 
 
     .stanza-riga {
 
         padding:
-            14px 13px;
+            15px 12px 14px;
 
+        border-radius:
+            10px;
+    }
+
+
+    .stanza-riga-top {
+
+        min-height:
+            45px;
     }
 
 
     .stanza-icona {
 
+        width:
+            42px;
+
+        height:
+            42px;
+
+        min-width:
+            42px;
+
         margin-right:
             10px;
 
-        font-size:
-            20px;
+        border-radius:
+            11px;
 
+        font-size:
+            22px;
     }
 
 
@@ -601,23 +751,45 @@ body {
 
         font-size:
             16px;
+    }
 
+
+    .stanza-sottotitolo {
+
+        font-size:
+            10px;
     }
 
 
     .stanza-online {
 
-        font-size:
-            11px;
+        min-width:
+            62px;
 
+        height:
+            33px;
+
+        margin-left:
+            7px;
+
+        padding:
+            0 8px;
+
+        font-size:
+            13px;
+
+        border-radius:
+            9px;
     }
 
 
     .stanza-giocatori {
 
         padding-left:
-            30px;
+            52px;
 
+        margin-top:
+            10px;
     }
 
 }
