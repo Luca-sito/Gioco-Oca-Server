@@ -82,7 +82,7 @@ try {
 
 function preparaGiocatoriPerFirebase(giocatori) {
   const risultato = {};
-  for (const uid in giocatori) risultato[uid] = { nome: giocatori[uid].nome, posizione: giocatori[uid].posizione, turniSaltati: giocatori[uid].turniSaltati };
+  for (const uid in giocatori) risultato[uid] = { nome: giocatori[uid].nome, posizione: giocatori[uid].posizione, turniSaltati: giocatori[uid].turniSaltati, elo: giocatori[uid].elo != null ? giocatori[uid].elo : ELO_INIZIALE, microfonoAttivo: !!giocatori[uid].microfonoAttivo };
   return risultato;
 }
 
@@ -96,6 +96,7 @@ async function salvaPartita(partita) {
     tempo: partita.tempo,
     punti: partita.punti,
     modalita: partita.modalita,
+    tipoPartita: partita.tipoPartita === "divertimento" ? "divertimento" : "classifica",
     maxGiocatori: partita.maxGiocatori,
     chatAttiva: partita.chatAttiva !== false,
     fase: partita.fase || "in_corso",
@@ -114,60 +115,127 @@ async function salvaPartita(partita) {
 async function caricaPartite() { if (!db) return {}; const snap = await db.ref("partite").once("value"); return snap.val() || {}; }
 async function aggiornaStatoPartita(partitaId, dati) { if (!db) return; await db.ref("partite/" + partitaId).update({ ...dati, aggiornataIl: Date.now() }); }
 async function rimuoviPartita(nomeStanza, partitaId) {
-  if (stanze[nomeStanza]) { const p = stanze[nomeStanza].partite[partitaId]; if (p) fermaTimerTurno(p); delete stanze[nomeStanza].partite[partitaId]; }
+  if (stanze[nomeStanza]) {
+    const p = stanze[nomeStanza].partite[partitaId];
+    if (p) {
+      fermaTimerTurno(p);
+      if (p.timerRimozioneAutomatica) { clearTimeout(p.timerRimozioneAutomatica); p.timerRimozioneAutomatica = null; }
+    }
+    delete stanze[nomeStanza].partite[partitaId];
+  }
   if (db) { try { await db.ref("partite/" + partitaId).remove(); } catch (e) { console.error("Errore rimozione partita da Firebase:", e.message); } }
 }
 
-// ===== LIVELLI, XP, BADGE =====
-const SOGLIE_LIVELLO = [0, 300, 700, 1200, 1800, 2500, 3300, 4200, 5200, 6300];
+// Rete di sicurezza: una partita "terminata" (schermata di vittoria) viene comunque
+// rimossa dopo un breve intervallo, anche se non tutti i giocatori sono tornati
+// manualmente alla lobby. Evita che la partita resti bloccata nella lista per sempre.
+const SECONDI_ATTESA_RIMOZIONE_PARTITA_TERMINATA = 20;
+function programmaRimozioneAutomaticaPartitaTerminata(partita, nomeStanza) {
+  if (partita.timerRimozioneAutomatica) clearTimeout(partita.timerRimozioneAutomatica);
+  partita.timerRimozioneAutomatica = setTimeout(async () => {
+    const trovato = trovaPartita(partita.id);
+    if (!trovato || trovato.partita.fase !== "terminata") return;
+    await rimuoviPartita(trovato.nomeStanza, partita.id);
+    inviaListaPartite(trovato.nomeStanza);
+    inviaConteggioStanze();
+  }, SECONDI_ATTESA_RIMOZIONE_PARTITA_TERMINATA * 1000);
+}
+
+// ===== LIVELLI, ELO, BADGE =====
+const ELO_INIZIALE = 1000;
+const SOGLIE_LIVELLO = [0, 900, 1000, 1100, 1250, 1400, 1600, 1850, 2150, 2500];
 const SOGLIA_VELOCISTA_SECONDI = 300;
-function calcolaLivello(xp) {
+const PENALITA_ELO_ABBANDONO_AUTOMATICO = 25;
+function calcolaLivello(elo) {
   let livello = 1;
-  for (let i = 0; i < SOGLIE_LIVELLO.length; i++) { if (xp >= SOGLIE_LIVELLO[i]) livello = i + 1; else break; }
+  for (let i = 0; i < SOGLIE_LIVELLO.length; i++) { if (elo >= SOGLIE_LIVELLO[i]) livello = i + 1; else break; }
   return { livello, sogliaAttuale: SOGLIE_LIVELLO[livello - 1], sogliaProssima: SOGLIE_LIVELLO[livello] !== undefined ? SOGLIE_LIVELLO[livello] : null };
 }
 function calcolaBadge(utente) {
   const badge = [];
-  const vinte = utente.partiteVinte || 0, giocate = utente.partiteGiocate || 0, xp = utente.xp || 0;
+  const vinte = utente.partiteVinte || 0, giocate = utente.partiteGiocate || 0, elo = utente.elo || ELO_INIZIALE;
   const streakMax = utente.streakVittorieMassima || 0, vittoriaVeloce = utente.vittoriaPiuVeloceSecondi;
   if (vinte >= 10) badge.push({ icona: "🥉", nome: "Prime 10 vittorie" });
   if (giocate >= 100) badge.push({ icona: "🥈", nome: "100 partite giocate" });
-  if (xp >= 500) badge.push({ icona: "🥇", nome: "500 punti XP" });
+  if (elo >= 1400) badge.push({ icona: "🥇", nome: "1400 punti ELO" });
   if (streakMax >= 20) badge.push({ icona: "👑", nome: "20 vittorie consecutive" });
   if (vittoriaVeloce != null && vittoriaVeloce < SOGLIA_VELOCISTA_SECONDI) badge.push({ icona: "🏃", nome: "Velocista" });
   return badge;
 }
-function xpVincita() { return 50 + Math.floor(Math.random() * 151); }
-function xpSconfitta() { return 20 + Math.floor(Math.random() * 61); }
-function xpPenalitaAbbandonoAutomatico() { return 200 + Math.floor(Math.random() * 101); }
+// Fattore K: più alto per i giocatori con poche partite (l'ELO si assesta più in fretta),
+// più basso per i giocatori esperti (l'ELO diventa più stabile).
+function fattoreK(partiteGiocate) {
+  const g = partiteGiocate || 0;
+  if (g < 15) return 40;
+  if (g < 50) return 28;
+  return 20;
+}
+// Formula ELO standard: punteggio atteso in base alla differenza di rating.
+function punteggioAtteso(mioElo, avversarioElo) {
+  return 1 / (1 + Math.pow(10, (avversarioElo - mioElo) / 400));
+}
+function nuovoElo(mioElo, avversarioElo, risultato, k) {
+  return Math.round(mioElo + k * (risultato - punteggioAtteso(mioElo, avversarioElo)));
+}
 function idConversazione(uidA, uidB) { return [uidA, uidB].sort().join("_"); }
 
-async function concludiPartita(partita, vincitoreUid, nomeStanza, elencoPartecipanti, escludiXpPer) {
+async function concludiPartita(partita, vincitoreUid, nomeStanza, elencoPartecipanti, escludiPer) {
   if (!db) return;
   try {
     const partecipanti = elencoPartecipanti || partita.ordineGiocatori.map(id => ({ uid: id, nome: partita.giocatori[id] ? partita.giocatori[id].nome : "?" }));
-    const esclusi = escludiXpPer || new Set();
+    const esclusi = escludiPer || new Set();
     const durataSecondi = partita.iniziataIl ? Math.round((Date.now() - partita.iniziataIl) / 1000) : null;
-    const xpVinti = xpVincita();
     const nomeVincitore = (partecipanti.find(p => p.uid === vincitoreUid) || {}).nome || null;
+    const partitaClassificata = partita.tipoPartita !== "divertimento";
+
+    // Carichiamo prima TUTTI gli utenti coinvolti (elo/partite attuali), così il calcolo
+    // ELO di ognuno usa i valori di partenza reali e non risente dell'ordine di scrittura.
+    const infoUtenti = {};
+    for (const p of partecipanti) {
+      if (esclusi.has(p.uid)) continue;
+      infoUtenti[p.uid] = (await db.ref("utenti/" + p.uid).once("value")).val();
+    }
+
+    let eloVariazioneVincitore = 0;
+
+    if (partitaClassificata) {
+      const idsValidi = partecipanti.map(p => p.uid).filter(id => !esclusi.has(id) && infoUtenti[id]);
+      for (const id of idsValidi) {
+        const u = infoUtenti[id];
+        const mioElo = u.elo != null ? u.elo : ELO_INIZIALE;
+        const altriElo = idsValidi.filter(x => x !== id).map(x => (infoUtenti[x].elo != null ? infoUtenti[x].elo : ELO_INIZIALE));
+        if (altriElo.length === 0) continue;
+        const eloMedioAvversari = altriElo.reduce((a, b) => a + b, 0) / altriElo.length;
+        const risultato = id === vincitoreUid ? 1 : 0;
+        const k = fattoreK(u.partiteGiocate || 0);
+        const dopo = nuovoElo(mioElo, eloMedioAvversari, risultato, k);
+        u._nuovoElo = Math.max(100, dopo);
+        if (id === vincitoreUid) eloVariazioneVincitore = u._nuovoElo - mioElo;
+      }
+    }
 
     for (const p of partecipanti) {
       if (esclusi.has(p.uid)) continue;
-      const u = (await db.ref("utenti/" + p.uid).once("value")).val();
+      const u = infoUtenti[p.uid];
       if (!u) continue;
+      const mioEloAttuale = u.elo != null ? u.elo : ELO_INIZIALE;
+      const eloFinale = partitaClassificata && u._nuovoElo != null ? u._nuovoElo : mioEloAttuale;
       if (p.uid === vincitoreUid) {
         const nuovoStreak = (u.streakVittorieAttuale || 0) + 1;
         const aggiornamenti = {
           partiteGiocate: admin.database.ServerValue.increment(1), partiteVinte: admin.database.ServerValue.increment(1),
-          streakVittorieAttuale: nuovoStreak, streakVittorieMassima: Math.max(u.streakVittorieMassima || 0, nuovoStreak), xp: (u.xp || 0) + xpVinti
+          streakVittorieAttuale: nuovoStreak, streakVittorieMassima: Math.max(u.streakVittorieMassima || 0, nuovoStreak), elo: eloFinale
         };
         if (durataSecondi !== null && (u.vittoriaPiuVeloceSecondi == null || durataSecondi < u.vittoriaPiuVeloceSecondi)) aggiornamenti.vittoriaPiuVeloceSecondi = durataSecondi;
         await db.ref("utenti/" + p.uid).update(aggiornamenti);
       } else {
-        await db.ref("utenti/" + p.uid).update({ partiteGiocate: admin.database.ServerValue.increment(1), streakVittorieAttuale: 0, xp: Math.max(0, (u.xp || 0) - xpSconfitta()) });
+        await db.ref("utenti/" + p.uid).update({ partiteGiocate: admin.database.ServerValue.increment(1), streakVittorieAttuale: 0, elo: eloFinale });
       }
     }
-    await db.ref("storicoPartite").push().set({ data: Date.now(), stanza: nomeStanza, vincitoreUid, vincitoreNome: nomeVincitore, durataSecondi, xpVincitore: xpVinti, partecipanti });
+    await db.ref("storicoPartite").push().set({
+      data: Date.now(), stanza: nomeStanza, vincitoreUid, vincitoreNome: nomeVincitore, durataSecondi,
+      classificata: partitaClassificata, eloVariazioneVincitore, partecipanti
+    });
   } catch (e) { console.error("Errore conclusione partita:", e.message); }
 }
 
@@ -310,7 +378,7 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET && GOOGLE_CALLBACK_URL) {
       const uid = nuovoRef.key;
 
       await nuovoRef.set({
-        partiteVinte: 0, partiteGiocate: 0, puntiTotali: 0, xp: 0,
+        partiteVinte: 0, partiteGiocate: 0, puntiTotali: 0, elo: ELO_INIZIALE,
         streakVittorieAttuale: 0, streakVittorieMassima: 0, vittoriaPiuVeloceSecondi: null,
         email, emailLower: email,
         nickname, nicknameLower: nickname.toLowerCase(),
@@ -400,7 +468,7 @@ app.post("/api/registrati", limiteLogin, async (req, res) => {
     const nuovoRef = db.ref("utenti").push();
     const uid = nuovoRef.key;
     await nuovoRef.set({
-      partiteVinte: 0, partiteGiocate: 0, puntiTotali: 0, xp: 0, streakVittorieAttuale: 0, streakVittorieMassima: 0, vittoriaPiuVeloceSecondi: null,
+      partiteVinte: 0, partiteGiocate: 0, puntiTotali: 0, elo: ELO_INIZIALE, streakVittorieAttuale: 0, streakVittorieMassima: 0, vittoriaPiuVeloceSecondi: null,
       email: emailPulita, emailLower: emailPulita, nickname: nicknamePulito, nicknameLower, passwordHash,
       avatar: null, ruolo: "utente", stato: "attivo", sospesoFino: null, avvisi: [], creatoIl: Date.now(), ultimoAccesso: Date.now()
     });
@@ -438,12 +506,12 @@ app.get("/api/me", richiediAuth, async (req, res) => {
   try {
     const utente = (await db.ref("utenti/" + req.utente.uid).once("value")).val();
     if (!utente) return res.status(404).json({ errore: "Utente non trovato." });
-    const { livello, sogliaAttuale, sogliaProssima } = calcolaLivello(utente.xp || 0);
+    const { livello, sogliaAttuale, sogliaProssima } = calcolaLivello(utente.elo != null ? utente.elo : ELO_INIZIALE);
     res.json({
       uid: req.utente.uid, nickname: utente.nickname, email: utente.email, avatar: utente.avatar || null,
       ruolo: utente.ruolo || "utente", stato: utente.stato || "attivo", sospesoFino: utente.sospesoFino || null, avvisi: utente.avvisi || [],
       partiteVinte: utente.partiteVinte || 0, partiteGiocate: utente.partiteGiocate || 0, creatoIl: utente.creatoIl || null, ultimoAccesso: utente.ultimoAccesso || null,
-      xp: utente.xp || 0, livello, sogliaAttuale, sogliaProssima, streakVittorieMassima: utente.streakVittorieMassima || 0,
+      elo: utente.elo != null ? utente.elo : ELO_INIZIALE, livello, sogliaAttuale, sogliaProssima, streakVittorieMassima: utente.streakVittorieMassima || 0,
       vittoriaPiuVeloceSecondi: utente.vittoriaPiuVeloceSecondi ?? null, badge: calcolaBadge(utente)
     });
   } catch (err) { console.error(err); res.status(500).json({ errore: "Errore del server." }); }
@@ -480,8 +548,8 @@ app.get("/api/top-giocatori", async (req, res) => {
   try {
     if (!db) return res.json({ giocatori: [] });
     const utenti = (await db.ref("utenti").once("value")).val() || {};
-    const top = Object.values(utenti).map(u => ({ nickname: u.nickname || "Sconosciuto", vinte: u.partiteVinte || 0, giocate: u.partiteGiocate || 0 }))
-      .sort((a, b) => (b.vinte !== a.vinte ? b.vinte - a.vinte : b.giocate - a.giocate)).slice(0, 10);
+    const top = Object.values(utenti).map(u => ({ nickname: u.nickname || "Sconosciuto", elo: u.elo != null ? u.elo : ELO_INIZIALE, vinte: u.partiteVinte || 0, giocate: u.partiteGiocate || 0 }))
+      .sort((a, b) => (b.elo !== a.elo ? b.elo - a.elo : b.vinte - a.vinte)).slice(0, 10);
     res.json({ giocatori: top });
   } catch (e) { console.error("Errore classifica:", e); res.status(500).json({ giocatori: [] }); }
 });
@@ -513,10 +581,10 @@ app.get("/api/profilo-pubblico/:nickname", richiediAuth, async (req, res) => {
     const utente = await trovaUtentePerNickname(pulisciTesto(req.params.nickname, 20).toLowerCase());
     if (!utente) return res.status(404).json({ errore: "Utente non trovato." });
     const giocate = utente.partiteGiocate || 0, vinte = utente.partiteVinte || 0;
-    const { livello, sogliaAttuale, sogliaProssima } = calcolaLivello(utente.xp || 0);
+    const { livello, sogliaAttuale, sogliaProssima } = calcolaLivello(utente.elo != null ? utente.elo : ELO_INIZIALE);
     res.json({
       uid: utente.uid, nickname: utente.nickname, avatar: utente.avatar || null, creatoIl: utente.creatoIl || null, ultimoAccesso: utente.ultimoAccesso || null,
-      partiteVinte: vinte, partiteGiocate: giocate, winRate: giocate > 0 ? Math.round((vinte / giocate) * 100) : 0, xp: utente.xp || 0,
+      partiteVinte: vinte, partiteGiocate: giocate, winRate: giocate > 0 ? Math.round((vinte / giocate) * 100) : 0, elo: utente.elo != null ? utente.elo : ELO_INIZIALE,
       livello, sogliaAttuale, sogliaProssima, streakVittorieMassima: utente.streakVittorieMassima || 0, vittoriaPiuVeloceSecondi: utente.vittoriaPiuVeloceSecondi ?? null,
       badge: calcolaBadge(utente), statoAmicizia: await statoAmicizia(req.utente.uid, utente.uid)
     });
@@ -1668,7 +1736,7 @@ function calcolaUidInPartita(nomeStanza) {
 }
 
 function costruisciStatoGiocatori(partita) {
-  return partita.ordineGiocatori.map(id => ({ id, nome: partita.giocatori[id].nome, avatar: partita.giocatori[id].avatar || null, posizione: partita.giocatori[id].posizione }));
+  return partita.ordineGiocatori.map(id => ({ id, nome: partita.giocatori[id].nome, avatar: partita.giocatori[id].avatar || null, posizione: partita.giocatori[id].posizione, elo: partita.giocatori[id].elo != null ? partita.giocatori[id].elo : ELO_INIZIALE }));
 }
 
 function inviaAllaStanza(nomeStanza, messaggio) {
@@ -1683,9 +1751,11 @@ function inviaListaPartite(nomeStanza) {
   if (!stanze[nomeStanza]) return;
   const lista = Object.values(stanze[nomeStanza].partite).map(p => ({
     id: p.id, creatore: p.creatore, creatoDa: p.creatoDa, tempo: p.tempo, punti: p.punti, modalita: p.modalita,
+    tipoPartita: p.tipoPartita === "divertimento" ? "divertimento" : "classifica",
+    creatoreElo: p.giocatori[p.creatoDa] && p.giocatori[p.creatoDa].elo != null ? p.giocatori[p.creatoDa].elo : ELO_INIZIALE,
     maxGiocatori: p.maxGiocatori, numGiocatoriAttuali: Object.keys(p.giocatori).length, chatAttiva: p.chatAttiva !== false,
     iniziata: p.iniziata !== false,
-    giocatori: Object.entries(p.giocatori).map(([uid, g]) => ({ uid, nome: g.nome, avatar: g.avatar || null }))
+    giocatori: Object.entries(p.giocatori).map(([uid, g]) => ({ uid, nome: g.nome, avatar: g.avatar || null, elo: g.elo != null ? g.elo : ELO_INIZIALE, microfonoAttivo: !!g.microfonoAttivo }))
   }));
   inviaAllaStanza(nomeStanza, { tipo: "listaPartite", partite: lista });
 }
@@ -1922,14 +1992,19 @@ async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, auto
   );
 
   /*
-   * NON eliminiamo subito la partita.
-   * Rimane temporaneamente in memoria con fase="terminata",
-   * così i giocatori continuano a risultare "In partita"
-   * finché non tornano alla lobby.
+   * NON eliminiamo subito la partita: rimane in memoria con fase="terminata"
+   * così i giocatori continuano a risultare "In partita" finché non tornano
+   * alla lobby (mostrando la schermata di vittoria).
+   * FIX: prima la partita restava per sempre finché *ogni singolo* giocatore
+   * non cliccava "torna alla lobby" — se anche uno solo restava sulla schermata
+   * finale, la partita non veniva mai eliminata e occupava la lista per sempre.
+   * Ora programmiamo comunque una rimozione automatica di sicurezza dopo un
+   * breve intervallo, indipendentemente da cosa fanno i giocatori.
    */
   partita.timerTurno = null;
   partita.tempoInizioTurno = null;
   partita.scadenzaTurno = null;
+  programmaRimozioneAutomaticaPartitaTerminata(partita, nomeStanza);
 
   inviaListaPartite(nomeStanza);
   inviaConteggioStanze();
@@ -2071,7 +2146,8 @@ async function forzaAbbandonoPerInattivita(partita, nomeStanza, idGiocatore) {
   if (db) {
     try {
       const u = (await db.ref("utenti/" + idGiocatore).once("value")).val();
-      if (u) await db.ref("utenti/" + idGiocatore).update({ xp: Math.max(0, (u.xp || 0) - xpPenalitaAbbandonoAutomatico()), streakVittorieAttuale: 0 });
+      if (u && partita.tipoPartita !== "divertimento") await db.ref("utenti/" + idGiocatore).update({ elo: Math.max(100, (u.elo != null ? u.elo : ELO_INIZIALE) - PENALITA_ELO_ABBANDONO_AUTOMATICO), streakVittorieAttuale: 0 });
+      else if (u) await db.ref("utenti/" + idGiocatore).update({ streakVittorieAttuale: 0 });
     } catch (e) { console.error("Errore penalità abbandono automatico:", e.message); }
   }
 
@@ -2231,7 +2307,7 @@ async function espelliPerInattivitaDuranteDeterminazione(partita, nomeStanza, ui
   if (db) {
     try {
       const u = (await db.ref("utenti/" + uid).once("value")).val();
-      if (u) await db.ref("utenti/" + uid).update({ xp: Math.max(0, (u.xp || 0) - xpPenalitaAbbandonoAutomatico()) });
+      if (u && partita.tipoPartita !== "divertimento") await db.ref("utenti/" + uid).update({ elo: Math.max(100, (u.elo != null ? u.elo : ELO_INIZIALE) - PENALITA_ELO_ABBANDONO_AUTOMATICO) });
     } catch (e) { console.error("Errore penalità inattività in determinazione:", e.message); }
   }
 
@@ -2272,6 +2348,7 @@ async function completaDeterminazione(partita, nomeStanza, ordineFinale) {
   const idPrimoTurno = partita.ordineGiocatori[partita.turnoAttuale];
 
   avviaTimerTurno(partita, nomeStanza);
+  avviaChatVocaleAutomatica(partita);
 
   Object.values(partita.giocatori).forEach(g => {
     if (g.socket && g.socket.readyState === WebSocket.OPEN) {
@@ -2292,6 +2369,29 @@ async function completaDeterminazione(partita, nomeStanza, ordineFinale) {
 
   await salvaPartita({ ...partita, stanza: nomeStanza });
   inviaConteggioStanze();
+}
+
+// Quando la partita inizia davvero, chi ha scelto il microfono attivo viene collegato
+// automaticamente in chat vocale con tutti gli altri giocatori che hanno fatto lo stesso,
+// senza dover passare dalla richiesta/risposta manuale.
+function avviaChatVocaleAutomatica(partita) {
+  const idsConMicrofono = Object.keys(partita.giocatori).filter(id => partita.giocatori[id].microfonoAttivo);
+  if (idsConMicrofono.length < 2) return;
+  if (!partita.coppieAudioApprovate) partita.coppieAudioApprovate = new Set();
+
+  idsConMicrofono.forEach(id => {
+    const giocatore = partita.giocatori[id];
+    if (!giocatore.socket || giocatore.socket.readyState !== WebSocket.OPEN) return;
+    const altriPeer = idsConMicrofono.filter(altroId => altroId !== id);
+    altriPeer.forEach(altroId => partita.coppieAudioApprovate.add(idConversazione(id, altroId)));
+    giocatore.socket.send(JSON.stringify({
+      tipo: "vocaleAutoAvvio",
+      peer: altriPeer.map(altroId => ({ uid: altroId, nome: partita.giocatori[altroId].nome })),
+      // convenzione: chi ha uid "minore" in ordine alfabetico avvia l'offerta WebRTC,
+      // evitando che entrambi i lati propongano l'offerta contemporaneamente.
+      iniziaOffertaVerso: altriPeer.filter(altroId => id < altroId)
+    }));
+  });
 }
 
 async function avviaPartitaAutomaticamente(partita) {
@@ -2522,12 +2622,14 @@ stanze[stanzaAttuale].giocatoriOnline[socketId] = {
         if (Object.values(stanze[stanzaAttuale].partite).some(p => p.creatoDa === uid)) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Hai già una partita attiva." })); return; }
         const partitaId = "p" + Date.now() + Math.floor(Math.random() * 1000);
         const max = parseInt(dati.maxGiocatori);
+        const eloCreatore = db ? (((await db.ref("utenti/" + uid + "/elo").once("value")).val()) ?? ELO_INIZIALE) : ELO_INIZIALE;
         stanze[stanzaAttuale].partite[partitaId] = {
           id: partitaId, creatore: nickname, creatoDa: uid, tempo: dati.tempo, punti: dati.punti, modalita: dati.modalita,
+          tipoPartita: dati.tipoPartita === "divertimento" ? "divertimento" : "classifica",
           maxGiocatori: (!max || max < 2 || max > 8 ? 2 : max),
           chatAttiva: dati.chatAttiva !== false,
           fase: "attesa_giocatori",
-          giocatori: { [uid]: { nome: nickname, avatar: mioAvatar, posizione: 0, socket, turniSaltati: 0, tentativiAutomaticiConsecutivi: 0 } },
+          giocatori: { [uid]: { nome: nickname, avatar: mioAvatar, posizione: 0, socket, turniSaltati: 0, tentativiAutomaticiConsecutivi: 0, elo: eloCreatore, microfonoAttivo: !!dati.microfonoAttivo } },
           ordineGiocatori: [uid], turnoAttuale: 0, iniziata: false, elaborandoTiro: false, animazioneTiroInCorso: false,
           tiriEffettuatiNelTurno: 0, tiriConsentitiNelTurno: 1,
           invitati: dati.modalita === "privata" ? { [uid]: true } : null, timerTurno: null, tempoInizioTurno: null,
@@ -2545,7 +2647,8 @@ stanze[stanzaAttuale].giocatoriOnline[socketId] = {
         if (partita.giocatori[uid]) return;
         if (Object.keys(partita.giocatori).length >= partita.maxGiocatori) return;
         if (partita.modalita === "privata") { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Questa è una partita privata: puoi entrare solo se il creatore ti invita direttamente." })); return; }
-        partita.giocatori[uid] = { nome: nickname, avatar: mioAvatar, posizione: 0, socket, turniSaltati: 0, tentativiAutomaticiConsecutivi: 0 };
+        const eloIngresso = db ? (((await db.ref("utenti/" + uid + "/elo").once("value")).val()) ?? ELO_INIZIALE) : ELO_INIZIALE;
+        partita.giocatori[uid] = { nome: nickname, avatar: mioAvatar, posizione: 0, socket, turniSaltati: 0, tentativiAutomaticiConsecutivi: 0, elo: eloIngresso, microfonoAttivo: !!dati.microfonoAttivo };
         partita.ordineGiocatori.push(uid);
         await aggiornaStatoPartita(partita.id, { giocatori: preparaGiocatoriPerFirebase(partita.giocatori), ordineGiocatori: partita.ordineGiocatori });
         inviaListaPartite(stanzaAttuale);
@@ -2592,7 +2695,8 @@ stanze[stanzaAttuale].giocatoriOnline[socketId] = {
         if (partita.giocatori[uid]) return;
         if (Object.keys(partita.giocatori).length >= partita.maxGiocatori) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "La partita si è già riempita." })); return; }
         stanzaAttuale = nomeStanza;
-        partita.giocatori[uid] = { nome: nickname, avatar: mioAvatar, posizione: 0, socket, turniSaltati: 0, tentativiAutomaticiConsecutivi: 0 };
+        const eloInvito = db ? (((await db.ref("utenti/" + uid + "/elo").once("value")).val()) ?? ELO_INIZIALE) : ELO_INIZIALE;
+        partita.giocatori[uid] = { nome: nickname, avatar: mioAvatar, posizione: 0, socket, turniSaltati: 0, tentativiAutomaticiConsecutivi: 0, elo: eloInvito, microfonoAttivo: !!dati.microfonoAttivo };
         partita.ordineGiocatori.push(uid);
         await aggiornaStatoPartita(partita.id, { giocatori: preparaGiocatoriPerFirebase(partita.giocatori), ordineGiocatori: partita.ordineGiocatori });
         inviaListaPartite(nomeStanza);
