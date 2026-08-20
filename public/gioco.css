@@ -181,9 +181,7 @@ body:not(.modalita-desktop) #btn-toggle-fullscreen { display: none; }
 }
 
 #messaggi-gioco {
-  position: fixed; top: 62px; left: 50%; transform: translateX(-50%);
-  background: rgba(10,16,22,0.85); color: #ffd700; padding: 8px 18px; border-radius: 20px;
-  font-size: 13px; min-height: 14px; text-align: center; z-index: 15; max-width: 82vw;
+    display: none !important;
 }
 body.modalita-desktop #messaggi-gioco { top: 18px; max-width: 60vw; }
 
