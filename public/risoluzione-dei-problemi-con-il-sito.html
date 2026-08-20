@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Risoluzione dei problemi | Giochi Società</title>
+
+<style>
+    * {
+        box-sizing: border-box;
+    }
+
+    :root {
+        --verde: #178861;
+        --verde-scuro: #106d4d;
+        --verde-hover: #147954;
+        --verde-chiaro: #eaf7f1;
+        --verde-soft: #f3faf7;
+
+        --testo: #17222b;
+        --testo-2: #55636e;
+        --testo-3: #8b97a1;
+
+        --sfondo: #eef2f5;
+        --superficie: #ffffff;
+        --superficie-2: #f8fafb;
+
+        --bordo: #e1e7eb;
+        --bordo-soft: #edf1f4;
+
+        --ombra-leggera:
+            0 2px 8px rgba(20, 31, 40, 0.05);
+
+        --ombra-media:
+            0 12px 35px rgba(20, 31, 40, 0.08);
+    }
+
+    html,
+    body {
+        width: 100%;
+        min-height: 100%;
+        margin: 0;
+        padding: 0;
+
+        background:
+            linear-gradient(
+                180deg,
+                #f5f7f9 0%,
+                #eef2f5 100%
+            );
+
+        color: var(--testo);
+
+        font-family:
+            Inter,
+            system-ui,
+            -apple-system,
+            BlinkMacSystemFont,
+            "Segoe UI",
+            Arial,
+            Helvetica,
+            sans-serif;
+
+        line-height: 1.65;
+    }
+
+    body {
+        min-height: 100vh;
+    }
+
+    a {
+        color: inherit;
+    }
+
+    /* =========================================================
+       CONTENITORE
+       ========================================================= */
+
+    .pagina-problemi {
+        width: 100%;
+        min-height: 100vh;
+
+        padding:
+            38px 22px 70px;
+    }
+
+    .contenitore {
+        width: min(100%, 980px);
+
+        margin: 0 auto;
+    }
+
+    /* =========================================================
+       HEADER
+       ========================================================= */
+
+    .intestazione {
+        position: relative;
+
+        padding:
+            30px 32px 29px;
+
+        margin-bottom: 22px;
+
+        border: 1px solid var(--bordo);
+
+        border-radius: 22px;
+
+        background:
+            linear-gradient(
+                135deg,
+                #ffffff 0%,
+                #f9fbfc 100%
+            );
+
+        box-shadow: var(--ombra-media);
+
+        overflow: hidden;
+    }
+
+    .intestazione::before {
+        content: "";
+
+        position: absolute;
+
+        left: 0;
+        top: 0;
+
+        width: 100%;
+        height: 4px;
+
+        background:
+            linear-gradient(
+                90deg,
+                var(--verde),
+                #2a9f78
+            );
+    }
+
+    .intestazione-etichetta {
+        margin-bottom: 8px;
+
+        color: var(--verde);
+
+        font-size: 11px;
+        font-weight: 800;
+
+        letter-spacing: 1.25px;
+
+        text-transform: uppercase;
+    }
+
+    .intestazione h1 {
+        margin: 0;
+
+        color: var(--testo);
+
+        font-size: clamp(28px, 4vw, 36px);
+
+        line-height: 1.15;
+
+        font-weight: 850;
+
+        letter-spacing: -0.8px;
+    }
+
+    .intestazione p {
+        margin: 10px 0 0;
+
+        color: var(--testo-3);
+
+        font-size: 13px;
+    }
+
+    .intestazione-sottotitolo {
+        max-width: 700px;
+
+        margin-top: 12px;
+
+        color: var(--testo-2);
+
+        font-size: 14px;
+
+        line-height: 1.6;
+    }
+
+    /* =========================================================
+       INDICE
+       ========================================================= */
+
+    .indice {
+        margin-bottom: 22px;
+
+        padding: 24px 26px;
+
+        border: 1px solid var(--bordo);
+
+        border-radius: 18px;
+
+        background: rgba(255, 255, 255, 0.94);
+
+        box-shadow: var(--ombra-leggera);
+    }
+
+    .indice-header {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+
+        margin-bottom: 16px;
+    }
+
+    .indice-icona {
+        width: 36px;
+        height: 36px;
+        min-width: 36px;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        border-radius: 10px;
+
+        background: var(--verde-chiaro);
+        color: var(--verde);
+
+        font-size: 17px;
+    }
+
+    .indice h2 {
+        margin: 0;
+
+        color: var(--testo);
+
+        font-size: 17px;
+        font-weight: 800;
+    }
+
+    .indice ol {
+        margin: 0;
+        padding-left: 21px;
+
+        columns: 2;
+        column-gap: 42px;
+    }
+
+    .indice li {
+        break-inside: avoid;
+
+        margin-bottom: 8px;
+
+        padding-left: 2px;
+
+        color: var(--testo-2);
+
+        font-size: 13px;
+    }
+
+    .indice a {
+        color: var(--testo-2);
+
+        text-decoration: none;
+
+        transition:
+            color 0.18s ease;
+    }
+
+    .indice a:hover {
+        color: var(--verde);
+    }
+
+    /* =========================================================
+       CONTENUTO
+       ========================================================= */
+
+    .contenuto {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    section {
+        scroll-margin-top: 20px;
+
+        padding: 27px 29px;
+
+        border: 1px solid var(--bordo);
+
+        border-radius: 18px;
+
+        background: rgba(255, 255, 255, 0.96);
+
+        box-shadow: var(--ombra-leggera);
+    }
+
+    .titolo-sezione {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+
+        margin-bottom: 15px;
+    }
+
+    .titolo-sezione-numero {
+        width: 34px;
+        height: 34px;
+        min-width: 34px;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        border-radius: 10px;
+
+        background: var(--verde-chiaro);
+        color: var(--verde);
+
+        font-size: 12px;
+        font-weight: 800;
+    }
+
+    section h2 {
+        margin: 0;
+
+        color: var(--testo);
+
+        font-size: 19px;
+        line-height: 1.3;
+
+        font-weight: 800;
+
+        letter-spacing: -0.25px;
+    }
+
+    section p {
+        margin:
+            0 0 13px;
+
+        color: var(--testo-2);
+
+        font-size: 14px;
+
+        line-height: 1.75;
+    }
+
+    section p:last-child {
+        margin-bottom: 0;
+    }
+
+    section ul,
+    section ol {
+        margin:
+            9px 0 0;
+
+        padding-left: 21px;
+    }
+
+    section li {
+        margin-bottom: 9px;
+
+        color: var(--testo-2);
+
+        font-size: 14px;
+
+        line-height: 1.7;
+    }
+
+    section li:last-child {
+        margin-bottom: 0;
+    }
+
+    section ul ul {
+        margin-top: 8px;
+    }
+
+    strong {
+        color: var(--testo);
+    }
+
+    /* =========================================================
+       BOX EVIDENZA
+       ========================================================= */
+
+    .box-evidenza {
+        margin-top: 18px;
+
+        padding: 16px 18px;
+
+        border:
+            1px solid #ccebdd;
+
+        border-radius: 14px;
+
+        background:
+            linear-gradient(
+                135deg,
+                #f2fbf7 0%,
+                #ebf8f2 100%
+            );
+
+        color: #346d58;
+
+        font-size: 13px;
+
+        line-height: 1.65;
+    }
+
+    /* =========================================================
+       LINK STAFF
+       ========================================================= */
+
+    .link-staff {
+        color: var(--verde);
+
+        text-decoration: none;
+
+        font-weight: 750;
+
+        transition:
+            color 0.18s ease;
+    }
+
+    .link-staff:hover {
+        color: var(--verde-scuro);
+
+        text-decoration: underline;
+    }
+
+    /* =========================================================
+       AZIONI FINALI
+       ========================================================= */
+
+    .azioni-finali {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+
+        margin-top: 2px;
+    }
+
+    .link-home,
+    .link-contatti {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+
+        min-height: 44px;
+
+        padding: 0 18px;
+
+        border-radius: 11px;
+
+        background: var(--verde);
+
+        color: #ffffff;
+
+        text-decoration: none;
+
+        font-size: 13px;
+        font-weight: 750;
+
+        box-shadow:
+            0 5px 14px rgba(23, 136, 97, 0.17);
+
+        transition:
+            background 0.18s ease,
+            transform 0.18s ease,
+            box-shadow 0.18s ease;
+    }
+
+    .link-home:hover,
+    .link-contatti:hover {
+        background: var(--verde-scuro);
+
+        transform: translateY(-1px);
+
+        box-shadow:
+            0 8px 18px rgba(23, 136, 97, 0.21);
+    }
+
+    .link-home:active,
+    .link-contatti:active {
+        transform: scale(0.98);
+    }
+
+    /* =========================================================
+       FOOTER
+       ========================================================= */
+
+    footer {
+        margin-top: 28px;
+
+        padding:
+            22px 10px 0;
+
+        border-top:
+            1px solid var(--bordo);
+
+        text-align: center;
+
+        color: var(--testo-3);
+
+        font-size: 11px;
+    }
+
+    /* =========================================================
+       TABLET
+       ========================================================= */
+
+    @media (max-width: 760px) {
+
+        .pagina-problemi {
+            padding:
+                22px 14px 45px;
+        }
+
+        .intestazione {
+            padding:
+                26px 22px 24px;
+
+            border-radius: 18px;
+        }
+
+        .indice {
+            padding:
+                21px 20px;
+        }
+
+        .indice ol {
+            columns: 1;
+        }
+
+        section {
+            padding:
+                23px 21px;
+        }
+    }
+
+    /* =========================================================
+       MOBILE
+       ========================================================= */
+
+    @media (max-width: 520px) {
+
+        .pagina-problemi {
+            padding:
+                12px 9px 30px;
+        }
+
+        .intestazione {
+            padding:
+                23px 18px 21px;
+
+            margin-bottom: 13px;
+
+            border-radius: 16px;
+        }
+
+        .intestazione h1 {
+            font-size: 25px;
+        }
+
+        .intestazione p {
+            font-size: 11px;
+        }
+
+        .intestazione-sottotitolo {
+            font-size: 12px;
+        }
+
+        .indice {
+            padding:
+                18px 17px;
+
+            margin-bottom: 13px;
+
+            border-radius: 15px;
+        }
+
+        .indice li {
+            font-size: 12px;
+            margin-bottom: 7px;
+        }
+
+        .contenuto {
+            gap: 11px;
+        }
+
+        section {
+            padding:
+                19px 17px;
+
+            border-radius: 15px;
+        }
+
+        .titolo-sezione {
+            gap: 9px;
+
+            margin-bottom: 12px;
+        }
+
+        .titolo-sezione-numero {
+            width: 30px;
+            height: 30px;
+            min-width: 30px;
+
+            border-radius: 9px;
+
+            font-size: 10px;
+        }
+
+        section h2 {
+            font-size: 17px;
+        }
+
+        section p,
+        section li {
+            font-size: 13px;
+        }
+
+        .box-evidenza {
+            padding:
+                14px 15px;
+
+            font-size: 12px;
+
+            border-radius: 12px;
+        }
+
+        .link-home,
+        .link-contatti {
+            width: 100%;
+        }
+
+        footer {
+            font-size: 10px;
+        }
+    }
+</style>
+</head>
+
+<body>
+
+<div class="pagina-problemi">
+
+    <div class="contenitore">
+
+        <!-- =====================================================
+             INTESTAZIONE
+             ===================================================== -->
+
+        <header class="intestazione">
+
+            <div class="intestazione-etichetta">
+                GIOCHI SOCIETÀ
+            </div>
+
+            <h1>
+                Risoluzione dei problemi
+            </h1>
+
+            <p>
+                Ultimo aggiornamento: luglio 2026
+            </p>
+
+            <div class="intestazione-sottotitolo">
+                Guida per risolvere gli errori più comuni e tornare
+                rapidamente a utilizzare Giochi Società.
+            </div>
+
+        </header>
+
+
+        <!-- =====================================================
+             INDICE
+             ===================================================== -->
+
+        <nav class="indice">
+
+            <div class="indice-header">
+
+                <div class="indice-icona">
+                    ☰
+                </div>
+
+                <h2>
+                    Indice
+                </h2>
+
+            </div>
+
+            <ol>
+
+                <li>
+                    <a href="#accesso">
+                        Problemi di accesso
+                    </a>
+                </li>
+
+                <li>
+                    <a href="#account">
+                        Problemi con l'account
+                    </a>
+                </li>
+
+                <li>
+                    <a href="#caricamento">
+                        Il sito non carica
+                    </a>
+                </li>
+
+                <li>
+                    <a href="#partite">
+                        Problemi durante le partite
+                    </a>
+                </li>
+
+                <li>
+                    <a href="#browser">
+                        Problemi del browser
+                    </a>
+                </li>
+
+                <li>
+                    <a href="#server">
+                        Problemi del server
+                    </a>
+                </li>
+
+                <li>
+                    <a href="#contatti">
+                        Contattare assistenza
+                    </a>
+                </li>
+
+            </ol>
+
+        </nav>
+
+
+        <!-- =====================================================
+             CONTENUTO
+             ===================================================== -->
+
+        <main class="contenuto">
+
+
+            <section id="accesso">
+
+                <div class="titolo-sezione">
+
+                    <div class="titolo-sezione-numero">
+                        01
+                    </div>
+
+                    <h2>
+                        Problemi di accesso
+                    </h2>
+
+                </div>
+
+                <p>
+                    Se non riesci ad accedere al tuo account, verifica
+                    innanzitutto i seguenti punti:
+                </p>
+
+                <ul>
+
+                    <li>
+                        Verifica che email e password siano corrette.
+                    </li>
+
+                    <li>
+                        Controlla di avere una connessione internet stabile.
+                    </li>
+
+                    <li>
+                        Prova a ricaricare la pagina.
+                    </li>
+
+                    <li>
+                        Effettua nuovamente il login.
+                    </li>
+
+                </ul>
+
+                <div class="box-evidenza">
+                    💡 Se il problema continua, attendi qualche secondo
+                    e riprova: il server potrebbe essere temporaneamente
+                    in fase di avvio o di riavvio.
+                </div>
+
+            </section>
+
+
+            <section id="account">
+
+                <div class="titolo-sezione">
+
+                    <div class="titolo-sezione-numero">
+                        02
+                    </div>
+
+                    <h2>
+                        Problemi con l'account
+                    </h2>
+
+                </div>
+
+                <p>
+                    Se il tuo account o alcune informazioni del profilo
+                    non vengono visualizzati correttamente:
+                </p>
+
+                <ul>
+
+                    <li>
+                        Aggiorna la pagina.
+                    </li>
+
+                    <li>
+                        Esci dall'account e accedi nuovamente.
+                    </li>
+
+                    <li>
+                        Controlla di utilizzare lo stesso account con cui
+                        ti sei registrato.
+                    </li>
+
+                    <li>
+                        Verifica che la connessione internet sia stabile.
+                    </li>
+
+                    <li>
+                        Non condividere mai la tua password con altre persone.
+                    </li>
+
+                </ul>
+
+                <div class="box-evidenza">
+                    🔐 Per motivi di sicurezza, non comunicare mai a nessuno
+                    le credenziali del tuo account.
+                </div>
+
+            </section>
+
+
+            <section id="caricamento">
+
+                <div class="titolo-sezione">
+
+                    <div class="titolo-sezione-numero">
+                        03
+                    </div>
+
+                    <h2>
+                        Il sito non carica correttamente
+                    </h2>
+
+                </div>
+
+                <p>
+                    Se alcune parti del sito non vengono visualizzate
+                    oppure una pagina rimane bloccata durante il caricamento,
+                    prova questi passaggi.
+                </p>
+
+                <ul>
+
+                    <li>
+                        Assicurati che i cookie necessari al corretto
+                        funzionamento del sito siano abilitati.
+                    </li>
+
+                    <li>
+                        Su <strong>Google Chrome</strong> puoi controllare
+                        le impostazioni dei cookie aprendo:
+                        
+                        <ul>
+
+                            <li>
+                                <strong>Impostazioni</strong>;
+                            </li>
+
+                            <li>
+                                <strong>Privacy e sicurezza</strong>;
+                            </li>
+
+                            <li>
+                                cerca <strong>"Impostazioni sito"</strong>
+                                nella barra di ricerca;
+                            </li>
+
+                            <li>
+                                apri <strong>Impostazioni sito</strong>;
+                            </li>
+
+                            <li>
+                                cerca <strong>"Cookie di terze parti"</strong>
+                                oppure <strong>"Accesso di terze parti"</strong>,
+                                a seconda della versione di Chrome;
+                            </li>
+
+                            <li>
+                                seleziona l'opzione che consente i cookie
+                                secondo le impostazioni disponibili.
+                            </li>
+
+                        </ul>
+
+                    </li>
+
+                    <li>
+                        Prova ad aprire il sito utilizzando un altro browser.
+                    </li>
+
+                    <li>
+                        Disattiva temporaneamente eventuali estensioni
+                        che bloccano script, cookie o contenuti.
+                    </li>
+
+                    <li>
+                        Controlla la connessione internet.
+                        <strong>Minimo consigliato: 15 Mbps — Consigliato: 100 Mbps.</strong>
+                    </li>
+
+                </ul>
+
+                <div class="box-evidenza">
+                    🌐 Se il problema si verifica solamente su un dispositivo
+                    o su un browser specifico, prova ad accedere da un altro
+                    dispositivo per verificare se il problema persiste.
+                </div>
+
+            </section>
+
+
+            <section id="partite">
+
+                <div class="titolo-sezione">
+
+                    <div class="titolo-sezione-numero">
+                        04
+                    </div>
+
+                    <h2>
+                        Problemi durante le partite
+                    </h2>
+
+                </div>
+
+                <p>
+                    Se una partita non si aggiorna correttamente,
+                    sembra bloccata oppure un giocatore non compare,
+                    prova le seguenti operazioni:
+                </p>
+
+                <ul>
+
+                    <li>
+                        Prova ad aggiornare la pagina.
+                    </li>
+
+                    <li>
+                        Non chiudere la pagina durante una fase di caricamento
+                        o di connessione alla partita.
+                    </li>
+
+                    <li>
+                        Controlla che la connessione internet sia stabile.
+                    </li>
+
+                    <li>
+                        Se un giocatore non compare immediatamente,
+                        attendi qualche secondo per permettere la sincronizzazione.
+                    </li>
+
+                    <li>
+                        Se il problema persiste, prova a rientrare nella partita
+                        quando previsto dalle funzionalità della piattaforma.
+                    </li>
+
+                </ul>
+
+                <div class="box-evidenza">
+                    🎲 Alcuni problemi durante le partite possono essere
+                    temporanei e risolversi automaticamente dopo alcuni secondi.
+                </div>
+
+            </section>
+
+
+            <section id="browser">
+
+                <div class="titolo-sezione">
+
+                    <div class="titolo-sezione-numero">
+                        05
+                    </div>
+
+                    <h2>
+                        Problemi del browser
+                    </h2>
+
+                </div>
+
+                <p>
+                    Un browser non aggiornato o dati temporanei danneggiati
+                    possono causare problemi di visualizzazione o funzionamento.
+                </p>
+
+                <p>
+                    Mantieni il browser aggiornato all'ultima versione disponibile:
+                </p>
+
+                <ul>
+
+                    <li>
+                        <strong>Google Chrome:</strong>
+                        Impostazioni → Informazioni su Chrome.
+                    </li>
+
+                    <li>
+                        <strong>Microsoft Edge:</strong>
+                        Impostazioni → Informazioni su Microsoft Edge.
+                    </li>
+
+                    <li>
+                        <strong>Mozilla Firefox:</strong>
+                        Impostazioni → Generale → Aggiornamenti di Firefox.
+                    </li>
+
+                </ul>
+
+                <p>
+                    Puoi inoltre provare a cancellare la cache e i cookie del browser.
+                </p>
+
+                <ul>
+
+                    <li>
+                        <strong>Google Chrome:</strong>
+                        Impostazioni → Privacy e sicurezza →
+                        Elimina dati di navigazione → seleziona
+                        "Cookie e altri dati dei siti" e
+                        "Immagini e file memorizzati nella cache" →
+                        Cancella dati.
+                    </li>
+
+                    <li>
+                        <strong>Microsoft Edge:</strong>
+                        Impostazioni → Privacy, ricerca e servizi →
+                        Cancella dati delle esplorazioni → scegli
+                        "Cookie e altri dati del sito" e
+                        "Immagini e file memorizzati nella cache" →
+                        Cancella ora.
+                    </li>
+
+                    <li>
+                        <strong>Mozilla Firefox:</strong>
+                        Impostazioni → Privacy e sicurezza →
+                        Cookie e dati dei siti → Cancella dati →
+                        seleziona le opzioni disponibili e conferma.
+                    </li>
+
+                </ul>
+
+                <div class="box-evidenza">
+                    🌐 Se possibile, prova anche Chrome, Edge o Firefox
+                    aggiornati per verificare se il problema dipende
+                    dal browser utilizzato.
+                </div>
+
+            </section>
+
+
+            <section id="server">
+
+                <div class="titolo-sezione">
+
+                    <div class="titolo-sezione-numero">
+                        06
+                    </div>
+
+                    <h2>
+                        Problemi del server
+                    </h2>
+
+                </div>
+
+                <p>
+                    Se il sito non risponde, presenta errori generali
+                    o alcune funzionalità risultano temporaneamente
+                    non disponibili, potrebbe essere in corso una manutenzione,
+                    un aggiornamento oppure il server potrebbe essere
+                    momentaneamente non disponibile.
+                </p>
+
+                <p>
+                    In questi casi il problema potrebbe non dipendere
+                    dal dispositivo o dalla connessione dell'utente.
+                </p>
+
+                <div class="box-evidenza">
+                    ⚠️ Durante eventuali problemi tecnici evita, quando possibile,
+                    di creare nuovi account o effettuare ripetutamente le stesse
+                    operazioni: potrebbero verificarsi errori temporanei.
+                </div>
+
+            </section>
+
+
+            <section id="contatti">
+
+                <div class="titolo-sezione">
+
+                    <div class="titolo-sezione-numero">
+                        07
+                    </div>
+
+                    <h2>
+                        Contattare assistenza
+                    </h2>
+
+                </div>
+
+                <p>
+                    Se nessuna delle soluzioni riportate in questa guida
+                    ha risolto il problema, puoi
+                    <a
+                        href="https://solfriniluca1.wixstudio.com/giochisocieta/contattaci"
+                        class="link-staff"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >
+                        contattare lo staff
+                    </a>
+                    fornendo più informazioni possibili.
+                </p>
+
+                <p>
+                    Per facilitare la verifica del problema è consigliato indicare:
+                </p>
+
+                <ul>
+
+                    <li>
+                        Il problema riscontrato.
+                    </li>
+
+                    <li>
+                        Il dispositivo utilizzato.
+                    </li>
+
+                    <li>
+                        Il browser utilizzato e, se possibile, la sua versione.
+                    </li>
+
+                    <li>
+                        Eventuali messaggi di errore visualizzati.
+                    </li>
+
+                    <li>
+                        Le operazioni già effettuate per tentare di risolvere
+                        il problema.
+                    </li>
+
+                </ul>
+
+                <div class="azioni-finali">
+
+                    <a
+                        href="https://solfriniluca1.wixstudio.com/giochisocieta/contattaci"
+                        class="link-contatti"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >
+                        CONTATTA LO STAFF
+                    </a>
+
+                    <a
+                        href="/lobby"
+                        class="link-home"
+                    >
+                        ← Torna al gioco
+                    </a>
+
+                </div>
+
+            </section>
+
+        </main>
+
+
+        <footer>
+            © 2026 Giochi Società — Tutti i diritti riservati
+        </footer>
+
+    </div>
+
+</div>
+
+
+<script>
+    document.querySelectorAll('.indice a').forEach(link => {
+
+        link.addEventListener('click', function(e) {
+
+            e.preventDefault();
+
+            const destinazione =
+                document.querySelector(
+                    this.getAttribute('href')
+                );
+
+            if (!destinazione) {
+                return;
+            }
+
+            destinazione.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            });
+
+        });
+
+    });
+</script>
+
+
+</body>
+</html>
