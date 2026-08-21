@@ -82,7 +82,7 @@ try {
 
 function preparaGiocatoriPerFirebase(giocatori) {
   const risultato = {};
-  for (const uid in giocatori) risultato[uid] = { nome: giocatori[uid].nome, posizione: giocatori[uid].posizione, turniSaltati: giocatori[uid].turniSaltati, elo: giocatori[uid].elo != null ? giocatori[uid].elo : ELO_INIZIALE, microfonoAttivo: !!giocatori[uid].microfonoAttivo };
+  for (const uid in giocatori) risultato[uid] = { nome: giocatori[uid].nome, posizione: giocatori[uid].posizione, turniSaltati: giocatori[uid].turniSaltati, elo: giocatori[uid].elo != null ? giocatori[uid].elo : ELO_INIZIALE, microfonoAttivo: !!giocatori[uid].microfonoAttivo, webcamAttiva: !!giocatori[uid].webcamAttiva };
   return risultato;
 }
 
@@ -142,7 +142,7 @@ function programmaRimozioneAutomaticaPartitaTerminata(partita, nomeStanza) {
 }
 
 // ===== LIVELLI, ELO, BADGE =====
-const ELO_INIZIALE = 1500;
+const ELO_INIZIALE = 1000;
 const SOGLIE_LIVELLO = [0, 900, 1000, 1100, 1250, 1400, 1600, 1850, 2150, 2500];
 const SOGLIA_VELOCISTA_SECONDI = 300;
 const PENALITA_ELO_ABBANDONO_AUTOMATICO = 25;
@@ -1631,7 +1631,7 @@ async function ripristinaPartiteDaFirebase() {
       invitati: {},
       timerTurno: null,
       punteggiOrdineIniziale: p.punteggiOrdineIniziale || null,
-      coppieAudioApprovate: new Set(),
+      coppieMediaApprovate: new Set(),
       fase: p.fase || (p.iniziata === true ? "in_corso" : "attesa_giocatori")
     };
 
@@ -1755,7 +1755,7 @@ function inviaListaPartite(nomeStanza) {
     creatoreElo: p.giocatori[p.creatoDa] && p.giocatori[p.creatoDa].elo != null ? p.giocatori[p.creatoDa].elo : ELO_INIZIALE,
     maxGiocatori: p.maxGiocatori, numGiocatoriAttuali: Object.keys(p.giocatori).length, chatAttiva: p.chatAttiva !== false,
     iniziata: p.iniziata !== false,
-    giocatori: Object.entries(p.giocatori).map(([uid, g]) => ({ uid, nome: g.nome, avatar: g.avatar || null, elo: g.elo != null ? g.elo : ELO_INIZIALE, microfonoAttivo: !!g.microfonoAttivo }))
+    giocatori: Object.entries(p.giocatori).map(([uid, g]) => ({ uid, nome: g.nome, avatar: g.avatar || null, elo: g.elo != null ? g.elo : ELO_INIZIALE, microfonoAttivo: !!g.microfonoAttivo, webcamAttiva: !!g.webcamAttiva }))
   }));
   inviaAllaStanza(nomeStanza, { tipo: "listaPartite", partite: lista });
 }
@@ -2371,22 +2371,23 @@ async function completaDeterminazione(partita, nomeStanza, ordineFinale) {
   inviaConteggioStanze();
 }
 
-// Quando la partita inizia davvero, chi ha scelto il microfono attivo viene collegato
-// automaticamente in chat vocale con tutti gli altri giocatori che hanno fatto lo stesso,
-// senza dover passare dalla richiesta/risposta manuale.
+// Quando la partita inizia davvero, chi ha scelto (in lobby, non modificabile durante
+// la partita) microfono e/o webcam attivi viene collegato automaticamente in chat
+// audio/video con tutti gli altri che hanno fatto la stessa scelta, senza dover
+// passare da nessuna richiesta manuale "vuoi parlare con me?".
 function avviaChatVocaleAutomatica(partita) {
-  const idsConMicrofono = Object.keys(partita.giocatori).filter(id => partita.giocatori[id].microfonoAttivo);
-  if (idsConMicrofono.length < 2) return;
-  if (!partita.coppieAudioApprovate) partita.coppieAudioApprovate = new Set();
+  const idsConMedia = Object.keys(partita.giocatori).filter(id => partita.giocatori[id].microfonoAttivo || partita.giocatori[id].webcamAttiva);
+  if (idsConMedia.length < 2) return;
+  if (!partita.coppieMediaApprovate) partita.coppieMediaApprovate = new Set();
 
-  idsConMicrofono.forEach(id => {
+  idsConMedia.forEach(id => {
     const giocatore = partita.giocatori[id];
     if (!giocatore.socket || giocatore.socket.readyState !== WebSocket.OPEN) return;
-    const altriPeer = idsConMicrofono.filter(altroId => altroId !== id);
-    altriPeer.forEach(altroId => partita.coppieAudioApprovate.add(idConversazione(id, altroId)));
+    const altriPeer = idsConMedia.filter(altroId => altroId !== id);
+    altriPeer.forEach(altroId => partita.coppieMediaApprovate.add(idConversazione(id, altroId)));
     giocatore.socket.send(JSON.stringify({
       tipo: "vocaleAutoAvvio",
-      peer: altriPeer.map(altroId => ({ uid: altroId, nome: partita.giocatori[altroId].nome })),
+      peer: altriPeer.map(altroId => ({ uid: altroId, nome: partita.giocatori[altroId].nome, microfonoAttivo: !!partita.giocatori[altroId].microfonoAttivo, webcamAttiva: !!partita.giocatori[altroId].webcamAttiva })),
       // convenzione: chi ha uid "minore" in ordine alfabetico avvia l'offerta WebRTC,
       // evitando che entrambi i lati propongano l'offerta contemporaneamente.
       iniziaOffertaVerso: altriPeer.filter(altroId => id < altroId)
@@ -2481,7 +2482,11 @@ wss.on("connection", (socket, request) => {
 
       if (dati.tipo === "richiediConteggio") { inviaConteggioStanze(); return; }
 
-      if (dati.tipo === "richiestaAudio" || dati.tipo === "rispostaAudio" || dati.tipo === "webrtc-offer" || dati.tipo === "webrtc-answer" || dati.tipo === "webrtc-ice-candidate") {
+      if (dati.tipo === "webrtc-offer" || dati.tipo === "webrtc-answer" || dati.tipo === "webrtc-ice-candidate") {
+        // Il collegamento audio/video ora è sempre automatico (deciso in lobby): non esiste
+        // più una richiesta manuale "vuoi parlare con me?" — chi entra in partita con
+        // microfono e/o webcam attivi viene collegato in automatico a tutti gli altri
+        // che hanno fatto la stessa scelta, non appena la partita comincia.
         if (!uid) return;
         const trovato = trovaPartita(dati.partitaId);
         if (!trovato) return;
@@ -2491,20 +2496,7 @@ wss.on("connection", (socket, request) => {
         if (!destinatarioUid) return;
         const destinatario = partita.giocatori[destinatarioUid];
         if (!destinatario || !destinatario.socket || destinatario.socket.readyState !== WebSocket.OPEN) return;
-
-        if (dati.tipo === "richiestaAudio") {
-          destinatario.socket.send(JSON.stringify({ tipo: "richiestaAudioRicevuta", mittenteUid: uid, mittenteNome: nickname }));
-          return;
-        }
-        if (dati.tipo === "rispostaAudio") {
-          if (dati.accettato) {
-            if (!partita.coppieAudioApprovate) partita.coppieAudioApprovate = new Set();
-            partita.coppieAudioApprovate.add(idConversazione(uid, destinatarioUid));
-          }
-          destinatario.socket.send(JSON.stringify({ tipo: "rispostaAudioRicevuta", mittenteUid: uid, mittenteNome: nickname, accettato: !!dati.accettato }));
-          return;
-        }
-        const coppiaApprovata = partita.coppieAudioApprovate && partita.coppieAudioApprovate.has(idConversazione(uid, destinatarioUid));
+        const coppiaApprovata = partita.coppieMediaApprovate && partita.coppieMediaApprovate.has(idConversazione(uid, destinatarioUid));
         if (!coppiaApprovata) return;
         destinatario.socket.send(JSON.stringify({ tipo: dati.tipo, mittenteUid: uid, sdp: dati.sdp || null, candidate: dati.candidate || null }));
         return;
@@ -2629,11 +2621,11 @@ stanze[stanzaAttuale].giocatoriOnline[socketId] = {
           maxGiocatori: (!max || max < 2 || max > 8 ? 2 : max),
           chatAttiva: dati.chatAttiva !== false,
           fase: "attesa_giocatori",
-          giocatori: { [uid]: { nome: nickname, avatar: mioAvatar, posizione: 0, socket, turniSaltati: 0, tentativiAutomaticiConsecutivi: 0, elo: eloCreatore, microfonoAttivo: !!dati.microfonoAttivo } },
+          giocatori: { [uid]: { nome: nickname, avatar: mioAvatar, posizione: 0, socket, turniSaltati: 0, tentativiAutomaticiConsecutivi: 0, elo: eloCreatore, microfonoAttivo: !!dati.microfonoAttivo, webcamAttiva: !!dati.webcamAttiva } },
           ordineGiocatori: [uid], turnoAttuale: 0, iniziata: false, elaborandoTiro: false, animazioneTiroInCorso: false,
           tiriEffettuatiNelTurno: 0, tiriConsentitiNelTurno: 1,
           invitati: dati.modalita === "privata" ? { [uid]: true } : null, timerTurno: null, tempoInizioTurno: null,
-          coppieAudioApprovate: new Set()
+          coppieMediaApprovate: new Set()
         };
         await salvaPartita({ ...stanze[stanzaAttuale].partite[partitaId], stanza: stanzaAttuale });
         inviaListaPartite(stanzaAttuale);
@@ -2648,7 +2640,7 @@ stanze[stanzaAttuale].giocatoriOnline[socketId] = {
         if (Object.keys(partita.giocatori).length >= partita.maxGiocatori) return;
         if (partita.modalita === "privata") { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Questa è una partita privata: puoi entrare solo se il creatore ti invita direttamente." })); return; }
         const eloIngresso = db ? (((await db.ref("utenti/" + uid + "/elo").once("value")).val()) ?? ELO_INIZIALE) : ELO_INIZIALE;
-        partita.giocatori[uid] = { nome: nickname, avatar: mioAvatar, posizione: 0, socket, turniSaltati: 0, tentativiAutomaticiConsecutivi: 0, elo: eloIngresso, microfonoAttivo: !!dati.microfonoAttivo };
+        partita.giocatori[uid] = { nome: nickname, avatar: mioAvatar, posizione: 0, socket, turniSaltati: 0, tentativiAutomaticiConsecutivi: 0, elo: eloIngresso, microfonoAttivo: !!dati.microfonoAttivo, webcamAttiva: !!dati.webcamAttiva };
         partita.ordineGiocatori.push(uid);
         await aggiornaStatoPartita(partita.id, { giocatori: preparaGiocatoriPerFirebase(partita.giocatori), ordineGiocatori: partita.ordineGiocatori });
         inviaListaPartite(stanzaAttuale);
@@ -2696,7 +2688,7 @@ stanze[stanzaAttuale].giocatoriOnline[socketId] = {
         if (Object.keys(partita.giocatori).length >= partita.maxGiocatori) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "La partita si è già riempita." })); return; }
         stanzaAttuale = nomeStanza;
         const eloInvito = db ? (((await db.ref("utenti/" + uid + "/elo").once("value")).val()) ?? ELO_INIZIALE) : ELO_INIZIALE;
-        partita.giocatori[uid] = { nome: nickname, avatar: mioAvatar, posizione: 0, socket, turniSaltati: 0, tentativiAutomaticiConsecutivi: 0, elo: eloInvito, microfonoAttivo: !!dati.microfonoAttivo };
+        partita.giocatori[uid] = { nome: nickname, avatar: mioAvatar, posizione: 0, socket, turniSaltati: 0, tentativiAutomaticiConsecutivi: 0, elo: eloInvito, microfonoAttivo: !!dati.microfonoAttivo, webcamAttiva: !!dati.webcamAttiva };
         partita.ordineGiocatori.push(uid);
         await aggiornaStatoPartita(partita.id, { giocatori: preparaGiocatoriPerFirebase(partita.giocatori), ordineGiocatori: partita.ordineGiocatori });
         inviaListaPartite(nomeStanza);
