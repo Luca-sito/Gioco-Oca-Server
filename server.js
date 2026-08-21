@@ -82,7 +82,7 @@ try {
 
 function preparaGiocatoriPerFirebase(giocatori) {
   const risultato = {};
-  for (const uid in giocatori) risultato[uid] = { nome: giocatori[uid].nome, posizione: giocatori[uid].posizione, turniSaltati: giocatori[uid].turniSaltati, elo: giocatori[uid].elo != null ? giocatori[uid].elo : ELO_INIZIALE, microfonoAttivo: !!giocatori[uid].microfonoAttivo, webcamAttiva: !!giocatori[uid].webcamAttiva };
+  for (const uid in giocatori) risultato[uid] = { nome: giocatori[uid].nome, posizione: giocatori[uid].posizione, turniSaltati: giocatori[uid].turniSaltati };
   return risultato;
 }
 
@@ -96,7 +96,6 @@ async function salvaPartita(partita) {
     tempo: partita.tempo,
     punti: partita.punti,
     modalita: partita.modalita,
-    tipoPartita: partita.tipoPartita === "divertimento" ? "divertimento" : "classifica",
     maxGiocatori: partita.maxGiocatori,
     chatAttiva: partita.chatAttiva !== false,
     fase: partita.fase || "in_corso",
@@ -115,127 +114,60 @@ async function salvaPartita(partita) {
 async function caricaPartite() { if (!db) return {}; const snap = await db.ref("partite").once("value"); return snap.val() || {}; }
 async function aggiornaStatoPartita(partitaId, dati) { if (!db) return; await db.ref("partite/" + partitaId).update({ ...dati, aggiornataIl: Date.now() }); }
 async function rimuoviPartita(nomeStanza, partitaId) {
-  if (stanze[nomeStanza]) {
-    const p = stanze[nomeStanza].partite[partitaId];
-    if (p) {
-      fermaTimerTurno(p);
-      if (p.timerRimozioneAutomatica) { clearTimeout(p.timerRimozioneAutomatica); p.timerRimozioneAutomatica = null; }
-    }
-    delete stanze[nomeStanza].partite[partitaId];
-  }
+  if (stanze[nomeStanza]) { const p = stanze[nomeStanza].partite[partitaId]; if (p) fermaTimerTurno(p); delete stanze[nomeStanza].partite[partitaId]; }
   if (db) { try { await db.ref("partite/" + partitaId).remove(); } catch (e) { console.error("Errore rimozione partita da Firebase:", e.message); } }
 }
 
-// Rete di sicurezza: una partita "terminata" (schermata di vittoria) viene comunque
-// rimossa dopo un breve intervallo, anche se non tutti i giocatori sono tornati
-// manualmente alla lobby. Evita che la partita resti bloccata nella lista per sempre.
-const SECONDI_ATTESA_RIMOZIONE_PARTITA_TERMINATA = 20;
-function programmaRimozioneAutomaticaPartitaTerminata(partita, nomeStanza) {
-  if (partita.timerRimozioneAutomatica) clearTimeout(partita.timerRimozioneAutomatica);
-  partita.timerRimozioneAutomatica = setTimeout(async () => {
-    const trovato = trovaPartita(partita.id);
-    if (!trovato || trovato.partita.fase !== "terminata") return;
-    await rimuoviPartita(trovato.nomeStanza, partita.id);
-    inviaListaPartite(trovato.nomeStanza);
-    inviaConteggioStanze();
-  }, SECONDI_ATTESA_RIMOZIONE_PARTITA_TERMINATA * 1000);
-}
-
-// ===== LIVELLI, ELO, BADGE =====
-const ELO_INIZIALE = 1000;
-const SOGLIE_LIVELLO = [0, 900, 1000, 1100, 1250, 1400, 1600, 1850, 2150, 2500];
+// ===== LIVELLI, XP, BADGE =====
+const SOGLIE_LIVELLO = [0, 300, 700, 1200, 1800, 2500, 3300, 4200, 5200, 6300];
 const SOGLIA_VELOCISTA_SECONDI = 300;
-const PENALITA_ELO_ABBANDONO_AUTOMATICO = 25;
-function calcolaLivello(elo) {
+function calcolaLivello(xp) {
   let livello = 1;
-  for (let i = 0; i < SOGLIE_LIVELLO.length; i++) { if (elo >= SOGLIE_LIVELLO[i]) livello = i + 1; else break; }
+  for (let i = 0; i < SOGLIE_LIVELLO.length; i++) { if (xp >= SOGLIE_LIVELLO[i]) livello = i + 1; else break; }
   return { livello, sogliaAttuale: SOGLIE_LIVELLO[livello - 1], sogliaProssima: SOGLIE_LIVELLO[livello] !== undefined ? SOGLIE_LIVELLO[livello] : null };
 }
 function calcolaBadge(utente) {
   const badge = [];
-  const vinte = utente.partiteVinte || 0, giocate = utente.partiteGiocate || 0, elo = utente.elo || ELO_INIZIALE;
+  const vinte = utente.partiteVinte || 0, giocate = utente.partiteGiocate || 0, xp = utente.xp || 0;
   const streakMax = utente.streakVittorieMassima || 0, vittoriaVeloce = utente.vittoriaPiuVeloceSecondi;
   if (vinte >= 10) badge.push({ icona: "🥉", nome: "Prime 10 vittorie" });
   if (giocate >= 100) badge.push({ icona: "🥈", nome: "100 partite giocate" });
-  if (elo >= 1400) badge.push({ icona: "🥇", nome: "1400 punti ELO" });
+  if (xp >= 500) badge.push({ icona: "🥇", nome: "500 punti XP" });
   if (streakMax >= 20) badge.push({ icona: "👑", nome: "20 vittorie consecutive" });
   if (vittoriaVeloce != null && vittoriaVeloce < SOGLIA_VELOCISTA_SECONDI) badge.push({ icona: "🏃", nome: "Velocista" });
   return badge;
 }
-// Fattore K: più alto per i giocatori con poche partite (l'ELO si assesta più in fretta),
-// più basso per i giocatori esperti (l'ELO diventa più stabile).
-function fattoreK(partiteGiocate) {
-  const g = partiteGiocate || 0;
-  if (g < 15) return 40;
-  if (g < 50) return 28;
-  return 20;
-}
-// Formula ELO standard: punteggio atteso in base alla differenza di rating.
-function punteggioAtteso(mioElo, avversarioElo) {
-  return 1 / (1 + Math.pow(10, (avversarioElo - mioElo) / 400));
-}
-function nuovoElo(mioElo, avversarioElo, risultato, k) {
-  return Math.round(mioElo + k * (risultato - punteggioAtteso(mioElo, avversarioElo)));
-}
+function xpVincita() { return 50 + Math.floor(Math.random() * 151); }
+function xpSconfitta() { return 20 + Math.floor(Math.random() * 61); }
+function xpPenalitaAbbandonoAutomatico() { return 200 + Math.floor(Math.random() * 101); }
 function idConversazione(uidA, uidB) { return [uidA, uidB].sort().join("_"); }
 
-async function concludiPartita(partita, vincitoreUid, nomeStanza, elencoPartecipanti, escludiPer) {
+async function concludiPartita(partita, vincitoreUid, nomeStanza, elencoPartecipanti, escludiXpPer) {
   if (!db) return;
   try {
     const partecipanti = elencoPartecipanti || partita.ordineGiocatori.map(id => ({ uid: id, nome: partita.giocatori[id] ? partita.giocatori[id].nome : "?" }));
-    const esclusi = escludiPer || new Set();
+    const esclusi = escludiXpPer || new Set();
     const durataSecondi = partita.iniziataIl ? Math.round((Date.now() - partita.iniziataIl) / 1000) : null;
+    const xpVinti = xpVincita();
     const nomeVincitore = (partecipanti.find(p => p.uid === vincitoreUid) || {}).nome || null;
-    const partitaClassificata = partita.tipoPartita !== "divertimento";
-
-    // Carichiamo prima TUTTI gli utenti coinvolti (elo/partite attuali), così il calcolo
-    // ELO di ognuno usa i valori di partenza reali e non risente dell'ordine di scrittura.
-    const infoUtenti = {};
-    for (const p of partecipanti) {
-      if (esclusi.has(p.uid)) continue;
-      infoUtenti[p.uid] = (await db.ref("utenti/" + p.uid).once("value")).val();
-    }
-
-    let eloVariazioneVincitore = 0;
-
-    if (partitaClassificata) {
-      const idsValidi = partecipanti.map(p => p.uid).filter(id => !esclusi.has(id) && infoUtenti[id]);
-      for (const id of idsValidi) {
-        const u = infoUtenti[id];
-        const mioElo = u.elo != null ? u.elo : ELO_INIZIALE;
-        const altriElo = idsValidi.filter(x => x !== id).map(x => (infoUtenti[x].elo != null ? infoUtenti[x].elo : ELO_INIZIALE));
-        if (altriElo.length === 0) continue;
-        const eloMedioAvversari = altriElo.reduce((a, b) => a + b, 0) / altriElo.length;
-        const risultato = id === vincitoreUid ? 1 : 0;
-        const k = fattoreK(u.partiteGiocate || 0);
-        const dopo = nuovoElo(mioElo, eloMedioAvversari, risultato, k);
-        u._nuovoElo = Math.max(100, dopo);
-        if (id === vincitoreUid) eloVariazioneVincitore = u._nuovoElo - mioElo;
-      }
-    }
 
     for (const p of partecipanti) {
       if (esclusi.has(p.uid)) continue;
-      const u = infoUtenti[p.uid];
+      const u = (await db.ref("utenti/" + p.uid).once("value")).val();
       if (!u) continue;
-      const mioEloAttuale = u.elo != null ? u.elo : ELO_INIZIALE;
-      const eloFinale = partitaClassificata && u._nuovoElo != null ? u._nuovoElo : mioEloAttuale;
       if (p.uid === vincitoreUid) {
         const nuovoStreak = (u.streakVittorieAttuale || 0) + 1;
         const aggiornamenti = {
           partiteGiocate: admin.database.ServerValue.increment(1), partiteVinte: admin.database.ServerValue.increment(1),
-          streakVittorieAttuale: nuovoStreak, streakVittorieMassima: Math.max(u.streakVittorieMassima || 0, nuovoStreak), elo: eloFinale
+          streakVittorieAttuale: nuovoStreak, streakVittorieMassima: Math.max(u.streakVittorieMassima || 0, nuovoStreak), xp: (u.xp || 0) + xpVinti
         };
         if (durataSecondi !== null && (u.vittoriaPiuVeloceSecondi == null || durataSecondi < u.vittoriaPiuVeloceSecondi)) aggiornamenti.vittoriaPiuVeloceSecondi = durataSecondi;
         await db.ref("utenti/" + p.uid).update(aggiornamenti);
       } else {
-        await db.ref("utenti/" + p.uid).update({ partiteGiocate: admin.database.ServerValue.increment(1), streakVittorieAttuale: 0, elo: eloFinale });
+        await db.ref("utenti/" + p.uid).update({ partiteGiocate: admin.database.ServerValue.increment(1), streakVittorieAttuale: 0, xp: Math.max(0, (u.xp || 0) - xpSconfitta()) });
       }
     }
-    await db.ref("storicoPartite").push().set({
-      data: Date.now(), stanza: nomeStanza, vincitoreUid, vincitoreNome: nomeVincitore, durataSecondi,
-      classificata: partitaClassificata, eloVariazioneVincitore, partecipanti
-    });
+    await db.ref("storicoPartite").push().set({ data: Date.now(), stanza: nomeStanza, vincitoreUid, vincitoreNome: nomeVincitore, durataSecondi, xpVincitore: xpVinti, partecipanti });
   } catch (e) { console.error("Errore conclusione partita:", e.message); }
 }
 
@@ -300,16 +232,6 @@ async function statoAmicizia(mioUid, altroUid) {
   if (snapInviata.exists()) return "richiesta_inviata";
   if (snapRicevuta.exists()) return "richiesta_ricevuta";
   return "nessuno";
-}
-
-async function verificaAmicizia(uidA, uidB) {
-  if (!db || !uidA || !uidB) return false;
-  if (uidA === uidB) return true;
-
-  const snap =
-    await db.ref(`utenti/${uidA}/amici/${uidB}`).once("value");
-
-  return snap.exists() && snap.val() === true;
 }
 
 function preparaNicknameGoogle(nome, email) {
@@ -378,7 +300,7 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET && GOOGLE_CALLBACK_URL) {
       const uid = nuovoRef.key;
 
       await nuovoRef.set({
-        partiteVinte: 0, partiteGiocate: 0, puntiTotali: 0, elo: ELO_INIZIALE,
+        partiteVinte: 0, partiteGiocate: 0, puntiTotali: 0, xp: 0,
         streakVittorieAttuale: 0, streakVittorieMassima: 0, vittoriaPiuVeloceSecondi: null,
         email, emailLower: email,
         nickname, nicknameLower: nickname.toLowerCase(),
@@ -397,54 +319,20 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET && GOOGLE_CALLBACK_URL) {
   }));
 }
 
-app.get(
-  "/auth/google",
-  passport.authenticate("google", {
-    scope: ["profile", "email"]
-  })
-);
+app.get("/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
 
-app.get(
-  "/auth/google/callback",
-  passport.authenticate("google", {
-    session: false,
-    failureRedirect:
-      "https://solfriniluca1.wixstudio.com/accedi?errore=google"
-  }),
+app.get("/auth/google/callback",
+  passport.authenticate("google", { session: false, failureRedirect: "/accedi.html?errore=google" }),
   async (req, res) => {
     try {
       const utente = req.user;
-
-      if (!utente || !utente.uid) {
-        return res.redirect(
-          "https://solfriniluca1.wixstudio.com/accedi?errore=google"
-        );
-      }
-
-      const token = creaToken(
-        utente.uid,
-        utente.nickname,
-        utente.ruolo || "utente"
-      );
-
-      res.cookie(
-        "token",
-        token,
-        OPZIONI_COOKIE
-      );
-
-      return res.redirect(
-        "https://solfriniluca1.wixstudio.com/giochisocieta"
-      );
+      if (!utente || !utente.uid) return res.redirect("/accedi.html?errore=google");
+      const token = creaToken(utente.uid, utente.nickname, utente.ruolo || "utente");
+      res.cookie("token", token, OPZIONI_COOKIE);
+      res.redirect("/");
     } catch (errore) {
-      console.error(
-        "Errore callback Google:",
-        errore
-      );
-
-      return res.redirect(
-        "https://solfriniluca1.wixstudio.com/accedi?errore=google"
-      );
+      console.error("Errore callback Google:", errore);
+      res.redirect("/accedi.html?errore=google");
     }
   }
 );
@@ -468,7 +356,7 @@ app.post("/api/registrati", limiteLogin, async (req, res) => {
     const nuovoRef = db.ref("utenti").push();
     const uid = nuovoRef.key;
     await nuovoRef.set({
-      partiteVinte: 0, partiteGiocate: 0, puntiTotali: 0, elo: ELO_INIZIALE, streakVittorieAttuale: 0, streakVittorieMassima: 0, vittoriaPiuVeloceSecondi: null,
+      partiteVinte: 0, partiteGiocate: 0, puntiTotali: 0, xp: 0, streakVittorieAttuale: 0, streakVittorieMassima: 0, vittoriaPiuVeloceSecondi: null,
       email: emailPulita, emailLower: emailPulita, nickname: nicknamePulito, nicknameLower, passwordHash,
       avatar: null, ruolo: "utente", stato: "attivo", sospesoFino: null, avvisi: [], creatoIl: Date.now(), ultimoAccesso: Date.now()
     });
@@ -506,12 +394,12 @@ app.get("/api/me", richiediAuth, async (req, res) => {
   try {
     const utente = (await db.ref("utenti/" + req.utente.uid).once("value")).val();
     if (!utente) return res.status(404).json({ errore: "Utente non trovato." });
-    const { livello, sogliaAttuale, sogliaProssima } = calcolaLivello(utente.elo != null ? utente.elo : ELO_INIZIALE);
+    const { livello, sogliaAttuale, sogliaProssima } = calcolaLivello(utente.xp || 0);
     res.json({
       uid: req.utente.uid, nickname: utente.nickname, email: utente.email, avatar: utente.avatar || null,
       ruolo: utente.ruolo || "utente", stato: utente.stato || "attivo", sospesoFino: utente.sospesoFino || null, avvisi: utente.avvisi || [],
       partiteVinte: utente.partiteVinte || 0, partiteGiocate: utente.partiteGiocate || 0, creatoIl: utente.creatoIl || null, ultimoAccesso: utente.ultimoAccesso || null,
-      elo: utente.elo != null ? utente.elo : ELO_INIZIALE, livello, sogliaAttuale, sogliaProssima, streakVittorieMassima: utente.streakVittorieMassima || 0,
+      xp: utente.xp || 0, livello, sogliaAttuale, sogliaProssima, streakVittorieMassima: utente.streakVittorieMassima || 0,
       vittoriaPiuVeloceSecondi: utente.vittoriaPiuVeloceSecondi ?? null, badge: calcolaBadge(utente)
     });
   } catch (err) { console.error(err); res.status(500).json({ errore: "Errore del server." }); }
@@ -548,8 +436,8 @@ app.get("/api/top-giocatori", async (req, res) => {
   try {
     if (!db) return res.json({ giocatori: [] });
     const utenti = (await db.ref("utenti").once("value")).val() || {};
-    const top = Object.values(utenti).map(u => ({ nickname: u.nickname || "Sconosciuto", elo: u.elo != null ? u.elo : ELO_INIZIALE, vinte: u.partiteVinte || 0, giocate: u.partiteGiocate || 0 }))
-      .sort((a, b) => (b.elo !== a.elo ? b.elo - a.elo : b.vinte - a.vinte)).slice(0, 10);
+    const top = Object.values(utenti).map(u => ({ nickname: u.nickname || "Sconosciuto", vinte: u.partiteVinte || 0, giocate: u.partiteGiocate || 0 }))
+      .sort((a, b) => (b.vinte !== a.vinte ? b.vinte - a.vinte : b.giocate - a.giocate)).slice(0, 10);
     res.json({ giocatori: top });
   } catch (e) { console.error("Errore classifica:", e); res.status(500).json({ giocatori: [] }); }
 });
@@ -581,10 +469,10 @@ app.get("/api/profilo-pubblico/:nickname", richiediAuth, async (req, res) => {
     const utente = await trovaUtentePerNickname(pulisciTesto(req.params.nickname, 20).toLowerCase());
     if (!utente) return res.status(404).json({ errore: "Utente non trovato." });
     const giocate = utente.partiteGiocate || 0, vinte = utente.partiteVinte || 0;
-    const { livello, sogliaAttuale, sogliaProssima } = calcolaLivello(utente.elo != null ? utente.elo : ELO_INIZIALE);
+    const { livello, sogliaAttuale, sogliaProssima } = calcolaLivello(utente.xp || 0);
     res.json({
       uid: utente.uid, nickname: utente.nickname, avatar: utente.avatar || null, creatoIl: utente.creatoIl || null, ultimoAccesso: utente.ultimoAccesso || null,
-      partiteVinte: vinte, partiteGiocate: giocate, winRate: giocate > 0 ? Math.round((vinte / giocate) * 100) : 0, elo: utente.elo != null ? utente.elo : ELO_INIZIALE,
+      partiteVinte: vinte, partiteGiocate: giocate, winRate: giocate > 0 ? Math.round((vinte / giocate) * 100) : 0, xp: utente.xp || 0,
       livello, sogliaAttuale, sogliaProssima, streakVittorieMassima: utente.streakVittorieMassima || 0, vittoriaPiuVeloceSecondi: utente.vittoriaPiuVeloceSecondi ?? null,
       badge: calcolaBadge(utente), statoAmicizia: await statoAmicizia(req.utente.uid, utente.uid)
     });
@@ -608,510 +496,54 @@ app.get("/api/storico", richiediAuth, async (req, res) => {
 
 // ===== MESSAGGI PRIVATI =====
 app.get("/api/messaggi-privati/:altroUid", richiediAuth, async (req, res) => {
-  if (!db) {
-    return res.status(500).json({
-      errore: "Servizio non disponibile."
-    });
-  }
-
+  if (!db) return res.status(500).json({ errore: "Servizio non disponibile." });
   try {
-    const mioUid = req.utente.uid;
-    const altroUid = req.params.altroUid;
-
-    if (!altroUid || altroUid === mioUid) {
-      return res.status(400).json({
-        errore: "Conversazione non valida."
-      });
-    }
-
-    const destinatarioEsiste =
-      await db.ref("utenti/" + altroUid).once("value");
-
-    if (!destinatarioEsiste.exists()) {
-      return res.status(404).json({
-        errore: "Utente non trovato."
-      });
-    }
-
-    const idConv =
-      idConversazione(mioUid, altroUid);
-
-    const messaggi =
-      (
-        await db
-          .ref("messaggiPrivati/" + idConv)
-          .once("value")
-      ).val() || {};
-
-    const lista =
-      Object.entries(messaggi)
-        .map(([id, m]) => ({
-          id,
-          ...m
-        }))
-        .sort(
-          (a, b) =>
-            Number(a.data || 0) -
-            Number(b.data || 0)
-        );
-
-    const amici =
-      await verificaAmicizia(
-        mioUid,
-        altroUid
-      );
-
-    /*
-     * Se non sono amici, il messaggio esiste ma
-     * il destinatario NON può leggerne il contenuto.
-     *
-     * Non segniamo nulla come letto.
-     */
-    if (!amici) {
-
-      const esisteMessaggioDaAltro =
-        lista.some(
-          m =>
-            m.daUid === altroUid &&
-            m.aUid === mioUid
-        );
-
-      if (esisteMessaggioDaAltro) {
-
-        return res.json({
-          messaggi: [],
-          bloccata: true,
-          richiestaAmicizia: true,
-          altroUid,
-          messaggio:
-            "Questa persona ti ha inviato un messaggio. Per leggerlo devi prima diventare suo amico."
-        });
-      }
-
-      /*
-       * Nessun messaggio ricevuto dall'altra persona.
-       * In questo caso possiamo comunque lasciare
-       * consultabile una eventuale conversazione
-       * iniziata dal destinatario stesso.
-       */
-    }
-
-    /*
-     * Conversazione autorizzata:
-     * ora possiamo leggere tutto e segnare
-     * come letti i messaggi ricevuti.
-     */
+    const idConv = idConversazione(req.utente.uid, req.params.altroUid);
+    const messaggi = (await db.ref("messaggiPrivati/" + idConv).once("value")).val() || {};
+    const lista = Object.entries(messaggi).map(([id, m]) => ({ id, ...m })).sort((a, b) => a.data - b.data);
     const aggiornamenti = {};
-
-    Object.entries(messaggi).forEach(
-      ([id, m]) => {
-
-        if (
-          m.aUid === mioUid &&
-          !m.letto
-        ) {
-          aggiornamenti[
-            id + "/letto"
-          ] = true;
-        }
-      }
-    );
-
-    if (
-      Object.keys(aggiornamenti).length
-    ) {
-      await db
-        .ref("messaggiPrivati/" + idConv)
-        .update(aggiornamenti);
-    }
-
-    res.json({
-      messaggi: lista,
-      bloccata: false,
-      richiestaAmicizia: false,
-      altroUid
-    });
-
-  } catch (err) {
-
-    console.error(
-      "Errore caricamento messaggi privati:",
-      err
-    );
-
-    res.status(500).json({
-      errore:
-        "Errore del server."
-    });
-  }
+    Object.entries(messaggi).forEach(([id, m]) => { if (m.aUid === req.utente.uid && !m.letto) aggiornamenti[id + "/letto"] = true; });
+    if (Object.keys(aggiornamenti).length) await db.ref("messaggiPrivati/" + idConv).update(aggiornamenti);
+    res.json({ messaggi: lista });
+  } catch (err) { console.error(err); res.status(500).json({ errore: "Errore del server." }); }
 });
 
 app.post("/api/messaggi-privati", limiteMessaggiPrivati, richiediAuth, async (req, res) => {
-  if (!db) {
-    return res.status(500).json({
-      errore: "Servizio non disponibile."
-    });
-  }
-
+  if (!db) return res.status(500).json({ errore: "Servizio non disponibile." });
   try {
-
-    const {
-      destinatarioUid,
-      testo
-    } = req.body;
-
-    if (
-      !destinatarioUid ||
-      !testo ||
-      !testo.trim()
-    ) {
-      return res.status(400).json({
-        errore: "Dati mancanti."
-      });
-    }
-
-    if (
-      destinatarioUid ===
-      req.utente.uid
-    ) {
-      return res.status(400).json({
-        errore:
-          "Non puoi scrivere a te stesso."
-      });
-    }
-
-    const testoPulito =
-      pulisciTesto(
-        testo,
-        500
-      );
-
-    if (!testoPulito) {
-      return res.status(400).json({
-        errore:
-          "Messaggio vuoto."
-      });
-    }
-
-    const mittente =
-      (
-        await db
-          .ref(
-            "utenti/" +
-            req.utente.uid
-          )
-          .once("value")
-      ).val();
-
-    const destinatario =
-      (
-        await db
-          .ref(
-            "utenti/" +
-            destinatarioUid
-          )
-          .once("value")
-      ).val();
-
-    if (
-      !mittente ||
-      !destinatario
-    ) {
-      return res.status(404).json({
-        errore:
-          "Utente non trovato."
-      });
-    }
-
-    /*
-     * Controlliamo se i due utenti sono amici.
-     * Il messaggio viene comunque inviato anche
-     * se NON sono amici.
-     */
-    const sonoAmici =
-      await verificaAmicizia(
-        req.utente.uid,
-        destinatarioUid
-      );
-
-    const idConv =
-      idConversazione(
-        req.utente.uid,
-        destinatarioUid
-      );
-
-    const ora =
-      Date.now();
-
-    const nuovoRef =
-      db
-        .ref(
-          "messaggiPrivati/" +
-          idConv
-        )
-        .push();
-
-    const messaggio = {
-      daUid:
-        req.utente.uid,
-
-      daNome:
-        mittente.nickname,
-
-      aUid:
-        destinatarioUid,
-
-      aNome:
-        destinatario.nickname,
-
-      testo:
-        testoPulito,
-
-      data:
-        ora,
-
-      letto:
-        false,
-
-      /*
-       * Serve al server per sapere che,
-       * al momento dell'invio, la conversazione
-       * non era ancora sbloccata.
-       *
-       * Il messaggio non viene cancellato:
-       * dopo l'amicizia sarà leggibile.
-       */
-      richiestaAmicizia:
-        !sonoAmici
-    };
-
-    await nuovoRef.set(
-      messaggio
-    );
-
-    /*
-     * Se non sono amici, informiamo il destinatario
-     * tramite il normale sistema delle notifiche.
-     *
-     * In questo modo sa che qualcuno gli ha scritto
-     * anche senza entrare nel profilo del mittente.
-     */
-    if (!sonoAmici) {
-
-      const notificheRef =
-        db.ref(
-          "utenti/" +
-          destinatarioUid +
-          "/notifiche"
-        );
-
-      await notificheRef.push({
-        tipo:
-          "messaggioPrivato",
-
-        testo:
-          `${mittente.nickname} ti ha inviato un messaggio. Diventate amici per leggerlo.`,
-
-        data:
-          ora,
-
-        letta:
-          false,
-
-        daUid:
-          req.utente.uid,
-
-        daNome:
-          mittente.nickname,
-
-        conversazioneUid:
-          req.utente.uid
-      });
-
-    }
-
-    res.json({
-      ok: true,
-
-      messaggio: {
-        id:
-          nuovoRef.key,
-
-        ...messaggio
-      },
-
-      richiestaAmicizia:
-        !sonoAmici
-    });
-
-  } catch (err) {
-
-    console.error(
-      "Errore invio messaggio privato:",
-      err
-    );
-
-    res.status(500).json({
-      errore:
-        "Errore durante l'invio, riprova."
-    });
-  }
+    const { destinatarioUid, testo } = req.body;
+    if (!destinatarioUid || !testo || !testo.trim()) return res.status(400).json({ errore: "Dati mancanti." });
+    if (destinatarioUid === req.utente.uid) return res.status(400).json({ errore: "Non puoi scrivere a te stesso." });
+    const testoPulito = pulisciTesto(testo, 500);
+    if (!testoPulito) return res.status(400).json({ errore: "Messaggio vuoto." });
+    const mittente = (await db.ref("utenti/" + req.utente.uid).once("value")).val();
+    const destinatario = (await db.ref("utenti/" + destinatarioUid).once("value")).val();
+    if (!mittente || !destinatario) return res.status(404).json({ errore: "Utente non trovato." });
+    const idConv = idConversazione(req.utente.uid, destinatarioUid);
+    const nuovoRef = db.ref("messaggiPrivati/" + idConv).push();
+    const messaggio = { daUid: req.utente.uid, daNome: mittente.nickname, aUid: destinatarioUid, aNome: destinatario.nickname, testo: testoPulito, data: Date.now(), letto: false };
+    await nuovoRef.set(messaggio);
+    res.json({ ok: true, messaggio: { id: nuovoRef.key, ...messaggio } });
+  } catch (err) { console.error(err); res.status(500).json({ errore: "Errore durante l'invio, riprova." }); }
 });
 
 app.get("/api/conversazioni", richiediAuth, async (req, res) => {
-  if (!db) {
-    return res.status(500).json({
-      errore: "Servizio non disponibile."
-    });
-  }
-
+  if (!db) return res.status(500).json({ errore: "Servizio non disponibile." });
   try {
-
-    const tutte =
-      (
-        await db
-          .ref("messaggiPrivati")
-          .once("value")
-      ).val() || {};
-
-    const mioUid =
-      req.utente.uid;
-
+    const tutte = (await db.ref("messaggiPrivati").once("value")).val() || {};
+    const mieUid = req.utente.uid;
     const conversazioni = {};
-
-    for (
-      const [
-        idConv,
-        messaggi
-      ] of Object.entries(tutte)
-    ) {
-
-      /*
-       * La conversazione appartiene all'utente
-       * solo se il suo UID è uno dei due.
-       */
-      if (
-        !idConv
-          .split("_")
-          .includes(mioUid)
-      ) {
-        continue;
-      }
-
-      const lista =
-        Object.values(
-          messaggi || {}
-        );
-
-      if (!lista.length) {
-        continue;
-      }
-
-      lista.sort(
-        (a, b) =>
-          Number(b.data || 0) -
-          Number(a.data || 0)
-      );
-
-      const ultimo =
-        lista[0];
-
-      const altroUid =
-        ultimo.daUid === mioUid
-          ? ultimo.aUid
-          : ultimo.daUid;
-
-      const altroNome =
-        ultimo.daUid === mioUid
-          ? ultimo.aNome
-          : ultimo.daNome;
-
-      /*
-       * Una volta amici la conversazione
-       * è completamente normale.
-       */
-      const amici =
-        await verificaAmicizia(
-          mioUid,
-          altroUid
-        );
-
-      /*
-       * Controlliamo se esiste almeno un messaggio
-       * ricevuto dal nostro interlocutore.
-       */
-      const haMessaggiRicevuti =
-        lista.some(
-          m =>
-            m.aUid === mioUid
-        );
-
-      /*
-       * Se non siamo amici e abbiamo ricevuto
-       * almeno un messaggio, l'inbox mostra
-       * l'esistenza del messaggio ma MAI il suo testo.
-       */
-      const bloccata =
-        !amici &&
-        haMessaggiRicevuti;
-
-      const ultimoTesto =
-        bloccata
-          ? "Ti ha inviato un messaggio"
-          : (ultimo.testo || "");
-
-      const nonLetti =
-        lista.filter(
-          m =>
-            m.aUid === mioUid &&
-            !m.letto
-        ).length;
-
-      conversazioni[altroUid] = {
-
-        altroUid,
-
-        altroNome,
-
-        ultimoTesto,
-
-        ultimaData:
-          ultimo.data,
-
-        nonLetti,
-
-        bloccata,
-
-        richiestaAmicizia:
-          bloccata
-      };
-    }
-
-    res.json({
-      conversazioni:
-        Object
-          .values(
-            conversazioni
-          )
-          .sort(
-            (a, b) =>
-              Number(b.ultimaData || 0) -
-              Number(a.ultimaData || 0)
-          )
+    Object.entries(tutte).forEach(([idConv, messaggi]) => {
+      if (!idConv.split("_").includes(mieUid)) return;
+      const lista = Object.values(messaggi);
+      if (!lista.length) return;
+      const ultimo = lista.sort((a, b) => b.data - a.data)[0];
+      const altroUid = ultimo.daUid === mieUid ? ultimo.aUid : ultimo.daUid;
+      const altroNome = ultimo.daUid === mieUid ? ultimo.aNome : ultimo.daNome;
+      conversazioni[altroUid] = { altroUid, altroNome, ultimoTesto: ultimo.testo, ultimaData: ultimo.data, nonLetti: lista.filter(m => m.aUid === mieUid && !m.letto).length };
     });
-
-  } catch (err) {
-
-    console.error(
-      "Errore caricamento conversazioni:",
-      err
-    );
-
-    res.status(500).json({
-      errore:
-        "Errore del server."
-    });
-  }
+    res.json({ conversazioni: Object.values(conversazioni).sort((a, b) => b.ultimaData - a.ultimaData) });
+  } catch (err) { console.error(err); res.status(500).json({ errore: "Errore del server." }); }
 });
 
 // ===== AMICI =====
@@ -1135,128 +567,6 @@ app.post("/api/amici/richiedi", limiteAmici, richiediAuth, async (req, res) => {
     await db.ref("utenti/" + destinatarioUid + "/notifiche").push({ tipo: "richiestaAmicizia", testo: `${mioNickname} ti ha inviato una richiesta di amicizia`, data: ora, letta: false, daUid: req.utente.uid, daNome: mioNickname });
     res.json({ ok: true });
   } catch (err) { console.error(err); res.status(500).json({ errore: "Errore del server, riprova." }); }
-});
-
-app.post("/api/amici/accetta-messaggio", limiteAmici, richiediAuth, async (req, res) => {
-  if (!db) {
-    return res.status(500).json({
-      errore: "Servizio non disponibile."
-    });
-  }
-
-  try {
-    const { altroUid } = req.body;
-
-    if (!altroUid) {
-      return res.status(400).json({
-        errore: "Dati mancanti."
-      });
-    }
-
-    const mioUid = req.utente.uid;
-
-    if (altroUid === mioUid) {
-      return res.status(400).json({
-        errore: "Operazione non valida."
-      });
-    }
-
-    const [mioSnap, altroSnap] = await Promise.all([
-      db.ref("utenti/" + mioUid).once("value"),
-      db.ref("utenti/" + altroUid).once("value")
-    ]);
-
-    const mioUtente = mioSnap.val();
-    const altroUtente = altroSnap.val();
-
-    if (!mioUtente || !altroUtente) {
-      return res.status(404).json({
-        errore: "Utente non trovato."
-      });
-    }
-
-    /*
-     * Prima di creare l'amicizia verifichiamo che
-     * l'altro utente abbia davvero inviato almeno
-     * un messaggio a questo utente.
-     */
-    const idConv = idConversazione(mioUid, altroUid);
-
-    const messaggi =
-      (
-        await db
-          .ref("messaggiPrivati/" + idConv)
-          .once("value")
-      ).val() || {};
-
-    const esisteMessaggioRicevuto = Object.values(messaggi).some(
-      m =>
-        m &&
-        m.daUid === altroUid &&
-        m.aUid === mioUid
-    );
-
-    if (!esisteMessaggioRicevuto) {
-      return res.status(400).json({
-        errore: "Non esiste nessun messaggio da questo utente."
-      });
-    }
-
-    const giaAmici = await verificaAmicizia(
-      mioUid,
-      altroUid
-    );
-
-    if (!giaAmici) {
-      const ora = Date.now();
-
-      await db.ref().update({
-        [`utenti/${mioUid}/richiesteRicevute/${altroUid}`]: null,
-        [`utenti/${mioUid}/richiesteInviate/${altroUid}`]: null,
-        [`utenti/${altroUid}/richiesteRicevute/${mioUid}`]: null,
-        [`utenti/${altroUid}/richiesteInviate/${mioUid}`]: null,
-
-        [`utenti/${mioUid}/amici/${altroUid}`]: true,
-        [`utenti/${altroUid}/amici/${mioUid}`]: true
-      });
-
-      await db
-        .ref(
-          "utenti/" +
-          altroUid +
-          "/notifiche"
-        )
-        .push({
-          tipo: "amiciziaAccettata",
-
-          testo:
-            `${mioUtente.nickname} è ora tuo amico`,
-
-          data: ora,
-
-          letta: false,
-
-          daUid: mioUid,
-
-          daNome: mioUtente.nickname
-        });
-    }
-
-    res.json({
-      ok: true,
-      amici: true
-    });
-
-  } catch (err) {
-    console.error(
-      "Errore accettazione amicizia da messaggio:",
-      err
-    );
-
-    res.status(500).json({
-      errore: "Errore durante l'accettazione."
-    });
-  }
 });
 
 app.post("/api/amici/accetta", richiediAuth, async (req, res) => {
@@ -1325,204 +635,6 @@ app.post("/api/notifiche/segna-lette", richiediAuth, async (req, res) => {
     if (Object.keys(aggiornamenti).length) await db.ref("utenti/" + req.utente.uid + "/notifiche").update(aggiornamenti);
     res.json({ ok: true });
   } catch (err) { console.error(err); res.status(500).json({ errore: "Errore del server." }); }
-});
-
-// ===== AVVISI DEL SITO =====
-
-app.get("/api/avvisi", richiediAuth, async (req, res) => {
-  if (!db) {
-    return res.status(500).json({
-      errore: "Servizio non disponibile."
-    });
-  }
-
-  try {
-    const dati =
-      (await db.ref("avvisiSito").once("value")).val() || {};
-
-    const avvisi = Object.entries(dati)
-      .map(([id, avviso]) => ({
-        id,
-        titolo: avviso.titolo || "Avviso",
-        messaggio: avviso.messaggio || "",
-        tipo: avviso.tipo || "Informazione",
-        data: avviso.data || null,
-        pubblicatoDa: avviso.pubblicatoDa || "Staff"
-      }))
-      .sort(
-        (a, b) =>
-          Number(b.data || 0) -
-          Number(a.data || 0)
-      );
-
-    res.json({
-      avvisi
-    });
-
-  } catch (err) {
-    console.error(
-      "Errore caricamento avvisi:",
-      err
-    );
-
-    res.status(500).json({
-      errore: "Errore del server."
-    });
-  }
-});
-
-app.post("/api/admin/avvisi", richiediAdmin, async (req, res) => {
-  if (!db) {
-    return res.status(500).json({
-      errore: "Database non disponibile."
-    });
-  }
-
-  try {
-    const {
-      titolo,
-      messaggio,
-      tipo
-    } = req.body;
-
-    const titoloPulito = pulisciTesto(titolo, 120);
-    const messaggioPulito = pulisciTesto(messaggio, 2000);
-    const tipoPulito = pulisciTesto(
-      tipo || "Informazione",
-      40
-    );
-
-    if (!titoloPulito) {
-      return res.status(400).json({
-        errore: "Inserisci un titolo."
-      });
-    }
-
-    if (!messaggioPulito) {
-      return res.status(400).json({
-        errore: "Inserisci il testo dell'avviso."
-      });
-    }
-
-    const ora = Date.now();
-
-    const nuovoRef = db.ref("avvisiSito").push();
-
-    const avviso = {
-      titolo: titoloPulito,
-      messaggio: messaggioPulito,
-      tipo: tipoPulito,
-      data: ora,
-      pubblicatoDa:
-        req.utenteAdmin.nickname || "Amministratore"
-    };
-
-    await nuovoRef.set(avviso);
-
-    /*
-     * Inviamo una notifica a tutti gli utenti registrati.
-     *
-     * La notifica viene salvata nel loro account:
-     *
-     * utenti/{uid}/notifiche
-     *
-     * In questo modo l'avviso resta disponibile
-     * anche se l'utente in quel momento non è online.
-     */
-    const utentiSnap =
-      await db.ref("utenti").once("value");
-
-    const utenti =
-      utentiSnap.val() || {};
-
-    const aggiornamenti = {};
-
-    for (const uid of Object.keys(utenti)) {
-
-      aggiornamenti[
-        `utenti/${uid}/notifiche/${db.ref().push().key}`
-      ] = {
-        tipo: "avvisoSito",
-        titolo: titoloPulito,
-        testo: messaggioPulito,
-        categoria: tipoPulito,
-        data: ora,
-        letta: false,
-        avvisoId: nuovoRef.key
-      };
-    }
-
-    if (Object.keys(aggiornamenti).length > 0) {
-      await db.ref().update(aggiornamenti);
-    }
-
-    res.json({
-      ok: true,
-      avviso: {
-        id: nuovoRef.key,
-        ...avviso
-      }
-    });
-
-  } catch (err) {
-
-    console.error(
-      "Errore pubblicazione avviso:",
-      err
-    );
-
-    res.status(500).json({
-      errore:
-        "Errore durante la pubblicazione dell'avviso."
-    });
-  }
-});
-
-app.delete("/api/admin/avvisi/:id", richiediAdmin, async (req, res) => {
-  if (!db) {
-    return res.status(500).json({
-      errore: "Database non disponibile."
-    });
-  }
-
-  try {
-    const id =
-      String(req.params.id || "").trim();
-
-    if (!id) {
-      return res.status(400).json({
-        errore: "ID avviso non valido."
-      });
-    }
-
-    const ref =
-      db.ref("avvisiSito/" + id);
-
-    const snap =
-      await ref.once("value");
-
-    if (!snap.exists()) {
-      return res.status(404).json({
-        errore: "Avviso non trovato."
-      });
-    }
-
-    await ref.remove();
-
-    res.json({
-      ok: true
-    });
-
-  } catch (err) {
-    console.error(
-      "Errore eliminazione avviso:",
-      err
-    );
-
-    res.status(500).json({
-      errore: "Errore durante l'eliminazione."
-    });
-  }
 });
 
 // ===== API ADMIN =====
@@ -1631,7 +743,7 @@ async function ripristinaPartiteDaFirebase() {
       invitati: {},
       timerTurno: null,
       punteggiOrdineIniziale: p.punteggiOrdineIniziale || null,
-      coppieMediaApprovate: new Set(),
+      coppieAudioApprovate: new Set(),
       fase: p.fase || (p.iniziata === true ? "in_corso" : "attesa_giocatori")
     };
 
@@ -1714,29 +826,13 @@ function trovaPartitaAttivaPerUid(uid) {
 
 function calcolaUidInPartita(nomeStanza) {
   const uidInPartita = new Set();
-
-  if (!stanze[nomeStanza]) {
-    return uidInPartita;
-  }
-
-  Object.values(stanze[nomeStanza].partite).forEach(p => {
-
-    if (
-      p.fase === "in_corso" ||
-      p.fase === "terminata"
-    ) {
-      Object.keys(p.giocatori || {}).forEach(uid => {
-        uidInPartita.add(uid);
-      });
-    }
-
-  });
-
+  if (!stanze[nomeStanza]) return uidInPartita;
+  Object.values(stanze[nomeStanza].partite).forEach(p => { if (p.iniziata) Object.keys(p.giocatori).forEach(uid => uidInPartita.add(uid)); });
   return uidInPartita;
 }
 
 function costruisciStatoGiocatori(partita) {
-  return partita.ordineGiocatori.map(id => ({ id, nome: partita.giocatori[id].nome, avatar: partita.giocatori[id].avatar || null, posizione: partita.giocatori[id].posizione, elo: partita.giocatori[id].elo != null ? partita.giocatori[id].elo : ELO_INIZIALE }));
+  return partita.ordineGiocatori.map(id => ({ id, nome: partita.giocatori[id].nome, avatar: partita.giocatori[id].avatar || null, posizione: partita.giocatori[id].posizione }));
 }
 
 function inviaAllaStanza(nomeStanza, messaggio) {
@@ -1751,47 +847,11 @@ function inviaListaPartite(nomeStanza) {
   if (!stanze[nomeStanza]) return;
   const lista = Object.values(stanze[nomeStanza].partite).map(p => ({
     id: p.id, creatore: p.creatore, creatoDa: p.creatoDa, tempo: p.tempo, punti: p.punti, modalita: p.modalita,
-    tipoPartita: p.tipoPartita === "divertimento" ? "divertimento" : "classifica",
-    creatoreElo: p.giocatori[p.creatoDa] && p.giocatori[p.creatoDa].elo != null ? p.giocatori[p.creatoDa].elo : ELO_INIZIALE,
     maxGiocatori: p.maxGiocatori, numGiocatoriAttuali: Object.keys(p.giocatori).length, chatAttiva: p.chatAttiva !== false,
     iniziata: p.iniziata !== false,
-    giocatori: Object.entries(p.giocatori).map(([uid, g]) => ({ uid, nome: g.nome, avatar: g.avatar || null, elo: g.elo != null ? g.elo : ELO_INIZIALE, microfonoAttivo: !!g.microfonoAttivo, webcamAttiva: !!g.webcamAttiva }))
+    giocatori: Object.entries(p.giocatori).map(([uid, g]) => ({ uid, nome: g.nome, avatar: g.avatar || null }))
   }));
   inviaAllaStanza(nomeStanza, { tipo: "listaPartite", partite: lista });
-}
-
-function rimuoviVecchieConnessioniOnline(nomeStanza, uid, socketIdDaConservare) {
-  if (!stanze[nomeStanza] || !uid) return;
-
-  for (const [sid, giocatoreOnline] of Object.entries(
-    stanze[nomeStanza].giocatoriOnline
-  )) {
-    if (
-      giocatoreOnline.uid === uid &&
-      sid !== socketIdDaConservare
-    ) {
-      delete stanze[nomeStanza].giocatoriOnline[sid];
-    }
-  }
-}
-
-function aggiornaSocketGiocatoreOnline(
-  nomeStanza,
-  uid,
-  socket
-) {
-  if (!stanze[nomeStanza] || !uid || !socket) {
-    return;
-  }
-
-  for (const sid in stanze[nomeStanza].giocatoriOnline) {
-    const giocatoreOnline =
-      stanze[nomeStanza].giocatoriOnline[sid];
-
-    if (giocatoreOnline.uid === uid) {
-      giocatoreOnline.socket = socket;
-    }
-  }
 }
 
 function inviaConteggioStanze() {
@@ -1811,10 +871,6 @@ function inviaConteggioStanze() {
 
 const HEARTBEAT_MS = 15000;
 const DURATA_ANIMAZIONE_TIRO_MS = 1200;
-
-// il giocatore ha il tempo di mossa scelto + 2 secondi di tolleranza
-// per compensare eventuali ritardi della rete.
-const TOLLERANZA_MOSSA_MS = 2000;
 const heartbeatInterval = setInterval(() => {
   wss.clients.forEach(socket => { if (socket.isAlive === false) return socket.terminate(); socket.isAlive = false; socket.ping(); });
 }, HEARTBEAT_MS);
@@ -1841,72 +897,31 @@ function fermaTimerTurno(partita) {
 
 function avviaTimerTurno(partita, nomeStanza) {
   if (!partita || !partita.iniziata) return;
-
   fermaTimerTurno(partita);
-
   const durata = millisecondiMossa(partita);
-
   const token = partita.tokenTimerTurno;
-
-  // Questo è l'istante in cui il server assegna il turno.
   partita.tempoInizioTurno = Date.now();
-
-  // Tempo di mossa normale, senza tolleranza.
-  partita.scadenzaTurno =
-    partita.tempoInizioTurno + durata;
-
-  // Il timeout automatico scatta solo dopo la tolleranza
-  // di 2 secondi.
-  partita.timerTurno = setTimeout(
-    async () => {
-
-      if (token !== partita.tokenTimerTurno) return;
-
-      partita.timerTurno = null;
-
-      await gestisciScadenzaTurno(
-        partita,
-        nomeStanza
-      );
-
-    },
-    durata + TOLLERANZA_MOSSA_MS
-  );
+  partita.scadenzaTurno = partita.tempoInizioTurno + durata;
+  partita.timerTurno = setTimeout(async () => {
+    if (token !== partita.tokenTimerTurno) return;
+    partita.timerTurno = null;
+    await gestisciScadenzaTurno(partita, nomeStanza);
+  }, durata);
 }
 
 function ripristinaTimerTurno(partita, nomeStanza) {
   if (!partita || !partita.iniziata) return;
-
   partita.animazioneTiroInCorso = false;
-
-  if (!partita.scadenzaTurno) {
-    avviaTimerTurno(partita, nomeStanza);
-    return;
-  }
-
+  if (!partita.scadenzaTurno) { avviaTimerTurno(partita, nomeStanza); return; }
   fermaTimerTurno(partita);
-
   const token = partita.tokenTimerTurno;
-
-  const tempoRimanenteFinoAllaScadenza =
-    partita.scadenzaTurno - Date.now();
-
-  const ritardo =
-    Math.max(
-      0,
-      tempoRimanenteFinoAllaScadenza + TOLLERANZA_MOSSA_MS
-    );
-
+  const tempoRimanente = partita.scadenzaTurno - Date.now();
+  const ritardo = tempoRimanente <= 0 ? 0 : tempoRimanente;
   partita.timerTurno = setTimeout(async () => {
     if (token !== partita.tokenTimerTurno) return;
-
     partita.timerTurno = null;
     partita.animazioneTiroInCorso = false;
-
-    await gestisciScadenzaTurno(
-      partita,
-      nomeStanza
-    );
+    await gestisciScadenzaTurno(partita, nomeStanza);
   }, ritardo);
 }
 
@@ -1956,61 +971,22 @@ async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, auto
     const messaggiFinali = automatico ? ["⏱️ Tempo scaduto: mossa automatica."].concat(risultato.messaggi) : risultato.messaggi;
 
     if (risultato.vittoria) {
-
-  partita.fase = "terminata";
-  partita.iniziata = false;
-
-  Object.values(partita.giocatori).forEach(g => {
-    if (
-      g.socket &&
-      g.socket.readyState === WebSocket.OPEN
-    ) {
-      g.socket.send(JSON.stringify({
-        tipo: "aggiornamentoPartita",
-        giocatori: statoGiocatori,
-        dado1,
-        dado2,
-        valoreDado,
-        percorso: risultato.percorso,
-        idGiocatoreCheHaTirato: idGiocatore,
-        automatico: !!automatico,
-        messaggi: messaggiFinali,
-        turnoDiId: null,
-        tempoInizioTurno: null,
-        durataMossaMs: 0,
-        vittoria: true,
-        vincitore: giocatore.nome
-      }));
+      Object.values(partita.giocatori).forEach(g => {
+        if (g.socket && g.socket.readyState === WebSocket.OPEN) {
+          g.socket.send(JSON.stringify({
+            tipo: "aggiornamentoPartita", giocatori: statoGiocatori, dado1, dado2, valoreDado,
+            percorso: risultato.percorso, idGiocatoreCheHaTirato: idGiocatore, automatico: !!automatico,
+            messaggi: messaggiFinali, turnoDiId: null, tempoInizioTurno: null, durataMossaMs: 0,
+            vittoria: true, vincitore: giocatore.nome
+          }));
+        }
+      });
+      await concludiPartita(partita, idGiocatore, nomeStanza, null);
+      await rimuoviPartita(nomeStanza, partita.id);
+      inviaListaPartite(nomeStanza);
+      inviaConteggioStanze();
+      return;
     }
-  });
-
-  await concludiPartita(
-    partita,
-    idGiocatore,
-    nomeStanza,
-    null
-  );
-
-  /*
-   * NON eliminiamo subito la partita: rimane in memoria con fase="terminata"
-   * così i giocatori continuano a risultare "In partita" finché non tornano
-   * alla lobby (mostrando la schermata di vittoria).
-   * FIX: prima la partita restava per sempre finché *ogni singolo* giocatore
-   * non cliccava "torna alla lobby" — se anche uno solo restava sulla schermata
-   * finale, la partita non veniva mai eliminata e occupava la lista per sempre.
-   * Ora programmiamo comunque una rimozione automatica di sicurezza dopo un
-   * breve intervallo, indipendentemente da cosa fanno i giocatori.
-   */
-  partita.timerTurno = null;
-  partita.tempoInizioTurno = null;
-  partita.scadenzaTurno = null;
-  programmaRimozioneAutomaticaPartitaTerminata(partita, nomeStanza);
-
-  inviaListaPartite(nomeStanza);
-  inviaConteggioStanze();
-
-  return;
-}
 
     // FIX (turni): in questa prima fase (mostra il tiro appena avvenuto) NON si
     // rivela più a chi tocca il prossimo turno — prima "turnoDiId" indicava già
@@ -2047,71 +1023,41 @@ async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, auto
     // "spostato in avanti" che il client potrebbe interpretare come tempo già
     // trascorso.
     const tokenAnimazione = partita.tokenTimerTurno;
+    setTimeout(async () => {
+      const trovato = trovaPartita(partita.id);
+      if (!trovato || trovato.partita !== partita) return;
+      if (!partita.iniziata) return;
+      if (tokenAnimazione !== partita.tokenTimerTurno) return;
 
-const durataAnimazioneCompleta =
-  DURATA_ANIMAZIONE_TIRO_MS +
-  (Array.isArray(risultato.percorso)
-    ? risultato.percorso.length * 220
-    : 0);
+      partita.animazioneTiroInCorso = false;
+      avviaTimerTurno(partita, nomeStanza);
 
-setTimeout(async () => {
-  const trovato = trovaPartita(partita.id);
-  if (!trovato || trovato.partita !== partita) return;
-  if (!partita.iniziata) return;
-  if (tokenAnimazione !== partita.tokenTimerTurno) return;
+      const statoDopoAnimazione = costruisciStatoGiocatori(partita);
+      const idTurnoAttuale = partita.ordineGiocatori[partita.turnoAttuale];
 
-  partita.animazioneTiroInCorso = false;
+      Object.values(partita.giocatori).forEach(g => {
+        if (g.socket && g.socket.readyState === WebSocket.OPEN) {
+          g.socket.send(JSON.stringify({
+            tipo: "statoPartita",
+            giocatori: statoDopoAnimazione,
+            turnoDiId: idTurnoAttuale,
+            punteggiOrdineIniziale: partita.punteggiOrdineIniziale || null,
+            tempoInizioTurno: partita.tempoInizioTurno,
+            durataMossaMs: millisecondiMossa(partita),
+            chatAttiva: partita.chatAttiva !== false
+          }));
+        }
+      });
 
-  avviaTimerTurno(
-    partita,
-    nomeStanza
-  );
-
-  const statoDopoAnimazione =
-    costruisciStatoGiocatori(partita);
-
-  const idTurnoAttuale =
-    partita.ordineGiocatori[
-      partita.turnoAttuale
-    ];
-
-  Object.values(partita.giocatori).forEach(g => {
-    if (
-      g.socket &&
-      g.socket.readyState === WebSocket.OPEN
-    ) {
-      g.socket.send(JSON.stringify({
-        tipo: "statoPartita",
-        giocatori: statoDopoAnimazione,
-        turnoDiId: idTurnoAttuale,
-        punteggiOrdineIniziale:
-          partita.punteggiOrdineIniziale || null,
-        tempoInizioTurno:
-          partita.tempoInizioTurno,
-        durataMossaMs:
-          millisecondiMossa(partita),
-        scadenzaTurno:
-          partita.scadenzaTurno,
-        chatAttiva:
-          partita.chatAttiva !== false
-      }));
-    }
-  });
-
-  await aggiornaStatoPartita(partita.id, {
-    turnoAttuale: partita.turnoAttuale,
-    iniziata: partita.iniziata,
-    tiriEffettuatiNelTurno:
-      partita.tiriEffettuatiNelTurno,
-    tiriConsentitiNelTurno:
-      partita.tiriConsentitiNelTurno,
-    tempoInizioTurno:
-      partita.tempoInizioTurno,
-    scadenzaTurno:
-      partita.scadenzaTurno
-  });
-
-}, durataAnimazioneCompleta);
+      await aggiornaStatoPartita(partita.id, {
+        turnoAttuale: partita.turnoAttuale,
+        iniziata: partita.iniziata,
+        tiriEffettuatiNelTurno: partita.tiriEffettuatiNelTurno,
+        tiriConsentitiNelTurno: partita.tiriConsentitiNelTurno,
+        tempoInizioTurno: partita.tempoInizioTurno,
+        scadenzaTurno: partita.scadenzaTurno
+      });
+    }, DURATA_ANIMAZIONE_TIRO_MS);
 
   } catch (erroreTiro) {
     // FIX (turni): se anche il ripiego locale fallisse per qualche motivo
@@ -2146,8 +1092,7 @@ async function forzaAbbandonoPerInattivita(partita, nomeStanza, idGiocatore) {
   if (db) {
     try {
       const u = (await db.ref("utenti/" + idGiocatore).once("value")).val();
-      if (u && partita.tipoPartita !== "divertimento") await db.ref("utenti/" + idGiocatore).update({ elo: Math.max(100, (u.elo != null ? u.elo : ELO_INIZIALE) - PENALITA_ELO_ABBANDONO_AUTOMATICO), streakVittorieAttuale: 0 });
-      else if (u) await db.ref("utenti/" + idGiocatore).update({ streakVittorieAttuale: 0 });
+      if (u) await db.ref("utenti/" + idGiocatore).update({ xp: Math.max(0, (u.xp || 0) - xpPenalitaAbbandonoAutomatico()), streakVittorieAttuale: 0 });
     } catch (e) { console.error("Errore penalità abbandono automatico:", e.message); }
   }
 
@@ -2307,7 +1252,7 @@ async function espelliPerInattivitaDuranteDeterminazione(partita, nomeStanza, ui
   if (db) {
     try {
       const u = (await db.ref("utenti/" + uid).once("value")).val();
-      if (u && partita.tipoPartita !== "divertimento") await db.ref("utenti/" + uid).update({ elo: Math.max(100, (u.elo != null ? u.elo : ELO_INIZIALE) - PENALITA_ELO_ABBANDONO_AUTOMATICO) });
+      if (u) await db.ref("utenti/" + uid).update({ xp: Math.max(0, (u.xp || 0) - xpPenalitaAbbandonoAutomatico()) });
     } catch (e) { console.error("Errore penalità inattività in determinazione:", e.message); }
   }
 
@@ -2348,7 +1293,6 @@ async function completaDeterminazione(partita, nomeStanza, ordineFinale) {
   const idPrimoTurno = partita.ordineGiocatori[partita.turnoAttuale];
 
   avviaTimerTurno(partita, nomeStanza);
-  avviaChatVocaleAutomatica(partita);
 
   Object.values(partita.giocatori).forEach(g => {
     if (g.socket && g.socket.readyState === WebSocket.OPEN) {
@@ -2369,30 +1313,6 @@ async function completaDeterminazione(partita, nomeStanza, ordineFinale) {
 
   await salvaPartita({ ...partita, stanza: nomeStanza });
   inviaConteggioStanze();
-}
-
-// Quando la partita inizia davvero, chi ha scelto (in lobby, non modificabile durante
-// la partita) microfono e/o webcam attivi viene collegato automaticamente in chat
-// audio/video con tutti gli altri che hanno fatto la stessa scelta, senza dover
-// passare da nessuna richiesta manuale "vuoi parlare con me?".
-function avviaChatVocaleAutomatica(partita) {
-  const idsConMedia = Object.keys(partita.giocatori).filter(id => partita.giocatori[id].microfonoAttivo || partita.giocatori[id].webcamAttiva);
-  if (idsConMedia.length < 2) return;
-  if (!partita.coppieMediaApprovate) partita.coppieMediaApprovate = new Set();
-
-  idsConMedia.forEach(id => {
-    const giocatore = partita.giocatori[id];
-    if (!giocatore.socket || giocatore.socket.readyState !== WebSocket.OPEN) return;
-    const altriPeer = idsConMedia.filter(altroId => altroId !== id);
-    altriPeer.forEach(altroId => partita.coppieMediaApprovate.add(idConversazione(id, altroId)));
-    giocatore.socket.send(JSON.stringify({
-      tipo: "vocaleAutoAvvio",
-      peer: altriPeer.map(altroId => ({ uid: altroId, nome: partita.giocatori[altroId].nome, microfonoAttivo: !!partita.giocatori[altroId].microfonoAttivo, webcamAttiva: !!partita.giocatori[altroId].webcamAttiva })),
-      // convenzione: chi ha uid "minore" in ordine alfabetico avvia l'offerta WebRTC,
-      // evitando che entrambi i lati propongano l'offerta contemporaneamente.
-      iniziaOffertaVerso: altriPeer.filter(altroId => id < altroId)
-    }));
-  });
 }
 
 async function avviaPartitaAutomaticamente(partita) {
@@ -2482,11 +1402,7 @@ wss.on("connection", (socket, request) => {
 
       if (dati.tipo === "richiediConteggio") { inviaConteggioStanze(); return; }
 
-      if (dati.tipo === "webrtc-offer" || dati.tipo === "webrtc-answer" || dati.tipo === "webrtc-ice-candidate") {
-        // Il collegamento audio/video ora è sempre automatico (deciso in lobby): non esiste
-        // più una richiesta manuale "vuoi parlare con me?" — chi entra in partita con
-        // microfono e/o webcam attivi viene collegato in automatico a tutti gli altri
-        // che hanno fatto la stessa scelta, non appena la partita comincia.
+      if (dati.tipo === "richiestaAudio" || dati.tipo === "rispostaAudio" || dati.tipo === "webrtc-offer" || dati.tipo === "webrtc-answer" || dati.tipo === "webrtc-ice-candidate") {
         if (!uid) return;
         const trovato = trovaPartita(dati.partitaId);
         if (!trovato) return;
@@ -2496,7 +1412,20 @@ wss.on("connection", (socket, request) => {
         if (!destinatarioUid) return;
         const destinatario = partita.giocatori[destinatarioUid];
         if (!destinatario || !destinatario.socket || destinatario.socket.readyState !== WebSocket.OPEN) return;
-        const coppiaApprovata = partita.coppieMediaApprovate && partita.coppieMediaApprovate.has(idConversazione(uid, destinatarioUid));
+
+        if (dati.tipo === "richiestaAudio") {
+          destinatario.socket.send(JSON.stringify({ tipo: "richiestaAudioRicevuta", mittenteUid: uid, mittenteNome: nickname }));
+          return;
+        }
+        if (dati.tipo === "rispostaAudio") {
+          if (dati.accettato) {
+            if (!partita.coppieAudioApprovate) partita.coppieAudioApprovate = new Set();
+            partita.coppieAudioApprovate.add(idConversazione(uid, destinatarioUid));
+          }
+          destinatario.socket.send(JSON.stringify({ tipo: "rispostaAudioRicevuta", mittenteUid: uid, mittenteNome: nickname, accettato: !!dati.accettato }));
+          return;
+        }
+        const coppiaApprovata = partita.coppieAudioApprovate && partita.coppieAudioApprovate.has(idConversazione(uid, destinatarioUid));
         if (!coppiaApprovata) return;
         destinatario.socket.send(JSON.stringify({ tipo: dati.tipo, mittenteUid: uid, sdp: dati.sdp || null, candidate: dati.candidate || null }));
         return;
@@ -2515,31 +1444,7 @@ wss.on("connection", (socket, request) => {
         }
         stanzaAttuale = dati.stanza; nickname = utenteDb.nickname; mioAvatar = utenteDb.avatar || null;
         if (!stanze[stanzaAttuale]) stanze[stanzaAttuale] = { giocatoriOnline: {}, partite: {} };
-        rimuoviVecchieConnessioniOnline(
-  stanzaAttuale,
-  uid,
-  socketId
-);
-
-stanze[stanzaAttuale].giocatoriOnline[socketId] = {
-  uid,
-  nickname,
-  avatar: mioAvatar,
-  tipoDispositivo,
-  socket
-};
-
-for (const partita of Object.values(
-  stanze[stanzaAttuale].partite
-)) {
-  if (
-    partita.giocatori &&
-    partita.giocatori[uid] &&
-    partita.fase === "attesa_giocatori"
-  ) {
-    partita.giocatori[uid].socket = socket;
-  }
-}
+        stanze[stanzaAttuale].giocatoriOnline[socketId] = { uid, nickname, avatar: mioAvatar, tipoDispositivo };
         inviaConteggioStanze();
         inviaAllaStanza(stanzaAttuale, { tipo: "online", numero: Object.keys(stanze[stanzaAttuale].giocatoriOnline).length });
         inviaListaPartite(stanzaAttuale);
@@ -2552,13 +1457,6 @@ for (const partita of Object.values(
         const trovato = trovaPartita(dati.partitaId);
         if (!trovato) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Partita non trovata." })); return; }
         const { partita, nomeStanza } = trovato;
-        if (partita.fase === "terminata") {
-  socket.send(JSON.stringify({
-    tipo: "errore",
-    messaggio: "Questa partita è già terminata."
-  }));
-  return;
-}
         stanzaAttuale = nomeStanza;
         const mioGiocatore = partita.giocatori[uid];
         if (!mioGiocatore) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Non fai parte di questa partita." })); return; }
@@ -2567,19 +1465,7 @@ for (const partita of Object.values(
         nickname = mioGiocatore.nome; mioAvatar = mioGiocatore.avatar || null;
 
         if (!stanze[stanzaAttuale]) stanze[stanzaAttuale] = { giocatoriOnline: {}, partite: {} };
-        rimuoviVecchieConnessioniOnline(
-  stanzaAttuale,
-  uid,
-  socketId
-);
-
-stanze[stanzaAttuale].giocatoriOnline[socketId] = {
-  uid,
-  nickname,
-  avatar: mioAvatar,
-  tipoDispositivo,
-  socket
-};
+        stanze[stanzaAttuale].giocatoriOnline[socketId] = { uid, nickname, avatar: mioAvatar, tipoDispositivo };
         inviaConteggioStanze();
 
         if (partita.fase === "determinazione_ordine") {
@@ -2588,7 +1474,7 @@ stanze[stanzaAttuale].giocatoriOnline[socketId] = {
             giocatori: (partita.ordineDeterminazione || []).map(u2 => ({ uid: u2, nome: partita.giocatori[u2] ? partita.giocatori[u2].nome : "?", avatar: partita.giocatori[u2] ? (partita.giocatori[u2].avatar || null) : null, risultato: partita.risultatiDeterminazione && partita.risultatiDeterminazione[u2] != null ? partita.risultatiDeterminazione[u2] : null })),
             turnoInCorsoUid: partita.turnoInCorsoDeterminazione || null,
             gruppoSpareggioAttuale: partita.gruppoSpareggioAttuale || null,
-            tempoInizioTurno: partita.tempoInizioTurno || null,
+            tempoInizioTurno: partita.tempoInizioTurno || Date.now(),
             durataMossaMs: millisecondiMossa(partita),
             chatAttiva: partita.chatAttiva !== false
           }));
@@ -2614,18 +1500,16 @@ stanze[stanzaAttuale].giocatoriOnline[socketId] = {
         if (Object.values(stanze[stanzaAttuale].partite).some(p => p.creatoDa === uid)) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Hai già una partita attiva." })); return; }
         const partitaId = "p" + Date.now() + Math.floor(Math.random() * 1000);
         const max = parseInt(dati.maxGiocatori);
-        const eloCreatore = db ? (((await db.ref("utenti/" + uid + "/elo").once("value")).val()) ?? ELO_INIZIALE) : ELO_INIZIALE;
         stanze[stanzaAttuale].partite[partitaId] = {
           id: partitaId, creatore: nickname, creatoDa: uid, tempo: dati.tempo, punti: dati.punti, modalita: dati.modalita,
-          tipoPartita: dati.tipoPartita === "divertimento" ? "divertimento" : "classifica",
           maxGiocatori: (!max || max < 2 || max > 8 ? 2 : max),
           chatAttiva: dati.chatAttiva !== false,
           fase: "attesa_giocatori",
-          giocatori: { [uid]: { nome: nickname, avatar: mioAvatar, posizione: 0, socket, turniSaltati: 0, tentativiAutomaticiConsecutivi: 0, elo: eloCreatore, microfonoAttivo: !!dati.microfonoAttivo, webcamAttiva: !!dati.webcamAttiva } },
+          giocatori: { [uid]: { nome: nickname, avatar: mioAvatar, posizione: 0, socket, turniSaltati: 0, tentativiAutomaticiConsecutivi: 0 } },
           ordineGiocatori: [uid], turnoAttuale: 0, iniziata: false, elaborandoTiro: false, animazioneTiroInCorso: false,
           tiriEffettuatiNelTurno: 0, tiriConsentitiNelTurno: 1,
           invitati: dati.modalita === "privata" ? { [uid]: true } : null, timerTurno: null, tempoInizioTurno: null,
-          coppieMediaApprovate: new Set()
+          coppieAudioApprovate: new Set()
         };
         await salvaPartita({ ...stanze[stanzaAttuale].partite[partitaId], stanza: stanzaAttuale });
         inviaListaPartite(stanzaAttuale);
@@ -2639,8 +1523,7 @@ stanze[stanzaAttuale].giocatoriOnline[socketId] = {
         if (partita.giocatori[uid]) return;
         if (Object.keys(partita.giocatori).length >= partita.maxGiocatori) return;
         if (partita.modalita === "privata") { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Questa è una partita privata: puoi entrare solo se il creatore ti invita direttamente." })); return; }
-        const eloIngresso = db ? (((await db.ref("utenti/" + uid + "/elo").once("value")).val()) ?? ELO_INIZIALE) : ELO_INIZIALE;
-        partita.giocatori[uid] = { nome: nickname, avatar: mioAvatar, posizione: 0, socket, turniSaltati: 0, tentativiAutomaticiConsecutivi: 0, elo: eloIngresso, microfonoAttivo: !!dati.microfonoAttivo, webcamAttiva: !!dati.webcamAttiva };
+        partita.giocatori[uid] = { nome: nickname, avatar: mioAvatar, posizione: 0, socket, turniSaltati: 0, tentativiAutomaticiConsecutivi: 0 };
         partita.ordineGiocatori.push(uid);
         await aggiornaStatoPartita(partita.id, { giocatori: preparaGiocatoriPerFirebase(partita.giocatori), ordineGiocatori: partita.ordineGiocatori });
         inviaListaPartite(stanzaAttuale);
@@ -2687,8 +1570,7 @@ stanze[stanzaAttuale].giocatoriOnline[socketId] = {
         if (partita.giocatori[uid]) return;
         if (Object.keys(partita.giocatori).length >= partita.maxGiocatori) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "La partita si è già riempita." })); return; }
         stanzaAttuale = nomeStanza;
-        const eloInvito = db ? (((await db.ref("utenti/" + uid + "/elo").once("value")).val()) ?? ELO_INIZIALE) : ELO_INIZIALE;
-        partita.giocatori[uid] = { nome: nickname, avatar: mioAvatar, posizione: 0, socket, turniSaltati: 0, tentativiAutomaticiConsecutivi: 0, elo: eloInvito, microfonoAttivo: !!dati.microfonoAttivo, webcamAttiva: !!dati.webcamAttiva };
+        partita.giocatori[uid] = { nome: nickname, avatar: mioAvatar, posizione: 0, socket, turniSaltati: 0, tentativiAutomaticiConsecutivi: 0 };
         partita.ordineGiocatori.push(uid);
         await aggiornaStatoPartita(partita.id, { giocatori: preparaGiocatoriPerFirebase(partita.giocatori), ordineGiocatori: partita.ordineGiocatori });
         inviaListaPartite(nomeStanza);
@@ -2743,76 +1625,23 @@ stanze[stanzaAttuale].giocatoriOnline[socketId] = {
         return;
       }
 
-        if (dati.tipo === "tiraDadi") {
-  if (!uid) return;
+      if (dati.tipo === "tiraDadi") {
+        if (!uid) return;
+        const trovato = trovaPartita(dati.partitaId);
+        if (!trovato) return;
+        const { partita, nomeStanza } = trovato;
+        if (partita.fase !== "in_corso") return;
+        if (partita.ordineGiocatori[partita.turnoAttuale] !== uid) {
+          socket.send(JSON.stringify({ tipo: "errore", messaggio: "Non è il tuo turno!" }));
+          return;
+        }
+        if (partita.scadenzaTurno && Date.now() >= partita.scadenzaTurno) return;
+        if (partita.giocatori[uid]) partita.giocatori[uid].tentativiAutomaticiConsecutivi = 0;
+        await eseguiTiroDadiPerGiocatore(partita, nomeStanza, uid, false);
+        return;
+      }
 
-  const trovato = trovaPartita(dati.partitaId);
-  if (!trovato) return;
-
-  const { partita, nomeStanza } = trovato;
-
-  if (partita.fase !== "in_corso") return;
-
-  const idGiocatoreDiTurno =
-    partita.ordineGiocatori[partita.turnoAttuale];
-
-  if (idGiocatoreDiTurno !== uid) {
-    socket.send(JSON.stringify({
-      tipo: "errore",
-      messaggio: "Non è il tuo turno!"
-    }));
-    return;
-  }
-
-  /*
-   * Il tempo ufficiale del turno è scaduto,
-   * ma concediamo ancora la tolleranza di rete.
-   *
-   * Esempio:
-   * tempo = 15 secondi
-   * scadenzaTurno = 15s
-   * tolleranza = 2s
-   *
-   * Il tiro viene quindi accettato fino a circa 17s.
-   */
-  if (
-    partita.scadenzaTurno &&
-    Date.now() >=
-      partita.scadenzaTurno + TOLLERANZA_MOSSA_MS
-  ) {
-    /*
-     * La tolleranza è terminata.
-     * Se il timer automatico non ha ancora elaborato
-     * la scadenza, la elaboriamo ora.
-     */
-    await gestisciScadenzaTurno(
-      partita,
-      nomeStanza
-    );
-
-    return;
-  }
-
-  /*
-   * Il click è arrivato entro il limite consentito.
-   * Anche se il countdown sul client è già arrivato a 0,
-   * il server accetta ancora il tiro durante la tolleranza.
-   */
-  if (partita.giocatori[uid]) {
-    partita.giocatori[uid].tentativiAutomaticiConsecutivi = 0;
-  }
-
-  await eseguiTiroDadiPerGiocatore(
-    partita,
-    nomeStanza,
-    uid,
-    false
-  );
-
-  return;
-}
-
-if (dati.tipo === "abbandonaPartita") {
+      if (dati.tipo === "abbandonaPartita") {
         if (!uid) return;
         const trovato = trovaPartita(dati.partitaId);
         if (!trovato) return;
@@ -2839,53 +1668,6 @@ if (dati.tipo === "abbandonaPartita") {
           inviaConteggioStanze();
           return;
         }
-
-        if (partita.fase === "terminata") {
-
-  delete partita.giocatori[uid];
-
-  partita.ordineGiocatori =
-    (partita.ordineGiocatori || []).filter(
-      id => id !== uid
-    );
-
-  const restanti =
-    Object.keys(partita.giocatori);
-
-  if (restanti.length === 0) {
-
-    await rimuoviPartita(
-      nomeStanza,
-      partita.id
-    );
-
-  } else {
-
-    await aggiornaStatoPartita(
-      partita.id,
-      {
-        giocatori:
-          preparaGiocatoriPerFirebase(
-            partita.giocatori
-          ),
-
-        ordineGiocatori:
-          partita.ordineGiocatori,
-
-        fase: "terminata",
-        iniziata: false,
-
-        tempoInizioTurno: null,
-        scadenzaTurno: null
-      }
-    );
-  }
-
-  inviaListaPartite(nomeStanza);
-  inviaConteggioStanze();
-
-  return;
-}
 
         // ===== PARTITA IN CORSO =====
         const eraLuiIlGiocatoreAttivo = partita.ordineGiocatori[partita.turnoAttuale] === uid;
@@ -2965,32 +1747,14 @@ if (dati.tipo === "abbandonaPartita") {
   });
 
   socket.on("close", async () => {
-  try {
-    delete socketsPerId[socketId];
+    try {
+      delete socketsPerId[socketId];
 
-    if (
-      stanzaAttuale &&
-      stanze[stanzaAttuale]
-    ) {
-      const connessioneOnline =
-        stanze[stanzaAttuale].giocatoriOnline[socketId];
-
-      if (connessioneOnline) {
+      if (stanzaAttuale && stanze[stanzaAttuale]) {
         delete stanze[stanzaAttuale].giocatoriOnline[socketId];
-
         inviaConteggioStanze();
-
-        inviaAllaStanza(
-          stanzaAttuale,
-          {
-            tipo: "online",
-            numero: Object.keys(
-              stanze[stanzaAttuale].giocatoriOnline
-            ).length
-          }
-        );
+        inviaAllaStanza(stanzaAttuale, { tipo: "online", numero: Object.keys(stanze[stanzaAttuale].giocatoriOnline).length });
       }
-    }
 
       if (!stanzaAttuale || !stanze[stanzaAttuale] || !uid) return;
 
