@@ -27,8 +27,8 @@ const coloriGiocatori = [
   "#f57c00", "#c0ca33", "#e53935", "#2b2b2b"
 ];
 
-const DURATA_LANCIO_DADI_MS = 1200;
-const DURATA_SALTO_MS = 220;
+const DURATA_LANCIO_DADI_MS = 1300;
+const DURATA_SALTO_MS = 260;
 
 const URL_SERVER_HTTP = "https://gioco-oca-server.onrender.com";
 const URL_SERVER_WS = "wss://gioco-oca-server.onrender.com";
@@ -51,11 +51,18 @@ let faseAttuale = "normale";
 let possoTirareIoInDeterminazione = false;
 
 /* ============================================================
-   TIMER CLIENT — ancorato a performance.now() al momento in cui
-   il messaggio arriva, mai a un confronto diretto tra orario del
-   server e orologio del telefono (un piccolo disallineamento tra
-   i due causava numeri sballati). Il valore iniziale non supera
-   mai durataMossaMs, qualunque altro dato arrivi insieme.
+   TIMER CLIENT
+   ============================================================
+   FIX: il countdown non confronta più nessun orario assoluto del
+   server con l'orologio del telefono (differenze anche di 1-2
+   secondi tra dispositivi causavano "17 invece di 15"). Ora si
+   calcola UNA VOLTA SOLA, all'arrivo del messaggio, quanti ms
+   restano davvero (usando scadenzaTurno se c'è, altrimenti
+   inizio+durata), e da lì in poi scorre in locale con
+   performance.now() — immune a qualunque disallineamento
+   d'orologio. In più il valore iniziale è sempre limitato a
+   durataMossaMs: non può mai mostrare più dei secondi ufficiali
+   dichiarati dal server, qualunque altro dato arrivi insieme.
    ============================================================ */
 
 let durataMossaMsAttuale = null;
@@ -82,20 +89,6 @@ function coloreDaNome(nome) {
 }
 
 /* ============================================================
-   NOTIFICHE INTERNE — al posto degli alert() del browser
-   ============================================================ */
-
-function mostraNotificaGioco(testo) {
-  const contenitore = document.getElementById("contenitore-notifiche-gioco");
-  if (!contenitore) { console.error(testo); return; }
-  const toast = document.createElement("div");
-  toast.className = "notifica-toast-gioco";
-  toast.textContent = testo;
-  contenitore.appendChild(toast);
-  setTimeout(() => toast.remove(), 5000);
-}
-
-/* ============================================================
    SUONI
    ============================================================ */
 
@@ -111,7 +104,9 @@ function ottieniContestoAudio() {
     }
     if (contestoAudio.state === "suspended") {
       const promessa = contestoAudio.resume();
-      if (promessa && typeof promessa.catch === "function") promessa.catch(() => {});
+      if (promessa && typeof promessa.catch === "function") {
+        promessa.catch(() => {});
+      }
     }
     return contestoAudio;
   } catch (e) {
@@ -149,7 +144,9 @@ function suonaClick(volume, ritardoMs) {
     const lung = Math.max(1, Math.floor(ctx.sampleRate * durata));
     const buffer = ctx.createBuffer(1, lung, ctx.sampleRate);
     const dati = buffer.getChannelData(0);
-    for (let i = 0; i < lung; i++) dati[i] = (Math.random() * 2 - 1) * (1 - i / lung);
+    for (let i = 0; i < lung; i++) {
+      dati[i] = (Math.random() * 2 - 1) * (1 - i / lung);
+    }
     const s = ctx.createBufferSource();
     s.buffer = buffer;
     const g = ctx.createGain();
@@ -161,27 +158,61 @@ function suonaClick(volume, ritardoMs) {
   } catch (e) {}
 }
 
-function suonaTiroDadi() { if (!suoniAttivi) return; for (let i = 0; i < 7; i++) suonaClick(0.1, i * 100); }
-function suonaAtterraggioDadi() { suonaTono(180, 90, "square", 0.14, 0); suonaClick(0.15, 20); }
-function suonaPassoPedina() { suonaTono(520, 55, "sine", 0.09, 0); }
-function suonaTuoTurno() { suonaTono(660, 120, "sine", 0.11, 0); suonaTono(880, 160, "sine", 0.11, 120); }
-function suonaVittoria() {
-  suonaTono(523, 130, "sine", 0.13, 0); suonaTono(659, 130, "sine", 0.13, 130);
-  suonaTono(784, 130, "sine", 0.13, 260); suonaTono(1047, 260, "sine", 0.14, 390);
+function suonaTiroDadi() {
+  if (!suoniAttivi) return;
+  for (let i = 0; i < 7; i++) {
+    suonaClick(0.1, i * 100);
+  }
 }
-function suonaMessaggioChat() { suonaTono(740, 70, "sine", 0.08, 0); }
-function suonaAvvisoTempo() { suonaTono(300, 90, "triangle", 0.14, 0); }
-function suonaRichiestaAudio() { suonaTono(700, 90, "sine", 0.12, 0); suonaTono(900, 120, "sine", 0.12, 130); }
 
-function toggleSuoni() { impostaSuoni(!suoniAttivi); }
+function suonaAtterraggioDadi() {
+  suonaTono(180, 90, "square", 0.14, 0);
+  suonaClick(0.15, 20);
+}
+
+function suonaPassoPedina() {
+  suonaTono(520, 55, "sine", 0.09, 0);
+}
+
+function suonaTuoTurno() {
+  suonaTono(660, 120, "sine", 0.11, 0);
+  suonaTono(880, 160, "sine", 0.11, 120);
+}
+
+function suonaVittoria() {
+  suonaTono(523, 130, "sine", 0.13, 0);
+  suonaTono(659, 130, "sine", 0.13, 130);
+  suonaTono(784, 130, "sine", 0.13, 260);
+  suonaTono(1047, 260, "sine", 0.14, 390);
+}
+
+function suonaMessaggioChat() {
+  suonaTono(740, 70, "sine", 0.08, 0);
+}
+
+function suonaAvvisoTempo() {
+  suonaTono(300, 90, "triangle", 0.14, 0);
+}
+
+function suonaRichiestaAudio() {
+  suonaTono(700, 90, "sine", 0.12, 0);
+  suonaTono(900, 120, "sine", 0.12, 130);
+}
+
+function toggleSuoni() {
+  impostaSuoni(!suoniAttivi);
+}
+
 function impostaSuoni(attivi) {
   suoniAttivi = !!attivi;
   localStorage.setItem("suoniAttivi", suoniAttivi ? "on" : "off");
   aggiornaTestoBottoneSuoni();
 }
+
 function aggiornaTestoBottoneSuoni() {
   const b = document.getElementById("btn-toggle-suoni");
-  if (b) b.textContent = suoniAttivi ? "🔊 Suoni: On" : "🔇 Suoni: Off";
+  if (!b) return;
+  b.textContent = suoniAttivi ? "🔊 Suoni: On" : "🔇 Suoni: Off";
 }
 
 /* ============================================================
@@ -197,11 +228,14 @@ function toggleFullscreen() {
         elemento.webkitRequestFullscreen ||
         elemento.mozRequestFullScreen ||
         elemento.msRequestFullscreen;
-      if (!richiesta) { mostraNotificaGioco("Il tuo browser non supporta lo schermo intero."); return; }
+      if (!richiesta) {
+        alert("Il tuo browser non supporta lo schermo intero.");
+        return;
+      }
       const risultato = richiesta.call(elemento);
       if (risultato && typeof risultato.catch === "function") {
         risultato.catch((err) => {
-          mostraNotificaGioco("Non è stato possibile attivare lo schermo intero" + (err && err.message ? ": " + err.message : "."));
+          alert("Non è stato possibile attivare lo schermo intero" + (err && err.message ? ": " + err.message : "."));
         });
       }
     } else {
@@ -210,10 +244,12 @@ function toggleFullscreen() {
         document.webkitExitFullscreen ||
         document.mozCancelFullScreen ||
         document.msExitFullscreen;
-      if (esci) esci.call(document);
+      if (esci) {
+        esci.call(document);
+      }
     }
   } catch (err) {
-    mostraNotificaGioco("Errore durante l'attivazione dello schermo intero" + (err && err.message ? ": " + err.message : "."));
+    alert("Errore durante l'attivazione dello schermo intero" + (err && err.message ? ": " + err.message : "."));
   }
 }
 
@@ -222,15 +258,31 @@ function aggiornaTestoBottoneFullscreen() {
   if (!b) return;
   b.textContent = (document.fullscreenElement || document.webkitFullscreenElement) ? "🡼 Esci da tutto schermo" : "⛶ Tutto schermo";
 }
+
 document.addEventListener("fullscreenchange", aggiornaTestoBottoneFullscreen);
 document.addEventListener("webkitfullscreenchange", aggiornaTestoBottoneFullscreen);
 
 /* ============================================================
-   LAYOUT — su Computer normale; su cellulare tutto (tranne la
-   chat) vive dentro #mondo-ruotato che ruota SEMPRE di 90°, senza
-   controllare l'orientamento fisico: pensato per restare in
-   verticale in mano.
+   ORIENTAMENTO / LAYOUT
    ============================================================ */
+
+function eSchermoInLandscape() {
+  if (window.screen && window.screen.orientation && typeof window.screen.orientation.type === "string") {
+    const orientamento = window.screen.orientation.type;
+    if (orientamento === "landscape-primary" || orientamento === "landscape-secondary") return true;
+    if (orientamento === "portrait-primary" || orientamento === "portrait-secondary") return false;
+  }
+  return window.innerWidth > window.innerHeight;
+}
+
+function calcolaEAggiornaOrientamento() {
+  const eDesktop = document.body.classList.contains("modalita-desktop");
+  const eLandscape = eSchermoInLandscape();
+  document.body.classList.remove("richiede-rotazione");
+  document.body.classList.toggle("tabellone-ruotato", !eDesktop && !eLandscape);
+  const altezzaReale = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+  document.documentElement.style.setProperty("--altezza-reale", altezzaReale + "px");
+}
 
 function rilevaEImpostaModalitaDesktop() {
   const puntatorePreciso = window.matchMedia && window.matchMedia("(pointer: fine)").matches;
@@ -240,28 +292,43 @@ function rilevaEImpostaModalitaDesktop() {
 
 function aggiornaLayoutTabellone() {
   const areaTabellone = document.getElementById("area-tabellone");
-  const mondo = document.getElementById("mondo-ruotato");
   const immagine = document.getElementById("immagine-tabellone");
-  if (!areaTabellone || !mondo || !immagine) return;
+  if (!areaTabellone || !immagine) return;
 
   const rapportoNaturale = (immagine.naturalWidth && immagine.naturalHeight) ? immagine.naturalWidth / immagine.naturalHeight : 1.48;
   const eDesktop = document.body.classList.contains("modalita-desktop");
+  const eLandscape = eSchermoInLandscape();
   const larghezzaFinestra = window.visualViewport ? window.visualViewport.width : window.innerWidth;
   const altezzaReale = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-  document.documentElement.style.setProperty("--altezza-reale", altezzaReale + "px");
 
-  const larghezzaCanvas = eDesktop ? larghezzaFinestra : altezzaReale;
-  const altezzaCanvas = eDesktop ? altezzaReale : larghezzaFinestra;
-  mondo.style.width = larghezzaCanvas + "px";
-  mondo.style.height = altezzaCanvas + "px";
+  let Wc;
+  let Hc;
 
-  const margineOrizzontale = Math.max(16, larghezzaCanvas * 0.03);
-  const margineVerticale = Math.max(16, altezzaCanvas * 0.06);
-  const larghezzaDisponibile = larghezzaCanvas - margineOrizzontale * 2;
-  const altezzaDisponibile = altezzaCanvas - margineVerticale * 2;
-
-  const Wc = Math.max(100, Math.min(larghezzaDisponibile, altezzaDisponibile * rapportoNaturale));
-  const Hc = Wc / rapportoNaturale;
+  if (eDesktop) {
+    const margineOrizzontale = Math.max(16, larghezzaFinestra * 0.03);
+    const margineVerticale = Math.max(16, altezzaReale * 0.03);
+    const larghezzaDisponibile = larghezzaFinestra - margineOrizzontale * 2;
+    const altezzaDisponibile = altezzaReale - margineVerticale * 2;
+    Wc = Math.max(120, Math.min(larghezzaDisponibile, altezzaDisponibile * rapportoNaturale));
+    Hc = Wc / rapportoNaturale;
+  } else if (eLandscape) {
+    const margineOrizzontale = 8;
+    const margineVerticale = 8;
+    const larghezzaDisponibile = larghezzaFinestra - margineOrizzontale * 2;
+    const altezzaDisponibile = altezzaReale - margineVerticale * 2;
+    Wc = Math.min(larghezzaDisponibile, altezzaDisponibile * rapportoNaturale);
+    Hc = Wc / rapportoNaturale;
+  } else {
+    const margine = 8;
+    const spazioOrizzontale = larghezzaFinestra - margine * 2;
+    const spazioVerticale = altezzaReale - margine * 2;
+    Hc = spazioOrizzontale;
+    Wc = Hc * rapportoNaturale;
+    if (Wc > spazioVerticale) {
+      Wc = spazioVerticale;
+      Hc = Wc / rapportoNaturale;
+    }
+  }
 
   if (!Number.isFinite(Wc) || !Number.isFinite(Hc)) return;
 
@@ -272,24 +339,48 @@ function aggiornaLayoutTabellone() {
 }
 
 let timerDebounceResize = null;
+
 function gestisciResize() {
   rilevaEImpostaModalitaDesktop();
+  calcolaEAggiornaOrientamento();
   clearTimeout(timerDebounceResize);
   timerDebounceResize = setTimeout(aggiornaLayoutTabellone, 60);
 }
 
-function inizializzaGestioneLayout() {
+function inizializzaGestioneOrientamento() {
   rilevaEImpostaModalitaDesktop();
+  calcolaEAggiornaOrientamento();
   aggiornaLayoutTabellone();
+
   window.addEventListener("resize", gestisciResize);
-  window.addEventListener("orientationchange", () => { setTimeout(gestisciResize, 300); });
-  if (window.visualViewport) window.visualViewport.addEventListener("resize", gestisciResize);
+  window.addEventListener("orientationchange", () => {
+    setTimeout(gestisciResize, 50);
+    setTimeout(gestisciResize, 300);
+    setTimeout(gestisciResize, 700);
+  });
+
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", gestisciResize);
+  }
+
+  if (window.screen && window.screen.orientation && window.screen.orientation.addEventListener) {
+    window.screen.orientation.addEventListener("change", () => {
+      setTimeout(gestisciResize, 50);
+      setTimeout(gestisciResize, 300);
+    });
+  }
 
   const immagine = document.getElementById("immagine-tabellone");
-  if (immagine) {
-    if (immagine.complete && immagine.naturalWidth) aggiornaLayoutTabellone();
-    else immagine.addEventListener("load", aggiornaLayoutTabellone);
+  if (immagine_pronta()) {
+    aggiornaLayoutTabellone();
+  } else if (immagine) {
+    immagine.addEventListener("load", aggiornaLayoutTabellone);
   }
+}
+
+function immagine_pronta() {
+  const immagine = document.getElementById("immagine-tabellone");
+  return !!(immagine && immagine.complete && immagine.naturalWidth);
 }
 
 function riposizionaTuttePedine() {
@@ -309,8 +400,10 @@ function mostraMessaggioGiocoGrande(testo) {
   if (!testo) return;
   const el = document.getElementById("flash-messaggio-gioco");
   if (!el) return;
+  if (testo.toLowerCase().includes("avanza dello stesso numero di caselle")) return;
   const span = el.querySelector("span");
   if (!span) return;
+  if (span.textContent === testo && el.classList.contains("visibile")) return;
   span.textContent = testo;
   el.classList.remove("visibile");
   void el.offsetWidth;
@@ -320,7 +413,7 @@ function mostraMessaggioGiocoGrande(testo) {
 }
 
 /* ============================================================
-   DETERMINAZIONE ORDINE ("CHI INIZIA?")
+   DETERMINAZIONE ORDINE
    ============================================================ */
 
 let areaDadiHomeGenitore = null;
@@ -352,6 +445,7 @@ function riportaDadiAllaPartita() {
 function disegnaListaDeterminazione(giocatori, turnoInCorsoUid, gruppoSpareggio) {
   const lista = document.getElementById("lista-determinazione");
   if (!lista) return;
+
   const elenco = Array.isArray(giocatori) ? giocatori : [];
   const spareggioSet = new Set(Array.isArray(gruppoSpareggio) ? gruppoSpareggio : []);
 
@@ -393,6 +487,7 @@ function gestisciStatoDeterminazione(dati) {
   if (appenaEntrato) mostraDadi(1, 1);
 
   const giocatori = Array.isArray(dati.giocatori) ? dati.giocatori : [];
+
   disegnaListaDeterminazione(giocatori, dati.turnoInCorsoUid || null, dati.gruppoSpareggioAttuale || []);
 
   possoTirareIoInDeterminazione = dati.turnoInCorsoUid === mioUid;
@@ -401,6 +496,7 @@ function gestisciStatoDeterminazione(dati) {
   if (areaDadi) areaDadi.classList.toggle("disabilitato", !possoTirareIoInDeterminazione);
 
   const sottotitolo = document.getElementById("sottotitolo-determinazione");
+
   if (dati.gruppoSpareggioAttuale && dati.gruppoSpareggioAttuale.length) {
     const nomiSpareggio = dati.gruppoSpareggioAttuale.map((u) => {
       const g = giocatori.find((x) => x.uid === u);
@@ -438,6 +534,7 @@ function gestisciOrdineFinaleCalcolato(dati) {
   if (!lista) return;
 
   const ordine = Array.isArray(dati.ordineGiocatori) ? dati.ordineGiocatori : [];
+
   lista.innerHTML = ordine.map((nome, indice) => {
     const punteggio = dati.punteggi && dati.punteggi[nome] != null ? dati.punteggi[nome] : "?";
     return `
@@ -459,6 +556,7 @@ function gestisciDeterminazioneCompletata(dati) {
   riportaDadiAllaPartita();
 
   ultimoStatoGiocatori = Array.isArray(dati.giocatori) ? dati.giocatori : [];
+
   const primoMovimento = dati.primoMovimento || {};
 
   const messaggiGioco = document.getElementById("messaggi-gioco");
@@ -480,7 +578,6 @@ function gestisciDeterminazioneCompletata(dati) {
 
     if (dati.vittoria) {
       turnoAttualeId = null;
-      mioTurno = false;
       fermaCountdownCompleto();
 
       const areaDadi = document.getElementById("area-dadi");
@@ -539,6 +636,9 @@ function avviaCountdownTurno(tempoInizio, durataMs, scadenzaTurno = null) {
     msRestantiAllArrivo = durataMossaMsAttuale;
   }
 
+  // Non può mai superare i secondi ufficiali dichiarati dal server, qualunque
+  // altro valore arrivi — questo è ciò che garantisce di non vedere mai un
+  // countdown "gonfiato".
   msResiduiRiferimento = Math.max(0, Math.min(durataMossaMsAttuale, msRestantiAllArrivo));
   momentoLocaleRiferimento = performance.now();
 
@@ -546,12 +646,14 @@ function avviaCountdownTurno(tempoInizio, durataMs, scadenzaTurno = null) {
   turnoLocalmenteCompletato = false;
 
   aggiornaCountdownTurno();
+
   intervalCountdown = setInterval(aggiornaCountdownTurno, 100);
 }
 
 function fermaCountdownPerAzioneLocale() {
   turnoLocalmenteCompletato = true;
   fermaCountdownCompleto();
+
   const el = document.getElementById("countdown-turno");
   if (el) {
     el.textContent = "✓";
@@ -563,6 +665,7 @@ function fermaCountdownPerAzioneLocale() {
 function aggiornaCountdownTurno() {
   const el = document.getElementById("countdown-turno");
   if (!el) return;
+
   if (turnoLocalmenteCompletato) return;
 
   if (msResiduiRiferimento === null || momentoLocaleRiferimento === null) {
@@ -586,7 +689,7 @@ function aggiornaCountdownTurno() {
 }
 
 /* ============================================================
-   MICROFONO / WEBRTC (consenso reciproco per coppia)
+   MICROFONO / WEBRTC
    ============================================================ */
 
 let microfonoAttivo = false;
@@ -600,19 +703,22 @@ let coppieAudioAttive = new Set();
 const CONFIGURAZIONE_ICE = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
 
 async function toggleMicrofono() {
-  if (microfonoAttivo) disattivaMicrofono();
-  else await attivaMicrofono();
+  if (microfonoAttivo) {
+    disattivaMicrofono();
+  } else {
+    await attivaMicrofono();
+  }
 }
 
 async function attivaMicrofono() {
   try {
     if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== "function") {
-      mostraNotificaGioco("Il tuo browser non permette l'accesso al microfono.");
+      alert("Il tuo browser non permette l'accesso al microfono.");
       return;
     }
     flussoAudioLocale = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
   } catch (e) {
-    mostraNotificaGioco("Non è stato possibile accedere al microfono. Controlla i permessi del browser.");
+    alert("Non è stato possibile accedere al microfono. Controlla i permessi del browser.");
     return;
   }
   microfonoAttivo = true;
@@ -622,7 +728,10 @@ async function attivaMicrofono() {
 
 function disattivaMicrofono() {
   microfonoAttivo = false;
-  if (flussoAudioLocale) { flussoAudioLocale.getTracks().forEach((t) => t.stop()); flussoAudioLocale = null; }
+  if (flussoAudioLocale) {
+    flussoAudioLocale.getTracks().forEach((t) => t.stop());
+    flussoAudioLocale = null;
+  }
   Object.keys(connessioniPeer).forEach(chiudiConnessioneAudio);
   richiesteInviate.clear();
   coppieAudioAttive.clear();
@@ -636,7 +745,10 @@ function aggiornaTestoBottoneMicrofono() {
 }
 
 function richiediAudioCon(altroUid) {
-  if (!microfonoAttivo) { mostraNotificaGioco("Attiva prima il tuo microfono dal menu ☰."); return; }
+  if (!microfonoAttivo) {
+    alert("Attiva prima il tuo microfono dal menu ☰.");
+    return;
+  }
   if (!altroUid || altroUid === mioUid) return;
   if (richiesteInviate.has(altroUid) || coppieAudioAttive.has(altroUid)) return;
   if (!socket || socket.readyState !== WebSocket.OPEN) return;
@@ -649,16 +761,20 @@ function richiediAudioCon(altroUid) {
 function mostraRichiestaAudioRicevuta(mittenteUid, mittenteNome) {
   uidRichiestaAudioInAttesa = mittenteUid;
   suonaRichiestaAudio();
+
   const testo = document.getElementById("testo-richiesta-audio");
   if (testo) testo.textContent = (mittenteNome || "Un giocatore") + " ti sta chiedendo di parlare in chiamata audio";
+
   const popup = document.getElementById("popup-richiesta-audio");
   if (popup) popup.classList.remove("nascosto");
 }
 
 async function rispondiRichiestaAudioRicevuta(accettato) {
   const mittenteUid = uidRichiestaAudioInAttesa;
+
   const popup = document.getElementById("popup-richiesta-audio");
   if (popup) popup.classList.add("nascosto");
+
   uidRichiestaAudioInAttesa = null;
   if (!mittenteUid) return;
 
@@ -673,6 +789,7 @@ async function rispondiRichiestaAudioRicevuta(accettato) {
   }
 
   if (!socket || socket.readyState !== WebSocket.OPEN) return;
+
   socket.send(JSON.stringify({ tipo: "rispostaAudio", partitaId, destinatarioUid: mittenteUid, accettato: !!accettato }));
 
   if (accettato) {
@@ -686,10 +803,16 @@ function creaConnessionePeer(altroUid) {
   if (connessioniPeer[altroUid]) return connessioniPeer[altroUid];
 
   let pc;
-  try { pc = new RTCPeerConnection(CONFIGURAZIONE_ICE); } catch (e) { return null; }
+  try {
+    pc = new RTCPeerConnection(CONFIGURAZIONE_ICE);
+  } catch (e) {
+    return null;
+  }
 
   if (flussoAudioLocale) {
-    flussoAudioLocale.getTracks().forEach((t) => { try { pc.addTrack(t, flussoAudioLocale); } catch (e) {} });
+    flussoAudioLocale.getTracks().forEach((t) => {
+      try { pc.addTrack(t, flussoAudioLocale); } catch (e) {}
+    });
   }
 
   pc.onicecandidate = (ev) => {
@@ -716,7 +839,9 @@ function creaConnessionePeer(altroUid) {
   };
 
   pc.onconnectionstatechange = () => {
-    if (pc.connectionState === "failed" || pc.connectionState === "closed") chiudiConnessioneAudio(altroUid);
+    if (pc.connectionState === "failed" || pc.connectionState === "closed") {
+      chiudiConnessioneAudio(altroUid);
+    }
   };
 
   connessioniPeer[altroUid] = pc;
@@ -726,6 +851,7 @@ function creaConnessionePeer(altroUid) {
 async function avviaConnessioneAudio(altroUid, sonoIoAdIniziare) {
   if (!altroUid || altroUid === mioUid) return;
   if (connessioniPeer[altroUid]) return;
+
   const pc = creaConnessionePeer(altroUid);
   if (!pc) return;
 
@@ -759,20 +885,31 @@ async function gestisciOffertaRicevuta(mittenteUid, sdp) {
 async function gestisciRispostaRicevuta(mittenteUid, sdp) {
   const pc = connessioniPeer[mittenteUid];
   if (!pc || !sdp) return;
-  try { await pc.setRemoteDescription(new RTCSessionDescription(sdp)); } catch (e) {}
+  try {
+    await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+  } catch (e) {}
 }
 
 async function gestisciCandidatoRicevuto(mittenteUid, candidate) {
   const pc = connessioniPeer[mittenteUid];
   if (!pc || !candidate) return;
-  try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch (e) {}
+  try {
+    await pc.addIceCandidate(new RTCIceCandidate(candidate));
+  } catch (e) {}
 }
 
 function chiudiConnessioneAudio(altroUid) {
   const pc = connessioniPeer[altroUid];
-  if (pc) { try { pc.close(); } catch (e) {} delete connessioniPeer[altroUid]; }
+  if (pc) {
+    try { pc.close(); } catch (e) {}
+    delete connessioniPeer[altroUid];
+  }
   const elAudio = elementiAudioRemoti[altroUid];
-  if (elAudio) { try { elAudio.srcObject = null; } catch (e) {} elAudio.remove(); delete elementiAudioRemoti[altroUid]; }
+  if (elAudio) {
+    try { elAudio.srcObject = null; } catch (e) {}
+    elAudio.remove();
+    delete elementiAudioRemoti[altroUid];
+  }
   coppieAudioAttive.delete(altroUid);
 }
 
@@ -789,16 +926,23 @@ const CORREZIONE_ANGOLI_DADO = {
   1: { x: 0, y: 0 }, 2: { x: 0, y: -90 }, 3: { x: -90, y: 0 },
   4: { x: 90, y: 0 }, 5: { x: 0, y: 90 }, 6: { x: 0, y: 180 }
 };
+
 let rotazioneAttuale = { dado1: { x: 0, y: 0 }, dado2: { x: 0, y: 0 } };
 
-function normalizza360(g) { return ((g % 360) + 360) % 360; }
+function normalizza360(g) {
+  return ((g % 360) + 360) % 360;
+}
 
 function calcolaNuovaRotazione(idDado, valore) {
   const c = CORREZIONE_ANGOLI_DADO[valore];
   if (!c) return rotazioneAttuale[idDado];
+
   const a = rotazioneAttuale[idDado];
-  let dX = normalizza360(c.x) - normalizza360(a.x); if (dX < 0) dX += 360;
-  let dY = normalizza360(c.y) - normalizza360(a.y); if (dY < 0) dY += 360;
+  let dX = normalizza360(c.x) - normalizza360(a.x);
+  if (dX < 0) dX += 360;
+  let dY = normalizza360(c.y) - normalizza360(a.y);
+  if (dY < 0) dY += 360;
+
   const nuova = {
     x: a.x + dX + (2 + Math.floor(Math.random() * 2)) * 360,
     y: a.y + dY + (2 + Math.floor(Math.random() * 2)) * 360
@@ -873,30 +1017,32 @@ function posizionaPedina(pedina, casellaNumero) {
 
 function ottieniOCreaPedina(idGiocatore, colore, indice) {
   if (!idGiocatore) return null;
+
   let pedina = document.getElementById("pedina-" + idGiocatore);
   if (!pedina) {
     pedina = document.createElement("div");
     pedina.id = "pedina-" + idGiocatore;
     pedina.className = "pedina";
+
     const idG = "gradPedina" + String(indice).replace(/[^a-zA-Z0-9_-]/g, "");
+
     pedina.innerHTML = `
-      <div class="pedina-interno">
-        <svg width="26" height="38" viewBox="0 0 34 48" aria-hidden="true">
-          <defs>
-            <radialGradient id="${idG}" cx="35%" cy="25%" r="75%">
-              <stop offset="0%" stop-color="${schiarisciColore(colore, 55)}"/>
-              <stop offset="55%" stop-color="${colore}"/>
-              <stop offset="100%" stop-color="${scuriscColore(colore, 35)}"/>
-            </radialGradient>
-          </defs>
-          <ellipse cx="17" cy="44" rx="12" ry="3.5" fill="rgba(0,0,0,0.3)"/>
-          <ellipse cx="17" cy="42" rx="11" ry="4" fill="${scuriscColore(colore, 25)}"/>
-          <path d="M17 42 C10 42 4 40 4 37 L10 15 C10 15 12 12 17 12 C22 12 24 15 24 15 L30 37 C30 40 24 42 17 42 Z" fill="url(#${idG})" stroke="${scuriscColore(colore, 45)}" stroke-width="0.8"/>
-          <circle cx="17" cy="9" r="7.5" fill="url(#${idG})" stroke="${scuriscColore(colore, 45)}" stroke-width="0.8"/>
-          <ellipse cx="14" cy="6" rx="2.5" ry="1.8" fill="rgba(255,255,255,0.55)"/>
-        </svg>
-      </div>
+      <svg width="26" height="38" viewBox="0 0 34 48" aria-hidden="true">
+        <defs>
+          <radialGradient id="${idG}" cx="35%" cy="25%" r="75%">
+            <stop offset="0%" stop-color="${schiarisciColore(colore, 55)}"/>
+            <stop offset="55%" stop-color="${colore}"/>
+            <stop offset="100%" stop-color="${scuriscColore(colore, 35)}"/>
+          </radialGradient>
+        </defs>
+        <ellipse cx="17" cy="44" rx="12" ry="3.5" fill="rgba(0,0,0,0.3)"/>
+        <ellipse cx="17" cy="42" rx="11" ry="4" fill="${scuriscColore(colore, 25)}"/>
+        <path d="M17 42 C10 42 4 40 4 37 L10 15 C10 15 12 12 17 12 C22 12 24 15 24 15 L30 37 C30 40 24 42 17 42 Z" fill="url(#${idG})" stroke="${scuriscColore(colore, 45)}" stroke-width="0.8"/>
+        <circle cx="17" cy="9" r="7.5" fill="url(#${idG})" stroke="${scuriscColore(colore, 45)}" stroke-width="0.8"/>
+        <ellipse cx="14" cy="6" rx="2.5" ry="1.8" fill="rgba(255,255,255,0.55)"/>
+      </svg>
     `;
+
     const contenitore = document.getElementById("contenitore-pedine");
     if (contenitore) contenitore.appendChild(pedina);
   }
@@ -905,26 +1051,42 @@ function ottieniOCreaPedina(idGiocatore, colore, indice) {
 
 function animaSaltoPedina(idGiocatore, percorso, callback) {
   const listaPercorso = Array.isArray(percorso) ? percorso : [];
-  if (listaPercorso.length === 0) { if (typeof callback === "function") callback(); return; }
+  if (listaPercorso.length === 0) {
+    if (typeof callback === "function") callback();
+    return;
+  }
 
   const indice = ultimoStatoGiocatori.findIndex((g) => g.id === idGiocatore);
   const colore = coloriGiocatori[(indice >= 0 ? indice : 0) % coloriGiocatori.length];
   const pedina = ottieniOCreaPedina(idGiocatore, colore, indice >= 0 ? indice : 0);
-  if (!pedina) { if (typeof callback === "function") callback(); return; }
+
+  if (!pedina) {
+    if (typeof callback === "function") callback();
+    return;
+  }
 
   let passo = 0;
+
   function saltaProssimo() {
-    if (passo >= listaPercorso.length) { if (typeof callback === "function") callback(); return; }
+    if (passo >= listaPercorso.length) {
+      if (typeof callback === "function") callback();
+      return;
+    }
+
     const casella = listaPercorso[passo];
     pedina.classList.add("pedina-salta");
     posizionaPedina(pedina, casella);
     suonaPassoPedina();
+
     const et = document.getElementById("casella-" + idGiocatore);
     if (et) et.textContent = String(casella);
+
     setTimeout(() => { pedina.classList.remove("pedina-salta"); }, Math.max(1, DURATA_SALTO_MS * 0.6));
+
     passo++;
     setTimeout(saltaProssimo, DURATA_SALTO_MS);
   }
+
   saltaProssimo();
 }
 
@@ -935,11 +1097,24 @@ function animaSaltoPedina(idGiocatore, percorso, callback) {
 async function avvia() {
   try {
     const risposta = await fetch(URL_SERVER_HTTP + "/api/me", { credentials: "include" });
-    if (!risposta.ok) { window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href); return; }
+    if (!risposta.ok) {
+      window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href);
+      return;
+    }
+
     const dati = await risposta.json();
-    if (!dati || !dati.uid) { window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href); return; }
+    if (!dati || !dati.uid) {
+      window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href);
+      return;
+    }
+
     mioUid = dati.uid;
-    if (!partitaId) { mostraNotificaGioco("ID partita mancante."); return; }
+
+    if (!partitaId) {
+      alert("ID partita mancante.");
+      return;
+    }
+
     connetti();
   } catch (e) {
     window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href);
@@ -973,16 +1148,17 @@ function connetti() {
 
   socket.onopen = () => {
     tentativoRiconnessioneInCorso = false;
-    if (timerRiconnessione) { clearTimeout(timerRiconnessione); timerRiconnessione = null; }
-    const banner = document.getElementById("banner-disconnesso");
-    if (banner) banner.classList.add("nascosto");
+    if (timerRiconnessione) {
+      clearTimeout(timerRiconnessione);
+      timerRiconnessione = null;
+    }
     socket.send(JSON.stringify({ tipo: "riprendiPartita", partitaId }));
   };
 
   socket.onclose = () => {
     tentativoRiconnessioneInCorso = false;
-    const banner = document.getElementById("banner-disconnesso");
-    if (banner) banner.classList.remove("nascosto");
+    const rigaTurno = document.getElementById("riga-turno");
+    if (rigaTurno) rigaTurno.textContent = "🔴 Disconnesso, riconnessione...";
     pianificaRiconnessione();
   };
 
@@ -990,7 +1166,11 @@ function connetti() {
 
   socket.onmessage = (msg) => {
     let dati;
-    try { dati = JSON.parse(msg.data); } catch (e) { return; }
+    try {
+      dati = JSON.parse(msg.data);
+    } catch (e) {
+      return;
+    }
     if (!dati || !dati.tipo) return;
 
     if (dati.tipo === "sessioneScaduta") {
@@ -1005,6 +1185,7 @@ function connetti() {
     if (dati.tipo === "determinazioneCompletata") { gestisciDeterminazioneCompletata(dati); return; }
 
     if (dati.tipo === "richiestaAudioRicevuta") { mostraRichiestaAudioRicevuta(dati.mittenteUid, dati.mittenteNome); return; }
+
     if (dati.tipo === "rispostaAudioRicevuta") {
       if (dati.mittenteUid) richiesteInviate.delete(dati.mittenteUid);
       if (dati.accettato && dati.mittenteUid) {
@@ -1016,6 +1197,7 @@ function connetti() {
       }
       return;
     }
+
     if (dati.tipo === "webrtc-offer") { gestisciOffertaRicevuta(dati.mittenteUid, dati.sdp); return; }
     if (dati.tipo === "webrtc-answer") { gestisciRispostaRicevuta(dati.mittenteUid, dati.sdp); return; }
     if (dati.tipo === "webrtc-ice-candidate") { gestisciCandidatoRicevuto(dati.mittenteUid, dati.candidate); return; }
@@ -1043,13 +1225,14 @@ function connetti() {
         disegnaGiocatori();
       }
 
-      if (Array.isArray(dati.messaggi) && dati.messaggi.length) {
+      if (Array.isArray(dati.messaggi) && dati.messaggi.length && dati.idGiocatoreCheHaTirato === mioUid) {
         mostraMessaggioGiocoGrande(dati.messaggi.join(" "));
       }
 
       if (dati.tempoInizioTurno != null && dati.durataMossaMs != null) {
         avviaCountdownTurno(dati.tempoInizioTurno, dati.durataMossaMs, dati.scadenzaTurno || null);
       }
+
       return;
     }
 
@@ -1092,18 +1275,14 @@ function connetti() {
           completa();
         }
       });
+
       return;
     }
 
     if (dati.tipo === "chatPartita") { aggiungiMessaggioChatPartita(dati.nome, dati.testo); return; }
 
     if (dati.tipo === "errore") {
-      mostraNotificaGioco(dati.messaggio || "Si è verificato un errore.");
-      const testo = String(dati.messaggio || "");
-      if (testo.indexOf("non trovata") !== -1 || testo.indexOf("Non fai parte") !== -1 || testo.indexOf("già terminata") !== -1) {
-        fermaCountdownCompleto();
-        setTimeout(() => { window.location.href = `lobby.html?stanza=${encodeURIComponent(stanza || "")}`; }, 2200);
-      }
+      alert(dati.messaggio || "Si è verificato un errore.");
       return;
     }
   };
@@ -1144,6 +1323,7 @@ function disegnaGiocatori() {
 
   const listaPannello = document.getElementById("lista-giocatori");
   if (!listaPannello) return;
+
   listaPannello.innerHTML = "";
 
   ultimoStatoGiocatori.forEach((giocatore, indice) => {
@@ -1192,8 +1372,10 @@ function disegnaGiocatori() {
 
 function mostraVittoria(nomeVincitore) {
   suonaVittoria();
+
   const testo = document.getElementById("testo-vincitore");
   if (testo) testo.textContent = "🎉 Ha vinto " + (nomeVincitore || "un giocatore") + "!";
+
   const overlay = document.getElementById("overlay-vittoria");
   if (overlay) overlay.classList.add("aperto");
 }
@@ -1202,29 +1384,31 @@ function mostraVittoria(nomeVincitore) {
    MENU / USCITA
    ============================================================ */
 
-// FIX: "Torna alla Lobby" ora avvisa il server PRIMA di navigare (come già
-// faceva "Abbandona partita"), invece di affidarsi solo alla chiusura della
-// connessione — così la partita terminata viene ripulita subito, senza
-// lasciarti segnato "In partita" dopo che sei già tornato in lobby.
 function tornaAllaLobby() {
-  if (socket && socket.readyState === WebSocket.OPEN) {
-    socket.send(JSON.stringify({ tipo: "abbandonaPartita", partitaId }));
-  }
-  fermaCountdownCompleto();
   window.location.href = `lobby.html?stanza=${encodeURIComponent(stanza || "")}`;
 }
 
 function abbandonaPartita() {
   if (!confirm("Sei sicuro di voler abbandonare la partita?")) return;
+
   if (socket && socket.readyState === WebSocket.OPEN) {
     socket.send(JSON.stringify({ tipo: "abbandonaPartita", partitaId }));
   }
+
   fermaCountdownCompleto();
   tornaAllaLobby();
 }
 
-function apriProfilo() { chiudiMenu(); window.location.href = "profilo.html"; }
-function apriImpostazioni() { chiudiMenu(); window.location.href = "opzioni-account.html"; }
+function apriProfilo() {
+  chiudiMenu();
+  window.location.href = "profilo.html";
+}
+
+function apriImpostazioni() {
+  chiudiMenu();
+  window.location.href = "opzioni-account.html";
+}
+
 function chiudiMenu() {
   const pannello = document.getElementById("pannello-menu");
   if (pannello) pannello.classList.add("nascosto");
@@ -1238,6 +1422,7 @@ if (btnMenu) {
     if (pannello) pannello.classList.toggle("nascosto");
   };
 }
+
 document.addEventListener("click", () => { chiudiMenu(); });
 
 /* ============================================================
@@ -1254,6 +1439,7 @@ if (btnGiocatori) {
     if (backdrop) backdrop.classList.toggle("aperto");
   };
 }
+
 const backdropGiocatori = document.getElementById("backdrop-giocatori");
 if (backdropGiocatori) {
   backdropGiocatori.onclick = () => {
@@ -1283,14 +1469,18 @@ function aggiornaBadgeChatPartita() {
 
 function aggiungiMessaggioChatPartita(nome, testo) {
   suonaMessaggioChat();
+
   const box = document.getElementById("chat-messaggi");
   if (!box) return;
 
   const riga = document.createElement("div");
   riga.className = "chat-msg";
+
   const nomeEl = document.createElement("b");
   nomeEl.textContent = String(nome || "Giocatore") + ":";
+
   const testoEl = document.createTextNode(" " + String(testo || ""));
+
   riga.appendChild(nomeEl);
   riga.appendChild(testoEl);
 
@@ -1307,8 +1497,10 @@ function aggiungiMessaggioChatPartita(nome, testo) {
 function inviaChatPartita() {
   const input = document.getElementById("chat-input");
   if (!input) return;
+
   const testo = input.value.trim();
   if (!testo) return;
+
   if (socket && socket.readyState === WebSocket.OPEN) {
     socket.send(JSON.stringify({ tipo: "chatPartita", partitaId, testo }));
     input.value = "";
@@ -1318,7 +1510,10 @@ function inviaChatPartita() {
 const chatInput = document.getElementById("chat-input");
 if (chatInput) {
   chatInput.addEventListener("keypress", (e) => {
-    if (e.key === "Enter") { e.preventDefault(); inviaChatPartita(); }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      inviaChatPartita();
+    }
   });
 }
 
@@ -1368,5 +1563,7 @@ aggiornaTestoBottoneMicrofono();
 aggiornaBadgeChatPartita();
 
 mostraDadi(1, 1);
-inizializzaGestioneLayout();
+
+inizializzaGestioneOrientamento();
+
 avvia();
