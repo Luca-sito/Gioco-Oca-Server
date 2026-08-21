@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Gioco dell'Oca - Dettagli del gioco | GIOCHI SOCIETA</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: #ffffff;
+  color: #111111;
+  font-family: Arial, Helvetica, sans-serif;
+  line-height: 1.65;
+}
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+.header {
+  background: #111111;
+  color: #ffffff;
+  border-bottom: 4px solid #ffd400;
+  padding: 28px 20px;
+}
+
+.header-inner {
+  width: min(1120px, calc(100% - 32px));
+  margin: 0 auto;
+}
+
+.brand {
+  display: inline-block;
+  color: #ffd400;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: clamp(30px, 5vw, 48px);
+  line-height: 1.1;
+  font-weight: 900;
+}
+
+.header p {
+  margin: 10px 0 0;
+  color: #cccccc;
+  font-size: 15px;
+}
+
+/* =========================================================
+   CONTENITORE
+========================================================= */
+
+.container {
+  width: min(1120px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 45px 0 70px;
+}
+
+/* =========================================================
+   INDICE
+========================================================= */
+
+.indice {
+  background: #111111;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 36px;
+  border-left: 6px solid #ffd400;
+}
+
+.indice h2 {
+  margin: 0 0 14px;
+  color: #ffd400;
+  font-size: 18px;
+}
+
+.indice a {
+  display: block;
+  color: #ffffff;
+  text-decoration: none;
+  padding: 7px 0;
+  font-size: 14px;
+  transition: color 0.2s;
+}
+
+.indice a:hover {
+  color: #ffd400;
+}
+
+/* =========================================================
+   SEZIONI
+========================================================= */
+
+.sezione {
+  margin-bottom: 42px;
+}
+
+.sezione h2 {
+  position: relative;
+  margin: 0 0 18px;
+  padding-bottom: 10px;
+  font-size: 27px;
+  line-height: 1.2;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.sezione h2::after {
+  content: "";
+  display: block;
+  width: 62px;
+  height: 4px;
+  background: #ffd400;
+  margin-top: 10px;
+}
+
+.sezione p {
+  margin: 0 0 16px;
+  font-size: 16px;
+}
+
+.introduzione {
+  background: #f6f6f6;
+  border: 1px solid #dddddd;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 28px;
+}
+
+.introduzione p:last-child {
+  margin-bottom: 0;
+}
+
+/* =========================================================
+   LOGO
+========================================================= */
+
+.logo-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 28px 0;
+  padding: 24px;
+  background: #ffffff;
+  border: 1px solid #dddddd;
+  border-radius: 16px;
+}
+
+.logo-box img {
+  max-width: 81px;
+  height: auto;
+  display: block;
+}
+
+/* =========================================================
+   REGOLE
+========================================================= */
+
+.regola {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 18px 0;
+  border-bottom: 1px solid #e4e4e4;
+}
+
+.regola:last-child {
+  border-bottom: none;
+}
+
+.regola-numero {
+  flex: 0 0 42px;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #ffd400;
+  color: #111111;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 15px;
+}
+
+.regola-testo {
+  flex: 1;
+  font-size: 16px;
+}
+
+/* =========================================================
+   SCOPO
+========================================================= */
+
+.box-evidenza {
+  background: #111111;
+  color: #ffffff;
+  border-radius: 16px;
+  padding: 26px;
+  border-left: 6px solid #ffd400;
+}
+
+.box-evidenza strong {
+  color: #ffd400;
+}
+
+/* =========================================================
+   CASELLE SPECIALI
+========================================================= */
+
+.caselle-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.casella {
+  background: #ffffff;
+  border: 1px solid #dddddd;
+  border-radius: 14px;
+  padding: 18px;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.casella:hover {
+  transform: translateY(-2px);
+  border-color: #ffd400;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+}
+
+.casella-numero {
+  flex: 0 0 48px;
+  width: 48px;
+  height: 48px;
+  background: #111111;
+  color: #ffd400;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.casella-testo {
+  flex: 1;
+  font-size: 15px;
+}
+
+.casella-testo strong {
+  display: block;
+  margin-bottom: 3px;
+  color: #111111;
+}
+
+/* =========================================================
+   TRAGUARDO
+========================================================= */
+
+.traguardo {
+  margin-top: 22px;
+  background: #ffd400;
+  color: #111111;
+  border-radius: 16px;
+  padding: 24px;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.traguardo strong {
+  font-weight: 900;
+}
+
+/* =========================================================
+   FOOTER
+========================================================= */
+
+.footer {
+  background: #111111;
+  color: #aaaaaa;
+  text-align: center;
+  padding: 28px 20px;
+  border-top: 4px solid #ffd400;
+  font-size: 13px;
+}
+
+.footer strong {
+  color: #ffd400;
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 760px) {
+  .container {
+    padding-top: 30px;
+  }
+
+  .caselle-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .regola {
+    gap: 12px;
+  }
+
+  .regola-numero {
+    flex-basis: 38px;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+  }
+
+  .sezione h2 {
+    font-size: 23px;
+  }
+
+  .sezione p,
+  .regola-testo {
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .header {
+    padding: 22px 16px;
+  }
+
+  .container {
+    width: min(100% - 22px, 1120px);
+  }
+
+  .indice,
+  .introduzione,
+  .box-evidenza,
+  .traguardo {
+    padding: 18px;
+  }
+
+  .casella {
+    padding: 14px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<header class="header">
+  <div class="header-inner">
+    <div class="brand">GIOCHI SOCIETA</div>
+    <h1>GIOCO DELL'OCA</h1>
+    <p>Dettagli, regole e caselle speciali del gioco.</p>
+  </div>
+</header>
+
+<main class="container">
+
+  <nav class="indice">
+    <h2>INDICE</h2>
+
+    <a href="#gioco">Il Gioco dell'Oca</a>
+    <a href="#regole">Regole del gioco</a>
+    <a href="#scopo">Scopo del gioco</a>
+    <a href="#speciali">Caselle speciali</a>
+  </nav>
+
+  <section class="sezione" id="gioco">
+
+    <h2>Gioco dell'Oca</h2>
+
+    <div class="introduzione">
+      <p>
+        Si gioca sul tabellone sul quale è disegnato un percorso a spirale,
+        caratterizzato da <strong>63 caselle numerate</strong>, raffiguranti
+        diversi simboli.
+      </p>
+    </div>
+
+    <div class="logo-box">
+      <img
+        src="https://static.wixstatic.com/media/b86610_ceb00a6da22f4c239891079fadfff207~mv2.png/v1/fill/w_81,h_121,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/TEOREMA%20GROUP%20LTD.png"
+        alt="TEOREMA GROUP LTD">
+    </div>
+
+  </section>
+
+  <section class="sezione" id="regole">
+
+    <h2>Regole del gioco</h2>
+
+    <div>
+
+      <div class="regola">
+        <div class="regola-numero">01</div>
+        <div class="regola-testo">
+          Lanciare i due dadi numerati da 1 a 6. Inizia il gioco chi raggiunge
+          il punteggio più alto al primo lancio dei dadi.
+        </div>
+      </div>
+
+      <div class="regola">
+        <div class="regola-numero">02</div>
+        <div class="regola-testo">
+          Ogni giocatore sceglie una delle pedine colorate disponibili.
+        </div>
+      </div>
+
+      <div class="regola">
+        <div class="regola-numero">03</div>
+        <div class="regola-testo">
+          I giocatori posizionano la propria pedina nella casella di partenza
+          e, a turno, lanciano i dadi e avanzano lungo il percorso di un numero
+          di caselle pari al numero ottenuto dal lancio della coppia dei dadi.
+        </div>
+      </div>
+
+    </div>
+
+  </section>
+
+  <section class="sezione" id="scopo">
+
+    <h2>Scopo del gioco</h2>
+
+    <div class="box-evidenza">
+      <strong>Vince il giocatore</strong> che raggiunge per primo la
+      <strong>casella numero 63</strong>.
+    </div>
+
+  </section>
+
+  <section class="sezione" id="speciali">
+
+    <h2>Caselle speciali</h2>
+
+    <p>
+      Il percorso è caratterizzato da alcune caselle speciali che possono
+      aiutare a raggiungere velocemente il traguardo oppure ostacolare
+      i giocatori.
+    </p>
+
+    <div class="caselle-grid">
+
+      <div class="casella">
+        <div class="casella-numero">6</div>
+        <div class="casella-testo">
+          Il giocatore tira nuovamente i dadi.
+        </div>
+      </div>
+
+      <div class="casella">
+        <div class="casella-numero">9</div>
+        <div class="casella-testo">
+          Il giocatore deve avanzare dello stesso numero di caselle
+          del tiro appena effettuato.
+        </div>
+      </div>
+
+      <div class="casella">
+        <div class="casella-numero">18</div>
+        <div class="casella-testo">
+          Il giocatore deve avanzare dello stesso numero di caselle
+          del tiro appena effettuato.
+        </div>
+      </div>
+
+      <div class="casella">
+        <div class="casella-numero">19</div>
+        <div class="casella-testo">
+          <strong>"Sosta al bar"</strong>
+          Il giocatore salta 3 turni.
+        </div>
+      </div>
+
+      <div class="casella">
+        <div class="casella-numero">27</div>
+        <div class="casella-testo">
+          Il giocatore deve avanzare dello stesso numero di caselle
+          del tiro appena effettuato.
+        </div>
+      </div>
+
+      <div class="casella">
+        <div class="casella-numero">31</div>
+        <div class="casella-testo">
+          <strong>"Cadi nel pozzo"</strong>
+          Il giocatore salta 3 turni.
+        </div>
+      </div>
+
+      <div class="casella">
+        <div class="casella-numero">36</div>
+        <div class="casella-testo">
+          Il giocatore deve avanzare dello stesso numero di caselle
+          del tiro appena effettuato.
+        </div>
+      </div>
+
+      <div class="casella">
+        <div class="casella-numero">42</div>
+        <div class="casella-testo">
+          <strong>"Ti sei perso"</strong>
+          Il giocatore torna alla casella 38.
+        </div>
+      </div>
+
+      <div class="casella">
+        <div class="casella-numero">45</div>
+        <div class="casella-testo">
+          Il giocatore deve avanzare dello stesso numero di caselle
+          del tiro appena effettuato.
+        </div>
+      </div>
+
+      <div class="casella">
+        <div class="casella-numero">50</div>
+        <div class="casella-testo">
+          <strong>"Sei cotto!"</strong>
+          Il giocatore torna immediatamente alla casella 1.
+        </div>
+      </div>
+
+      <div class="casella">
+        <div class="casella-numero">52</div>
+        <div class="casella-testo">
+          <strong>"Fermo al semaforo"</strong>
+          Il giocatore salta un turno.
+        </div>
+      </div>
+
+      <div class="casella">
+        <div class="casella-numero">54</div>
+        <div class="casella-testo">
+          Il giocatore deve avanzare dello stesso numero di caselle
+          del tiro appena effettuato.
+        </div>
+      </div>
+
+      <div class="casella">
+        <div class="casella-numero">58</div>
+        <div class="casella-testo">
+          <strong>"Inciampi"</strong>
+          Il giocatore torna immediatamente alla casella 1.
+        </div>
+      </div>
+
+    </div>
+
+    <div class="traguardo">
+      <strong>63 — Traguardo:</strong>
+      vince chi arriva alla casella 63 con un tiro unico.
+      I punti in eccesso devono essere percorsi all'indietro.
+    </div>
+
+  </section>
+
+</main>
+
+<footer class="footer">
+  <strong>GIOCHI SOCIETA</strong> · Dettagli del Gioco dell'Oca
+</footer>
+
+</body>
+</html>
