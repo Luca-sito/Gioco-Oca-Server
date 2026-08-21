@@ -23,18 +23,15 @@ const posizioniCaselle = {
 };
 
 const coloriGiocatori = [
-  "#6a2c70",
-  "#dddddd",
-  "#1e40af",
-  "#43a047",
-  "#f57c00",
-  "#c0ca33",
-  "#e53935",
-  "#2b2b2b"
+  "#6a2c70", "#dddddd", "#1e40af", "#43a047",
+  "#f57c00", "#c0ca33", "#e53935", "#2b2b2b"
 ];
 
-const DURATA_SALTO_MS = 380;
-const DURATA_ANIMAZIONE_DADI_MS = 640;
+const DURATA_LANCIO_DADI_MS = 1300;
+const DURATA_SALTO_MS = 260;
+
+const URL_SERVER_HTTP = "https://gioco-oca-server.onrender.com";
+const URL_SERVER_WS = "wss://gioco-oca-server.onrender.com";
 
 const params = new URLSearchParams(window.location.search);
 const partitaId = params.get("partita");
@@ -48,3076 +45,1525 @@ let mioTurno = false;
 let turnoAttualeId = null;
 
 let timerRiconnessione = null;
+let tentativoRiconnessioneInCorso = false;
 
-let determinazioneAttiva = false;
-let determinazioneTurnoUid = null;
-let risultatiDeterminazione = {};
-let ordineDeterminazione = [];
-let gruppoSpareggioAttuale = [];
+let faseAttuale = "normale";
+let possoTirareIoInDeterminazione = false;
 
-let timerDeterminazione = null;
-let scadenzaDeterminazione = null;
+/* ============================================================
+   TIMER CLIENT
+   ============================================================
+   FIX: il countdown non confronta più nessun orario assoluto del
+   server con l'orologio del telefono (differenze anche di 1-2
+   secondi tra dispositivi causavano "17 invece di 15"). Ora si
+   calcola UNA VOLTA SOLA, all'arrivo del messaggio, quanti ms
+   restano davvero (usando scadenzaTurno se c'è, altrimenti
+   inizio+durata), e da lì in poi scorre in locale con
+   performance.now() — immune a qualunque disallineamento
+   d'orologio. In più il valore iniziale è sempre limitato a
+   durataMossaMs: non può mai mostrare più dei secondi ufficiali
+   dichiarati dal server, qualunque altro dato arrivi insieme.
+   ============================================================ */
 
-let timerTurno = null;
-let scadenzaTurnoServer = null;
+let durataMossaMsAttuale = null;
+let msResiduiRiferimento = null;
+let momentoLocaleRiferimento = null;
+let intervalCountdown = null;
+let ultimoSecondoAvviso = null;
+let turnoLocalmenteCompletato = false;
 
-let partitaTerminata = false;
-
-// =========================================================
-// CREAZIONE DINAMICA ELEMENTI MEDIA
-// =========================================================
-
-function creaInterfacciaMedia() {
-  let box = document.getElementById("media-box");
-
-  if (!box) {
-    box = document.createElement("div");
-    box.id = "media-box";
-
-    box.style.position = "fixed";
-    box.style.bottom = "18px";
-    box.style.left = "18px";
-    box.style.zIndex = "80";
-    box.style.display = "flex";
-    box.style.flexDirection = "column";
-    box.style.gap = "8px";
-    box.style.maxWidth = "min(420px, calc(100vw - 36px))";
-    box.style.pointerEvents = "none";
-
-    document.body.appendChild(box);
-  }
-
-  let controlli = document.getElementById("media-controlli");
-
-  if (!controlli) {
-    controlli = document.createElement("div");
-    controlli.id = "media-controlli";
-
-    controlli.style.display = "flex";
-    controlli.style.gap = "8px";
-    controlli.style.pointerEvents = "auto";
-
-    controlli.innerHTML = `
-      <button id="btn-microfono" type="button"
-        style="
-          border:none;
-          border-radius:12px;
-          padding:9px 12px;
-          background:rgba(10,16,22,.88);
-          color:#fff;
-          border:1px solid rgba(255,215,0,.3);
-          cursor:pointer;
-          font-weight:bold;
-        ">
-        🔇 Microfono: Off
-      </button>
-
-      <button id="btn-webcam" type="button"
-        style="
-          border:none;
-          border-radius:12px;
-          padding:9px 12px;
-          background:rgba(10,16,22,.88);
-          color:#fff;
-          border:1px solid rgba(255,215,0,.3);
-          cursor:pointer;
-          font-weight:bold;
-        ">
-        🚫 Webcam: Off
-      </button>
-    `;
-
-    box.appendChild(controlli);
-  }
-
-  let stato = document.getElementById("media-stato");
-
-  if (!stato) {
-    stato = document.createElement("div");
-    stato.id = "media-stato";
-
-    stato.style.display = "none";
-    stato.style.background = "rgba(10,16,22,.88)";
-    stato.style.border = "1px solid rgba(255,215,0,.25)";
-    stato.style.borderRadius = "10px";
-    stato.style.padding = "8px 10px";
-    stato.style.fontSize = "12px";
-    stato.style.color = "#fff";
-    stato.style.pointerEvents = "none";
-
-    box.appendChild(stato);
-  }
-
-  let videos = document.getElementById("media-videos");
-
-  if (!videos) {
-    videos = document.createElement("div");
-    videos.id = "media-videos";
-
-    videos.style.display = "grid";
-    videos.style.gridTemplateColumns = "repeat(2, minmax(120px, 1fr))";
-    videos.style.gap = "8px";
-    videos.style.pointerEvents = "none";
-
-    box.appendChild(videos);
-  }
-
-  if (!document.getElementById("media-styles")) {
-    const style = document.createElement("style");
-    style.id = "media-styles";
-
-    style.textContent = `
-      .media-tile {
-        position:relative;
-        width:150px;
-        height:106px;
-        background:#111820;
-        border:1px solid rgba(255,215,0,.24);
-        border-radius:12px;
-        overflow:hidden;
-        box-shadow:0 8px 24px rgba(0,0,0,.45);
-      }
-
-      .media-tile video {
-        width:100%;
-        height:100%;
-        object-fit:cover;
-        display:block;
-        background:#000;
-      }
-
-      .media-name {
-        position:absolute;
-        left:7px;
-        right:7px;
-        bottom:6px;
-        padding:4px 6px;
-        border-radius:7px;
-        background:rgba(0,0,0,.58);
-        color:#fff;
-        font-size:11px;
-        font-weight:bold;
-      }
-
-      .media-tile.audio-only {
-        height:52px;
-      }
-
-      .media-tile.audio-only video {
-        display:none;
-      }
-
-      @media (max-width:600px) {
-        #media-box {
-          left:8px !important;
-          bottom:8px !important;
-          max-width:calc(100vw - 16px) !important;
-        }
-
-        .media-tile {
-          width:120px;
-          height:84px;
-        }
-      }
-    `;
-
-    document.head.appendChild(style);
-  }
+function iniziale(nome) {
+  return (nome || "?").trim().charAt(0).toUpperCase();
 }
 
-creaInterfacciaMedia();
+function coloreDaNome(nome) {
+  const colori = [
+    "#6a2c70", "#1e40af", "#43a047", "#f57c00",
+    "#c0ca33", "#e53935", "#00838f", "#8d6e63"
+  ];
+  let somma = 0;
+  for (let i = 0; i < (nome || "?").length; i++) {
+    somma += nome.charCodeAt(i);
+  }
+  return colori[somma % colori.length];
+}
 
-// =========================================================
-// AUDIO / WEBCAM - WEBRTC
-// =========================================================
+/* ============================================================
+   SUONI
+   ============================================================ */
 
-const CONFIGURAZIONE_ICE = {
-  iceServers: [
-    {
-      urls: "stun:stun.l.google.com:19302"
+let suoniAttivi = localStorage.getItem("suoniAttivi") !== "off";
+let contestoAudio = null;
+
+function ottieniContestoAudio() {
+  try {
+    if (!contestoAudio) {
+      const C = window.AudioContext || window.webkitAudioContext;
+      if (!C) return null;
+      contestoAudio = new C();
     }
-  ]
-};
-
-let flussoMediaLocale = null;
-let microfonoLocaleAttivo = false;
-let webcamLocaleAttiva = false;
-
-const connessioniMedia = {};
-const peerInfoMedia = {};
-
-function aggiornaStatoMedia(testo, visibile = true) {
-  const el = document.getElementById("media-stato");
-  if (!el) return;
-
-  el.textContent = testo || "";
-  el.style.display = visibile && testo ? "block" : "none";
-}
-
-function aggiornaPulsantiMedia() {
-  const m = document.getElementById("btn-microfono");
-  const c = document.getElementById("btn-webcam");
-
-  if (m) {
-    m.textContent = microfonoLocaleAttivo
-      ? "🎤 Microfono: On"
-      : "🔇 Microfono: Off";
-
-    m.style.opacity = microfonoLocaleAttivo ? "1" : ".7";
-  }
-
-  if (c) {
-    c.textContent = webcamLocaleAttiva
-      ? "📷 Webcam: On"
-      : "🚫 Webcam: Off";
-
-    c.style.opacity = webcamLocaleAttiva ? "1" : ".7";
+    if (contestoAudio.state === "suspended") {
+      const promessa = contestoAudio.resume();
+      if (promessa && typeof promessa.catch === "function") {
+        promessa.catch(() => {});
+      }
+    }
+    return contestoAudio;
+  } catch (e) {
+    return null;
   }
 }
 
-function fermaMediaLocale() {
-  if (flussoMediaLocale) {
-    flussoMediaLocale.getTracks().forEach(track => {
-      try {
-        track.stop();
-      } catch (_) {}
+function suonaTono(frequenza, durataMs, tipoOnda, volume, ritardoMs) {
+  if (!suoniAttivi) return;
+  const ctx = ottieniContestoAudio();
+  if (!ctx) return;
+  try {
+    const inizio = ctx.currentTime + (ritardoMs || 0) / 1000;
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = tipoOnda || "sine";
+    osc.frequency.setValueAtTime(frequenza, inizio);
+    g.gain.setValueAtTime(0.0001, inizio);
+    g.gain.linearRampToValueAtTime(volume || 0.12, inizio + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, inizio + durataMs / 1000);
+    osc.connect(g);
+    g.connect(ctx.destination);
+    osc.start(inizio);
+    osc.stop(inizio + durataMs / 1000 + 0.02);
+  } catch (e) {}
+}
+
+function suonaClick(volume, ritardoMs) {
+  if (!suoniAttivi) return;
+  const ctx = ottieniContestoAudio();
+  if (!ctx) return;
+  try {
+    const inizio = ctx.currentTime + (ritardoMs || 0) / 1000;
+    const durata = 0.045;
+    const lung = Math.max(1, Math.floor(ctx.sampleRate * durata));
+    const buffer = ctx.createBuffer(1, lung, ctx.sampleRate);
+    const dati = buffer.getChannelData(0);
+    for (let i = 0; i < lung; i++) {
+      dati[i] = (Math.random() * 2 - 1) * (1 - i / lung);
+    }
+    const s = ctx.createBufferSource();
+    s.buffer = buffer;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(volume || 0.18, inizio);
+    g.gain.exponentialRampToValueAtTime(0.001, inizio + durata);
+    s.connect(g);
+    g.connect(ctx.destination);
+    s.start(inizio);
+  } catch (e) {}
+}
+
+function suonaTiroDadi() {
+  if (!suoniAttivi) return;
+  for (let i = 0; i < 7; i++) {
+    suonaClick(0.1, i * 100);
+  }
+}
+
+function suonaAtterraggioDadi() {
+  suonaTono(180, 90, "square", 0.14, 0);
+  suonaClick(0.15, 20);
+}
+
+function suonaPassoPedina() {
+  suonaTono(520, 55, "sine", 0.09, 0);
+}
+
+function suonaTuoTurno() {
+  suonaTono(660, 120, "sine", 0.11, 0);
+  suonaTono(880, 160, "sine", 0.11, 120);
+}
+
+function suonaVittoria() {
+  suonaTono(523, 130, "sine", 0.13, 0);
+  suonaTono(659, 130, "sine", 0.13, 130);
+  suonaTono(784, 130, "sine", 0.13, 260);
+  suonaTono(1047, 260, "sine", 0.14, 390);
+}
+
+function suonaMessaggioChat() {
+  suonaTono(740, 70, "sine", 0.08, 0);
+}
+
+function suonaAvvisoTempo() {
+  suonaTono(300, 90, "triangle", 0.14, 0);
+}
+
+function suonaRichiestaAudio() {
+  suonaTono(700, 90, "sine", 0.12, 0);
+  suonaTono(900, 120, "sine", 0.12, 130);
+}
+
+function toggleSuoni() {
+  impostaSuoni(!suoniAttivi);
+}
+
+function impostaSuoni(attivi) {
+  suoniAttivi = !!attivi;
+  localStorage.setItem("suoniAttivi", suoniAttivi ? "on" : "off");
+  aggiornaTestoBottoneSuoni();
+}
+
+function aggiornaTestoBottoneSuoni() {
+  const b = document.getElementById("btn-toggle-suoni");
+  if (!b) return;
+  b.textContent = suoniAttivi ? "🔊 Suoni: On" : "🔇 Suoni: Off";
+}
+
+/* ============================================================
+   TUTTO SCHERMO
+   ============================================================ */
+
+function toggleFullscreen() {
+  try {
+    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+      const elemento = document.documentElement;
+      const richiesta =
+        elemento.requestFullscreen ||
+        elemento.webkitRequestFullscreen ||
+        elemento.mozRequestFullScreen ||
+        elemento.msRequestFullscreen;
+      if (!richiesta) {
+        alert("Il tuo browser non supporta lo schermo intero.");
+        return;
+      }
+      const risultato = richiesta.call(elemento);
+      if (risultato && typeof risultato.catch === "function") {
+        risultato.catch((err) => {
+          alert("Non è stato possibile attivare lo schermo intero" + (err && err.message ? ": " + err.message : "."));
+        });
+      }
+    } else {
+      const esci =
+        document.exitFullscreen ||
+        document.webkitExitFullscreen ||
+        document.mozCancelFullScreen ||
+        document.msExitFullscreen;
+      if (esci) {
+        esci.call(document);
+      }
+    }
+  } catch (err) {
+    alert("Errore durante l'attivazione dello schermo intero" + (err && err.message ? ": " + err.message : "."));
+  }
+}
+
+function aggiornaTestoBottoneFullscreen() {
+  const b = document.getElementById("btn-toggle-fullscreen");
+  if (!b) return;
+  b.textContent = (document.fullscreenElement || document.webkitFullscreenElement) ? "🡼 Esci da tutto schermo" : "⛶ Tutto schermo";
+}
+
+document.addEventListener("fullscreenchange", aggiornaTestoBottoneFullscreen);
+document.addEventListener("webkitfullscreenchange", aggiornaTestoBottoneFullscreen);
+
+/* ============================================================
+   ORIENTAMENTO / LAYOUT
+   ============================================================ */
+
+function eSchermoInLandscape() {
+  if (window.screen && window.screen.orientation && typeof window.screen.orientation.type === "string") {
+    const orientamento = window.screen.orientation.type;
+    if (orientamento === "landscape-primary" || orientamento === "landscape-secondary") return true;
+    if (orientamento === "portrait-primary" || orientamento === "portrait-secondary") return false;
+  }
+  return window.innerWidth > window.innerHeight;
+}
+
+function calcolaEAggiornaOrientamento() {
+  const eDesktop = document.body.classList.contains("modalita-desktop");
+  const eLandscape = eSchermoInLandscape();
+  document.body.classList.remove("richiede-rotazione");
+  document.body.classList.toggle("tabellone-ruotato", !eDesktop && !eLandscape);
+  const altezzaReale = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+  document.documentElement.style.setProperty("--altezza-reale", altezzaReale + "px");
+}
+
+function rilevaEImpostaModalitaDesktop() {
+  const puntatorePreciso = window.matchMedia && window.matchMedia("(pointer: fine)").matches;
+  const schermoAmpio = window.innerWidth >= 1000;
+  document.body.classList.toggle("modalita-desktop", !!(puntatorePreciso && schermoAmpio));
+}
+
+function aggiornaLayoutTabellone() {
+  const areaTabellone = document.getElementById("area-tabellone");
+  const immagine = document.getElementById("immagine-tabellone");
+  if (!areaTabellone || !immagine) return;
+
+  const rapportoNaturale = (immagine.naturalWidth && immagine.naturalHeight) ? immagine.naturalWidth / immagine.naturalHeight : 1.48;
+  const eDesktop = document.body.classList.contains("modalita-desktop");
+  const eLandscape = eSchermoInLandscape();
+  const larghezzaFinestra = window.visualViewport ? window.visualViewport.width : window.innerWidth;
+  const altezzaReale = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+
+  let Wc;
+  let Hc;
+
+  if (eDesktop) {
+    const margineOrizzontale = Math.max(16, larghezzaFinestra * 0.03);
+    const margineVerticale = Math.max(16, altezzaReale * 0.03);
+    const larghezzaDisponibile = larghezzaFinestra - margineOrizzontale * 2;
+    const altezzaDisponibile = altezzaReale - margineVerticale * 2;
+    Wc = Math.max(120, Math.min(larghezzaDisponibile, altezzaDisponibile * rapportoNaturale));
+    Hc = Wc / rapportoNaturale;
+  } else if (eLandscape) {
+    const margineOrizzontale = 8;
+    const margineVerticale = 8;
+    const larghezzaDisponibile = larghezzaFinestra - margineOrizzontale * 2;
+    const altezzaDisponibile = altezzaReale - margineVerticale * 2;
+    Wc = Math.min(larghezzaDisponibile, altezzaDisponibile * rapportoNaturale);
+    Hc = Wc / rapportoNaturale;
+  } else {
+    const margine = 8;
+    const spazioOrizzontale = larghezzaFinestra - margine * 2;
+    const spazioVerticale = altezzaReale - margine * 2;
+    Hc = spazioOrizzontale;
+    Wc = Hc * rapportoNaturale;
+    if (Wc > spazioVerticale) {
+      Wc = spazioVerticale;
+      Hc = Wc / rapportoNaturale;
+    }
+  }
+
+  if (!Number.isFinite(Wc) || !Number.isFinite(Hc)) return;
+
+  areaTabellone.style.width = Wc + "px";
+  areaTabellone.style.height = Hc + "px";
+
+  riposizionaTuttePedine();
+}
+
+let timerDebounceResize = null;
+
+function gestisciResize() {
+  rilevaEImpostaModalitaDesktop();
+  calcolaEAggiornaOrientamento();
+  clearTimeout(timerDebounceResize);
+  timerDebounceResize = setTimeout(aggiornaLayoutTabellone, 60);
+}
+
+function inizializzaGestioneOrientamento() {
+  rilevaEImpostaModalitaDesktop();
+  calcolaEAggiornaOrientamento();
+  aggiornaLayoutTabellone();
+
+  window.addEventListener("resize", gestisciResize);
+  window.addEventListener("orientationchange", () => {
+    setTimeout(gestisciResize, 50);
+    setTimeout(gestisciResize, 300);
+    setTimeout(gestisciResize, 700);
+  });
+
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", gestisciResize);
+  }
+
+  if (window.screen && window.screen.orientation && window.screen.orientation.addEventListener) {
+    window.screen.orientation.addEventListener("change", () => {
+      setTimeout(gestisciResize, 50);
+      setTimeout(gestisciResize, 300);
     });
   }
 
-  flussoMediaLocale = null;
-  microfonoLocaleAttivo = false;
-  webcamLocaleAttiva = false;
+  const immagine = document.getElementById("immagine-tabellone");
+  if (immagine_pronta()) {
+    aggiornaLayoutTabellone();
+  } else if (immagine) {
+    immagine.addEventListener("load", aggiornaLayoutTabellone);
+  }
 }
 
-async function ottieniMediaLocale({ audio = true, video = true } = {}) {
-  if (
-    !navigator.mediaDevices ||
-    !navigator.mediaDevices.getUserMedia
-  ) {
-    aggiornaStatoMedia("Il browser non supporta audio/video.");
-    return false;
+function immagine_pronta() {
+  const immagine = document.getElementById("immagine-tabellone");
+  return !!(immagine && immagine.complete && immagine.naturalWidth);
+}
+
+function riposizionaTuttePedine() {
+  ultimoStatoGiocatori.forEach((g) => {
+    const p = document.getElementById("pedina-" + g.id);
+    if (p) posizionaPedina(p, g.posizione);
+  });
+}
+
+/* ============================================================
+   MESSAGGIO GRANDE
+   ============================================================ */
+
+let timerFlashMessaggio = null;
+
+function mostraMessaggioGiocoGrande(testo) {
+  if (!testo) return;
+  const el = document.getElementById("flash-messaggio-gioco");
+  if (!el) return;
+  if (testo.toLowerCase().includes("avanza dello stesso numero di caselle")) return;
+  const span = el.querySelector("span");
+  if (!span) return;
+  if (span.textContent === testo && el.classList.contains("visibile")) return;
+  span.textContent = testo;
+  el.classList.remove("visibile");
+  void el.offsetWidth;
+  el.classList.add("visibile");
+  if (timerFlashMessaggio) clearTimeout(timerFlashMessaggio);
+  timerFlashMessaggio = setTimeout(() => { el.classList.remove("visibile"); }, 1500);
+}
+
+/* ============================================================
+   DETERMINAZIONE ORDINE
+   ============================================================ */
+
+let areaDadiHomeGenitore = null;
+let areaDadiHomeFratelloSuccessivo = null;
+
+function spostaDadiInDeterminazione() {
+  const areaDadi = document.getElementById("area-dadi");
+  const slot = document.getElementById("slot-dadi-determinazione");
+  if (!areaDadi || !slot) return false;
+  if (areaDadi.parentNode === slot) return false;
+  areaDadiHomeGenitore = areaDadi.parentNode;
+  areaDadiHomeFratelloSuccessivo = areaDadi.nextSibling;
+  slot.appendChild(areaDadi);
+  areaDadi.classList.add("dadi-in-popup");
+  return true;
+}
+
+function riportaDadiAllaPartita() {
+  const areaDadi = document.getElementById("area-dadi");
+  if (!areaDadi || !areaDadiHomeGenitore) return;
+  if (areaDadiHomeFratelloSuccessivo && areaDadiHomeFratelloSuccessivo.parentNode === areaDadiHomeGenitore) {
+    areaDadiHomeGenitore.insertBefore(areaDadi, areaDadiHomeFratelloSuccessivo);
+  } else {
+    areaDadiHomeGenitore.appendChild(areaDadi);
   }
+  areaDadi.classList.remove("dadi-in-popup");
+}
 
-  try {
-    let constraints = {
-      audio: !!audio,
-      video: !!video
-    };
+function disegnaListaDeterminazione(giocatori, turnoInCorsoUid, gruppoSpareggio) {
+  const lista = document.getElementById("lista-determinazione");
+  if (!lista) return;
 
-    if (!audio && !video) {
-      constraints = {
-        audio: false,
-        video: false
-      };
-    }
+  const elenco = Array.isArray(giocatori) ? giocatori : [];
+  const spareggioSet = new Set(Array.isArray(gruppoSpareggio) ? gruppoSpareggio : []);
 
-    if (!flussoMediaLocale) {
-      flussoMediaLocale =
-        await navigator.mediaDevices.getUserMedia(constraints);
+  lista.innerHTML = elenco.map((g) => {
+    const avatarHtml = g.avatar
+      ? `<img class="avatar-mini" src="${g.avatar}" alt="">`
+      : `<div class="avatar-mini" style="background:${coloreDaNome(g.nome)};">${iniziale(g.nome)}</div>`;
+
+    let statoHtml;
+    if (g.risultato != null) {
+      statoHtml = `<span class="determinazione-risultato">🎲 ${g.risultato}</span>`;
+    } else if (g.uid === turnoInCorsoUid) {
+      statoHtml = `<span class="determinazione-in-corso">🎲 sta tirando...</span>`;
     } else {
-      const audioRichiesto = !!audio;
-      const videoRichiesto = !!video;
-
-      const haAudio =
-        flussoMediaLocale.getAudioTracks().length > 0;
-
-      const haVideo =
-        flussoMediaLocale.getVideoTracks().length > 0;
-
-      if (audioRichiesto !== haAudio || videoRichiesto !== haVideo) {
-        flussoMediaLocale.getTracks().forEach(track => {
-          try {
-            track.stop();
-          } catch (_) {}
-        });
-
-        flussoMediaLocale =
-          await navigator.mediaDevices.getUserMedia(constraints);
-      }
+      statoHtml = `<span class="determinazione-attesa">in attesa</span>`;
     }
 
-    microfonoLocaleAttivo =
-      flussoMediaLocale
-        .getAudioTracks()
-        .some(track => track.enabled && track.readyState === "live");
+    const tagSpareggio = spareggioSet.has(g.uid) ? `<span class="determinazione-tag-spareggio" title="In spareggio">⚔️</span>` : "";
+    const evidenzia = g.uid === turnoInCorsoUid ? " determinazione-riga-attiva" : "";
 
-    webcamLocaleAttiva =
-      flussoMediaLocale
-        .getVideoTracks()
-        .some(track => track.enabled && track.readyState === "live");
+    return `
+      <div class="determinazione-riga${evidenzia}">
+        ${avatarHtml}
+        <span class="determinazione-nome">${g.nome || "?"}</span>
+        ${tagSpareggio}
+        ${statoHtml}
+      </div>
+    `;
+  }).join("");
+}
 
-    aggiornaPulsantiMedia();
-    creaTileLocale();
+function gestisciStatoDeterminazione(dati) {
+  faseAttuale = "determinazione";
 
-    aggiornaStatoMedia(
-      "Connessione audio/video attiva",
-      false
-    );
+  const overlay = document.getElementById("overlay-determinazione");
+  if (overlay) overlay.classList.add("aperto");
 
-    return true;
-  } catch (errore) {
-    console.error("Errore accesso dispositivi multimediali:", errore);
+  const appenaEntrato = spostaDadiInDeterminazione();
+  if (appenaEntrato) mostraDadi(1, 1);
 
-    aggiornaStatoMedia(
-      "Permesso microfono/webcam non concesso."
-    );
+  const giocatori = Array.isArray(dati.giocatori) ? dati.giocatori : [];
 
-    return false;
+  disegnaListaDeterminazione(giocatori, dati.turnoInCorsoUid || null, dati.gruppoSpareggioAttuale || []);
+
+  possoTirareIoInDeterminazione = dati.turnoInCorsoUid === mioUid;
+
+  const areaDadi = document.getElementById("area-dadi");
+  if (areaDadi) areaDadi.classList.toggle("disabilitato", !possoTirareIoInDeterminazione);
+
+  const sottotitolo = document.getElementById("sottotitolo-determinazione");
+
+  if (dati.gruppoSpareggioAttuale && dati.gruppoSpareggioAttuale.length) {
+    const nomiSpareggio = dati.gruppoSpareggioAttuale.map((u) => {
+      const g = giocatori.find((x) => x.uid === u);
+      return g ? g.nome : "?";
+    }).join(", ");
+    if (sottotitolo) sottotitolo.textContent = "⚔️ Pareggio tra " + nomiSpareggio + " — nuovo tiro per decidere l'ordine tra loro!";
+  } else if (possoTirareIoInDeterminazione) {
+    if (sottotitolo) sottotitolo.textContent = "Tocca a te: tira i dadi!";
+  } else {
+    const inAttesaDi = giocatori.find((g) => g.uid === dati.turnoInCorsoUid);
+    if (sottotitolo) sottotitolo.textContent = inAttesaDi ? "In attesa che " + inAttesaDi.nome + " tiri..." : "I giocatori tirano i dadi uno alla volta.";
+  }
+
+  if (dati.tempoInizioTurno != null && dati.durataMossaMs != null) {
+    avviaCountdownTurno(dati.tempoInizioTurno, dati.durataMossaMs, dati.scadenzaTurno || null);
+  } else if (appenaEntrato) {
+    mostraDadi(1, 1);
   }
 }
 
-function creaTileLocale() {
-  const box = document.getElementById("media-videos");
-  if (!box) return;
+function gestisciRisultatoDeterminazione(dati) {
+  animaLancioDadi(dati.dado1, dati.dado2, () => {
+    const sottotitolo = document.getElementById("sottotitolo-determinazione");
+    if (sottotitolo) {
+      sottotitolo.textContent = (dati.nome || "Il giocatore") + " ha fatto " + dati.valoreDado + (dati.automatico ? " (tempo scaduto)" : "") + "!";
+    }
+  });
+}
 
-  let tile = document.getElementById("media-locale");
+function gestisciOrdineFinaleCalcolato(dati) {
+  const sottotitolo = document.getElementById("sottotitolo-determinazione");
+  if (sottotitolo) sottotitolo.textContent = "Ordine deciso! La partita inizia tra un istante...";
 
-  if (!flussoMediaLocale || !webcamLocaleAttiva) {
-    if (tile) tile.remove();
+  const lista = document.getElementById("lista-determinazione");
+  if (!lista) return;
+
+  const ordine = Array.isArray(dati.ordineGiocatori) ? dati.ordineGiocatori : [];
+
+  lista.innerHTML = ordine.map((nome, indice) => {
+    const punteggio = dati.punteggi && dati.punteggi[nome] != null ? dati.punteggi[nome] : "?";
+    return `
+      <div class="determinazione-riga determinazione-riga-finale" style="animation-delay:${indice * 0.12}s;">
+        <span class="determinazione-posizione-finale">${indice + 1}°</span>
+        <span class="determinazione-nome">${nome || "?"}</span>
+        <span class="determinazione-risultato">🎲 ${punteggio}</span>
+      </div>
+    `;
+  }).join("");
+}
+
+function gestisciDeterminazioneCompletata(dati) {
+  faseAttuale = "normale";
+
+  const overlay = document.getElementById("overlay-determinazione");
+  if (overlay) overlay.classList.remove("aperto");
+
+  riportaDadiAllaPartita();
+
+  ultimoStatoGiocatori = Array.isArray(dati.giocatori) ? dati.giocatori : [];
+
+  const primoMovimento = dati.primoMovimento || {};
+
+  const messaggiGioco = document.getElementById("messaggi-gioco");
+  if (messaggiGioco) {
+    messaggiGioco.textContent =
+      "🎲 " + (primoMovimento.nomeGiocatore || "?") +
+      " ha fatto " + Number(primoMovimento.valoreDado || 0) +
+      " — avanza di " + Number(primoMovimento.valoreDado || 0) + " caselle!";
+  }
+
+  animaSaltoPedina(primoMovimento.idGiocatore, primoMovimento.percorso || [], () => {
+    if (Array.isArray(primoMovimento.messaggi) && primoMovimento.messaggi.length) {
+      mostraMessaggioGiocoGrande(primoMovimento.messaggi.join(" "));
+    }
+
+    if (dati.tempoInizioTurno != null && dati.durataMossaMs != null) {
+      avviaCountdownTurno(dati.tempoInizioTurno, dati.durataMossaMs, dati.scadenzaTurno || null);
+    }
+
+    if (dati.vittoria) {
+      turnoAttualeId = null;
+      fermaCountdownCompleto();
+
+      const areaDadi = document.getElementById("area-dadi");
+      if (areaDadi) areaDadi.classList.add("disabilitato");
+
+      disegnaGiocatori();
+      mostraVittoria(dati.vincitore);
+    } else {
+      aggiornaTurno(dati.turnoDiId || null);
+      disegnaGiocatori();
+    }
+  });
+}
+
+/* ============================================================
+   TIMER
+   ============================================================ */
+
+function fermaCountdownCompleto() {
+  if (intervalCountdown !== null) {
+    clearInterval(intervalCountdown);
+    intervalCountdown = null;
+  }
+}
+
+function azzeraDatiCountdown() {
+  durataMossaMsAttuale = null;
+  msResiduiRiferimento = null;
+  momentoLocaleRiferimento = null;
+  ultimoSecondoAvviso = null;
+}
+
+function avviaCountdownTurno(tempoInizio, durataMs, scadenzaTurno = null) {
+  fermaCountdownCompleto();
+
+  const durataNumero = Number(durataMs);
+  durataMossaMsAttuale = Number.isFinite(durataNumero) && durataNumero > 0 ? durataNumero : null;
+
+  if (durataMossaMsAttuale === null) {
+    msResiduiRiferimento = null;
+    momentoLocaleRiferimento = null;
+    const el = document.getElementById("countdown-turno");
+    if (el) el.textContent = "⏱ --s";
     return;
   }
 
-  if (!tile) {
-    tile = document.createElement("div");
-    tile.id = "media-locale";
-    tile.className = "media-tile";
+  const inizioNumero = Number(tempoInizio);
+  const scadenzaNumero = Number(scadenzaTurno);
 
-    tile.innerHTML = `
-      <video autoplay muted playsinline></video>
-      <div class="media-name">Tu</div>
-    `;
-
-    box.prepend(tile);
+  let msRestantiAllArrivo;
+  if (Number.isFinite(scadenzaNumero) && scadenzaNumero > 0) {
+    msRestantiAllArrivo = scadenzaNumero - Date.now();
+  } else if (Number.isFinite(inizioNumero) && inizioNumero > 0) {
+    msRestantiAllArrivo = (inizioNumero + durataMossaMsAttuale) - Date.now();
+  } else {
+    msRestantiAllArrivo = durataMossaMsAttuale;
   }
 
-  const video = tile.querySelector("video");
+  // Non può mai superare i secondi ufficiali dichiarati dal server, qualunque
+  // altro valore arrivi — questo è ciò che garantisce di non vedere mai un
+  // countdown "gonfiato".
+  msResiduiRiferimento = Math.max(0, Math.min(durataMossaMsAttuale, msRestantiAllArrivo));
+  momentoLocaleRiferimento = performance.now();
 
-  if (video && video.srcObject !== flussoMediaLocale) {
-    video.srcObject = flussoMediaLocale;
+  ultimoSecondoAvviso = null;
+  turnoLocalmenteCompletato = false;
+
+  aggiornaCountdownTurno();
+
+  intervalCountdown = setInterval(aggiornaCountdownTurno, 100);
+}
+
+function fermaCountdownPerAzioneLocale() {
+  turnoLocalmenteCompletato = true;
+  fermaCountdownCompleto();
+
+  const el = document.getElementById("countdown-turno");
+  if (el) {
+    el.textContent = "✓";
+    el.classList.remove("countdown-scaduto");
+    el.classList.add("countdown-fermo");
   }
 }
 
-function chiudiConnessioneMedia(uid) {
-  const pc = connessioniMedia[uid];
+function aggiornaCountdownTurno() {
+  const el = document.getElementById("countdown-turno");
+  if (!el) return;
 
-  if (pc) {
-    try {
-      pc.close();
-    } catch (_) {}
+  if (turnoLocalmenteCompletato) return;
 
-    delete connessioniMedia[uid];
+  if (msResiduiRiferimento === null || momentoLocaleRiferimento === null) {
+    el.textContent = "⏱ --s";
+    el.classList.remove("countdown-scaduto");
+    return;
   }
 
-  delete peerInfoMedia[uid];
+  const trascorsoLocaleMs = performance.now() - momentoLocaleRiferimento;
+  const restanteMs = msResiduiRiferimento - trascorsoLocaleMs;
+  const sec = Math.max(0, Math.ceil(restanteMs / 1000));
 
-  const tile = document.getElementById(
-    "media-remoto-" + uid
-  );
+  el.textContent = "⏱ " + sec + "s";
+  el.classList.toggle("countdown-scaduto", sec <= 0);
+  el.classList.remove("countdown-fermo");
 
-  if (tile) tile.remove();
-}
-
-function creaTileRemoto(uid, nome, videoAttivo) {
-  const box = document.getElementById("media-videos");
-
-  if (!box) return null;
-
-  let tile = document.getElementById(
-    "media-remoto-" + uid
-  );
-
-  if (!tile) {
-    tile = document.createElement("div");
-
-    tile.id =
-      "media-remoto-" + uid;
-
-    tile.className =
-      "media-tile" +
-      (videoAttivo ? "" : " audio-only");
-
-    tile.innerHTML = `
-      <video autoplay playsinline></video>
-      <div class="media-name"></div>
-    `;
-
-    box.appendChild(tile);
-  }
-
-  tile.classList.toggle(
-    "audio-only",
-    !videoAttivo
-  );
-
-  const nomeEl =
-    tile.querySelector(".media-name");
-
-  if (nomeEl) {
-    nomeEl.textContent =
-      nome || "Giocatore";
-  }
-
-  return tile.querySelector("video");
-}
-
-function aggiungiStreamRemoto(uid, nome, stream) {
-  const hasVideo =
-    stream
-      .getVideoTracks()
-      .some(track => track.readyState !== "ended");
-
-  const video =
-    creaTileRemoto(uid, nome, hasVideo);
-
-  if (!video) return;
-
-  video.srcObject = stream;
-  video.muted = false;
-
-  const playPromise = video.play();
-
-  if (
-    playPromise &&
-    typeof playPromise.catch === "function"
-  ) {
-    playPromise.catch(() => {});
+  if (sec >= 1 && sec <= 3 && sec !== ultimoSecondoAvviso) {
+    ultimoSecondoAvviso = sec;
+    suonaAvvisoTempo();
   }
 }
 
-async function creaConnessioneMedia(
-  uid,
-  nome,
-  deveCreareOfferta,
-  videoAttivoRemoto = true
-) {
-  if (!uid || uid === mioUid) {
-    return null;
+/* ============================================================
+   MICROFONO / WEBRTC
+   ============================================================ */
+
+let microfonoAttivo = false;
+let flussoAudioLocale = null;
+let connessioniPeer = {};
+let elementiAudioRemoti = {};
+let uidRichiestaAudioInAttesa = null;
+let richiesteInviate = new Set();
+let coppieAudioAttive = new Set();
+
+const CONFIGURAZIONE_ICE = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+
+async function toggleMicrofono() {
+  if (microfonoAttivo) {
+    disattivaMicrofono();
+  } else {
+    await attivaMicrofono();
   }
+}
 
-  if (
-    !socket ||
-    socket.readyState !== WebSocket.OPEN
-  ) {
-    return null;
-  }
-
-  if (connessioniMedia[uid]) {
-    return connessioniMedia[uid];
-  }
-
-  const pc = new RTCPeerConnection(
-    CONFIGURAZIONE_ICE
-  );
-
-  connessioniMedia[uid] = pc;
-
-  peerInfoMedia[uid] = {
-    nome: nome || "Giocatore",
-    webcamAttiva: !!videoAttivoRemoto
-  };
-
-  if (!flussoMediaLocale) {
-    await ottieniMediaLocale({
-      audio: true,
-      video: webcamLocaleAttiva
-    });
-  }
-
-  if (flussoMediaLocale) {
-    flussoMediaLocale.getTracks().forEach(track => {
-      try {
-        pc.addTrack(
-          track,
-          flussoMediaLocale
-        );
-      } catch (_) {}
-    });
-  }
-
-  pc.onicecandidate = event => {
-    if (
-      !event.candidate ||
-      !socket ||
-      socket.readyState !== WebSocket.OPEN
-    ) {
+async function attivaMicrofono() {
+  try {
+    if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== "function") {
+      alert("Il tuo browser non permette l'accesso al microfono.");
       return;
     }
+    flussoAudioLocale = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+  } catch (e) {
+    alert("Non è stato possibile accedere al microfono. Controlla i permessi del browser.");
+    return;
+  }
+  microfonoAttivo = true;
+  aggiornaTestoBottoneMicrofono();
+  disegnaGiocatori();
+}
 
-    socket.send(
-      JSON.stringify({
-        tipo: "webrtc-ice-candidate",
-        partitaId,
-        destinatarioUid: uid,
-        candidate: event.candidate
-      })
-    );
+function disattivaMicrofono() {
+  microfonoAttivo = false;
+  if (flussoAudioLocale) {
+    flussoAudioLocale.getTracks().forEach((t) => t.stop());
+    flussoAudioLocale = null;
+  }
+  Object.keys(connessioniPeer).forEach(chiudiConnessioneAudio);
+  richiesteInviate.clear();
+  coppieAudioAttive.clear();
+  aggiornaTestoBottoneMicrofono();
+  disegnaGiocatori();
+}
+
+function aggiornaTestoBottoneMicrofono() {
+  const b = document.getElementById("btn-toggle-microfono");
+  if (b) b.textContent = microfonoAttivo ? "🎤 Microfono: On" : "🔇 Microfono: Off";
+}
+
+function richiediAudioCon(altroUid) {
+  if (!microfonoAttivo) {
+    alert("Attiva prima il tuo microfono dal menu ☰.");
+    return;
+  }
+  if (!altroUid || altroUid === mioUid) return;
+  if (richiesteInviate.has(altroUid) || coppieAudioAttive.has(altroUid)) return;
+  if (!socket || socket.readyState !== WebSocket.OPEN) return;
+
+  richiesteInviate.add(altroUid);
+  socket.send(JSON.stringify({ tipo: "richiestaAudio", partitaId, destinatarioUid: altroUid }));
+  disegnaGiocatori();
+}
+
+function mostraRichiestaAudioRicevuta(mittenteUid, mittenteNome) {
+  uidRichiestaAudioInAttesa = mittenteUid;
+  suonaRichiestaAudio();
+
+  const testo = document.getElementById("testo-richiesta-audio");
+  if (testo) testo.textContent = (mittenteNome || "Un giocatore") + " ti sta chiedendo di parlare in chiamata audio";
+
+  const popup = document.getElementById("popup-richiesta-audio");
+  if (popup) popup.classList.remove("nascosto");
+}
+
+async function rispondiRichiestaAudioRicevuta(accettato) {
+  const mittenteUid = uidRichiestaAudioInAttesa;
+
+  const popup = document.getElementById("popup-richiesta-audio");
+  if (popup) popup.classList.add("nascosto");
+
+  uidRichiestaAudioInAttesa = null;
+  if (!mittenteUid) return;
+
+  if (accettato && !microfonoAttivo) {
+    await attivaMicrofono();
+    if (!microfonoAttivo) {
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ tipo: "rispostaAudio", partitaId, destinatarioUid: mittenteUid, accettato: false }));
+      }
+      return;
+    }
+  }
+
+  if (!socket || socket.readyState !== WebSocket.OPEN) return;
+
+  socket.send(JSON.stringify({ tipo: "rispostaAudio", partitaId, destinatarioUid: mittenteUid, accettato: !!accettato }));
+
+  if (accettato) {
+    coppieAudioAttive.add(mittenteUid);
+    disegnaGiocatori();
+  }
+}
+
+function creaConnessionePeer(altroUid) {
+  if (!altroUid) return null;
+  if (connessioniPeer[altroUid]) return connessioniPeer[altroUid];
+
+  let pc;
+  try {
+    pc = new RTCPeerConnection(CONFIGURAZIONE_ICE);
+  } catch (e) {
+    return null;
+  }
+
+  if (flussoAudioLocale) {
+    flussoAudioLocale.getTracks().forEach((t) => {
+      try { pc.addTrack(t, flussoAudioLocale); } catch (e) {}
+    });
+  }
+
+  pc.onicecandidate = (ev) => {
+    if (ev.candidate && socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({ tipo: "webrtc-ice-candidate", partitaId, destinatarioUid: altroUid, candidate: ev.candidate }));
+    }
   };
 
-  pc.ontrack = event => {
-    const stream =
-      event.streams && event.streams[0]
-        ? event.streams[0]
-        : null;
-
-    if (stream) {
-      aggiungiStreamRemoto(
-        uid,
-        nome,
-        stream
-      );
+  pc.ontrack = (ev) => {
+    let elAudio = elementiAudioRemoti[altroUid];
+    if (!elAudio) {
+      elAudio = document.createElement("audio");
+      elAudio.autoplay = true;
+      elAudio.playsInline = true;
+      elAudio.id = "audio-remoto-" + altroUid;
+      document.body.appendChild(elAudio);
+      elementiAudioRemoti[altroUid] = elAudio;
+    }
+    if (ev.streams && ev.streams[0]) {
+      elAudio.srcObject = ev.streams[0];
+      const p = elAudio.play();
+      if (p && typeof p.catch === "function") p.catch(() => {});
     }
   };
 
   pc.onconnectionstatechange = () => {
-    if (
-      pc.connectionState === "failed" ||
-      pc.connectionState === "closed"
-    ) {
-      chiudiConnessioneMedia(uid);
+    if (pc.connectionState === "failed" || pc.connectionState === "closed") {
+      chiudiConnessioneAudio(altroUid);
     }
   };
 
-  if (deveCreareOfferta) {
-    try {
-      const offer = await pc.createOffer();
-
-      await pc.setLocalDescription(offer);
-
-      if (
-        socket &&
-        socket.readyState === WebSocket.OPEN
-      ) {
-        socket.send(
-          JSON.stringify({
-            tipo: "webrtc-offer",
-            partitaId,
-            destinatarioUid: uid,
-            sdp: pc.localDescription
-          })
-        );
-      }
-    } catch (errore) {
-      console.error(
-        "Errore creazione offerta WebRTC:",
-        errore
-      );
-    }
-  }
-
+  connessioniPeer[altroUid] = pc;
   return pc;
 }
 
-async function gestisciAvvioMediaAutomatico(dati) {
-  const peers =
-    Array.isArray(dati.peer)
-      ? dati.peer
-      : [];
+async function avviaConnessioneAudio(altroUid, sonoIoAdIniziare) {
+  if (!altroUid || altroUid === mioUid) return;
+  if (connessioniPeer[altroUid]) return;
 
-  if (!peers.length) {
-    return;
-  }
-
-  const vuoleAudio =
-    peers.length > 0;
-
-  const ok =
-    await ottieniMediaLocale({
-      audio: vuoleAudio,
-      video: webcamLocaleAttiva
-    });
-
-  if (!ok) {
-    return;
-  }
-
-  const offerte =
-    new Set(
-      dati.iniziaOffertaVerso || []
-    );
-
-  for (const peer of peers) {
-    if (!peer || !peer.uid) {
-      continue;
-    }
-
-    await creaConnessioneMedia(
-      peer.uid,
-      peer.nome,
-      offerte.has(peer.uid),
-      !!peer.webcamAttiva
-    );
-  }
-}
-
-async function gestisciWebRTCOffer(dati) {
-  const uid = dati.mittenteUid;
-
-  if (!uid || !dati.sdp) return;
-
-  const pc =
-    await creaConnessioneMedia(
-      uid,
-      peerInfoMedia[uid]
-        ? peerInfoMedia[uid].nome
-        : "Giocatore",
-      false,
-      peerInfoMedia[uid]
-        ? !!peerInfoMedia[uid].webcamAttiva
-        : true
-    );
-
+  const pc = creaConnessionePeer(altroUid);
   if (!pc) return;
 
-  try {
-    await pc.setRemoteDescription(
-      new RTCSessionDescription(dati.sdp)
-    );
-
-    const answer =
-      await pc.createAnswer();
-
-    await pc.setLocalDescription(answer);
-
-    if (
-      socket &&
-      socket.readyState === WebSocket.OPEN
-    ) {
-      socket.send(
-        JSON.stringify({
-          tipo: "webrtc-answer",
-          partitaId,
-          destinatarioUid: uid,
-          sdp: pc.localDescription
-        })
-      );
-    }
-  } catch (errore) {
-    console.error(
-      "Errore gestione offerta WebRTC:",
-      errore
-    );
-  }
-}
-
-async function gestisciWebRTCAnswer(dati) {
-  const uid = dati.mittenteUid;
-
-  const pc =
-    connessioniMedia[uid];
-
-  if (!pc || !dati.sdp) return;
-
-  try {
-    await pc.setRemoteDescription(
-      new RTCSessionDescription(dati.sdp)
-    );
-  } catch (errore) {
-    console.error(
-      "Errore gestione risposta WebRTC:",
-      errore
-    );
-  }
-}
-
-async function gestisciICECandidate(dati) {
-  const uid =
-    dati.mittenteUid;
-
-  const pc =
-    connessioniMedia[uid];
-
-  if (!pc || !dati.candidate) return;
-
-  try {
-    await pc.addIceCandidate(
-      new RTCIceCandidate(dati.candidate)
-    );
-  } catch (errore) {
-    console.warn(
-      "ICE candidate non accettato:",
-      errore
-    );
-  }
-}
-
-async function toggleMicrofonoLocale() {
-  if (!flussoMediaLocale) {
-    await ottieniMediaLocale({
-      audio: true,
-      video: webcamLocaleAttiva
-    });
-
-    return;
-  }
-
-  const tracks =
-    flussoMediaLocale.getAudioTracks();
-
-  if (!tracks.length) {
-    await ottieniMediaLocale({
-      audio: true,
-      video: webcamLocaleAttiva
-    });
-
-    return;
-  }
-
-  microfonoLocaleAttivo =
-    !microfonoLocaleAttivo;
-
-  tracks.forEach(track => {
-    track.enabled =
-      microfonoLocaleAttivo;
-  });
-
-  aggiornaPulsantiMedia();
-}
-
-async function toggleWebcamLocale() {
-  if (!flussoMediaLocale) {
-    await ottieniMediaLocale({
-      audio: microfonoLocaleAttivo,
-      video: true
-    });
-
-    return;
-  }
-
-  const tracks =
-    flussoMediaLocale.getVideoTracks();
-
-  if (!tracks.length) {
-    await ottieniMediaLocale({
-      audio: microfonoLocaleAttivo,
-      video: true
-    });
-
-    return;
-  }
-
-  webcamLocaleAttiva =
-    !webcamLocaleAttiva;
-
-  tracks.forEach(track => {
-    track.enabled =
-      webcamLocaleAttiva;
-  });
-
-  if (webcamLocaleAttiva) {
-    creaTileLocale();
-  } else {
-    const tile =
-      document.getElementById(
-        "media-locale"
-      );
-
-    if (tile) {
-      tile.remove();
-    }
-  }
-
-  aggiornaPulsantiMedia();
-}
-
-function chiudiTutteConnessioniMedia() {
-  Object.keys(connessioniMedia).forEach(uid => {
-    chiudiConnessioneMedia(uid);
-  });
-
-  fermaMediaLocale();
-
-  const box =
-    document.getElementById("media-videos");
-
-  if (box) {
-    box.innerHTML = "";
-  }
-
-  aggiornaPulsantiMedia();
-}
-
-// =========================================================
-// INTERFACCIA "CHI INIZIA?"
-//
-// Viene creata direttamente dal JS, quindi non devi
-// modificare gioco.html.
-// =========================================================
-
-function creaOverlayDeterminazione() {
-  let overlay =
-    document.getElementById(
-      "overlay-determinazione"
-    );
-
-  if (overlay) {
-    return overlay;
-  }
-
-  overlay =
-    document.createElement("div");
-
-  overlay.id =
-    "overlay-determinazione";
-
-  overlay.style.position = "fixed";
-  overlay.style.inset = "0";
-  overlay.style.display = "none";
-  overlay.style.alignItems = "center";
-  overlay.style.justifyContent = "center";
-  overlay.style.background = "rgba(0,0,0,.76)";
-  overlay.style.zIndex = "900";
-  overlay.style.padding = "20px";
-
-  const popup =
-    document.createElement("div");
-
-  popup.style.width =
-    "min(520px, 94vw)";
-
-  popup.style.maxHeight =
-    "88vh";
-
-  popup.style.overflow =
-    "auto";
-
-  popup.style.background =
-    "#121c26";
-
-  popup.style.border =
-    "2px solid #ffd700";
-
-  popup.style.borderRadius =
-    "16px";
-
-  popup.style.padding =
-    "24px";
-
-  popup.style.boxShadow =
-    "0 20px 60px rgba(0,0,0,.55)";
-
-  popup.innerHTML = `
-    <h2
-      style="
-        margin:0;
-        color:#ffd700;
-        text-align:center;
-      ">
-      🎲 Chi inizia?
-    </h2>
-
-    <p
-      id="determinazione-sottotitolo"
-      style="
-        margin:8px 0 18px;
-        text-align:center;
-        color:#ccc;
-        font-size:14px;
-      ">
-      Ogni giocatore tira due dadi.
-    </p>
-
-    <div id="lista-determinazione"></div>
-
-    <div
-      id="determinazione-controlli"
-      style="
-        display:flex;
-        justify-content:center;
-        margin-top:16px;
-      ">
-    </div>
-  `;
-
-  overlay.appendChild(popup);
-  document.body.appendChild(overlay);
-
-  return overlay;
-}
-
-function aggiornaOverlayDeterminazione() {
-  const overlay =
-    creaOverlayDeterminazione();
-
-  overlay.style.display =
-    determinazioneAttiva
-      ? "flex"
-      : "none";
-
-  const lista =
-    document.getElementById(
-      "lista-determinazione"
-    );
-
-  if (!lista) return;
-
-  lista.innerHTML = "";
-
-  ordineDeterminazione.forEach(uid => {
-    const giocatore =
-      ultimoStatoGiocatori.find(
-        g => g.id === uid
-      );
-
-    const riga =
-      document.createElement("div");
-
-    riga.style.display = "flex";
-    riga.style.alignItems = "center";
-    riga.style.gap = "10px";
-    riga.style.padding = "10px 12px";
-    riga.style.marginBottom = "8px";
-    riga.style.borderRadius = "10px";
-    riga.style.background =
-      uid === determinazioneTurnoUid
-        ? "rgba(255,215,0,.13)"
-        : "rgba(255,255,255,.04)";
-
-    riga.style.border =
-      uid === determinazioneTurnoUid
-        ? "1px solid rgba(255,215,0,.45)"
-        : "1px solid rgba(255,255,255,.06)";
-
-    const nome =
-      giocatore
-        ? giocatore.nome
-        : "Giocatore";
-
-    const risultato =
-      risultatiDeterminazione[uid];
-
-    let testoRisultato =
-      "In attesa...";
-
-    let coloreRisultato =
-      "#888";
-
-    if (risultato != null) {
-      testoRisultato =
-        "🎲 " + risultato;
-
-      coloreRisultato =
-        "#ffd700";
-    } else if (
-      uid === determinazioneTurnoUid
-    ) {
-      testoRisultato =
-        "È il suo turno";
-
-      coloreRisultato =
-        "#ffd700";
-    }
-
-    riga.innerHTML = `
-      <div
-        style="
-          width:28px;
-          height:28px;
-          border-radius:50%;
-          background:${coloriGiocatori[
-            Math.max(
-              0,
-              ordineDeterminazione.indexOf(uid)
-            ) % coloriGiocatori.length
-          ]};
-          display:flex;
-          align-items:center;
-          justify-content:center;
-          font-weight:bold;
-          color:#fff;
-          flex-shrink:0;
-        ">
-        ${iniziale(nome)}
-      </div>
-
-      <div
-        style="
-          flex:1;
-          min-width:0;
-          color:#eee;
-          font-weight:
-            ${uid === determinazioneTurnoUid ? "bold" : "normal"};
-        ">
-        ${nome}
-      </div>
-
-      <div
-        style="
-          color:${coloreRisultato};
-          font-weight:bold;
-          font-size:13px;
-          flex-shrink:0;
-        ">
-        ${testoRisultato}
-      </div>
-    `;
-
-    lista.appendChild(riga);
-  });
-
-  const gruppo =
-    gruppoSpareggioAttuale || [];
-
-  const sottotitolo =
-    document.getElementById(
-      "determinazione-sottotitolo"
-    );
-
-  if (sottotitolo) {
-    if (gruppo.length > 1) {
-      const nomi =
-        gruppo
-          .map(uid => {
-            const g =
-              ultimoStatoGiocatori.find(
-                x => x.id === uid
-              );
-
-            return g
-              ? g.nome
-              : "Giocatore";
-          })
-          .join(", ");
-
-      sottotitolo.textContent =
-        "Pareggio! Nuovo spareggio tra: " +
-        nomi;
-    } else if (
-      determinazioneTurnoUid === mioUid
-    ) {
-      sottotitolo.textContent =
-        "È il tuo turno: tira i dadi!";
-    } else {
-      sottotitolo.textContent =
-        "Aspetta che gli altri giocatori tirino.";
-    }
-  }
-
-  const controlli =
-    document.getElementById(
-      "determinazione-controlli"
-    );
-
-  if (!controlli) return;
-
-  controlli.innerHTML = "";
-
-  if (
-    determinazioneTurnoUid === mioUid &&
-    !risultatiDeterminazione[mioUid]
-  ) {
-    const btn =
-      document.createElement("button");
-
-    btn.id =
-      "btn-tira-determinazione";
-
-    btn.textContent =
-      "🎲 Tira i dadi";
-
-    btn.style.border = "none";
-    btn.style.borderRadius = "10px";
-    btn.style.padding = "12px 22px";
-    btn.style.background = "#ffd700";
-    btn.style.color = "#000";
-    btn.style.fontWeight = "bold";
-    btn.style.cursor = "pointer";
-    btn.style.fontSize = "14px";
-
-    btn.onclick =
-      tiraDeterminazione;
-
-    controlli.appendChild(btn);
-  } else if (
-    determinazioneTurnoUid
-  ) {
-    const attesa =
-      document.createElement("div");
-
-    attesa.textContent =
-      "⏳ In attesa...";
-
-    attesa.style.color =
-      "#aaa";
-
-    attesa.style.fontSize =
-      "13px";
-
-    controlli.appendChild(
-      attesa
-    );
-  }
-}
-
-function apriDeterminazione(
-  giocatori,
-  turnoUid,
-  risultati,
-  gruppo
-) {
-  ultimoStatoGiocatori =
-    Array.isArray(giocatori)
-      ? giocatori
-      : ultimoStatoGiocatori;
-
-  determinazioneAttiva =
-    true;
-
-  determinazioneTurnoUid =
-    turnoUid || null;
-
-  risultatiDeterminazione =
-    risultati || {};
-
-  ordineDeterminazione =
-    Array.isArray(
-      giocatori
-    )
-      ? giocatori.map(g => g.id)
-      : ordineDeterminazione;
-
-  gruppoSpareggioAttuale =
-    Array.isArray(gruppo)
-      ? gruppo
-      : [];
-
-  aggiornaOverlayDeterminazione();
-
-  fermaTimerDeterminazione();
-}
-
-function chiudiDeterminazione() {
-  determinazioneAttiva =
-    false;
-
-  determinazioneTurnoUid =
-    null;
-
-  risultatiDeterminazione =
-    {};
-
-  gruppoSpareggioAttuale =
-    [];
-
-  fermaTimerDeterminazione();
-
-  const overlay =
-    document.getElementById(
-      "overlay-determinazione"
-    );
-
-  if (overlay) {
-    overlay.style.display =
-      "none";
-  }
-}
-
-function fermaTimerDeterminazione() {
-  if (timerDeterminazione) {
-    clearInterval(
-      timerDeterminazione
-    );
-
-    timerDeterminazione =
-      null;
-  }
-
-  scadenzaDeterminazione =
-    null;
-}
-
-function avviaTimerDeterminazioneLocale(
-  tempoInizio,
-  durata
-) {
-  fermaTimerDeterminazione();
-
-  if (!tempoInizio || !durata) {
-    return;
-  }
-
-  scadenzaDeterminazione =
-    Number(tempoInizio) +
-    Number(durata);
-
-  timerDeterminazione =
-    setInterval(() => {
-      if (
-        !determinazioneAttiva
-      ) {
-        fermaTimerDeterminazione();
-        return;
+  if (sonoIoAdIniziare) {
+    try {
+      const offerta = await pc.createOffer();
+      await pc.setLocalDescription(offerta);
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ tipo: "webrtc-offer", partitaId, destinatarioUid: altroUid, sdp: pc.localDescription }));
       }
-
-      if (
-        Date.now() >=
-        scadenzaDeterminazione
-      ) {
-        aggiornaOverlayDeterminazione();
-        return;
-      }
-
-      aggiornaOverlayDeterminazione();
-    }, 250);
+    } catch (e) {
+      chiudiConnessioneAudio(altroUid);
+    }
+  }
 }
 
-function tiraDeterminazione() {
-  if (
-    !determinazioneAttiva ||
-    determinazioneTurnoUid !== mioUid
-  ) {
-    return;
-  }
-
-  if (
-    risultatiDeterminazione[mioUid] != null
-  ) {
-    return;
-  }
-
-  if (
-    !socket ||
-    socket.readyState !== WebSocket.OPEN
-  ) {
-    return;
-  }
-
-  const btn =
-    document.getElementById(
-      "btn-tira-determinazione"
-    );
-
-  if (btn) {
-    btn.disabled =
-      true;
-
-    btn.style.opacity =
-      ".5";
-
-    btn.textContent =
-      "🎲 Tiro in corso...";
-  }
-
-  socket.send(
-    JSON.stringify({
-      tipo: "tiraDeterminazione",
-      partitaId
-    })
-  );
+async function gestisciOffertaRicevuta(mittenteUid, sdp) {
+  if (!microfonoAttivo || !mittenteUid || !sdp) return;
+  try {
+    const pc = connessioniPeer[mittenteUid] || creaConnessionePeer(mittenteUid);
+    if (!pc) return;
+    await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+    const risposta = await pc.createAnswer();
+    await pc.setLocalDescription(risposta);
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({ tipo: "webrtc-answer", partitaId, destinatarioUid: mittenteUid, sdp: pc.localDescription }));
+    }
+  } catch (e) {}
 }
 
-// =========================================================
-// DADI
-// =========================================================
+async function gestisciRispostaRicevuta(mittenteUid, sdp) {
+  const pc = connessioniPeer[mittenteUid];
+  if (!pc || !sdp) return;
+  try {
+    await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+  } catch (e) {}
+}
 
-function creaFacciaDado(valore) {
-  const posizioniPip = {
-    1: [[50, 50]],
-    2: [[25, 25], [75, 75]],
-    3: [[25, 25], [50, 50], [75, 75]],
-    4: [[25, 25], [75, 25], [25, 75], [75, 75]],
-    5: [[25, 25], [75, 25], [50, 50], [25, 75], [75, 75]],
-    6: [[25, 25], [75, 25], [25, 50], [75, 50], [25, 75], [75, 75]]
+async function gestisciCandidatoRicevuto(mittenteUid, candidate) {
+  const pc = connessioniPeer[mittenteUid];
+  if (!pc || !candidate) return;
+  try {
+    await pc.addIceCandidate(new RTCIceCandidate(candidate));
+  } catch (e) {}
+}
+
+function chiudiConnessioneAudio(altroUid) {
+  const pc = connessioniPeer[altroUid];
+  if (pc) {
+    try { pc.close(); } catch (e) {}
+    delete connessioniPeer[altroUid];
+  }
+  const elAudio = elementiAudioRemoti[altroUid];
+  if (elAudio) {
+    try { elAudio.srcObject = null; } catch (e) {}
+    elAudio.remove();
+    delete elementiAudioRemoti[altroUid];
+  }
+  coppieAudioAttive.delete(altroUid);
+}
+
+window.addEventListener("beforeunload", () => {
+  if (flussoAudioLocale) flussoAudioLocale.getTracks().forEach((t) => t.stop());
+  Object.keys(connessioniPeer).forEach(chiudiConnessioneAudio);
+});
+
+/* ============================================================
+   DADI 3D
+   ============================================================ */
+
+const CORREZIONE_ANGOLI_DADO = {
+  1: { x: 0, y: 0 }, 2: { x: 0, y: -90 }, 3: { x: -90, y: 0 },
+  4: { x: 90, y: 0 }, 5: { x: 0, y: 90 }, 6: { x: 0, y: 180 }
+};
+
+let rotazioneAttuale = { dado1: { x: 0, y: 0 }, dado2: { x: 0, y: 0 } };
+
+function normalizza360(g) {
+  return ((g % 360) + 360) % 360;
+}
+
+function calcolaNuovaRotazione(idDado, valore) {
+  const c = CORREZIONE_ANGOLI_DADO[valore];
+  if (!c) return rotazioneAttuale[idDado];
+
+  const a = rotazioneAttuale[idDado];
+  let dX = normalizza360(c.x) - normalizza360(a.x);
+  if (dX < 0) dX += 360;
+  let dY = normalizza360(c.y) - normalizza360(a.y);
+  if (dY < 0) dY += 360;
+
+  const nuova = {
+    x: a.x + dX + (2 + Math.floor(Math.random() * 2)) * 360,
+    y: a.y + dY + (2 + Math.floor(Math.random() * 2)) * 360
   };
+  rotazioneAttuale[idDado] = nuova;
+  return nuova;
+}
 
-  const colorePip =
-    valore === 1 || valore === 4
-      ? "#e53935"
-      : "#222";
-
-  const pips =
-    posizioniPip[valore]
-      .map(([x, y]) =>
-        `<circle cx="${x}" cy="${y}" r="8" fill="${colorePip}"/>`
-      )
-      .join("");
-
-  return `
-    <svg
-      width="55"
-      height="55"
-      viewBox="0 0 100 100">
-      <rect
-        x="4"
-        y="4"
-        width="92"
-        height="92"
-        rx="14"
-        fill="#fff"
-        stroke="#ccc"
-        stroke-width="3"/>
-      ${pips}
-    </svg>
-  `;
+function applicaRotazioneDado(idDado, valore) {
+  const r = calcolaNuovaRotazione(idDado, valore);
+  const cubo = document.querySelector("#" + idDado + " .cubo");
+  if (cubo && r) cubo.style.transform = `rotateX(${r.x}deg) rotateY(${r.y}deg)`;
 }
 
 function mostraDadi(v1, v2) {
-  const d1 =
-    document.getElementById("dado1");
-
-  const d2 =
-    document.getElementById("dado2");
-
-  if (d1) {
-    d1.innerHTML =
-      creaFacciaDado(v1);
-  }
-
-  if (d2) {
-    d2.innerHTML =
-      creaFacciaDado(v2);
-  }
+  const c1 = document.querySelector("#dado1 .cubo");
+  const c2 = document.querySelector("#dado2 .cubo");
+  if (c1) c1.style.transition = "none";
+  if (c2) c2.style.transition = "none";
+  if (v1 >= 1 && v1 <= 6) applicaRotazioneDado("dado1", v1);
+  if (v2 >= 1 && v2 <= 6) applicaRotazioneDado("dado2", v2);
+  if (c1) { void c1.offsetHeight; c1.style.transition = ""; }
+  if (c2) { void c2.offsetHeight; c2.style.transition = ""; }
 }
 
-function animaLancioDadi(
-  vf1,
-  vf2,
-  callback
-) {
-  const dado1El =
-    document.getElementById("dado1");
-
-  const dado2El =
-    document.getElementById("dado2");
-
-  if (!dado1El || !dado2El) {
-    if (callback) {
-      callback();
-    }
-
-    return;
-  }
-
-  dado1El.classList.add(
-    "dado-rotola"
-  );
-
-  dado2El.classList.add(
-    "dado-rotola"
-  );
-
-  let cicli = 0;
-
-  const intervallo =
-    setInterval(() => {
-      dado1El.innerHTML =
-        creaFacciaDado(
-          Math.floor(Math.random() * 6) + 1
-        );
-
-      dado2El.innerHTML =
-        creaFacciaDado(
-          Math.floor(Math.random() * 6) + 1
-        );
-
-      cicli++;
-
-      if (cicli >= 8) {
-        clearInterval(intervallo);
-
-        dado1El.classList.remove(
-          "dado-rotola"
-        );
-
-        dado2El.classList.remove(
-          "dado-rotola"
-        );
-
-        mostraDadi(
-          vf1,
-          vf2
-        );
-
-        if (callback) {
-          callback();
-        }
-      }
-    }, 80);
+function animaLancioDadi(vf1, vf2, callback) {
+  suonaTiroDadi();
+  applicaRotazioneDado("dado1", vf1);
+  applicaRotazioneDado("dado2", vf2);
+  setTimeout(() => {
+    suonaAtterraggioDadi();
+    if (typeof callback === "function") callback();
+  }, DURATA_LANCIO_DADI_MS);
 }
 
-function schiarisciColore(hex, p) {
-  return mescolaColore(
-    hex,
-    255,
-    p
-  );
-}
+/* ============================================================
+   PEDINE
+   ============================================================ */
 
-function scuriscColore(hex, p) {
-  return mescolaColore(
-    hex,
-    0,
-    p
-  );
-}
+function schiarisciColore(hex, p) { return mescolaColore(hex, 255, p); }
+function scuriscColore(hex, p) { return mescolaColore(hex, 0, p); }
 
 function mescolaColore(hex, target, p) {
-  const num =
-    parseInt(
-      String(hex).replace("#", ""),
-      16
-    );
-
+  const num = parseInt(String(hex).replace("#", ""), 16);
+  if (!Number.isFinite(num)) return `rgb(${target},${target},${target})`;
   let r = (num >> 16) & 255;
   let g = (num >> 8) & 255;
   let b = num & 255;
-
-  r = Math.round(
-    r + (target - r) * (p / 100)
-  );
-
-  g = Math.round(
-    g + (target - g) * (p / 100)
-  );
-
-  b = Math.round(
-    b + (target - b) * (p / 100)
-  );
-
+  r = Math.round(r + (target - r) * (p / 100));
+  g = Math.round(g + (target - g) * (p / 100));
+  b = Math.round(b + (target - b) * (p / 100));
   return `rgb(${r},${g},${b})`;
 }
 
-function iniziale(nome) {
-  return (
-    nome || "?"
-  )
-    .trim()
-    .charAt(0)
-    .toUpperCase();
-}
-
-// =========================================================
-// TABELLONE / PEDINE
-// =========================================================
-
 function coordinatePerCasella(casellaNumero) {
-  const immagine =
-    document.getElementById(
-      "immagine-tabellone"
-    );
-
-  if (!immagine) {
-    return null;
-  }
-
-  const naturalWidth =
-    immagine.naturalWidth || 1;
-
-  const naturalHeight =
-    immagine.naturalHeight || 1;
-
-  const scaleX =
-    immagine.clientWidth /
-    naturalWidth;
-
-  const scaleY =
-    immagine.clientHeight /
-    naturalHeight;
-
-  const casella =
-    casellaNumero === 0
-      ? {
-          x: 100,
-          y: 1900
-        }
-      : posizioniCaselle[
-          casellaNumero
-        ];
-
-  if (!casella) {
-    return null;
-  }
-
-  return {
-    left:
-      casella.x *
-      scaleX,
-
-    top:
-      casella.y *
-      scaleY
-  };
+  const immagine = document.getElementById("immagine-tabellone");
+  if (!immagine || !immagine.naturalWidth || !immagine.naturalHeight) return null;
+  const scaleX = immagine.clientWidth / immagine.naturalWidth;
+  const scaleY = immagine.clientHeight / immagine.naturalHeight;
+  const casella = casellaNumero === 0 ? { x: 100, y: 1900 } : posizioniCaselle[casellaNumero];
+  if (!casella) return null;
+  return { left: casella.x * scaleX, top: casella.y * scaleY };
 }
 
-function posizionaPedina(
-  pedina,
-  casellaNumero
-) {
-  const coord =
-    coordinatePerCasella(
-      casellaNumero
-    );
-
-  if (!coord) {
-    return;
-  }
-
-  pedina.style.left =
-    coord.left + "px";
-
-  pedina.style.top =
-    coord.top + "px";
+function posizionaPedina(pedina, casellaNumero) {
+  if (!pedina) return;
+  const coord = coordinatePerCasella(casellaNumero);
+  if (!coord) return;
+  pedina.style.left = coord.left + "px";
+  pedina.style.top = coord.top + "px";
 }
 
-function ottieniOCreaPedina(
-  idGiocatore,
-  colore,
-  indice
-) {
-  let pedina =
-    document.getElementById(
-      "pedina-" +
-      idGiocatore
-    );
+function ottieniOCreaPedina(idGiocatore, colore, indice) {
+  if (!idGiocatore) return null;
 
+  let pedina = document.getElementById("pedina-" + idGiocatore);
   if (!pedina) {
-    pedina =
-      document.createElement("div");
+    pedina = document.createElement("div");
+    pedina.id = "pedina-" + idGiocatore;
+    pedina.className = "pedina";
 
-    pedina.id =
-      "pedina-" +
-      idGiocatore;
-
-    pedina.className =
-      "pedina";
-
-    const idGradiente =
-      "gradPedina" +
-      indice;
+    const idG = "gradPedina" + String(indice).replace(/[^a-zA-Z0-9_-]/g, "");
 
     pedina.innerHTML = `
-      <svg
-        width="26"
-        height="38"
-        viewBox="0 0 34 48">
-
+      <svg width="26" height="38" viewBox="0 0 34 48" aria-hidden="true">
         <defs>
-          <radialGradient
-            id="${idGradiente}"
-            cx="35%"
-            cy="25%"
-            r="75%">
-
-            <stop
-              offset="0%"
-              stop-color="${schiarisciColore(
-                colore,
-                55
-              )}"/>
-
-            <stop
-              offset="55%"
-              stop-color="${colore}"/>
-
-            <stop
-              offset="100%"
-              stop-color="${scuriscColore(
-                colore,
-                35
-              )}"/>
+          <radialGradient id="${idG}" cx="35%" cy="25%" r="75%">
+            <stop offset="0%" stop-color="${schiarisciColore(colore, 55)}"/>
+            <stop offset="55%" stop-color="${colore}"/>
+            <stop offset="100%" stop-color="${scuriscColore(colore, 35)}"/>
           </radialGradient>
         </defs>
-
-        <ellipse
-          cx="17"
-          cy="44"
-          rx="12"
-          ry="3.5"
-          fill="rgba(0,0,0,0.3)"/>
-
-        <ellipse
-          cx="17"
-          cy="42"
-          rx="11"
-          ry="4"
-          fill="${scuriscColore(
-            colore,
-            25
-          )}"/>
-
-        <path
-          d="M17 42 C10 42 4 40 4 37
-          L10 15 C10 15 12 12 17 12
-          C22 12 24 15 24 15 L30 37
-          C30 40 24 42 17 42 Z"
-          fill="url(#${idGradiente})"
-          stroke="${scuriscColore(
-            colore,
-            45
-          )}"
-          stroke-width="0.8"/>
-
-        <circle
-          cx="17"
-          cy="9"
-          r="7.5"
-          fill="url(#${idGradiente})"
-          stroke="${scuriscColore(
-            colore,
-            45
-          )}"
-          stroke-width="0.8"/>
-
-        <ellipse
-          cx="14"
-          cy="6"
-          rx="2.5"
-          ry="1.8"
-          fill="rgba(255,255,255,0.55)"/>
+        <ellipse cx="17" cy="44" rx="12" ry="3.5" fill="rgba(0,0,0,0.3)"/>
+        <ellipse cx="17" cy="42" rx="11" ry="4" fill="${scuriscColore(colore, 25)}"/>
+        <path d="M17 42 C10 42 4 40 4 37 L10 15 C10 15 12 12 17 12 C22 12 24 15 24 15 L30 37 C30 40 24 42 17 42 Z" fill="url(#${idG})" stroke="${scuriscColore(colore, 45)}" stroke-width="0.8"/>
+        <circle cx="17" cy="9" r="7.5" fill="url(#${idG})" stroke="${scuriscColore(colore, 45)}" stroke-width="0.8"/>
+        <ellipse cx="14" cy="6" rx="2.5" ry="1.8" fill="rgba(255,255,255,0.55)"/>
       </svg>
     `;
 
-    const contenitore =
-      document.getElementById(
-        "contenitore-pedine"
-      );
-
-    if (contenitore) {
-      contenitore.appendChild(
-        pedina
-      );
-    }
+    const contenitore = document.getElementById("contenitore-pedine");
+    if (contenitore) contenitore.appendChild(pedina);
   }
-
   return pedina;
 }
 
-function animaSaltoPedina(
-  idGiocatore,
-  percorso,
-  callback
-) {
-  if (
-    !Array.isArray(percorso) ||
-    percorso.length === 0
-  ) {
-    if (callback) {
-      callback();
-    }
-
+function animaSaltoPedina(idGiocatore, percorso, callback) {
+  const listaPercorso = Array.isArray(percorso) ? percorso : [];
+  if (listaPercorso.length === 0) {
+    if (typeof callback === "function") callback();
     return;
   }
 
-  const indice =
-    ultimoStatoGiocatori.findIndex(
-      g =>
-        g.id === idGiocatore
-    );
-
-  const colore =
-    coloriGiocatori[
-      (indice >= 0
-        ? indice
-        : 0) %
-      coloriGiocatori.length
-    ];
-
-  const pedina =
-    ottieniOCreaPedina(
-      idGiocatore,
-      colore,
-      indice >= 0
-        ? indice
-        : 0
-    );
+  const indice = ultimoStatoGiocatori.findIndex((g) => g.id === idGiocatore);
+  const colore = coloriGiocatori[(indice >= 0 ? indice : 0) % coloriGiocatori.length];
+  const pedina = ottieniOCreaPedina(idGiocatore, colore, indice >= 0 ? indice : 0);
 
   if (!pedina) {
-    if (callback) {
-      callback();
-    }
-
+    if (typeof callback === "function") callback();
     return;
   }
 
   let passo = 0;
 
   function saltaProssimo() {
-    if (
-      passo >= percorso.length
-    ) {
-      if (callback) {
-        callback();
-      }
-
+    if (passo >= listaPercorso.length) {
+      if (typeof callback === "function") callback();
       return;
     }
 
-    const casella =
-      percorso[passo];
+    const casella = listaPercorso[passo];
+    pedina.classList.add("pedina-salta");
+    posizionaPedina(pedina, casella);
+    suonaPassoPedina();
 
-    pedina.classList.add(
-      "pedina-salta"
-    );
+    const et = document.getElementById("casella-" + idGiocatore);
+    if (et) et.textContent = String(casella);
 
-    posizionaPedina(
-      pedina,
-      casella
-    );
-
-    const etichetta =
-      document.getElementById(
-        "casella-" +
-        idGiocatore
-      );
-
-    if (etichetta) {
-      etichetta.textContent =
-        casella;
-    }
-
-    setTimeout(() => {
-      pedina.classList.remove(
-        "pedina-salta"
-      );
-    }, DURATA_SALTO_MS * 0.6);
+    setTimeout(() => { pedina.classList.remove("pedina-salta"); }, Math.max(1, DURATA_SALTO_MS * 0.6));
 
     passo++;
-
-    setTimeout(
-      saltaProssimo,
-      DURATA_SALTO_MS
-    );
+    setTimeout(saltaProssimo, DURATA_SALTO_MS);
   }
 
   saltaProssimo();
 }
 
-function disegnaGiocatori() {
-  const contenitore =
-    document.getElementById(
-      "contenitore-pedine"
-    );
-
-  if (!contenitore) {
-    return;
-  }
-
-  Array.from(
-    contenitore.children
-  ).forEach(pedina => {
-    if (
-      !ultimoStatoGiocatori.some(
-        g =>
-          "pedina-" +
-          g.id ===
-          pedina.id
-      )
-    ) {
-      pedina.remove();
-    }
-  });
-
-  const listaPannello =
-    document.getElementById(
-      "lista-giocatori"
-    );
-
-  if (!listaPannello) {
-    return;
-  }
-
-  listaPannello.innerHTML =
-    "";
-
-  ultimoStatoGiocatori.forEach(
-    (giocatore, indice) => {
-      const colore =
-        coloriGiocatori[
-          indice %
-          coloriGiocatori.length
-        ];
-
-      const pedina =
-        ottieniOCreaPedina(
-          giocatore.id,
-          colore,
-          indice
-        );
-
-      if (pedina) {
-        posizionaPedina(
-          pedina,
-          giocatore.posizione
-        );
-      }
-
-      const avatarHtml =
-        giocatore.avatar
-          ? `
-            <img
-              class="avatar-mini"
-              src="${giocatore.avatar}">
-          `
-          : `
-            <div
-              class="avatar-mini"
-              style="background:${colore};">
-              ${iniziale(
-                giocatore.nome
-              )}
-            </div>
-          `;
-
-      const card =
-        document.createElement(
-          "div"
-        );
-
-      card.className =
-        "giocatore-card" +
-        (
-          giocatore.id ===
-          turnoAttualeId
-            ? " attivo"
-            : ""
-        );
-
-      card.innerHTML = `
-        ${avatarHtml}
-
-        <a
-          href="profilo-pubblico.html?nickname=${encodeURIComponent(
-            giocatore.nome
-          )}"
-          target="_blank"
-          style="
-            color:inherit;
-            text-decoration:none;
-            flex-grow:1;
-          ">
-          ${giocatore.nome}
-        </a>
-
-        <span
-          class="casella-mini"
-          id="casella-${giocatore.id}">
-          ${giocatore.posizione}
-        </span>
-      `;
-
-      listaPannello.appendChild(
-        card
-      );
-    }
-  );
-}
-
-// =========================================================
-// TURNO / COUNTDOWN
-// =========================================================
-
-function aggiornaTurno(
-  turnoDiId
-) {
-  turnoAttualeId =
-    turnoDiId || null;
-
-  mioTurno =
-    turnoDiId === mioUid;
-
-  const riga =
-    document.getElementById(
-      "riga-turno"
-    );
-
-  if (riga) {
-    riga.textContent =
-      mioTurno
-        ? "🎲 È il tuo turno!"
-        : "⏳ In attesa...";
-  }
-
-  const areaDadi =
-    document.getElementById(
-      "area-dadi"
-    );
-
-  if (areaDadi) {
-    areaDadi.classList.toggle(
-      "disabilitato",
-      !mioTurno
-    );
-  }
-}
-
-function aggiornaCountdownTurno(
-  scadenzaTurno
-) {
-  scadenzaTurnoServer =
-    scadenzaTurno
-      ? Number(scadenzaTurno)
-      : null;
-
-  const riga =
-    document.getElementById(
-      "riga-turno"
-    );
-
-  if (!riga) {
-    return;
-  }
-
-  clearInterval(
-    timerTurno
-  );
-
-  if (
-    !scadenzaTurnoServer ||
-    !mioTurno
-  ) {
-    return;
-  }
-
-  timerTurno =
-    setInterval(() => {
-      const rimanente =
-        Math.max(
-          0,
-          scadenzaTurnoServer -
-            Date.now()
-        );
-
-      const secondi =
-        Math.ceil(
-          rimanente /
-          1000
-        );
-
-      if (mioTurno) {
-        riga.textContent =
-          secondi > 0
-            ? `🎲 È il tuo turno! (${secondi}s)`
-            : "🎲 È il tuo turno! (0s)";
-      }
-
-      if (secondi <= 0) {
-        clearInterval(
-          timerTurno
-        );
-      }
-    }, 200);
-}
-
-// =========================================================
-// AVVIO
-// =========================================================
+/* ============================================================
+   AVVIO / AUTENTICAZIONE
+   ============================================================ */
 
 async function avvia() {
   try {
-    if (!partitaId) {
-      console.error(
-        "Partita non specificata nell'URL."
-      );
-
-      return;
-    }
-
-    const risposta =
-      await fetch(
-        "https://gioco-oca-server.onrender.com/api/me",
-        {
-          credentials: "include"
-        }
-      );
-
+    const risposta = await fetch(URL_SERVER_HTTP + "/api/me", { credentials: "include" });
     if (!risposta.ok) {
-      window.location.href =
-        "login.html?redirect=" +
-        encodeURIComponent(
-          window.location.href
-        );
-
+      window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href);
       return;
     }
 
-    const dati =
-      await risposta.json();
+    const dati = await risposta.json();
+    if (!dati || !dati.uid) {
+      window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href);
+      return;
+    }
 
-    mioUid =
-      dati.uid;
+    mioUid = dati.uid;
+
+    if (!partitaId) {
+      alert("ID partita mancante.");
+      return;
+    }
 
     connetti();
-
   } catch (e) {
-    console.error(
-      "Errore avvio:",
-      e
-    );
-
-    window.location.href =
-      "login.html?redirect=" +
-      encodeURIComponent(
-        window.location.href
-      );
+    window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href);
   }
+}
+
+/* ============================================================
+   CONNESSIONE WEBSOCKET
+   ============================================================ */
+
+function pianificaRiconnessione() {
+  if (timerRiconnessione) return;
+  timerRiconnessione = setTimeout(() => {
+    timerRiconnessione = null;
+    if (socket && socket.readyState === WebSocket.OPEN) return;
+    connetti();
+  }, 3000);
 }
 
 function connetti() {
-  socket =
-    new WebSocket(
-      "wss://gioco-oca-server.onrender.com"
-    );
+  if (tentativoRiconnessioneInCorso) return;
+  tentativoRiconnessioneInCorso = true;
+
+  try {
+    socket = new WebSocket(URL_SERVER_WS);
+  } catch (e) {
+    tentativoRiconnessioneInCorso = false;
+    pianificaRiconnessione();
+    return;
+  }
 
   socket.onopen = () => {
+    tentativoRiconnessioneInCorso = false;
     if (timerRiconnessione) {
-      clearTimeout(
-        timerRiconnessione
-      );
-
-      timerRiconnessione =
-        null;
+      clearTimeout(timerRiconnessione);
+      timerRiconnessione = null;
     }
-
-    socket.send(
-      JSON.stringify({
-        tipo:
-          "riprendiPartita",
-        partitaId
-      })
-    );
+    socket.send(JSON.stringify({ tipo: "riprendiPartita", partitaId }));
   };
 
   socket.onclose = () => {
-    const riga =
-      document.getElementById(
-        "riga-turno"
-      );
-
-    if (riga) {
-      riga.textContent =
-        "🔴 Disconnesso, riconnessione...";
-    }
-
-    if (!timerRiconnessione) {
-      timerRiconnessione =
-        setTimeout(() => {
-          timerRiconnessione =
-            null;
-
-          connetti();
-        }, 3000);
-    }
+    tentativoRiconnessioneInCorso = false;
+    const rigaTurno = document.getElementById("riga-turno");
+    if (rigaTurno) rigaTurno.textContent = "🔴 Disconnesso, riconnessione...";
+    pianificaRiconnessione();
   };
 
-  socket.onerror = errore => {
-    console.error(
-      "WebSocket:",
-      errore
-    );
-  };
+  socket.onerror = () => {};
 
-  socket.onmessage = msg => {
+  socket.onmessage = (msg) => {
     let dati;
-
     try {
-      dati =
-        JSON.parse(msg.data);
+      dati = JSON.parse(msg.data);
     } catch (e) {
       return;
     }
+    if (!dati || !dati.tipo) return;
 
-    // =====================================================
-    // SESSIONE
-    // =====================================================
+    if (dati.tipo === "sessioneScaduta") {
+      fermaCountdownCompleto();
+      window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href);
+      return;
+    }
 
-    if (
-      dati.tipo ===
-      "sessioneScaduta"
-    ) {
-      window.location.href =
-        "login.html?redirect=" +
-        encodeURIComponent(
-          window.location.href
-        );
+    if (dati.tipo === "statoDeterminazione") { gestisciStatoDeterminazione(dati); return; }
+    if (dati.tipo === "risultatoDeterminazione") { gestisciRisultatoDeterminazione(dati); return; }
+    if (dati.tipo === "ordineFinaleCalcolato") { gestisciOrdineFinaleCalcolato(dati); return; }
+    if (dati.tipo === "determinazioneCompletata") { gestisciDeterminazioneCompletata(dati); return; }
+
+    if (dati.tipo === "richiestaAudioRicevuta") { mostraRichiestaAudioRicevuta(dati.mittenteUid, dati.mittenteNome); return; }
+
+    if (dati.tipo === "rispostaAudioRicevuta") {
+      if (dati.mittenteUid) richiesteInviate.delete(dati.mittenteUid);
+      if (dati.accettato && dati.mittenteUid) {
+        coppieAudioAttive.add(dati.mittenteUid);
+        disegnaGiocatori();
+        avviaConnessioneAudio(dati.mittenteUid, true);
+      } else {
+        disegnaGiocatori();
+      }
+      return;
+    }
+
+    if (dati.tipo === "webrtc-offer") { gestisciOffertaRicevuta(dati.mittenteUid, dati.sdp); return; }
+    if (dati.tipo === "webrtc-answer") { gestisciRispostaRicevuta(dati.mittenteUid, dati.sdp); return; }
+    if (dati.tipo === "webrtc-ice-candidate") { gestisciCandidatoRicevuto(dati.mittenteUid, dati.candidate); return; }
+
+    if (dati.tipo === "statoPartita") {
+      faseAttuale = "normale";
+      ultimoStatoGiocatori = Array.isArray(dati.giocatori) ? dati.giocatori : [];
+
+      const chatWrapper = document.getElementById("chat-wrapper");
+      if (chatWrapper) chatWrapper.style.display = dati.chatAttiva === false ? "none" : "";
+
+      if (dati.vittoria) {
+        turnoAttualeId = null;
+        mioTurno = false;
+        fermaCountdownCompleto();
+        azzeraDatiCountdown();
+
+        const areaDadi = document.getElementById("area-dadi");
+        if (areaDadi) areaDadi.classList.add("disabilitato");
+
+        disegnaGiocatori();
+        mostraVittoria(dati.vincitore);
+      } else {
+        aggiornaTurno(dati.turnoDiId || null);
+        disegnaGiocatori();
+      }
+
+      if (Array.isArray(dati.messaggi) && dati.messaggi.length && dati.idGiocatoreCheHaTirato === mioUid) {
+        mostraMessaggioGiocoGrande(dati.messaggi.join(" "));
+      }
+
+      if (dati.tempoInizioTurno != null && dati.durataMossaMs != null) {
+        avviaCountdownTurno(dati.tempoInizioTurno, dati.durataMossaMs, dati.scadenzaTurno || null);
+      }
 
       return;
     }
 
-    // =====================================================
-    // MEDIA
-    // =====================================================
+    if (dati.tipo === "aggiornamentoPartita") {
+      fermaCountdownCompleto();
+      turnoLocalmenteCompletato = true;
 
-    if (
-      dati.tipo ===
-      "vocaleAutoAvvio"
-    ) {
-      gestisciAvvioMediaAutomatico(
-        dati
-      );
+      animaLancioDadi(Number(dati.dado1), Number(dati.dado2), () => {
+        const completa = () => {
+          ultimoStatoGiocatori = Array.isArray(dati.giocatori) ? dati.giocatori : [];
 
-      return;
-    }
+          const messaggiGioco = document.getElementById("messaggi-gioco");
+          if (messaggiGioco) {
+            messaggiGioco.textContent = "🎲 " + Number(dati.dado1 || 0) + " + " + Number(dati.dado2 || 0) + " = " + Number(dati.valoreDado || 0);
+          }
 
-    if (
-      dati.tipo ===
-      "webrtc-offer"
-    ) {
-      gestisciWebRTCOffer(
-        dati
-      );
+          if (Array.isArray(dati.messaggi) && dati.messaggi.length) {
+            mostraMessaggioGiocoGrande(dati.messaggi.join(" "));
+          }
 
-      return;
-    }
+          if (dati.vittoria) {
+            turnoAttualeId = null;
+            mioTurno = false;
+            fermaCountdownCompleto();
+            azzeraDatiCountdown();
 
-    if (
-      dati.tipo ===
-      "webrtc-answer"
-    ) {
-      gestisciWebRTCAnswer(
-        dati
-      );
+            const areaDadi = document.getElementById("area-dadi");
+            if (areaDadi) areaDadi.classList.add("disabilitato");
 
-      return;
-    }
+            disegnaGiocatori();
+            mostraVittoria(dati.vincitore);
+          } else {
+            disegnaGiocatori();
+          }
+        };
 
-    if (
-      dati.tipo ===
-      "webrtc-ice-candidate"
-    ) {
-      gestisciICECandidate(
-        dati
-      );
-
-      return;
-    }
-
-    // =====================================================
-    // CHI INIZIA
-    // =====================================================
-
-    if (
-      dati.tipo ===
-      "statoDeterminazione"
-    ) {
-      const giocatori =
-        Array.isArray(
-          dati.giocatori
-        )
-          ? dati.giocatori.map(g => ({
-              id: g.uid,
-              nome: g.nome,
-              avatar: g.avatar || null,
-              posizione: 0
-            }))
-          : [];
-
-      ultimoStatoGiocatori =
-        giocatori;
-
-      risultatiDeterminazione =
-        {};
-
-      giocatori.forEach(g => {
-        if (
-          dati.risultato != null
-        ) {
-          risultatiDeterminazione[g.id] =
-            dati.risultato;
+        if (Array.isArray(dati.percorso) && dati.percorso.length > 0 && dati.idGiocatoreCheHaTirato) {
+          animaSaltoPedina(dati.idGiocatoreCheHaTirato, dati.percorso, completa);
+        } else {
+          completa();
         }
       });
 
-      ordineDeterminazione =
-        giocatori.map(
-          g => g.id
-        );
-
-      determinazioneAttiva =
-        true;
-
-      determinazioneTurnoUid =
-        dati.turnoInCorsoUid ||
-        null;
-
-      gruppoSpareggioAttuale =
-        Array.isArray(
-          dati.gruppoSpareggioAttuale
-        )
-          ? dati.gruppoSpareggioAttuale
-          : [];
-
-      apriDeterminazione(
-        giocatori,
-        determinazioneTurnoUid,
-        risultatiDeterminazione,
-        gruppoSpareggioAttuale
-      );
-
-      avviaTimerDeterminazioneLocale(
-        dati.tempoInizioTurno,
-        dati.durataMossaMs
-      );
-
-      disegnaGiocatori();
-
       return;
     }
 
-    if (
-      dati.tipo ===
-      "risultatoDeterminazione"
-    ) {
-      risultatiDeterminazione[
-        dati.uid
-      ] =
-        dati.valoreDado;
+    if (dati.tipo === "chatPartita") { aggiungiMessaggioChatPartita(dati.nome, dati.testo); return; }
 
-      const giocatore =
-        ultimoStatoGiocatori.find(
-          g =>
-            g.id ===
-            dati.uid
-        );
-
-      if (giocatore) {
-        giocatore.posizione =
-          0;
-      }
-
-      aggiornaOverlayDeterminazione();
-
-      if (
-        dati.uid === mioUid
-      ) {
-        const btn =
-          document.getElementById(
-            "btn-tira-determinazione"
-          );
-
-        if (btn) {
-          btn.disabled =
-            true;
-
-          btn.style.opacity =
-            ".5";
-
-          btn.textContent =
-            "🎲 Risultato registrato";
-        }
-      }
-
-      const messaggi =
-        document.getElementById(
-          "messaggi-gioco"
-        );
-
-      if (messaggi) {
-        messaggi.textContent =
-          `${dati.nome}: 🎲 ${dati.valoreDado}`;
-      }
-
-      return;
-    }
-
-    if (
-      dati.tipo ===
-      "ordineFinaleCalcolato"
-    ) {
-      const sottotitolo =
-        document.getElementById(
-          "determinazione-sottotitolo"
-        );
-
-      if (sottotitolo) {
-        sottotitolo.textContent =
-          "Ordine deciso! La partita sta per iniziare...";
-      }
-
-      const lista =
-        document.getElementById(
-          "lista-determinazione"
-        );
-
-      if (lista) {
-        lista.innerHTML = "";
-
-        const ordine =
-          Array.isArray(
-            dati.ordineGiocatori
-          )
-            ? dati.ordineGiocatori
-            : [];
-
-        ordine.forEach(
-          (nome, indice) => {
-            const riga =
-              document.createElement(
-                "div"
-              );
-
-            riga.style.display =
-              "flex";
-
-            riga.style.alignItems =
-              "center";
-
-            riga.style.gap =
-              "10px";
-
-            riga.style.padding =
-              "10px 12px";
-
-            riga.style.marginBottom =
-              "8px";
-
-            riga.style.borderRadius =
-              "10px";
-
-            riga.style.background =
-              "rgba(255,215,0,.08)";
-
-            riga.innerHTML = `
-              <strong
-                style="
-                  color:#ffd700;
-                  width:24px;">
-                ${indice + 1}
-              </strong>
-
-              <span
-                style="
-                  flex:1;
-                  color:#eee;
-                  font-weight:bold;">
-                ${nome}
-              </span>
-
-              <span
-                style="
-                  color:#ffd700;
-                  font-weight:bold;">
-                ${dati.punteggi &&
-                dati.punteggi[nome] != null
-                  ? "🎲 " +
-                    dati.punteggi[nome]
-                  : ""}
-              </span>
-            `;
-
-            lista.appendChild(
-              riga
-            );
-          }
-        );
-      }
-
-      return;
-    }
-
-    if (
-      dati.tipo ===
-      "determinazioneCompletata"
-    ) {
-      chiudiDeterminazione();
-
-      partitaTerminata =
-        false;
-
-      ultimoStatoGiocatori =
-        Array.isArray(
-          dati.giocatori
-        )
-          ? dati.giocatori
-          : ultimoStatoGiocatori;
-
-      turnoAttualeId =
-        dati.turnoDiId ||
-        null;
-
-      mioTurno =
-        turnoAttualeId ===
-        mioUid;
-
-      aggiornaTurno(
-        dati.turnoDiId
-      );
-
-      aggiornaCountdownTurno(
-        dati.scadenzaTurno
-      );
-
-      disegnaGiocatori();
-
-      if (
-        dati.punteggiOrdineIniziale
-      ) {
-        const msg =
-          document.getElementById(
-            "messaggi-gioco"
-          );
-
-        if (msg) {
-          msg.textContent =
-            dati.primoMovimento &&
-            dati.primoMovimento.messaggi
-              ? dati.primoMovimento.messaggi.join(" ")
-              : "🎲 Ordine deciso!";
-        }
-      }
-
-      return;
-    }
-
-    // =====================================================
-    // STATO PARTITA
-    // =====================================================
-
-    if (
-      dati.tipo ===
-      "statoPartita"
-    ) {
-      ultimoStatoGiocatori =
-        Array.isArray(
-          dati.giocatori
-        )
-          ? dati.giocatori
-          : [];
-
-      partitaTerminata =
-        !!dati.vittoria;
-
-      if (
-        dati.vittoria
-      ) {
-        turnoAttualeId =
-          null;
-
-        mioTurno =
-          false;
-
-        const areaDadi =
-          document.getElementById(
-            "area-dadi"
-          );
-
-        if (areaDadi) {
-          areaDadi.classList.add(
-            "disabilitato"
-          );
-        }
-
-        disegnaGiocatori();
-
-        mostraVittoria(
-          dati.vincitore
-        );
-      } else {
-        aggiornaTurno(
-          dati.turnoDiId
-        );
-
-        aggiornaCountdownTurno(
-          dati.scadenzaTurno
-        );
-
-        disegnaGiocatori();
-      }
-
-      if (
-        dati.messaggi &&
-        dati.messaggi.length
-      ) {
-        const msg =
-          document.getElementById(
-            "messaggi-gioco"
-          );
-
-        if (msg) {
-          msg.textContent =
-            dati.messaggi.join(" ");
-        }
-      }
-
-      return;
-    }
-
-    // =====================================================
-    // AGGIORNAMENTO PARTITA / TIRO
-    // =====================================================
-
-    if (
-      dati.tipo ===
-      "aggiornamentoPartita"
-    ) {
-      animaLancioDadi(
-        dati.dado1,
-        dati.dado2,
-        () => {
-          if (
-            dati.percorso &&
-            dati.idGiocatoreCheHaTirato
-          ) {
-            animaSaltoPedina(
-              dati.idGiocatoreCheHaTirato,
-              dati.percorso,
-              () => {
-                ultimoStatoGiocatori =
-                  Array.isArray(
-                    dati.giocatori
-                  )
-                    ? dati.giocatori
-                    : [];
-
-                const msg =
-                  document.getElementById(
-                    "messaggi-gioco"
-                  );
-
-                if (msg) {
-                  msg.textContent =
-                    "🎲 " +
-                    dati.dado1 +
-                    " + " +
-                    dati.dado2 +
-                    " = " +
-                    dati.valoreDado +
-                    (
-                      dati.messaggi &&
-                      dati.messaggi.length
-                        ? " — " +
-                          dati.messaggi.join(" ")
-                        : ""
-                    );
-                }
-
-                if (
-                  dati.vittoria
-                ) {
-                  turnoAttualeId =
-                    null;
-
-                  mioTurno =
-                    false;
-
-                  const areaDadi =
-                    document.getElementById(
-                      "area-dadi"
-                    );
-
-                  if (areaDadi) {
-                    areaDadi.classList.add(
-                      "disabilitato"
-                    );
-                  }
-
-                  partitaTerminata =
-                    true;
-
-                  disegnaGiocatori();
-
-                  mostraVittoria(
-                    dati.vincitore
-                  );
-                } else {
-                  aggiornaTurno(
-                    null
-                  );
-
-                  disegnaGiocatori();
-                }
-              }
-            );
-          } else {
-            ultimoStatoGiocatori =
-              Array.isArray(
-                dati.giocatori
-              )
-                ? dati.giocatori
-                : [];
-
-            const msg =
-              document.getElementById(
-                "messaggi-gioco"
-              );
-
-            if (msg) {
-              msg.textContent =
-                "🎲 " +
-                dati.dado1 +
-                " + " +
-                dati.dado2 +
-                " = " +
-                dati.valoreDado +
-                (
-                  dati.messaggi &&
-                  dati.messaggi.length
-                    ? " — " +
-                      dati.messaggi.join(" ")
-                    : ""
-                );
-            }
-
-            if (
-              dati.vittoria
-            ) {
-              turnoAttualeId =
-                null;
-
-              mioTurno =
-                false;
-
-              const areaDadi =
-                document.getElementById(
-                  "area-dadi"
-                );
-
-              if (areaDadi) {
-                areaDadi.classList.add(
-                  "disabilitato"
-                );
-              }
-
-              partitaTerminata =
-                true;
-
-              disegnaGiocatori();
-
-              mostraVittoria(
-                dati.vincitore
-              );
-            } else {
-              aggiornaTurno(
-                null
-              );
-
-              disegnaGiocatori();
-            }
-          }
-        }
-      );
-
-      return;
-    }
-
-    // =====================================================
-    // CHAT
-    // =====================================================
-
-    if (
-      dati.tipo ===
-      "chatPartita"
-    ) {
-      aggiungiMessaggioChatPartita(
-        dati.nome,
-        dati.testo
-      );
-
-      return;
-    }
-
-    // =====================================================
-    // ERRORI
-    // =====================================================
-
-    if (
-      dati.tipo ===
-      "errore"
-    ) {
-      console.error(
-        "Errore server:",
-        dati.messaggio
-      );
-
-      alert(
-        dati.messaggio ||
-        "Si è verificato un errore."
-      );
-
-      if (
-        mioTurno
-      ) {
-        const areaDadi =
-          document.getElementById(
-            "area-dadi"
-          );
-
-        if (areaDadi) {
-          areaDadi.classList.remove(
-            "disabilitato"
-          );
-        }
-      }
-
+    if (dati.tipo === "errore") {
+      alert(dati.messaggio || "Si è verificato un errore.");
       return;
     }
   };
 }
 
-// =========================================================
-// VITTORIA / USCITA
-// =========================================================
+/* ============================================================
+   TURNI
+   ============================================================ */
 
-function mostraVittoria(
-  nomeVincitore
-) {
-  const testo =
-    document.getElementById(
-      "testo-vincitore"
-    );
+function aggiornaTurno(turnoDiId) {
+  const eraIlMioTurno = mioTurno;
+  turnoAttualeId = turnoDiId || null;
+  mioTurno = !!turnoDiId && turnoDiId === mioUid;
 
-  if (testo) {
-    testo.textContent =
-      "🎉 Ha vinto " +
-      (nomeVincitore || "un giocatore") +
-      "!";
+  if (mioTurno && !eraIlMioTurno) {
+    turnoLocalmenteCompletato = false;
+    suonaTuoTurno();
   }
 
-  const overlay =
-    document.getElementById(
-      "overlay-vittoria"
-    );
+  const rigaTurno = document.getElementById("riga-turno");
+  if (rigaTurno) rigaTurno.textContent = mioTurno ? "🎲 È il tuo turno!" : "⏳ In attesa...";
 
-  if (overlay) {
-    overlay.classList.add(
-      "aperto"
-    );
-  }
+  const areaDadi = document.getElementById("area-dadi");
+  if (areaDadi) areaDadi.classList.toggle("disabilitato", !mioTurno);
 }
 
+/* ============================================================
+   GIOCATORI
+   ============================================================ */
+
+function disegnaGiocatori() {
+  const contenitore = document.getElementById("contenitore-pedine");
+  if (!contenitore) return;
+
+  Array.from(contenitore.children).forEach((p) => {
+    if (!ultimoStatoGiocatori.some((g) => "pedina-" + g.id === p.id)) p.remove();
+  });
+
+  const listaPannello = document.getElementById("lista-giocatori");
+  if (!listaPannello) return;
+
+  listaPannello.innerHTML = "";
+
+  ultimoStatoGiocatori.forEach((giocatore, indice) => {
+    if (!giocatore || !giocatore.id) return;
+
+    const colore = coloriGiocatori[indice % coloriGiocatori.length];
+    const pedina = ottieniOCreaPedina(giocatore.id, colore, indice);
+    if (pedina) posizionaPedina(pedina, Number(giocatore.posizione || 0));
+
+    const avatarHtml = giocatore.avatar
+      ? `<img class="avatar-mini" src="${giocatore.avatar}" alt="">`
+      : `<div class="avatar-mini" style="background:${colore};">${iniziale(giocatore.nome)}</div>`;
+
+    const eAttivo = giocatore.id === turnoAttualeId;
+    const countdownHtml = eAttivo ? `<span class="countdown-turno" id="countdown-turno">⏱ --s</span>` : "";
+
+    let audioHtml = "";
+    if (giocatore.id !== mioUid) {
+      if (coppieAudioAttive.has(giocatore.id)) {
+        audioHtml = `<span class="stato-audio attivo" title="Chiamata attiva">🎤</span>`;
+      } else if (richiesteInviate.has(giocatore.id)) {
+        audioHtml = `<span class="stato-audio in-attesa" title="Richiesta inviata">⏳</span>`;
+      } else if (microfonoAttivo) {
+        audioHtml = `<button type="button" class="btn-chiama-audio" title="Chiedi di parlare" onclick="richiediAudioCon('${String(giocatore.id).replace(/'/g, "\\'")}')">📞</button>`;
+      }
+    }
+
+    const card = document.createElement("div");
+    card.className = "giocatore-card" + (eAttivo ? " attivo" : "");
+
+    const nicknameHtml = `<a href="profilo-pubblico.html?nickname=${encodeURIComponent(giocatore.nome || "")}" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:none;flex-grow:1;">${giocatore.nome || "Giocatore"}</a>`;
+
+    card.innerHTML =
+      `${avatarHtml}` + nicknameHtml + `${audioHtml}` + `${countdownHtml}` +
+      `<span class="casella-mini" id="casella-${giocatore.id}">${Number(giocatore.posizione || 0)}</span>`;
+
+    listaPannello.appendChild(card);
+  });
+
+  if (turnoAttualeId) aggiornaCountdownTurno();
+}
+
+/* ============================================================
+   VITTORIA
+   ============================================================ */
+
+function mostraVittoria(nomeVincitore) {
+  suonaVittoria();
+
+  const testo = document.getElementById("testo-vincitore");
+  if (testo) testo.textContent = "🎉 Ha vinto " + (nomeVincitore || "un giocatore") + "!";
+
+  const overlay = document.getElementById("overlay-vittoria");
+  if (overlay) overlay.classList.add("aperto");
+}
+
+/* ============================================================
+   MENU / USCITA
+   ============================================================ */
+
 function tornaAllaLobby() {
-  chiudiTutteConnessioniMedia();
-
-  if (socket) {
-    try {
-      socket.close();
-    } catch (_) {}
-  }
-
-  window.location.href =
-    `lobby.html?stanza=${encodeURIComponent(
-      stanza || ""
-    )}`;
+  window.location.href = `lobby.html?stanza=${encodeURIComponent(stanza || "")}`;
 }
 
 function abbandonaPartita() {
-  if (
-    partitaTerminata
-  ) {
-    tornaAllaLobby();
-    return;
+  if (!confirm("Sei sicuro di voler abbandonare la partita?")) return;
+
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    socket.send(JSON.stringify({ tipo: "abbandonaPartita", partitaId }));
   }
 
-  if (
-    !confirm(
-      "Sei sicuro di voler abbandonare la partita?"
-    )
-  ) {
-    return;
-  }
-
-  if (
-    socket &&
-    socket.readyState === WebSocket.OPEN
-  ) {
-    socket.send(
-      JSON.stringify({
-        tipo:
-          "abbandonaPartita",
-        partitaId
-      })
-    );
-  }
-
-  chiudiTutteConnessioniMedia();
-
-  setTimeout(() => {
-    window.location.href =
-      `lobby.html?stanza=${encodeURIComponent(
-        stanza || ""
-      )}`;
-  }, 150);
+  fermaCountdownCompleto();
+  tornaAllaLobby();
 }
-
-// =========================================================
-// MENU
-// =========================================================
 
 function apriProfilo() {
   chiudiMenu();
-
-  window.location.href =
-    "profilo.html";
+  window.location.href = "profilo.html";
 }
 
 function apriImpostazioni() {
   chiudiMenu();
-
-  window.location.href =
-    "opzioni-account.html";
+  window.location.href = "opzioni-account.html";
 }
 
 function chiudiMenu() {
-  const pannello =
-    document.getElementById(
-      "pannello-menu"
-    );
+  const pannello = document.getElementById("pannello-menu");
+  if (pannello) pannello.classList.add("nascosto");
+}
 
-  if (pannello) {
-    pannello.classList.add(
-      "nascosto"
-    );
+const btnMenu = document.getElementById("btn-menu");
+if (btnMenu) {
+  btnMenu.onclick = (e) => {
+    e.stopPropagation();
+    const pannello = document.getElementById("pannello-menu");
+    if (pannello) pannello.classList.toggle("nascosto");
+  };
+}
+
+document.addEventListener("click", () => { chiudiMenu(); });
+
+/* ============================================================
+   PANNELLO GIOCATORI
+   ============================================================ */
+
+const btnGiocatori = document.getElementById("btn-giocatori");
+if (btnGiocatori) {
+  btnGiocatori.onclick = (e) => {
+    e.stopPropagation();
+    const pannello = document.getElementById("pannello-giocatori");
+    const backdrop = document.getElementById("backdrop-giocatori");
+    if (pannello) pannello.classList.toggle("aperto");
+    if (backdrop) backdrop.classList.toggle("aperto");
+  };
+}
+
+const backdropGiocatori = document.getElementById("backdrop-giocatori");
+if (backdropGiocatori) {
+  backdropGiocatori.onclick = () => {
+    const pannello = document.getElementById("pannello-giocatori");
+    const backdrop = document.getElementById("backdrop-giocatori");
+    if (pannello) pannello.classList.remove("aperto");
+    if (backdrop) backdrop.classList.remove("aperto");
+  };
+}
+
+/* ============================================================
+   CHAT PARTITA
+   ============================================================ */
+
+let messaggiChatNonLetti = 0;
+
+function aggiornaBadgeChatPartita() {
+  const badge = document.getElementById("badge-chat-partita");
+  if (!badge) return;
+  if (messaggiChatNonLetti > 0) {
+    badge.style.display = "flex";
+    badge.textContent = messaggiChatNonLetti > 9 ? "9+" : String(messaggiChatNonLetti);
+  } else {
+    badge.style.display = "none";
   }
 }
 
-const btnMenu =
-  document.getElementById(
-    "btn-menu"
-  );
+function aggiungiMessaggioChatPartita(nome, testo) {
+  suonaMessaggioChat();
 
-if (btnMenu) {
-  btnMenu.onclick = e => {
+  const box = document.getElementById("chat-messaggi");
+  if (!box) return;
+
+  const riga = document.createElement("div");
+  riga.className = "chat-msg";
+
+  const nomeEl = document.createElement("b");
+  nomeEl.textContent = String(nome || "Giocatore") + ":";
+
+  const testoEl = document.createTextNode(" " + String(testo || ""));
+
+  riga.appendChild(nomeEl);
+  riga.appendChild(testoEl);
+
+  box.appendChild(riga);
+  box.scrollTop = box.scrollHeight;
+
+  const pannelloChat = document.getElementById("pannello-chat");
+  if (pannelloChat && pannelloChat.classList.contains("nascosto")) {
+    messaggiChatNonLetti++;
+    aggiornaBadgeChatPartita();
+  }
+}
+
+function inviaChatPartita() {
+  const input = document.getElementById("chat-input");
+  if (!input) return;
+
+  const testo = input.value.trim();
+  if (!testo) return;
+
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    socket.send(JSON.stringify({ tipo: "chatPartita", partitaId, testo }));
+    input.value = "";
+  }
+}
+
+const chatInput = document.getElementById("chat-input");
+if (chatInput) {
+  chatInput.addEventListener("keypress", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      inviaChatPartita();
+    }
+  });
+}
+
+const btnChat = document.getElementById("btn-chat");
+if (btnChat) {
+  btnChat.onclick = (e) => {
     e.stopPropagation();
-
-    const pannello =
-      document.getElementById(
-        "pannello-menu"
-      );
-
-    if (pannello) {
-      pannello.classList.toggle(
-        "nascosto"
-      );
+    const pannello = document.getElementById("pannello-chat");
+    if (!pannello) return;
+    pannello.classList.toggle("nascosto");
+    if (!pannello.classList.contains("nascosto")) {
+      messaggiChatNonLetti = 0;
+      aggiornaBadgeChatPartita();
     }
   };
 }
 
-document.addEventListener(
-  "click",
-  () => chiudiMenu()
-);
+/* ============================================================
+   CLICK SUI DADI
+   ============================================================ */
 
-// =========================================================
-// CHAT
-// =========================================================
-
-function aggiungiMessaggioChatPartita(
-  nome,
-  testo
-) {
-  const box =
-    document.getElementById(
-      "chat-messaggi"
-    );
-
-  if (!box) {
-    return;
-  }
-
-  const riga =
-    document.createElement(
-      "div"
-    );
-
-  riga.className =
-    "chat-msg";
-
-  const nomeEl =
-    document.createElement(
-      "b"
-    );
-
-  nomeEl.textContent =
-    (nome || "Giocatore") +
-    ": ";
-
-  const testoEl =
-    document.createElement(
-      "span"
-    );
-
-  testoEl.textContent =
-    testo || "";
-
-  riga.appendChild(
-    nomeEl
-  );
-
-  riga.appendChild(
-    testoEl
-  );
-
-  box.appendChild(
-    riga
-  );
-
-  box.scrollTop =
-    box.scrollHeight;
-}
-
-function inviaChatPartita() {
-  const input =
-    document.getElementById(
-      "chat-input"
-    );
-
-  if (!input) {
-    return;
-  }
-
-  const testo =
-    input.value.trim();
-
-  if (!testo) {
-    return;
-  }
-
-  if (
-    socket &&
-    socket.readyState === WebSocket.OPEN
-  ) {
-    socket.send(
-      JSON.stringify({
-        tipo:
-          "chatPartita",
-        partitaId,
-        testo
-      })
-    );
-  }
-
-  input.value =
-    "";
-}
-
-const chatInput =
-  document.getElementById(
-    "chat-input"
-  );
-
-if (chatInput) {
-  chatInput.addEventListener(
-    "keypress",
-    e => {
-      if (
-        e.key ===
-        "Enter"
-      ) {
-        e.preventDefault();
-        inviaChatPartita();
-      }
-    }
-  );
-}
-
-const btnChat =
-  document.getElementById(
-    "btn-chat"
-  );
-
-if (btnChat) {
-  btnChat.onclick =
-    e => {
-      e.stopPropagation();
-
-      const pannello =
-        document.getElementById(
-          "pannello-chat"
-        );
-
-      if (pannello) {
-        pannello.classList.toggle(
-          "nascosto"
-        );
-      }
-    };
-}
-
-// =========================================================
-// DADO
-// =========================================================
-
-const areaDadi =
-  document.getElementById(
-    "area-dadi"
-  );
-
+const areaDadi = document.getElementById("area-dadi");
 if (areaDadi) {
-  areaDadi.onclick =
-    () => {
-      if (
-        !mioTurno ||
-        determinazioneAttiva ||
-        partitaTerminata
-      ) {
-        return;
-      }
+  areaDadi.onclick = () => {
+    const possoTirare = faseAttuale === "determinazione" ? possoTirareIoInDeterminazione : mioTurno;
+    if (!possoTirare) return;
+    if (!socket || socket.readyState !== WebSocket.OPEN) return;
 
-      if (
-        !socket ||
-        socket.readyState !== WebSocket.OPEN
-      ) {
-        return;
-      }
+    fermaCountdownPerAzioneLocale();
+    areaDadi.classList.add("disabilitato");
 
-      areaDadi.classList.add(
-        "disabilitato"
-      );
-
-      socket.send(
-        JSON.stringify({
-          tipo:
-            "tiraDadi",
-          partitaId
-        })
-      );
-    };
+    if (faseAttuale === "determinazione") {
+      socket.send(JSON.stringify({ tipo: "tiraDeterminazione", partitaId }));
+    } else {
+      socket.send(JSON.stringify({ tipo: "tiraDadi", partitaId }));
+    }
+  };
 }
 
-// =========================================================
-// MICROFONO / WEBCAM
-// =========================================================
+/* ============================================================
+   STATO INIZIALE
+   ============================================================ */
 
-const btnMicrofono =
-  document.getElementById(
-    "btn-microfono"
-  );
+aggiornaTestoBottoneSuoni();
+aggiornaTestoBottoneFullscreen();
+aggiornaTestoBottoneMicrofono();
+aggiornaBadgeChatPartita();
 
-const btnWebcam =
-  document.getElementById(
-    "btn-webcam"
-  );
+mostraDadi(1, 1);
 
-if (btnMicrofono) {
-  btnMicrofono.addEventListener(
-    "click",
-    toggleMicrofonoLocale
-  );
-}
-
-if (btnWebcam) {
-  btnWebcam.addEventListener(
-    "click",
-    toggleWebcamLocale
-  );
-}
-
-aggiornaPulsantiMedia();
-
-window.addEventListener(
-  "beforeunload",
-  () => {
-    chiudiTutteConnessioniMedia();
-  }
-);
-
-// =========================================================
-// RESIZE TABELLONE
-// =========================================================
-
-window.addEventListener(
-  "resize",
-  () => {
-    disegnaGiocatori();
-  }
-);
-
-// =========================================================
-// AVVIO INIZIALE
-// =========================================================
-
-creaOverlayDeterminazione();
-
-mostraDadi(
-  1,
-  1
-);
+inizializzaGestioneOrientamento();
 
 avvia();
