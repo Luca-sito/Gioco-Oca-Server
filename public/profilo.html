@@ -1601,7 +1601,7 @@ body {
                             class="xp-total"
                             id="xpTotal"
                         >
-                            0 XP
+                            0 ELO
                         </div>
 
                     </div>
@@ -1754,7 +1754,7 @@ body {
                         </div>
 
                         <div class="info-row">
-                            <span class="info-label">XP</span>
+                            <span class="info-label">ELO</span>
                             <span
                                 class="info-value"
                                 id="summaryXp"
@@ -2606,15 +2606,16 @@ function aggiornaInterfaccia() {
         );
 
 
-    /* LIVELLO */
+    /* LIVELLO ED ELO */
 
     const livello =
         datiUtente.livello ||
         1;
 
-    const xp =
-        datiUtente.xp ||
-        0;
+    const elo =
+        datiUtente.elo != null
+            ? datiUtente.elo
+            : 1000;
 
     document.getElementById(
         "levelBadge"
@@ -2626,7 +2627,7 @@ function aggiornaInterfaccia() {
     document.getElementById(
         "xpTotal"
     ).textContent =
-        xp + " XP";
+        elo + " ELO";
 
 
     let progresso = 0;
@@ -2647,7 +2648,7 @@ function aggiornaInterfaccia() {
             progresso =
                 Math.round(
                     (
-                        (xp -
+                        (elo -
                             datiUtente.sogliaAttuale) /
                         intervallo
                     ) * 100
@@ -2657,13 +2658,13 @@ function aggiornaInterfaccia() {
         document.getElementById(
             "xpCaption"
         ).textContent =
-            xp +
-            " XP · " +
+            elo +
+            " ELO · " +
             Math.max(
                 0,
-                datiUtente.sogliaProssima - xp
+                datiUtente.sogliaProssima - elo
             ) +
-            " XP al prossimo livello";
+            " ELO al prossimo livello";
 
     } else {
 
@@ -2672,8 +2673,8 @@ function aggiornaInterfaccia() {
         document.getElementById(
             "xpCaption"
         ).textContent =
-            xp +
-            " XP · livello massimo raggiunto";
+            elo +
+            " ELO · livello massimo raggiunto";
 
     }
 
@@ -2748,7 +2749,7 @@ function aggiornaInterfaccia() {
     document.getElementById(
         "summaryXp"
     ).textContent =
-        xp + " XP";
+        elo + " ELO";
 
 
     document.getElementById(
