@@ -5,1304 +5,232 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Gioco di Società - Lobby</title>
 <style>
-/* =========================================================
-   RESET E STILE GENERALE
-========================================================= */
-*{
-    box-sizing:border-box;
-    font-family:Arial,sans-serif;
-}
-html,
-body{
-    margin:0;
-    padding:0;
-    width:100%;
-    min-height:100%;
-}
-body{
-    background:#f2f2f2;
-    color:#111;
-}
-button,
-input,
-select{
-    font-family:Arial,sans-serif;
-}
-button{
-    cursor:pointer;
-}
-button:disabled{
-    cursor:not-allowed;
-}
-/* =========================================================
-   LAYOUT PRINCIPALE DESKTOP
-========================================================= */
-.contenitore{
-    display:flex;
-    height:100vh;
-    gap:5px;
-    padding:5px;
-}
-.sinistra,
-.centro,
-.destra{
-    background:white;
-    border:2px solid #ff6600;
-    border-radius:5px;
-    overflow:hidden;
-}
-.sinistra{
-    width:25%;
-}
-.centro{
-    width:50%;
-}
-.destra{
-    width:25%;
-    display:flex;
-    flex-direction:column;
-    overflow:hidden;
-}
-/* =========================================================
-   TITOLI
-========================================================= */
-h2{
-    margin:0;
-    padding:12px;
-    background:#111;
-    color:white;
-    text-align:center;
-    font-size:18px;
-}
-h3{
-    margin-top:10px;
-    margin-bottom:10px;
-}
-/* =========================================================
-   PANNELLO SINISTRO
-========================================================= */
-.box{
-    padding:15px;
-}
-.box p{
-    font-weight:bold;
-}
-select,
-button,
-input{
-    width:100%;
-    padding:10px;
-    margin-bottom:10px;
-    border-radius:5px;
-    border:1px solid #ccc;
-    font-size:15px;
-}
-button{
-    background:#333;
-    color:white;
-    font-weight:bold;
-}
-button:hover{
-    opacity:.8;
-}
-button:disabled{
-    background:#ccc;
-    opacity:1;
-}
-.crea{
-    background:#ffc400;
-    color:#000;
-}
-.riprendi{
-    background:#43a047;
-    color:white;
-}
-.elimina{
-    background:#dc3545;
-    color:white;
-}
-/* =========================================================
-   ELENCO PARTITE
-========================================================= */
-#partite{
-    height:45%;
-    overflow-y:auto;
-    padding:10px;
-}
-.partita{
-    border:1px solid #ddd;
-    padding:12px;
-    margin-bottom:10px;
-    border-radius:8px;
-    background:#fafafa;
-}
+*{ box-sizing:border-box; font-family:Arial,sans-serif; }
+body{ margin:0; background:#f2f2f2; }
+.contenitore{ display:flex; height:100vh; gap:5px; padding:5px; }
+.sinistra,.centro,.destra{ background:white; border:2px solid #ff6600; border-radius:5px; overflow:hidden; }
+.sinistra{ width:25%; } .centro{ width:50%; }
+.destra{ width:25%; display:flex; flex-direction:column; overflow:hidden; }
+h2{ margin:0; padding:12px; background:#111; color:white; text-align:center; font-size:18px; }
+.box{ padding:15px; } .box p{ font-weight:bold; }
+select,button,input{ width:100%; padding:10px; margin-bottom:10px; border-radius:5px; border:1px solid #ccc; font-size:15px; }
+button{ cursor:pointer; background:#333; color:white; font-weight:bold; }
+button:hover{ opacity:0.8; }
+button:disabled{ background:#ccc; cursor:not-allowed; opacity:1; }
+.crea{ background:#ffc400; color:#000; }
+#partite{ height:45%; overflow-y:auto; padding:10px; }
+.partita{ border:1px solid #ddd; padding:12px; margin-bottom:10px; border-radius:8px; background:#fafafa; }
 .scheda-partita{
-    display:flex;
-    gap:20px;
-    padding:12px;
-    border:1px solid #ddd;
-    border-radius:10px;
-    background:#fafafa;
-    margin-bottom:10px;
-    align-items:flex-start;
+ display:flex;
+ gap:20px;
+ padding:12px;
+ border:1px solid #ddd;
+ border-radius:10px;
+ background:#fafafa;
+ margin-bottom:10px;
+ align-items:flex-start;
 }
 .info-partita{
-    width:180px;
-    font-weight:bold;
-    line-height:1.8;
-    flex-shrink:0;
+ width:180px;
+ font-weight:bold;
+ line-height:1.8;
+ flex-shrink:0;
 }
 .giocatori-mini{
-    flex:1;
-    display:grid;
-    grid-template-columns:repeat(2,1fr);
-    gap:8px;
-    align-content:start;
+ flex:1;
+ display:grid;
+ grid-template-columns:repeat(2, 1fr);
+ gap:8px;
+ align-content:start;
 }
 .mini-giocatore{
-    display:flex;
-    align-items:center;
-    gap:6px;
-    background:white;
-    border-radius:8px;
-    padding:6px;
-    border:1px solid #eee;
-    font-size:13px;
+ display:flex;
+ align-items:center;
+ gap:6px;
+ background:white;
+ border-radius:8px;
+ padding:6px;
+ border:1px solid #eee;
+ font-size:13px;
 }
 .avatar-partita-mini{
-    width:30px;
-    height:30px;
-    border-radius:50%;
-    object-fit:cover;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    color:white;
-    font-weight:bold;
-    flex-shrink:0;
+ width:30px;
+ height:30px;
+ border-radius:50%;
+ object-fit:cover;
+ display:flex;
+ align-items:center;
+ justify-content:center;
+ color:white;
+ font-weight:bold;
 }
 .stato-partita-online{
-    color:#43a047;
-    font-size:12px;
-}
-.partita button{
-    background:#ff6600;
-    color:#fff;
-    margin-top:8px;
-}
-.partita button:disabled{
-    background:#ccc;
-}
-/* =========================================================
-   AZIONI SULLA CARD (Elimina / Alzati / Riprendi / Entra)
-========================================================= */
-.azioni-scheda{
-    display:flex;
-    flex-direction:column;
-    gap:6px;
-    min-width:120px;
-    flex-shrink:0;
-}
-.azioni-scheda button{
-    margin:0;
-    text-align:center;
-}
-.btn-elimina-scheda{
-    background:#dc3545 !important;
-    color:white !important;
-}
-.btn-alzati-scheda{
-    background:#e67e22 !important;
-    color:white !important;
-}
-.btn-riprendi-scheda{
-    background:#43a047 !important;
-    color:white !important;
-}
-/* =========================================================
-   CHAT DESKTOP
-========================================================= */
-#chat{
-    height:39%;
-    margin-left:10px;
-    border-top:1px solid #ddd;
-    padding:10px;
-    overflow-y:auto;
-    background:#fff;
-}
-.messaggio{
-    padding:5px;
-    border-bottom:1px dashed #ddd;
-    word-break:break-word;
-    overflow-wrap:anywhere;
-}
-#messaggio{
-    width:75%;
-    display:inline-block;
-}
-#messaggio+button{
-    width:23%;
-    display:inline-block;
-}
-/* =========================================================
-   PANNELLO EMOJI DESKTOP
-========================================================= */
-#pannelloEmoji{
-    display:none;
-    position:absolute;
-    bottom:55px;
-    left:0;
-    width:100%;
-    padding:10px;
-    background:white;
-    border:1px solid #ccc;
-    border-radius:10px;
-    box-shadow:0 4px 12px rgba(0,0,0,.2);
-    z-index:100;
-    font-size:22px;
-}
-#pannelloEmoji span{
-    cursor:pointer;
-    display:inline-block;
-    padding:3px;
-}
-/* =========================================================
-   PANNELLO DESTRO
-========================================================= */
-#top{
-    padding:10px;
-}
-#online{
-    color:#00a000;
-    font-size:25px;
-    font-weight:bold;
-}
-.utente-box{
-    padding:15px;
-    text-align:center;
-}
-.avatar-container{
-    display:flex;
-    justify-content:center;
-}
-.nickname{
-    font-weight:bold;
-    margin-top:10px;
-}
-.nickname-riga{
-    font-weight:bold;
-}
-.dispositivo{
-    margin-top:8px;
-    font-size:14px;
-    color:#555;
-    font-weight:bold;
-}
-/* =========================================================
-   LISTA ONLINE
-========================================================= */
-#listaOnline{
-    flex:1;
-    min-height:0;
-    overflow-y:auto;
-    padding:10px;
-}
-.giocatore-online{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    padding:10px;
-    border-bottom:1px solid #ddd;
-}
-.avatar-mini{
-    width:40px;
-    height:40px;
-    border-radius:50%;
-    object-fit:cover;
-    flex-shrink:0;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    background:#43a047;
-    color:white;
-    font-weight:bold;
-    font-size:16px;
-}
-.avatar{
-    width:70px;
-    height:70px;
-    border-radius:50%;
-    object-fit:cover;
-    border:3px solid #222;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    color:white;
-    font-weight:bold;
-    font-size:25px;
-}
-/* =========================================================
-   NOTIFICHE TOAST
-========================================================= */
-#contenitoreNotifiche{
-    position:fixed;
-    top:16px;
-    right:16px;
-    z-index:5000;
-    display:flex;
-    flex-direction:column;
-    gap:8px;
-    max-width:320px;
-}
-.notifica-toast{
-    background:#2b1414;
-    border:2px solid #e53935;
-    color:#fff;
-    padding:12px 16px;
-    border-radius:10px;
-    font-size:14px;
-    box-shadow:0 8px 24px rgba(0,0,0,.4);
-    animation:
-        notifica-entra .3s ease,
-        notifica-esci .3s ease 4.7s forwards;
-}
-@keyframes notifica-entra{
-    from{
-        opacity:0;
-        transform:translateX(30px);
-    }
-    to{
-        opacity:1;
-        transform:translateX(0);
-    }
-}
-@keyframes notifica-esci{
-    to{
-        opacity:0;
-        transform:translateX(30px);
-    }
-}
-/* =========================================================
-   CAMPANELLA NOTIFICHE
-========================================================= */
-#areaCampanella{
-    position:fixed;
-    top:14px;
-    right:14px;
-    z-index:520;
-}
-#btnCampanella{
-    position:relative;
-    width:44px;
-    height:44px;
-    border-radius:50%;
-    background:#111;
-    color:#ffd700;
-    font-size:19px;
-    border:2px solid #ffd700;
-    cursor:pointer;
-    padding:0;
-    margin:0;
-}
-.badge-notifiche{
-    position:absolute;
-    top:-4px;
-    right:-4px;
-    background:#e53935;
-    color:white;
-    font-size:10px;
-    font-weight:bold;
-    min-width:16px;
-    height:16px;
-    border-radius:8px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    padding:0 3px;
-}
-.pannello-notifiche{
-    position:absolute;
-    top:52px;
-    right:0;
-    width:300px;
-    max-width:calc(100vw - 20px);
-    background:white;
-    border:1px solid #ccc;
-    border-radius:10px;
-    box-shadow:0 8px 24px rgba(0,0,0,.25);
-    max-height:400px;
-    overflow-y:auto;
-}
-.pannello-notifiche.nascosto{
-    display:none;
-}
-.notifiche-titolo{
-    padding:12px 14px;
-    font-weight:bold;
-    background:#111;
-    color:#ffd700;
-    border-radius:10px 10px 0 0;
-}
-.notifica-riga{
-    padding:10px 14px;
-    border-bottom:1px solid #eee;
-    font-size:13px;
-}
-.notifica-testo{
-    margin-bottom:4px;
-}
-.notifica-data{
-    font-size:11px;
-    color:#999;
-    margin-bottom:6px;
-}
-.notifica-azioni{
-    display:flex;
-    gap:6px;
-}
-.notifica-vuota{
-    padding:20px;
-    text-align:center;
-    color:#999;
-    font-style:italic;
-    font-size:13px;
-}
-.btn-mini{
-    padding:6px 10px;
-    border:none;
-    border-radius:6px;
-    font-size:12px;
-    font-weight:bold;
-    cursor:pointer;
-    text-decoration:none;
-    display:inline-block;
-}
-.btn-mini.btn-accetta{
-    background:#43a047;
-    color:white;
-}
-.btn-mini.btn-rifiuta{
-    background:#e53935;
-    color:white;
-}
-.btn-mini.btn-vai{
-    background:#ff6600;
-    color:white;
-}
-/* =========================================================
-   INVITO RICEVUTO
-========================================================= */
-#cardInvitoRicevuto{
-    position:fixed;
-    top:66px;
-    right:14px;
-    z-index:510;
-    width:260px;
-    max-width:calc(100vw - 28px);
-    background:white;
-    border:2px solid #ffd700;
-    border-radius:10px;
-    padding:14px;
-    box-shadow:0 8px 24px rgba(0,0,0,.3);
-    font-size:14px;
-}
-#cardInvitoRicevuto.nascosto{
-    display:none;
-}
-.invito-bottoni{
-    display:flex;
-    gap:8px;
-    margin-top:10px;
-}
-.invito-bottoni button{
-    flex:1;
-    padding:9px;
-    border:none;
-    border-radius:6px;
-    font-weight:bold;
-    cursor:pointer;
-    margin:0;
-}
-.btn-rifiuta-invito{
-    background:#e53935;
-    color:white;
-}
-.btn-accetta-invito{
-    background:#43a047;
-    color:white;
-}
-/* =========================================================
-   POPUP GIOCATORE
-========================================================= */
-.overlay-popup-giocatore,
-.overlay-modal-invito{
-    display:none;
-    position:fixed;
-    top:0;
-    left:0;
-    width:100%;
-    height:100%;
-    background:rgba(0,0,0,.55);
-    z-index:700;
-    align-items:center;
-    justify-content:center;
-}
-.overlay-popup-giocatore.aperto,
-.overlay-modal-invito.aperto{
-    display:flex;
-}
-.popup-giocatore-box{
-    position:relative;
-    background:white;
-    border-radius:12px;
-    padding:22px;
-    width:260px;
-    max-width:calc(100vw - 32px);
-    text-align:center;
-}
-.popup-giocatore-box .chiudi-popup{
-    position:absolute;
-    top:8px;
-    right:10px;
-    background:none;
-    border:none;
-    font-size:16px;
-    color:#999;
-    width:auto;
-    padding:4px;
-    margin:0;
-}
-.popup-avatar-container{
-    display:flex;
-    justify-content:center;
-    margin-bottom:8px;
-}
-.popup-avatar{
-    width:64px;
-    height:64px;
-    border-radius:50%;
-    object-fit:cover;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    color:white;
-    font-weight:bold;
-    font-size:24px;
-}
-.popup-nickname{
-    font-weight:bold;
-    font-size:16px;
-    margin-bottom:4px;
-}
-.popup-stato-online{
-    font-size:12px;
-    color:#666;
-    margin-bottom:14px;
-}
-.popup-azioni{
-    margin-bottom:10px;
-    display:flex;
-    gap:8px;
-}
-.btn-popup{
-    flex:1;
-    padding:10px;
-    border:none;
-    border-radius:8px;
-    font-weight:bold;
-    cursor:pointer;
-    font-size:13px;
-    margin:0;
-}
-.btn-popup:disabled{
-    background:#ddd;
-    color:#888;
-    cursor:not-allowed;
-}
-.btn-invia-richiesta{
-    background:#ffc400;
-    color:#111;
-}
-.btn-accetta{
-    background:#43a047;
-    color:white;
-}
-.btn-rifiuta{
-    background:#e53935;
-    color:white;
-}
-.btn-rimuovi-amico{
-    background:#7a1b1b;
-    color:#ffab91;
-}
-.popup-link-profilo{
-    display:block;
-    font-size:12px;
-    color:#ff6600;
-    text-decoration:none;
-    margin-top:6px;
-}
-/* =========================================================
-   MODAL INVITA GIOCATORI
-========================================================= */
-.modal-invito-box{
-    background:white;
-    border-radius:12px;
-    width:380px;
-    max-width:calc(100vw - 32px);
-    max-height:75vh;
-    display:flex;
-    flex-direction:column;
-    overflow:hidden;
-}
-.modal-invito-titolo{
-    padding:14px 16px;
-    background:#111;
-    color:#ffd700;
-    font-weight:bold;
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-}
-.modal-invito-titolo button{
-    background:none;
-    border:none;
-    color:#ffd700;
-    font-size:16px;
-    cursor:pointer;
-    width:auto;
-    padding:0;
-    margin:0;
-}
-#listaModalInvito{
-    overflow-y:auto;
-    padding:10px;
-}
-.modal-invito-riga{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    padding:10px;
-    border-radius:8px;
-    cursor:pointer;
-}
-.modal-invito-riga:hover{
-    background:#f4f4f4;
-}
-.modal-invito-riga-invitato{
-    opacity:.55;
-    cursor:default;
-}
-.modal-invito-avatar{
-    width:38px;
-    height:38px;
-    border-radius:50%;
-    object-fit:cover;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    color:white;
-    font-weight:bold;
-    flex-shrink:0;
-}
-.modal-invito-check{
-    margin-left:auto;
-    font-size:12px;
-    color:#43a047;
-    font-weight:bold;
-}
-/* =========================================================
-   MENU MOBILE
-========================================================= */
-#menuMobile{
-    display:none;
-}
-.popup-mobile{
-    display:none;
-}
-.popup-mobile.aperto{
-    display:block;
-}
-/* =========================================================
-   TABLET / SCHERMI MEDI
-========================================================= */
+  color:#43a047;
+  font-size:12px;
+}
+/* NUOVO: azioni sulla card (Elimina / Riprendi / Entra) impilate in colonna */
+.azioni-scheda{ display:flex; flex-direction:column; gap:6px; min-width:120px; flex-shrink:0; }
+.azioni-scheda button, .azioni-scheda a{ margin:0; text-align:center; text-decoration:none; display:block; }
+.partita button{ background:#ff6600; color:#fff; }
+.partita button:disabled{ background:#ccc; cursor:not-allowed; }
+.btn-elimina-scheda{ background:#dc3545 !important; color:white !important; }
+.btn-riprendi-scheda{ background:#43a047 !important; color:white !important; }
+#chat{ height:39%; margin-left:10px; border-top:1px solid #ddd; padding:10px; overflow-y:auto; background:#fff; }
+.messaggio{ padding:5px; border-bottom:1px dashed #ddd; word-break: break-word; overflow-wrap: anywhere; }
+#messaggio{ width:75%; display:inline-block; }
+#messaggio+button{ width:23%; display:inline-block; }
+#top{ padding:10px; }
+#online{ color:#00a000; font-size:25px; font-weight:bold; }
+.utente-box{ padding:15px; text-align:center; }
+.avatar-container{ display:flex; justify-content:center; }
+.nickname{ font-weight:bold; margin-top:10px; }
+.nickname-riga{ font-weight:bold; }
+.dispositivo{ margin-top:8px; font-size:14px; color:#555; font-weight:bold; }
+#listaOnline{ flex:1; min-height:0; overflow-y:auto; padding:10px; }
+.giocatore-online{ display:flex; align-items:center; gap:10px; padding:10px; border-bottom:1px solid #ddd; }
+.avatar-mini{ width:40px; height:40px; border-radius:50%; object-fit:cover; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:#43a047; color:white; font-weight:bold; font-size:16px; }
+.avatar{ width:70px; height:70px; border-radius:50%; object-fit:cover; border:3px solid #222; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; font-size:25px; }
+
+#contenitoreNotifiche{ position:fixed; top:16px; right:16px; z-index:5000; display:flex; flex-direction:column; gap:8px; max-width:320px; }
+.notifica-toast{ background:#2b1414; border:2px solid #e53935; color:#fff; padding:12px 16px; border-radius:10px; font-size:14px; box-shadow:0 8px 24px rgba(0,0,0,0.4); animation: notifica-entra 0.3s ease, notifica-esci 0.3s ease 4.7s forwards; }
+@keyframes notifica-entra{ from{ opacity:0; transform:translateX(30px);} to{ opacity:1; transform:translateX(0);} }
+@keyframes notifica-esci{ to{ opacity:0; transform:translateX(30px);} }
+@media(max-width:600px){ #contenitoreNotifiche{ left:16px; right:16px; max-width:none; top:10px; } }
+
+#areaCampanella{ position:fixed; top:14px; right:14px; z-index:520; }
+#btnCampanella{ position:relative; width:44px; height:44px; border-radius:50%; background:#111; color:#ffd700; font-size:19px; border:2px solid #ffd700; cursor:pointer; padding:0; margin:0; }
+.badge-notifiche{ position:absolute; top:-4px; right:-4px; background:#e53935; color:white; font-size:10px; font-weight:bold; min-width:16px; height:16px; border-radius:8px; display:flex; align-items:center; justify-content:center; padding:0 3px; }
+.pannello-notifiche{ position:absolute; top:52px; right:0; width:300px; max-width:calc(100vw - 20px); background:white; border:1px solid #ccc; border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,0.25); max-height:400px; overflow-y:auto; }
+.pannello-notifiche.nascosto{ display:none; }
+.notifiche-titolo{ padding:12px 14px; font-weight:bold; background:#111; color:#ffd700; border-radius:10px 10px 0 0; }
+.notifica-riga{ padding:10px 14px; border-bottom:1px solid #eee; font-size:13px; }
+.notifica-testo{ margin-bottom:4px; }
+.notifica-data{ font-size:11px; color:#999; margin-bottom:6px; }
+.notifica-azioni{ display:flex; gap:6px; }
+.notifica-vuota{ padding:20px; text-align:center; color:#999; font-style:italic; font-size:13px; }
+.btn-mini{ padding:6px 10px; border:none; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; text-decoration:none; display:inline-block; }
+.btn-mini.btn-accetta{ background:#43a047; color:white; }
+.btn-mini.btn-rifiuta{ background:#e53935; color:white; }
+.btn-mini.btn-vai{ background:#ff6600; color:white; }
+
+#cardInvitoRicevuto{ position:fixed; top:66px; right:14px; z-index:510; width:260px; max-width:calc(100vw - 28px); background:white; border:2px solid #ffd700; border-radius:10px; padding:14px; box-shadow:0 8px 24px rgba(0,0,0,0.3); font-size:14px; }
+#cardInvitoRicevuto.nascosto{ display:none; }
+.invito-bottoni{ display:flex; gap:8px; margin-top:10px; }
+.invito-bottoni button{ flex:1; padding:9px; border:none; border-radius:6px; font-weight:bold; cursor:pointer; margin:0; }
+.btn-rifiuta-invito{ background:#e53935; color:white; }
+.btn-accetta-invito{ background:#43a047; color:white; }
+.overlay-popup-giocatore, .overlay-modal-invito{ display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.55); z-index:700; align-items:center; justify-content:center; }
+.overlay-popup-giocatore.aperto, .overlay-modal-invito.aperto{ display:flex; }
+.popup-giocatore-box{ position:relative; background:white; border-radius:12px; padding:22px; width:260px; max-width:calc(100vw - 32px); text-align:center; }
+.popup-giocatore-box .chiudi-popup{ position:absolute; top:8px; right:10px; background:none; border:none; font-size:16px; color:#999; width:auto; padding:4px; margin:0; }
+.popup-avatar-container{ display:flex; justify-content:center; margin-bottom:8px; }
+.popup-avatar{ width:64px; height:64px; border-radius:50%; object-fit:cover; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; font-size:24px; }
+.popup-nickname{ font-weight:bold; font-size:16px; margin-bottom:4px; }
+.popup-stato-online{ font-size:12px; color:#666; margin-bottom:14px; }
+.popup-azioni{ margin-bottom:10px; display:flex; gap:8px; }
+.btn-popup{ flex:1; padding:10px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; margin:0; }
+.btn-popup:disabled{ background:#ddd; color:#888; cursor:not-allowed; }
+.btn-invia-richiesta{ background:#ffc400; color:#111; }
+.btn-accetta{ background:#43a047; color:white; }
+.btn-rifiuta{ background:#e53935; color:white; }
+.btn-rimuovi-amico{ background:#7a1b1b; color:#ffab91; }
+.popup-link-profilo{ display:block; font-size:12px; color:#ff6600; text-decoration:none; margin-top:6px; }
+
+.modal-invito-box{ background:white; border-radius:12px; width:380px; max-width:calc(100vw - 32px); max-height:75vh; display:flex; flex-direction:column; overflow:hidden; }
+.modal-invito-titolo{ padding:14px 16px; background:#111; color:#ffd700; font-weight:bold; display:flex; justify-content:space-between; align-items:center; }
+.modal-invito-titolo button{ background:none; border:none; color:#ffd700; font-size:16px; cursor:pointer; width:auto; padding:0; margin:0; }
+#listaModalInvito{ overflow-y:auto; padding:10px; }
+.modal-invito-riga{ display:flex; align-items:center; gap:10px; padding:10px; border-radius:8px; cursor:pointer; }
+.modal-invito-riga:hover{ background:#f4f4f4; }
+.modal-invito-riga-invitato{ opacity:0.55; cursor:default; }
+.modal-invito-avatar{ width:38px; height:38px; border-radius:50%; object-fit:cover; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; flex-shrink:0; }
+.modal-invito-check{ margin-left:auto; font-size:12px; color:#43a047; font-weight:bold; }
 @media(max-width:900px){
-    .contenitore{
-        flex-direction:column;
-        height:auto;
-    }
-    .sinistra,
-    .centro,
-    .destra{
-        width:100%;
-    }
-    #partite{
-        height:260px;
-    }
-    #chat{
-        height:200px;
-        width:auto;
-        margin-left:0;
-    }
-    #listaOnline{
-        max-height:260px;
-    }
+  .contenitore{ flex-direction:column; height:auto; }
+  .sinistra,.centro,.destra{ width:100%; }
+  .destra{ max-height:70vh; }
+  #partite{ height:260px; }
+  #chat{ height:200px; width:10%; margin-left:30px; }
+  #listaOnline{ max-height:260px; }
 }
-/* =========================================================
-   MOBILE GENERALE
-========================================================= */
-@media(max-width:600px){
-    body{
-        overflow:hidden;
-    }
-    /* Nascondiamo i pannelli laterali */
-    .sinistra,
-    .destra{
-        display:none;
-    }
-    .contenitore{
-        display:block;
-        height:100vh;
-        height:100dvh;
-        padding:0;
-    }
-    .centro{
-        width:100%;
-        height:100vh;
-        height:100dvh;
-        border:none;
-        border-radius:0;
-    }
-    /* =====================================================
-       TITOLO PRINCIPALE
-    ===================================================== */
-    .centro h2:first-child{
-        font-size:16px;
-        padding:8px;
-    }
-    /* =====================================================
-       PARTITE
-    ===================================================== */
-    .scheda-partita{
-        display:flex;
-        flex-direction:column;
-        gap:8px;
-    }
-    .info-partita{
-        width:100%;
-        font-size:14px;
-    }
-    .giocatori-mini{
-        grid-template-columns:1fr 1fr;
-    }
-    .azioni-scheda{
-        width:100%;
-    }
-    #partite{
-        height:calc(100vh - 90px);
-        height:calc(100dvh - 90px);
-        overflow-y:auto;
-        padding:8px;
-    }
-/* =====================================================
-       NASCONDI CHAT DESKTOP
-    ===================================================== */
-    .centro h2:nth-of-type(2),
-    #chat,
-    #messaggio,
-    #messaggio+button,
-    #pannelloEmoji{
-        display:none;
-    }
-    /* =====================================================
-       MENU MOBILE
-    ===================================================== */
-    #menuMobile{
-        position:fixed;
-        display:flex;
-        bottom:0;
-        left:0;
-        width:100%;
-        height:75px;
-        background:#000;
-        border-top:2px solid #ff6600;
-        justify-content:space-around;
-        align-items:center;
-        z-index:1000;
-        padding:5px;
-    }
-    .btn-mobile{
-        position:relative;
-        width:58px;
-        height:58px;
-        border-radius:50%;
-        background:#fff !important;
-        color:#111 !important;
-        border:2px solid #000 !important;
-        font-size:22px;
-        display:flex;
-        flex-direction:column;
-        align-items:center;
-        justify-content:center;
-        padding:0;
-        margin:0;
-        gap:2px;
-    }
-    .btn-mobile:hover{
-        opacity:1;
-    }
-    .btn-mobile img{
-        width:24px;
-        height:24px;
-        object-fit:contain;
-        display:block;
-    }
-    .btn-mobile span{
-        color:#111 !important;
-        font-size:9px;
-        line-height:1;
-    }
-    /* =====================================================
-       BADGE MENU MOBILE
-    ===================================================== */
-    .badge-mobile{
-        position:absolute;
-        top:-6px;
-        right:-6px;
-        min-width:18px;
-        height:18px;
-        background:#e53935;
-        color:white !important;
-        border-radius:50%;
-        font-size:11px !important;
-        font-weight:bold;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        padding:0 4px;
-        border:2px solid white;
-    }
-/* =====================================================
-       POPUP MOBILE FULLSCREEN
-    ===================================================== */
-    .popup-mobile{
-        position:fixed !important;
-        inset:0 !important;
-        width:100vw !important;
-        height:100vh !important;
-        height:100dvh !important;
-        max-width:none !important;
-        max-height:none !important;
-        margin:0 !important;
-        padding:0 !important;
-        background:#fff !important;
-        border:none !important;
-        border-radius:0 !important;
-        box-shadow:none !important;
-        z-index:99999 !important;
-        overflow-y:auto;
-        overflow-x:hidden;
-        display:none;
-    }
-    .popup-mobile.aperto{
-        display:block;
-    }
-    .popup-mobile.crea-schermo-intero{
-        position:fixed !important;
-        inset:0 !important;
-        width:100vw !important;
-        height:100vh !important;
-        height:100dvh !important;
-        max-width:none !important;
-        max-height:none !important;
-        margin:0 !important;
-        padding:0 !important;
-        border-radius:0 !important;
-        border:none !important;
-        box-shadow:none !important;
-        z-index:99999 !important;
-    }
-    /* =====================================================
-       CONTENUTO POPUP
-    ===================================================== */
-    #contenutoMobile{
-        min-height:100%;
-        min-height:100dvh;
-        padding:20px;
-        box-sizing:border-box;
-    }
-    /* =====================================================
-       CREA TAVOLO
-    ===================================================== */
-    #contenutoMobile[data-vista="crea"]{
-        padding:0 20px 20px;
-    }
-    #contenutoMobile[data-vista="crea"] > h2{
-        margin:0 -20px 20px !important;
-        padding:16px 20px !important;
-        width:calc(100% + 40px);
-        background:#111 !important;
-        color:#fff !important;
-        text-align:center;
-        font-size:16px;
-    }
-    /* =====================================================
-       OPZIONI
-       STESSA GRAFICA DI CREA TAVOLO
-    ===================================================== */
-    #contenutoMobile[data-vista="opzioni"]{
-        padding:0 20px 20px !important;
-        background:#fff;
-    }
-    #contenutoMobile[data-vista="opzioni"] > h2{
-        margin:0 -20px 20px !important;
-        padding:16px 20px !important;
-        width:calc(100% + 40px);
-        background:#111 !important;
-        color:#fff !important;
-        text-align:center;
-        font-size:16px;
-    }
-/* =====================================================
-       CHAT MOBILE
-    ===================================================== */
-    #contenutoMobile[data-vista="chat"]{
-        padding:0 !important;
-        height:100%;
-        min-height:100dvh;
-        background:#f4f4f4;
-    }
-    .chat-mobile-schermata{
-        height:100%;
-        min-height:100dvh;
-        display:flex;
-        flex-direction:column;
-        background:#f4f4f4;
-    }
-    .chat-mobile-titolo{
-        flex-shrink:0;
-        background:#111;
-        color:white;
-        text-align:center;
-        font-size:16px;
-        font-weight:bold;
-        padding:16px 20px;
-    }
-    .chat-mobile-messaggi{
-        flex:1;
-        min-height:0;
-        overflow-y:auto;
-        padding:14px 10px 20px;
-        background:#f5f5f5;
-        -webkit-overflow-scrolling:touch;
-    }
-    .chat-mobile-messaggi .messaggio{
-        background:white;
-        border:1px solid #e1e1e1;
-        border-radius:10px;
-        padding:9px 11px;
-        margin-bottom:7px;
-        box-shadow:0 1px 3px rgba(0,0,0,.06);
-        word-break:break-word;
-        overflow-wrap:anywhere;
-    }
-    .chat-mobile-input{
-        flex-shrink:0;
-        display:flex;
-        align-items:center;
-        gap:7px;
-        padding:9px;
-        background:white;
-        border-top:1px solid #ddd;
-        box-shadow:0 -2px 8px rgba(0,0,0,.08);
-    }
-    .chat-mobile-input input{
-        flex:1;
-        width:auto;
-        height:44px;
-        margin:0;
-        padding:10px 14px;
-        border:1px solid #ccc;
-        border-radius:22px;
-        font-size:15px;
-        outline:none;
-    }
-    .chat-mobile-input input:focus{
-        border-color:#ff6600;
-    }
-    .chat-mobile-invia{
-        flex-shrink:0;
-        width:70px !important;
-        height:44px !important;
-        margin:0 !important;
-        padding:0 !important;
-        border:none !important;
-        border-radius:22px !important;
-        background:#ff6600 !important;
-        color:white !important;
-        font-weight:bold;
-    }
-    /* =====================================================
-       PULSANTE CHIUDI MOBILE
-    ===================================================== */
-    .chiudi-mobile{
-        position:absolute;
-        right:8px;
-        top:7px;
-        width:42px;
-        height:42px;
-        border-radius:50%;
-        background:white;
-        color:black;
-        border:2px solid #000;
-        font-size:26px;
-        font-weight:bold;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        padding:0;
-        line-height:1;
-        z-index:100000;
-        margin:0;
-    }
-}
-/* =========================================================
-   MOBILE PICCOLO
-========================================================= */
 @media(max-width:480px){
-    body{
-        font-size:15px;
-    }
-    .contenitore{
-        padding:0;
-        gap:0;
-    }
-    .box{
-        padding:10px;
-    }
-    h2{
-        font-size:15px;
-        padding:9px;
-    }
-    select,
-    button,
-    input{
-        padding:11px;
-        font-size:15px;
-    }
-    .utente-box{
-        padding:10px;
-    }
-    .avatar{
-        width:56px;
-        height:56px;
-        font-size:20px;
-    }
-    /* MENU */
-    #menuMobile{
-        height:64px;
-    }
-    .btn-mobile{
-        width:50px;
-        height:50px;
-        font-size:19px;
-    }
-    .btn-mobile img{
-        width:22px;
-        height:22px;
-    }
-    .btn-mobile span{
-        font-size:8px;
-    }
-    /* POPUP */
-.popup-mobile,
-    .popup-mobile.crea-schermo-intero{
-        top:0 !important;
-        left:0 !important;
-        right:0 !important;
-        bottom:0 !important;
-        width:100vw !important;
-        height:100vh !important;
-        height:100dvh !important;
-        padding:0 !important;
-    }
-    /* PARTITE */
-    .scheda-partita{
-        padding:10px;
-    }
-    .info-partita{
-        font-size:13px;
-        line-height:1.6;
-    }
-    .mini-giocatore{
-        font-size:12px;
-        padding:5px;
-    }
-    .avatar-partita-mini{
-        width:26px;
-        height:26px;
-    }
-    /* CHAT */
-    .chat-mobile-titolo{
-        padding:14px 20px;
-    }
-    .chat-mobile-messaggi{
-        padding:10px 8px 15px;
-    }
-    .chat-mobile-input{
-        padding:8px;
-    }
-    .chat-mobile-input input{
-        height:43px;
-        font-size:15px;
-    }
-    .chat-mobile-invia{
-        width:65px !important;
-        height:43px !important;
-    }
-    /* NOTIFICHE */
-    #contenitoreNotifiche{
-        left:16px;
-        right:16px;
-        max-width:none;
-        top:10px;
-    }
-    #areaCampanella{
-        top:8px;
-        right:8px;
-    }
-    #cardInvitoRicevuto{
-        top:58px;
-        right:8px;
-        left:8px;
-        width:auto;
-        max-width:none;
-    }
-    .pannello-notifiche{
-        width:calc(100vw - 16px);
-        right:-6px;
-    }
-    .modal-invito-box{
-        width:calc(100vw - 24px);
-    }
+  body{ font-size:15px; }
+  .contenitore{ padding:2px; gap:3px; }
+  .box{ padding:10px; }
+  h2{ font-size:15px; padding:9px; }
+  select,button,input{ padding:11px; font-size:15px; }
+  .utente-box{ padding:10px; }
+  .avatar{ width:56px; height:56px; font-size:20px; }
+  #listaOnline{ max-height:200px; }
+  #areaCampanella{ top:8px; right:8px; }
+  #cardInvitoRicevuto{ top:58px; right:8px; left:8px; width:auto; max-width:none; }
+  .pannello-notifiche{ width:calc(100vw - 16px); right:-6px; }
+  .modal-invito-box{ width:calc(100vw - 24px); }
 }
-/* =========================================================
-   TELEFONI MOLTO PICCOLI
-========================================================= */
+
+#menuMobile{ display:none; }
+.popup-mobile{ display:none; }
+.popup-mobile.aperto{ display:block; }
+@media(max-width:600px){
+body{ overflow:hidden; }
+.sinistra,.destra{ display:none; }
+.contenitore{ display:block; height:100vh; padding:0; }
+.centro{ width:100%; height:100vh; border:none; border-radius:0; }
+.centro h2:first-child{ font-size:16px; padding:8px; }
+.scheda-partita{ display:flex; flex-direction:column; gap:8px; }
+.info-partita{ width:100%; font-size:14px; }
+.giocatori-mini{ grid-template-columns:1fr 1fr; }
+.centro h2:nth-of-type(2),
+#chat, #messaggio, #messaggio+button, #pannelloEmoji{ display:none; }
+#messaggioMobile + button{ width:80px; height:45px; border-radius:20px; }
+.badge-mobile{
+    position:absolute; top:-6px; right:-6px; min-width:18px; height:18px;
+    background:#e53935; color:white; border-radius:50%; font-size:11px; font-weight:bold;
+    display:flex; align-items:center; justify-content:center;
+}
+#partite{ height:calc(100vh - 90px); overflow-y:auto; padding:8px; }
+.btn-mobile{ position:relative; }
+#menuMobile{
+position:fixed; display:flex; bottom:0; left:0; width:100%; height:75px;
+background:white; border-top:2px solid #ff6600; justify-content:space-around; align-items:center; z-index:1000;
+}
+.btn-mobile{
+width:58px; height:58px; border-radius:50%; background:#111; color:#ffd700; border:2px solid #ffd700;
+font-size:22px; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:0;
+}
+.btn-mobile span{ font-size:9px; }
+.popup-mobile{
+position:fixed; top:10%; left:5%; width:90%; height:75%; background:white;
+border-radius:15px; box-shadow:0 5px 25px #0005; z-index:2000; padding:15px; overflow:auto;
+}
+.chiudi-mobile{
+position:absolute; right:10px; top:10px; width:35px; height:35px; border-radius:50%;
+background:#e53935; color:white; border:none; font-size:18px;
+}
+}
+@media(max-width:480px){
+  #menuMobile{ height:64px; }
+  .btn-mobile{ width:50px; height:50px; font-size:19px; }
+  .btn-mobile span{ font-size:8px; }
+  .popup-mobile{ top:6%; left:3%; width:94%; height:86%; padding:12px; }
+  .scheda-partita{ padding:10px; }
+  .info-partita{ font-size:13px; line-height:1.6; }
+  .mini-giocatore{ font-size:12px; padding:5px; }
+  .avatar-partita-mini{ width:26px; height:26px; }
+}
 @media(max-width:360px){
-    .btn-mobile{
-        width:46px;
-        height:46px;
-        font-size:17px;
-    }
-    .btn-mobile span{
-        display:none;
-    }
-    #menuMobile{
-        height:58px;
-        gap:2px;
-    }
-    .popup-mobile,
-    .popup-mobile.crea-schermo-intero{
-        top:0 !important;
-        left:0 !important;
-        right:0 !important;
-        bottom:0 !important;
-        width:100vw !important;
-        height:100vh !important;
-        height:100dvh !important;
-        padding:0 !important;
-    }
-    h2{
-        font-size:14px;
-        padding:7px;
-    }
-    .chat-mobile-input input{
-        font-size:14px;
-    }
-    .chat-mobile-invia{
-        width:60px !important;
-    }
-}
-/* =========================================================
-   TEMA SCURO
-   Compatibile con il tuo cambiaTema()
-========================================================= */
-body.tema-scuro{
-    background:#111;
-    color:white;
-}
-body.tema-scuro .centro,
-body.tema-scuro .sinistra,
-body.tema-scuro .destra{
-    background:#222;
-    color:white;
-}
-body.tema-scuro .popup-mobile{
-    background:#222 !important;
-    color:white;
-}
-body.tema-scuro .scheda-partita,
-body.tema-scuro .partita{
-    background:#2b2b2b;
-    border-color:#444;
-}
-body.tema-scuro .mini-giocatore{
-    background:#333;
-    border-color:#444;
-}
-body.tema-scuro #chat{
-    background:#222;
-}
-body.tema-scuro .messaggio{
-    border-color:#444;
-}
-body.tema-scuro .chat-mobile-schermata{
-    background:#222;
-}
-body.tema-scuro .chat-mobile-messaggi{
-    background:#222;
-}
-body.tema-scuro .chat-mobile-messaggi .messaggio{
-    background:#333;
-    border-color:#444;
-    color:white;
-}
-body.tema-scuro .chat-mobile-input{
-    background:#222;
-    border-color:#444;
-}
-body.tema-scuro .chat-mobile-input input{
-    background:#333;
-    color:white;
-    border-color:#555;
-}
-body.tema-scuro #contenutoMobile[data-vista="opzioni"]{
-    background:#222;
-}
-body.tema-scuro .giocatore-online{
-    border-color:#444;
-}
-/* =========================================================
-   NASCONDI PULSANTE EMOJI SOLO SU CELLULARE
-========================================================= */
-@media (max-width:600px){
-    /* Nasconde il pulsante che apre gli emoji */
-    button[onclick="apriEmoji()"]{
-        display:none !important;
-    }
+  .btn-mobile{ width:46px; height:46px; font-size:17px; }
+  .btn-mobile span{ display:none; }
+  #menuMobile{ height:58px; gap:2px; }
+  .popup-mobile{ top:4%; left:2%; width:96%; height:90%; padding:10px; }
+  h2{ font-size:14px; padding:7px; }
 }
 </style>
 </head>
 <body>
+
 <div id="contenitoreNotifiche"></div>
-<div id="areaCampanella">
-  <button id="btnCampanella" onclick="toggleNotifiche()">🔔<span id="badgeNotifiche" class="badge-notifiche" style="display:none;">0</span></button>
-  <div id="pannelloNotifiche" class="pannello-notifiche nascosto">
-    <div class="notifiche-titolo">Notifiche</div>
-    <div id="listaNotifiche">Caricamento...</div>
-  </div>
-</div>
+
 <div id="cardInvitoRicevuto" class="nascosto">
   <div id="testoInvitoRicevuto"></div>
   <div class="invito-bottoni">
@@ -1345,7 +273,7 @@ body.tema-scuro .giocatore-online{
         <option value="30">30 secondi</option>
         <option value="60">60 secondi</option>
       </select>
-<p>Punti partita</p>
+      <p>Punti partita</p>
       <select id="punti"><option>100</option><option>150</option><option>200</option></select>
       <p>Tipo partita</p>
       <select id="tipoPartita">
@@ -1353,6 +281,7 @@ body.tema-scuro .giocatore-online{
         <option value="privata">🔒 Privata (solo su invito)</option>
       </select>
       <button class="crea" onclick="creaPartita()">Crea partita</button>
+      <!-- Elimina/Riprendi ora vivono sulla card della propria partita, non più qui -->
     </div>
   </div>
   <div class="centro">
@@ -1362,39 +291,13 @@ body.tema-scuro .giocatore-online{
     <div id="chat"></div>
     <div style="position:relative;">
 <div id="pannelloEmoji" style="
-  display:none;
-  position:absolute;
-  bottom:55px;
-  left:0;
-  width:100%;
-  padding:10px;
-  background:white;
-  border:1px solid #ccc;
-  border-radius:10px;
-  box-shadow:0 4px 12px rgba(0,0,0,0.2);
-  z-index:100;
-  font-size:22px;
+  display:none; position:absolute; bottom:55px; left:0; width:100%; padding:10px;
+  background:white; border:1px solid #ccc; border-radius:10px; box-shadow:0 4px 12px rgba(0,0,0,0.2);
+  z-index:100; font-size:22px;
 ">
-<span>😀</span>
-<span>😃</span>
-<span>😄</span>
-<span>😁</span>
-<span>😂</span>
-<span>😊</span>
-<span>😉</span>
-<span>😎</span>
-<span>😍</span>
-<span>😢</span>
-<span>😡</span>
-<span>😱</span>
-<span>👍</span>
-<span>👎</span>
-<span>❤️</span>
-<span>🔥</span>
-<span>🎲</span>
-<span>🏆</span>
-<span>🎉</span>
-<span>👋</span>
+<span>😀</span><span>😃</span><span>😄</span><span>😁</span><span>😂</span><span>😊</span><span>😉</span><span>😎</span>
+<span>😍</span><span>😢</span><span>😡</span><span>😱</span><span>👍</span><span>👎</span><span>❤️</span><span>🔥</span>
+<span>🎲</span><span>🏆</span><span>🎉</span><span>👋</span>
 </div>
   <div style="display:flex; gap:5px;">
     <button onclick="apriEmoji()" style="width:45px;">😊</button>
@@ -1425,7 +328,7 @@ let ultimaListaOnlineStanza = [];
 let aspettaPropriaPartitaPrivata = false;
 let partitaDaInvitareId = null;
 let invitoAttivoPartitaId = null;
-// ===== NUOVO: notifiche interne al posto di alert() =====
+
 function mostraNotifica(testo) {
   const contenitore = document.getElementById("contenitoreNotifiche");
   if (!contenitore) return;
@@ -1435,6 +338,7 @@ function mostraNotifica(testo) {
   contenitore.appendChild(toast);
   setTimeout(() => toast.remove(), 5000);
 }
+
 function iniziale(nome) { return (nome || "?").trim().charAt(0).toUpperCase(); }
 function coloreDaNome(nome) {
   const colori = ["#6a2c70", "#1e40af", "#43a047", "#f57c00", "#c0ca33", "#e53935", "#00838f", "#8d6e63"];
@@ -1453,57 +357,27 @@ function rilevaTipoDispositivoClient() {
   if (/iPhone|iPod/i.test(ua) || (/Android/i.test(ua) && /Mobile/i.test(ua))) return "cellulare";
   return "computer";
 }
-// ===== MENU MOBILE =====
+
 function apriCreaMobile(){
-const popup = document.getElementById("popupMobile");
-popup.classList.add("crea-schermo-intero");
 document.getElementById("contenutoMobile").dataset.vista = "crea";
 document.getElementById("contenutoMobile").innerHTML=`
-<h2 style="margin-bottom:15px;">
-CREA TAVOLO
-</h2>
+<h2 style="margin-bottom:15px;">🪑 Crea tavolo</h2>
 <p>Numero giocatori</p>
 <select id="numeroGiocatoriMobile">
-<option value="2">2 giocatori</option>
-<option value="3">3 giocatori</option>
-<option value="4">4 giocatori</option>
-<option value="5">5 giocatori</option>
-<option value="6">6 giocatori</option>
-<option value="7">7 giocatori</option>
-<option value="8">8 giocatori</option>
+<option value="2">2 giocatori</option><option value="3">3 giocatori</option><option value="4">4 giocatori</option>
+<option value="5">5 giocatori</option><option value="6">6 giocatori</option><option value="7">7 giocatori</option><option value="8">8 giocatori</option>
 </select>
 <p>Tempo di mossa</p>
-<select id="tempoMobile">
-<option value="15">15 secondi</option>
-<option value="30">30 secondi</option>
-<option value="60">60 secondi</option>
-</select>
+<select id="tempoMobile"><option value="15">15 secondi</option><option value="30">30 secondi</option><option value="60">60 secondi</option></select>
 <p>Punti partita</p>
-<select id="puntiMobile">
-<option value="100">100</option>
-<option value="150">150</option>
-<option value="200">200</option>
-</select>
+<select id="puntiMobile"><option value="100">100</option><option value="150">150</option><option value="200">200</option></select>
 <p>Tipo partita</p>
-<select id="tipoPartitaMobile">
-<option value="pubblica">
-🔓 Pubblica
-</option>
-<option value="privata">
-🔒 Privata
-</option>
-</select>
-<button onclick="creaPartitaMobile()" 
-style="
-margin-top:20px;
-background:#ffc400;
-color:#000;
-">
-Crea partita
-</button>
+<select id="tipoPartitaMobile"><option value="pubblica">🔓 Pubblica</option><option value="privata">🔒 Privata</option></select>
+<button onclick="creaPartitaMobile()" style="margin-top:20px;background:#ffc400;color:#000;">🪑 Crea partita</button>
 `;
 apriMobile();
 }
+
 function creaPartitaMobile() {
   const tipo = document.getElementById("tipoPartitaMobile").value;
   socket.send(JSON.stringify({
@@ -1516,97 +390,37 @@ function creaPartitaMobile() {
   if (tipo === "privata") aspettaPropriaPartitaPrivata = true;
   chiudiMobile();
 }
+
 function apriOnlineMobile(){
-const popup = document.getElementById("popupMobile");
-popup.classList.remove("crea-schermo-intero");
 document.getElementById("contenutoMobile").dataset.vista = "online";
 let lista=document.getElementById("listaOnline").innerHTML;
-document.getElementById("contenutoMobile").innerHTML=`
-<h2>GIOCATORI ONLINE</h2>
-${lista}
-`;
+document.getElementById("contenutoMobile").innerHTML=`<h2>GIOCATORI ONLINE</h2>${lista}`;
 apriMobile();
 }
 function apriChatMobile(){
-const popup = document.getElementById("popupMobile");
-popup.classList.remove("crea-schermo-intero");
 document.getElementById("contenutoMobile").dataset.vista = "chat";
 nuoviMessaggiMobile = 0;
 aggiornaBadgeChatMobile();
 document.getElementById("contenutoMobile").innerHTML=`
-<div style="
-height:100%;
-display:flex;
-flex-direction:column;
-">
-<h2 style="
-margin-bottom:10px;
-">
-CHAT
-</h2>
-<div id="chatMobile" style="flex:1; overflow-y:auto;">
-${document.getElementById("chat").innerHTML}
+<div style="height:100%;display:flex;flex-direction:column;">
+<h2 style="margin-bottom:10px;">💬 Chat</h2>
+<div id="chatMobile" style="flex:1; overflow-y:auto;">${document.getElementById("chat").innerHTML}</div>
+<div id="emojiMobile" style="display:none;background:white;border:1px solid #ddd;border-radius:10px;padding:10px;font-size:25px;line-height:35px;margin-bottom:8px;">
+<span onclick="aggiungiEmojiMobile('😀')">😀</span><span onclick="aggiungiEmojiMobile('😂')">😂</span><span onclick="aggiungiEmojiMobile('😊')">😊</span>
+<span onclick="aggiungiEmojiMobile('😉')">😉</span><span onclick="aggiungiEmojiMobile('😎')">😎</span><span onclick="aggiungiEmojiMobile('😍')">😍</span>
+<span onclick="aggiungiEmojiMobile('😢')">😢</span><span onclick="aggiungiEmojiMobile('😡')">😡</span><span onclick="aggiungiEmojiMobile('👍')">👍</span>
+<span onclick="aggiungiEmojiMobile('❤️')">❤️</span><span onclick="aggiungiEmojiMobile('🔥')">🔥</span><span onclick="aggiungiEmojiMobile('🎲')">🎲</span>
+<span onclick="aggiungiEmojiMobile('🏆')">🏆</span><span onclick="aggiungiEmojiMobile('🎉')">🎉</span>
 </div>
-<div id="emojiMobile" style="
-display:none;
-background:white;
-border:1px solid #ddd;
-border-radius:10px;
-padding:10px;
-font-size:25px;
-line-height:35px;
-margin-bottom:8px;
-">
-<span onclick="aggiungiEmojiMobile('😀')">😀</span>
-<span onclick="aggiungiEmojiMobile('😂')">😂</span>
-<span onclick="aggiungiEmojiMobile('😊')">😊</span>
-<span onclick="aggiungiEmojiMobile('😉')">😉</span>
-<span onclick="aggiungiEmojiMobile('😎')">😎</span>
-<span onclick="aggiungiEmojiMobile('😍')">😍</span>
-<span onclick="aggiungiEmojiMobile('😢')">😢</span>
-<span onclick="aggiungiEmojiMobile('😡')">😡</span>
-<span onclick="aggiungiEmojiMobile('👍')">👍</span>
-<span onclick="aggiungiEmojiMobile('❤️')">❤️</span>
-<span onclick="aggiungiEmojiMobile('🔥')">🔥</span>
-<span onclick="aggiungiEmojiMobile('🎲')">🎲</span>
-<span onclick="aggiungiEmojiMobile('🏆')">🏆</span>
-<span onclick="aggiungiEmojiMobile('🎉')">🎉</span>
-</div>
-<div style="
-display:flex;
-gap:6px;
-height:45px;
-">
-<button onclick="mostraEmojiMobile()"
-style="
-width:45px;
-margin:0;
-padding:0;
-">
-😊
-</button>
-<input id="messaggioMobile"
-placeholder="Scrivi un messaggio..."
-style="
-flex:1;
-margin:0;
-width:auto;
-">
-<button onclick="inviaChatMobile()"
-style="
-width:70px;
-margin:0;
-padding:0;
-">
-Invia
-</button>
+<div style="display:flex;gap:6px;height:45px;">
+<button onclick="mostraEmojiMobile()" style="width:45px;margin:0;padding:0;">😊</button>
+<input id="messaggioMobile" placeholder="Scrivi un messaggio..." style="flex:1;margin:0;width:auto;">
+<button onclick="inviaChatMobile()" style="width:70px;margin:0;padding:0;">Invia</button>
 </div>
 </div>
 `;
 const inputMobile = document.getElementById("messaggioMobile");
-inputMobile.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") { e.preventDefault(); inviaChatMobile(); }
-});
+inputMobile.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); inviaChatMobile(); } });
 apriMobile();
 const chatMobileBox = document.getElementById("chatMobile");
 chatMobileBox.scrollTop = chatMobileBox.scrollHeight;
@@ -1617,12 +431,10 @@ if(!input) return;
 const testo = input.value.trim();
 if(!testo) return;
 if (testo.length > 200) { mostraNotifica("Massimo 200 caratteri."); return; }
-socket.send(JSON.stringify({
- tipo:"chat",
- testo:testo
-}));
+socket.send(JSON.stringify({ tipo:"chat", testo:testo }));
 input.value="";
 }
+
 function mostraEmojiMobile() {
   const pannello = document.getElementById("emojiMobile");
   if (!pannello) return;
@@ -1634,71 +446,34 @@ function aggiungiEmojiMobile(emoji) {
   input.value += emoji;
   input.focus();
 }
+
 function apriOpzioniMobile(){
-const popup = document.getElementById("popupMobile");
-popup.classList.remove("crea-schermo-intero");
 document.getElementById("contenutoMobile").dataset.vista = "opzioni";
 document.getElementById("contenutoMobile").innerHTML=`
-<h2>OPZIONI</h2>
-<div style="
-display:flex;
-align-items:center;
-justify-content:space-between;
-padding:15px;
-background:#f5f5f5;
-border-radius:10px;
-margin-top:20px;
-">
-<div>
-🌗 Tema
-<br>
-<span style="font-size:13px;color:#777;">
-Chiaro / Scuro
-</span>
-</div>
-<select id="temaMobile" 
-onchange="cambiaTema()"
-style="
-width:120px;
-margin:0;
-">
-<option value="chiaro">
-☀️ Chiaro
-</option>
-<option value="scuro">
-🌙 Scuro
-</option>
+<h2>⚙️ Opzioni</h2>
+<div style="display:flex;align-items:center;justify-content:space-between;padding:15px;background:#f5f5f5;border-radius:10px;margin-top:20px;">
+<div>🌗 Tema<br><span style="font-size:13px;color:#777;">Chiaro / Scuro</span></div>
+<select id="temaMobile" onchange="cambiaTema()" style="width:120px;margin:0;">
+<option value="chiaro">☀️ Chiaro</option><option value="scuro">🌙 Scuro</option>
 </select>
 </div>
 `;
 apriMobile();
 }
-function apriMobile(){
-const popup = document.getElementById("popupMobile");
-popup.classList.add("aperto");
-}
+function apriMobile(){ document.getElementById("popupMobile").classList.add("aperto"); }
 function cambiaTema(){
 const tema=document.getElementById("temaMobile").value;
 if(tema==="scuro"){
 document.body.style.background="#111";
-document.querySelectorAll(".centro,.sinistra,.destra,.popup-mobile")
-.forEach(e=>{
-e.style.background="#222";
-e.style.color="white";
-});
+document.querySelectorAll(".centro,.sinistra,.destra,.popup-mobile").forEach(e=>{ e.style.background="#222"; e.style.color="white"; });
 }else{
 document.body.style.background="#f2f2f2";
-document.querySelectorAll(".centro,.sinistra,.destra,.popup-mobile")
-.forEach(e=>{
-e.style.background="white";
-e.style.color="#111";
-});
+document.querySelectorAll(".centro,.sinistra,.destra,.popup-mobile").forEach(e=>{ e.style.background="white"; e.style.color="#111"; });
 }
 localStorage.setItem("tema",tema);
 }
 function chiudiMobile(){
-const popup = document.getElementById("popupMobile");
-popup.classList.remove("aperto", "crea-schermo-intero");
+document.getElementById("popupMobile").classList.remove("aperto");
 document.getElementById("contenutoMobile").dataset.vista = "";
 }
 async function verificaSessione() {
@@ -1731,16 +506,11 @@ async function esci() {
 }
 function connetti() {
   socket = new WebSocket("wss://gioco-oca-server.onrender.com");
-  socket.onopen = () => {
-    socket.send(JSON.stringify({ tipo: "entraLobby", stanza: stanza }));
-  };
-socket.onclose = () => { setTimeout(() => location.reload(), 3000); };
+  socket.onopen = () => { socket.send(JSON.stringify({ tipo: "entraLobby", stanza: stanza })); };
+  socket.onclose = () => { setTimeout(() => location.reload(), 3000); };
   socket.onmessage = (msg) => {
     const dati = JSON.parse(msg.data);
-    if (dati.tipo === "sessioneScaduta") {
-      window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href);
-      return;
-    }
+    if (dati.tipo === "sessioneScaduta") { window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href); return; }
     if (dati.tipo === "online") document.getElementById("online").innerHTML = dati.numero;
     if (dati.tipo === "conteggioStanze" && dati.giocatori) mostraGiocatori(dati.giocatori[stanza] || []);
     if (dati.tipo === "chat") aggiungiMessaggio(dati.uid, dati.nome, dati.testo);
@@ -1752,7 +522,6 @@ socket.onclose = () => { setTimeout(() => location.reload(), 3000); };
     if (dati.tipo === "invitoRifiutato") mostraNotifica((dati.destinatarioNome || "Il giocatore") + " ha rifiutato l'invito.");
   };
 }
-// ===== CREAZIONE / LISTA PARTITE =====
 function creaPartita() {
   const tipo = document.getElementById("tipoPartita").value;
   socket.send(JSON.stringify({
@@ -1768,12 +537,9 @@ function eliminaPartita() {
   if (!confirm("Vuoi eliminare la partita creata?")) return;
   socket.send(JSON.stringify({ tipo: "eliminaPartita" }));
 }
-// NUOVO: il creatore (o un giocatore già dentro) lascia un tavolo non ancora
-// avviato senza distruggerlo per gli altri
-function alzatiDaPartita(id) {
-  if (!confirm("Vuoi alzarti da questo tavolo?")) return;
-  socket.send(JSON.stringify({ tipo: "abbandonaPartita", partitaId: id }));
-}
+
+// NUOVO: Elimina/Riprendi/Entra ora dipendono dallo stato della card stessa,
+// non più da un bottone fisso in fondo alla colonna sinistra
 function mostraPartite(lista) {
   let html = "";
   if (lista.length === 0) html = "<p>Nessuna partita disponibile</p>";
@@ -1784,26 +550,15 @@ function mostraPartite(lista) {
     let azioniHtml;
 
     if (partita.iniziata) {
-      // Partita già avviata: chi ne fa parte può rientrare, gli altri la vedono solo "in corso"
       if (cePartecipo) {
         azioniHtml = `<button class="btn-riprendi-scheda" onclick="window.location.href='gioco.html?partita=${partita.id}&stanza=${stanza}'">▶️ Riprendi</button>`;
       } else {
         azioniHtml = `<button disabled>🎲 In corso</button>`;
       }
     } else if (eMia) {
-      // Sei il creatore, partita ancora in attesa di giocatori
       let invito = "";
       if (partita.modalita === "privata" && !piena) invito = `<button onclick="apriModalInvito('${partita.id}')">➕ Invita</button>`;
-      if (partita.numGiocatoriAttuali <= 1) {
-        // Nessuno si è ancora unito: puoi eliminare senza disturbare nessuno
-        azioniHtml = invito + `<button class="btn-elimina-scheda" onclick="eliminaPartita()">Elimina</button>`;
-      } else {
-        // Qualcuno è già dentro: non è giusto cancellare tutto, solo alzarsi
-        azioniHtml = invito + `<button class="btn-alzati-scheda" onclick="alzatiDaPartita('${partita.id}')">Alzati</button>`;
-      }
-    } else if (cePartecipo) {
-      // Ti sei unito ma non sei il creatore, partita non ancora avviata
-      azioniHtml = `<button disabled>✅ Sei dentro</button>`;
+      azioniHtml = invito + `<button class="btn-elimina-scheda" onclick="eliminaPartita()">🗑 Elimina</button>`;
     } else if (partita.modalita === "privata") {
       azioniHtml = `<button disabled>🔒 Solo su invito</button>`;
     } else {
@@ -1832,30 +587,19 @@ function mostraPartite(lista) {
 function entraPartita(id) {
   socket.send(JSON.stringify({ tipo: "entraPartita", id: id }));
 }
-// ===== CHAT =====
 function inviaChat() {
   let testo = document.getElementById("messaggio").value.trim();
   if (testo === "") return;
-  if (testo.length > 200) {
-    mostraNotifica("Massimo 200 caratteri.");
-    return;
-  }
+  if (testo.length > 200) { mostraNotifica("Massimo 200 caratteri."); return; }
   socket.send(JSON.stringify({ tipo: "chat", testo: testo }));
   document.getElementById("messaggio").value = "";
 }
 document.getElementById("messaggio").addEventListener("keydown", function(e) {
-  if (e.key === "Enter") {
-    e.preventDefault();
-    inviaChat();
-  }
+  if (e.key === "Enter") { e.preventDefault(); inviaChat(); }
 });
 function apriEmoji() {
   const pannello = document.getElementById("pannelloEmoji");
-  if (pannello.style.display === "none") {
-    pannello.style.display = "block";
-  } else {
-    pannello.style.display = "none";
-  }
+  pannello.style.display = (pannello.style.display === "none") ? "block" : "none";
 }
 document.getElementById("pannelloEmoji").addEventListener("click", function(e) {
   if (e.target.tagName === "SPAN") {
@@ -1864,22 +608,14 @@ document.getElementById("pannelloEmoji").addEventListener("click", function(e) {
     input.focus();
   }
 });
+
 let nuoviMessaggiMobile = 0;
-function pulisciTestoChat(testo) {
-  return testo
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
+function pulisciTestoChat(testo) { return testo.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
 function aggiornaBadgeChatMobile(){
   const badge = document.getElementById("badgeChatMobile");
   if (!badge) return;
-  if (nuoviMessaggiMobile > 0) {
-    badge.style.display = "flex";
-    badge.innerHTML = nuoviMessaggiMobile;
-  } else {
-    badge.style.display = "none";
-  }
+  if (nuoviMessaggiMobile > 0) { badge.style.display = "flex"; badge.innerHTML = nuoviMessaggiMobile; }
+  else badge.style.display = "none";
 }
 function aggiungiMessaggio(uid, nome, testo) {
   const chat = document.getElementById("chat");
@@ -1888,26 +624,16 @@ function aggiungiMessaggio(uid, nome, testo) {
     ? `<span class="nickname-riga" style="cursor:pointer;color:#ff6600;" onclick="apriPopupGiocatore('${uid}','${nome}')">${nome}</span>`
     : `<b>${nome}</b>`;
   const ora = new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
-  const rigaHtml = `
-    <div class="messaggio">
-      <span style="color:#888;font-size:12px;">[${ora}]</span>
-      ${nomeHtml}: ${pulisciTestoChat(testo)}
-    </div>`;
+  const rigaHtml = `<div class="messaggio"><span style="color:#888;font-size:12px;">[${ora}]</span> ${nomeHtml}: ${pulisciTestoChat(testo)}</div>`;
   chat.innerHTML += rigaHtml;
   chat.scrollTop = chat.scrollHeight;
   const chatMobile = document.getElementById("chatMobile");
   const contenutoMobile = document.getElementById("contenutoMobile");
-  const vistaChatAttiva = document.getElementById("popupMobile").classList.contains("aperto")
-    && contenutoMobile && contenutoMobile.dataset.vista === "chat";
-  if (chatMobile && vistaChatAttiva) {
-    chatMobile.innerHTML += rigaHtml;
-    chatMobile.scrollTop = chatMobile.scrollHeight;
-  } else {
-    nuoviMessaggiMobile++;
-    aggiornaBadgeChatMobile();
-  }
+  const vistaChatAttiva = document.getElementById("popupMobile").classList.contains("aperto") && contenutoMobile && contenutoMobile.dataset.vista === "chat";
+  if (chatMobile && vistaChatAttiva) { chatMobile.innerHTML += rigaHtml; chatMobile.scrollTop = chatMobile.scrollHeight; }
+  else { nuoviMessaggiMobile++; aggiornaBadgeChatMobile(); }
 }
-// ===== ONLINE IN QUESTA STANZA =====
+
 function mostraGiocatori(lista) {
   ultimaListaOnlineStanza = lista || [];
   aggiornaContatoreAmiciOnline();
@@ -1926,42 +652,26 @@ function mostraGiocatori(lista) {
     const amici = listaOrdinata.filter(g => mieiAmiciUid.has(g.uid));
     const altri = listaOrdinata.filter(g => !mieiAmiciUid.has(g.uid));
     let html = "";
-    if (amici.length) {
-      html += "<h3 style='margin:10px;color:#43a047;'>👥 Amici online</h3>";
-      html += amici.map(g => creaRigaGiocatore(g)).join("");
-    }
-    if (altri.length) {
-      html += "<h3 style='margin:10px;color:#666;'>🟢 Altri giocatori</h3>";
-      html += altri.map(g => creaRigaGiocatore(g)).join("");
-    }
+    if (amici.length) { html += "<h3 style='margin:10px;color:#43a047;'>Amici online</h3>"; html += amici.map(g => creaRigaGiocatore(g)).join(""); }
+    if (altri.length) { html += "<h3 style='margin:10px;color:#666;'>Altri giocatori</h3>"; html += altri.map(g => creaRigaGiocatore(g)).join(""); }
     contenitore.innerHTML = html;
   }
   const contenutoMobile = document.getElementById("contenutoMobile");
   if (contenutoMobile && contenutoMobile.dataset.vista === "online") {
-    contenutoMobile.innerHTML = `<h2>👥 Giocatori online</h2>${contenitore.innerHTML}`;
+    contenutoMobile.innerHTML = `<h2>GIOCATORI ONLINE</h2>${contenitore.innerHTML}`;
   }
 }
 function creaRigaGiocatore(g) {
-    const immagine = g.avatar
-      ? `<img class="avatar-mini" src="${g.avatar}">`
-      : `<div class="avatar-mini" style="background:${coloreDaNome(g.nickname)};">${iniziale(g.nickname)}</div>`;
+    const immagine = g.avatar ? `<img class="avatar-mini" src="${g.avatar}">` : `<div class="avatar-mini" style="background:${coloreDaNome(g.nickname)};">${iniziale(g.nickname)}</div>`;
     const cliccabile = g.uid && g.uid !== mioUid;
     return `
       <div class="giocatore-online" ${cliccabile ? `onclick="apriPopupGiocatore('${g.uid}','${g.nickname}')" style="cursor:pointer;"` : ""}>
         ${immagine}
         <div>
   <span class="nickname-riga">${g.nickname}</span>
-  <div style="font-size:13px;color:#777;">
-    ${iconaDispositivo(g.tipoDispositivo)}
-  </div>
-  <div style="font-size:13px;font-weight:bold;color:${
-    g.stato === "partita" ? "#ff6600" : "#43a047"
-  };">
-    ${
-      g.stato === "partita"
-      ? "🎲 In partita"
-      : "🟢 In lobby"
-    }
+  <div style="font-size:13px;color:#777;">${iconaDispositivo(g.tipoDispositivo)}</div>
+  <div style="font-size:13px;font-weight:bold;color:${g.stato === "partita" ? "#ff6600" : "#43a047"};">
+    ${g.stato === "partita" ? "🎲 In partita" : "🟢 In lobby"}
   </div>
 </div>
       </div>`;
@@ -1976,11 +686,8 @@ async function caricaTopGiocatori() {
       let medaglia = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : "🏅";
       return `<div class="top-player">${medaglia} <b><a href="profilo-pubblico.html?nickname=${encodeURIComponent(g.nickname)}" style="color:inherit;">${g.nickname}</a></b><br>🎯 Vittorie: ${g.vinte}<br>🎮 Partite: ${g.giocate}</div><br>`;
     }).join("");
-  } catch (e) {
-    document.getElementById("top").innerHTML = "Errore caricamento classifica";
-  }
+  } catch (e) { document.getElementById("top").innerHTML = "Errore caricamento classifica"; }
 }
-// ===== AMICI =====
 async function caricaAmici() {
   try {
     const r = await fetch("https://gioco-oca-server.onrender.com/api/amici", { credentials: "include" });
@@ -1995,7 +702,6 @@ function aggiornaContatoreAmiciOnline() {
   const el = document.getElementById("amiciOnline");
   if (el) el.textContent = conteggio;
 }
-// ===== POPUP PICCOLO SU UN GIOCATORE =====
 function apriPopupGiocatore(uidTarget, nomeTarget) {
   if (!uidTarget || uidTarget === mioUid) return;
   const overlay = document.getElementById("overlayPopupGiocatore");
@@ -2003,36 +709,23 @@ function apriPopupGiocatore(uidTarget, nomeTarget) {
   overlay.classList.add("aperto");
   caricaDatiPopupGiocatore(nomeTarget);
 }
-function chiudiPopupGiocatore() {
-  document.getElementById("overlayPopupGiocatore").classList.remove("aperto");
-}
-document.getElementById("overlayPopupGiocatore").addEventListener("click", (e) => {
-  if (e.target.id === "overlayPopupGiocatore") chiudiPopupGiocatore();
-});
+function chiudiPopupGiocatore() { document.getElementById("overlayPopupGiocatore").classList.remove("aperto"); }
+document.getElementById("overlayPopupGiocatore").addEventListener("click", (e) => { if (e.target.id === "overlayPopupGiocatore") chiudiPopupGiocatore(); });
 async function caricaDatiPopupGiocatore(nomeTarget) {
   try {
     const risposta = await fetch("https://gioco-oca-server.onrender.com/api/profilo-pubblico/" + encodeURIComponent(nomeTarget), { credentials: "include" });
     if (!risposta.ok) { document.getElementById("popupGiocatoreContenuto").innerHTML = "Errore nel caricamento."; return; }
     const dati = await risposta.json();
     disegnaPopupGiocatore(dati);
-  } catch (e) {
-    document.getElementById("popupGiocatoreContenuto").innerHTML = "Errore di connessione.";
-  }
+  } catch (e) { document.getElementById("popupGiocatoreContenuto").innerHTML = "Errore di connessione."; }
 }
 function creaGiocatoriPartita(partita){
   if(!partita.giocatori) return "";
   return partita.giocatori.map(g=>{
     const avatar = g.avatar
     ? `<img class="avatar-partita-mini" src="${g.avatar}">`
-    : `<div class="avatar-partita-mini" style="background:${coloreDaNome(g.nome)}">
-        ${iniziale(g.nome)}
-       </div>`;
-    return `
-      <div class="mini-giocatore">
-        ${avatar}
-        ${g.nome} 🟢
-      </div>
-    `;
+    : `<div class="avatar-partita-mini" style="background:${coloreDaNome(g.nome)}">${iniziale(g.nome)}</div>`;
+    return `<div class="mini-giocatore">${avatar}${g.nome} 🟢</div>`;
   }).join("");
 }
 function disegnaPopupGiocatore(dati) {
@@ -2042,7 +735,7 @@ function disegnaPopupGiocatore(dati) {
     : `<div class="popup-avatar" style="background:${coloreDaNome(dati.nickname)};">${iniziale(dati.nickname)}</div>`;
   let azioneHtml;
   if (dati.statoAmicizia === "amici") {
-    azioneHtml = `<button class="btn-popup btn-rimuovi-amico" onclick="rimuoviAmico('${dati.uid}')">Rimuovi amico</button>`;
+    azioneHtml = `<button class="btn-popup btn-rimuovi-amico" onclick="rimuoviAmico('${dati.uid}')">🗑️ Rimuovi amico</button>`;
   } else if (dati.statoAmicizia === "richiesta_inviata") {
     azioneHtml = `<button class="btn-popup" disabled>⏳ Richiesta inviata</button>`;
   } else if (dati.statoAmicizia === "richiesta_ricevuta") {
@@ -2053,16 +746,15 @@ function disegnaPopupGiocatore(dati) {
   document.getElementById("popupGiocatoreContenuto").innerHTML = `
     <div class="popup-avatar-container">${immagine}</div>
     <div class="popup-nickname">${dati.nickname}</div>
-    <div class="popup-stato-online">${online ? "🟢 Online ora in questa stanza" : "⚫ Non online in questa stanza al momento"}</div>
+    <div class="popup-stato-online">${online ? "Online ora in questa stanza" : "Non online in questa stanza al momento"}</div>
     <div class="popup-azioni">${azioneHtml}</div>
-    <a href="profilo-pubblico.html?nickname=${encodeURIComponent(dati.nickname)}" class="popup-link-profilo">👤 Vedi profilo completo</a>
+    <a href="profilo-pubblico.html?nickname=${encodeURIComponent(dati.nickname)}" class="popup-link-profilo">Vedi profilo completo</a>
   `;
 }
 async function inviaRichiestaAmicizia(destinatarioUid) {
   try {
     const r = await fetch("https://gioco-oca-server.onrender.com/api/amici/richiedi", {
-      method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ destinatarioUid })
+      method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ destinatarioUid })
     });
     const d = await r.json();
     if (!r.ok) { mostraNotifica(d.errore || "Errore."); return; }
@@ -2072,8 +764,7 @@ async function inviaRichiestaAmicizia(destinatarioUid) {
 async function accettaAmicizia(daUid) {
   try {
     const r = await fetch("https://gioco-oca-server.onrender.com/api/amici/accetta", {
-      method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ daUid })
+      method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ daUid })
     });
     if (!r.ok) { const d = await r.json(); mostraNotifica(d.errore || "Errore."); return; }
     chiudiPopupGiocatore();
@@ -2083,8 +774,7 @@ async function accettaAmicizia(daUid) {
 async function rifiutaAmicizia(daUid) {
   try {
     await fetch("https://gioco-oca-server.onrender.com/api/amici/rifiuta", {
-      method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ daUid })
+      method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ daUid })
     });
     chiudiPopupGiocatore();
   } catch (e) { mostraNotifica("Errore di connessione."); }
@@ -2093,15 +783,13 @@ async function rimuoviAmico(altroUid) {
   if (!confirm("Vuoi rimuovere questa persona dai tuoi amici?")) return;
   try {
     const r = await fetch("https://gioco-oca-server.onrender.com/api/amici/rimuovi", {
-      method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ altroUid })
+      method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ altroUid })
     });
     if (!r.ok) { const d = await r.json(); mostraNotifica(d.errore || "Errore."); return; }
     chiudiPopupGiocatore();
     caricaAmici();
   } catch (e) { mostraNotifica("Errore di connessione."); }
 }
-// ===== NOTIFICHE =====
 async function caricaNotifiche(apriPannello) {
   try {
     const r = await fetch("https://gioco-oca-server.onrender.com/api/notifiche", { credentials: "include" });
@@ -2145,48 +833,26 @@ function toggleNotifiche() {
   pannello.classList.remove("nascosto");
   caricaNotifiche(true);
   fetch("https://gioco-oca-server.onrender.com/api/notifiche/segna-lette", { method: "POST", credentials: "include" })
-    .then(() => aggiornaBadgeNotifiche(0))
-    .catch(() => {});
+    .then(() => aggiornaBadgeNotifiche(0)).catch(() => {});
 }
-document.addEventListener("click", (e) => {
-  if (!e.target.closest("#areaCampanella")) document.getElementById("pannelloNotifiche").classList.add("nascosto");
-});
-async function accettaAmiciziaDaNotifica(daUid, bottone) {
-  await accettaAmicizia(daUid);
-  bottone.closest(".notifica-riga").remove();
-  caricaAmici();
-}
-async function rifiutaAmiciziaDaNotifica(daUid, bottone) {
-  await rifiutaAmicizia(daUid);
-  bottone.closest(".notifica-riga").remove();
-}
+document.addEventListener("click", (e) => { if (!e.target.closest("#areaCampanella")) document.getElementById("pannelloNotifiche").classList.add("nascosto"); });
+async function accettaAmiciziaDaNotifica(daUid, bottone) { await accettaAmicizia(daUid); bottone.closest(".notifica-riga").remove(); caricaAmici(); }
+async function rifiutaAmiciziaDaNotifica(daUid, bottone) { await rifiutaAmicizia(daUid); bottone.closest(".notifica-riga").remove(); }
 setInterval(() => caricaNotifiche(false), 10000);
-// ===== INVITO A PARTITA PRIVATA =====
 function apriModalInvito(partitaId) {
   partitaDaInvitareId = partitaId;
   disegnaListaModalInvito();
   document.getElementById("overlayModalInvito").classList.add("aperto");
 }
-function chiudiModalInvito() {
-  document.getElementById("overlayModalInvito").classList.remove("aperto");
-  partitaDaInvitareId = null;
-}
-document.getElementById("overlayModalInvito").addEventListener("click", (e) => {
-  if (e.target.id === "overlayModalInvito") chiudiModalInvito();
-});
+function chiudiModalInvito() { document.getElementById("overlayModalInvito").classList.remove("aperto"); partitaDaInvitareId = null; }
+document.getElementById("overlayModalInvito").addEventListener("click", (e) => { if (e.target.id === "overlayModalInvito") chiudiModalInvito(); });
 function disegnaListaModalInvito() {
   const altri = ultimaListaOnlineStanza.filter(g => g.uid !== mioUid);
   const box = document.getElementById("listaModalInvito");
   if (!altri.length) { box.innerHTML = "<p style='text-align:center;color:#999;padding:20px;'>Nessun altro giocatore online in questa stanza al momento.</p>"; return; }
   box.innerHTML = altri.map(g => {
-    const immagine = g.avatar
-      ? `<img class="modal-invito-avatar" src="${g.avatar}">`
-      : `<div class="modal-invito-avatar" style="background:${coloreDaNome(g.nickname)};">${iniziale(g.nickname)}</div>`;
-    return `
-      <div class="modal-invito-riga" id="rigaInvito-${g.uid}" onclick="invitaGiocatore('${g.uid}')">
-        ${immagine}
-        <span>${g.nickname}</span>
-      </div>`;
+    const immagine = g.avatar ? `<img class="modal-invito-avatar" src="${g.avatar}">` : `<div class="modal-invito-avatar" style="background:${coloreDaNome(g.nickname)};">${iniziale(g.nickname)}</div>`;
+    return `<div class="modal-invito-riga" id="rigaInvito-${g.uid}" onclick="invitaGiocatore('${g.uid}')">${immagine}<span>${g.nickname}</span></div>`;
   }).join("");
 }
 function invitaGiocatore(destinatarioUid) {
@@ -2195,11 +861,7 @@ function invitaGiocatore(destinatarioUid) {
 }
 function segnaInvitatoNelModal(destinatarioUid) {
   const riga = document.getElementById("rigaInvito-" + destinatarioUid);
-  if (riga) {
-    riga.classList.add("modal-invito-riga-invitato");
-    riga.innerHTML += ' <span class="modal-invito-check">✓ Invitato</span>';
-    riga.onclick = null;
-  }
+  if (riga) { riga.classList.add("modal-invito-riga-invitato"); riga.innerHTML += ' <span class="modal-invito-check">✓ Invitato</span>'; riga.onclick = null; }
 }
 function mostraInvitoRicevuto(dati) {
   invitoAttivoPartitaId = dati.partitaId;
@@ -2213,90 +875,19 @@ function rispondiInvito(accettato) {
   invitoAttivoPartitaId = null;
 }
 let temaSalvato=localStorage.getItem("tema");
-if(temaSalvato==="scuro"){
-document.body.classList.add("tema-scuro");
-}
+if(temaSalvato==="scuro"){ document.body.classList.add("tema-scuro"); }
 caricaTopGiocatori();
 verificaSessione();
 </script>
-<!-- MENU MOBILE -->
 <div id="menuMobile">
-    <!-- CREA -->
-    <button class="btn-mobile" onclick="apriCreaMobile()">
-        <img
-            src="https://gioco-oca-server.onrender.com/Immagini/Creatavolo.png"
-            alt="Crea"
-            style="
-                width:24px;
-                height:24px;
-                object-fit:contain;
-            "
-        >
-        <span>Crea</span>
-    </button>
-    <!-- ONLINE -->
-    <button class="btn-mobile" onclick="apriOnlineMobile()">
-        <img
-            src="https://gioco-oca-server.onrender.com/Immagini/Amicionline.png"
-            alt="Online"
-            style="
-                width:24px;
-                height:24px;
-                object-fit:contain;
-            "
-        >
-        <span>Online</span>
-        <span
-            id="badgeOnlineMobile"
-            class="badge-mobile"
-            style="display:none;"
-        >
-            0
-        </span>
-    </button>
-    <!-- CHAT -->
-    <button class="btn-mobile" onclick="apriChatMobile()">
-        <img
-            src="https://gioco-oca-server.onrender.com/Immagini/Chatonline.png"
-            alt="Chat"
-            style="
-                width:24px;
-                height:24px;
-                object-fit:contain;
-            "
-        >
-        <span>Chat</span>
-        <span
-            id="badgeChatMobile"
-            class="badge-mobile"
-            style="display:none;"
-        >
-            0
-        </span>
-    </button>
-    <!-- OPZIONI -->
-    <button class="btn-mobile" onclick="apriOpzioniMobile()">
-        <img
-            src="https://gioco-oca-server.onrender.com/Immagini/Impostazioni.png"
-            alt="Opzioni"
-            style="
-                width:24px;
-                height:24px;
-                object-fit:contain;
-            "
-        >
-        <span>Opzioni</span>
-    </button>
+<button class="btn-mobile" onclick="apriCreaMobile()">🪑<span>Crea</span></button>
+<button class="btn-mobile" onclick="apriOnlineMobile()">👥<span>Online</span><span id="badgeOnlineMobile" class="badge-mobile" style="display:none;">0</span></button>
+<button class="btn-mobile" onclick="apriChatMobile()">💬<span>Chat</span><span id="badgeChatMobile" class="badge-mobile" style="display:none;">0</span></button>
+<button class="btn-mobile" onclick="apriOpzioniMobile()">⚙️<span>Opzioni</span></button>
 </div>
-<!-- FINESTRE MOBILE -->
 <div id="popupMobile" class="popup-mobile">
-    <button
-        class="chiudi-mobile"
-        onclick="chiudiMobile()"
-    >
-        ✕
-    </button>
-    <div id="contenutoMobile"></div>
+<button class="chiudi-mobile" onclick="chiudiMobile()">✕</button>
+<div id="contenutoMobile"></div>
 </div>
 </body>
 </html>
