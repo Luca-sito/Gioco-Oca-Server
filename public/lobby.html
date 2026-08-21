@@ -189,15 +189,8 @@ button:disabled{
     background:#eafaf0;
     color:#2e7d32;
 }
-.badge-microfono,
-.badge-webcam{
+.badge-microfono{
     font-size:12px;
-}
-.nota-media{
-    font-size:11px;
-    color:#888;
-    margin:-6px 0 10px;
-    line-height:1.4;
 }
 .elo-mini{
     font-size:11px;
@@ -1384,17 +1377,6 @@ body.tema-scuro .giocatore-online{
 </style>
 </head>
 <body>
-<div id="contenitoreNotifiche"></div>
-<div id="areaCampanella">
-  <button id="btnCampanella" onclick="toggleNotifiche()">
-    🔔
-    <span id="badgeNotifiche" class="badge-notifiche" style="display:none;">0</span>
-  </button>
-  <div id="pannelloNotifiche" class="pannello-notifiche nascosto">
-    <div class="notifiche-titolo">Notifiche</div>
-    <div id="listaNotifiche"></div>
-  </div>
-</div>
 <div id="cardInvitoRicevuto" class="nascosto">
   <div id="testoInvitoRicevuto"></div>
   <div class="invito-bottoni">
@@ -1417,26 +1399,6 @@ body.tema-scuro .giocatore-online{
     <div id="listaModalInvito"></div>
   </div>
 </div>
-<div id="overlayEntrataMedia" class="overlay-modal-invito">
-  <div class="modal-invito-box" style="width:300px;">
-    <div class="modal-invito-titolo">
-      Prima di entrare
-      <button onclick="chiudiEntrataMedia()">✕</button>
-    </div>
-    <div style="padding:16px;">
-      <div class="riga-microfono">
-        <input type="checkbox" id="microfonoAttivoEntrata">
-        <label for="microfonoAttivoEntrata">🎤 Microfono attivo in partita</label>
-      </div>
-      <div class="riga-microfono">
-        <input type="checkbox" id="webcamAttivaEntrata">
-        <label for="webcamAttivaEntrata">📷 Webcam attiva in partita</label>
-      </div>
-      <div class="nota-media">Scelta valida solo per questa partita: verrai collegato in automatico agli altri giocatori che hanno fatto la stessa scelta.</div>
-      <button class="crea" onclick="confermaEntrataPartita()" style="margin-top:6px;">Entra in partita</button>
-    </div>
-  </div>
-</div>
 <div class="contenitore">
   <div class="sinistra">
     <h2>Opzioni di gioco</h2>
@@ -1449,13 +1411,8 @@ body.tema-scuro .giocatore-online{
       <input type="hidden" id="tipoPartitaSelezionato" value="classifica">
       <div class="riga-microfono">
         <input type="checkbox" id="microfonoAttivo">
-        <label for="microfonoAttivo">🎤 Microfono attivo in partita</label>
+        <label for="microfonoAttivo">🎤 Chat vocale (microfono attivo in partita)</label>
       </div>
-      <div class="riga-microfono">
-        <input type="checkbox" id="webcamAttiva">
-        <label for="webcamAttiva">📷 Webcam attiva in partita</label>
-      </div>
-      <div class="nota-media">La scelta si fa solo qui: appena la partita inizia, chi ha attivato microfono e/o webcam viene collegato automaticamente con tutti gli altri che hanno fatto lo stesso, senza bisogno di richieste durante la partita.</div>
       <p>Numero giocatori</p>
       <select id="numeroGiocatori">
         <option value="2">2 giocatori</option>
@@ -1612,13 +1569,8 @@ CREA TAVOLO
 <input type="hidden" id="tipoPartitaSelezionatoMobile" value="classifica">
 <div class="riga-microfono">
   <input type="checkbox" id="microfonoAttivoMobile">
-  <label for="microfonoAttivoMobile">🎤 Microfono attivo in partita</label>
+  <label for="microfonoAttivoMobile">🎤 Chat vocale (microfono attivo)</label>
 </div>
-<div class="riga-microfono">
-  <input type="checkbox" id="webcamAttivaMobile">
-  <label for="webcamAttivaMobile">📷 Webcam attiva in partita</label>
-</div>
-<div class="nota-media">Scelta valida solo per questa partita: si decide qui, non durante il gioco.</div>
 <p>Numero giocatori</p>
 <select id="numeroGiocatoriMobile">
 <option value="2">2 giocatori</option>
@@ -1665,7 +1617,6 @@ function creaPartitaMobile() {
   const tipo = document.getElementById("tipoPartitaMobile").value;
   const tipoPartita = document.getElementById("tipoPartitaSelezionatoMobile").value;
   const microfonoAttivo = document.getElementById("microfonoAttivoMobile").checked;
-  const webcamAttiva = document.getElementById("webcamAttivaMobile").checked;
   socket.send(JSON.stringify({
     tipo: "creaPartita",
     tempo: document.getElementById("tempoMobile").value,
@@ -1673,7 +1624,6 @@ function creaPartitaMobile() {
     modalita: tipo,
     tipoPartita: tipoPartita,
     microfonoAttivo: microfonoAttivo,
-    webcamAttiva: webcamAttiva,
     maxGiocatori: document.getElementById("numeroGiocatoriMobile").value
   }));
   if (tipo === "privata") aspettaPropriaPartitaPrivata = true;
@@ -1915,11 +1865,11 @@ socket.onclose = () => { setTimeout(() => location.reload(), 3000); };
     if (dati.tipo === "invitoRicevuto") mostraInvitoRicevuto(dati);
     if (dati.tipo === "invitoInviato") segnaInvitatoNelModal(dati.destinatarioUid);
     if (dati.tipo === "invitoRifiutato") mostraNotifica((dati.destinatarioNome || "Il giocatore") + " ha rifiutato l'invito.");
-    // Il collegamento vero e proprio (WebRTC audio/video) avviene nella pagina di
-    // gioco (gioco.html): la scelta di microfono/webcam è presa qui in lobby e non è
-    // più modificabile durante la partita, né richiede alcuna richiesta manuale.
+    // La connessione vocale automatica vera e propria (WebRTC) avviene nella pagina
+    // di gioco (gioco.html): qui in lobby avvisiamo solo che il microfono verrà
+    // collegato in automatico non appena la partita comincia.
     if (dati.tipo === "vocaleAutoAvvio" && dati.peer && dati.peer.length) {
-      mostraNotifica("🎤📷 Collegamento automatico con " + dati.peer.map(p => p.nome).join(", "));
+      mostraNotifica("🎤 Chat vocale attiva con " + dati.peer.map(p => p.nome).join(", "));
     }
   };
 }
@@ -1928,7 +1878,6 @@ function creaPartita() {
   const tipo = document.getElementById("tipoPartita").value;
   const tipoPartita = document.getElementById("tipoPartitaSelezionato").value;
   const microfonoAttivo = document.getElementById("microfonoAttivo").checked;
-  const webcamAttiva = document.getElementById("webcamAttiva").checked;
   socket.send(JSON.stringify({
     tipo: "creaPartita",
     tempo: document.getElementById("tempo").value,
@@ -1936,7 +1885,6 @@ function creaPartita() {
     modalita: tipo,
     tipoPartita: tipoPartita,
     microfonoAttivo: microfonoAttivo,
-    webcamAttiva: webcamAttiva,
     maxGiocatori: document.getElementById("numeroGiocatori").value
   }));
   if (tipo === "privata") aspettaPropriaPartitaPrivata = true;
@@ -2025,27 +1973,8 @@ const eMia =
     if (mia) { aspettaPropriaPartitaPrivata = false; apriModalInvito(mia.id); }
   }
 }
-let partitaDaRaggiungereId = null;
 function entraPartita(id) {
-  partitaDaRaggiungereId = id;
-  document.getElementById("microfonoAttivoEntrata").checked = false;
-  document.getElementById("webcamAttivaEntrata").checked = false;
-  document.getElementById("overlayEntrataMedia").classList.add("aperto");
-}
-function confermaEntrataPartita() {
-  if (!partitaDaRaggiungereId) return;
-  socket.send(JSON.stringify({
-    tipo: "entraPartita",
-    id: partitaDaRaggiungereId,
-    microfonoAttivo: document.getElementById("microfonoAttivoEntrata").checked,
-    webcamAttiva: document.getElementById("webcamAttivaEntrata").checked
-  }));
-  document.getElementById("overlayEntrataMedia").classList.remove("aperto");
-  partitaDaRaggiungereId = null;
-}
-function chiudiEntrataMedia() {
-  document.getElementById("overlayEntrataMedia").classList.remove("aperto");
-  partitaDaRaggiungereId = null;
+  socket.send(JSON.stringify({ tipo: "entraPartita", id: id }));
 }
 // ===== CHAT =====
 function inviaChat() {
@@ -2244,11 +2173,10 @@ function creaGiocatoriPartita(partita){
        </div>`;
     const elo = g.elo != null ? `<span class="elo-mini">${g.elo} ELO</span>` : "";
     const microfono = g.microfonoAttivo ? `<span class="badge-microfono" title="Microfono attivo">🎤</span>` : "";
-    const webcam = g.webcamAttiva ? `<span class="badge-webcam" title="Webcam attiva">📷</span>` : "";
     return `
       <div class="mini-giocatore">
         ${avatar}
-        <span>${g.nome} 🟢 ${microfono}${webcam}<br>${elo}</span>
+        <span>${g.nome} 🟢 ${microfono}<br>${elo}</span>
       </div>
     `;
   }).join("");
