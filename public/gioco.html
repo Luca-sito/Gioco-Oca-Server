@@ -1,1403 +1,165 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8">
+<meta charset="UTF-8">
 
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
-  >
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <meta name="theme-color" content="#071018">
-  <meta name="color-scheme" content="dark">
-
-  <title>Gioco dell'Oca - GIOCHI SOCIETA</title>
-
-  <link rel="stylesheet" href="gioco.css">
-
-  <style>
-    /* =====================================================
-       CARICAMENTO
-       Questi stili restano qui perché il tuo gioco.css
-       originale non contieneva il sistema di caricamento.
-       ===================================================== */
-
-#overlay-caricamento {
-  position: fixed;
-  inset: 0;
-  z-index: 10000;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  padding:
-    max(20px, env(safe-area-inset-top))
-    max(20px, env(safe-area-inset-right))
-    max(20px, env(safe-area-inset-bottom))
-    max(20px, env(safe-area-inset-left));
-
-  background: rgba(255, 255, 255, 0.34);
-
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-
-  transition:
-    opacity 0.45s ease,
-    visibility 0.45s ease;
-}
-
-#overlay-caricamento.caricamento-finito {
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-}
-
-#caricamento-box {
-  width: min(88vw, 390px);
-
-  padding: 30px 28px;
-
-  background: #ffffff;
-
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 18px;
-
-  text-align: center;
-
-  box-shadow:
-    0 20px 55px rgba(0, 0, 0, 0.20),
-    0 3px 12px rgba(0, 0, 0, 0.08);
-
-  animation: comparsa-caricamento 0.3s ease;
-}
-
-#caricamento-logo {
-  margin-bottom: 22px;
-
-  color: #111111;
-
-  font-size: clamp(21px, 4vw, 30px);
-  font-weight: 900;
-  letter-spacing: 0.07em;
-}
-
-#caricamento-spinner {
-  width: 42px;
-  height: 42px;
-
-  margin: 0 auto 18px;
-
-  border-radius: 50%;
-
-  border: 3px solid #e7e7e7;
-  border-top-color: #222222;
-
-  animation:
-    caricamento-spin 0.85s linear infinite;
-}
-
-#caricamento-testo {
-  min-height: 20px;
-
-  color: #666666;
-
-  font-size: 13px;
-  font-weight: 600;
-}
-
-@keyframes caricamento-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes comparsa-caricamento {
-  from {
-    opacity: 0;
-    transform: translateY(8px) scale(0.97);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-    /* =====================================================
-       BANNER DISCONNESSIONE
-       ===================================================== */
-
-    #banner-disconnesso {
-      position: fixed;
-      top: max(10px, env(safe-area-inset-top));
-      left: 50%;
-      transform: translateX(-50%);
-
-      z-index: 9000;
-
-      max-width: calc(100vw - 24px);
-
-      padding: 9px 14px;
-
-      background:
-        linear-gradient(
-          180deg,
-          rgba(75, 25, 29, 0.97),
-          rgba(48, 17, 21, 0.97)
-        );
-
-      border:
-        1px solid rgba(239, 100, 100, 0.35);
-
-      border-radius: 999px;
-
-      color: #ffd6d6;
-
-      font-size: 12px;
-      font-weight: 800;
-
-      text-align: center;
-
-      box-shadow:
-        0 10px 30px rgba(0,0,0,0.35);
-    }
-
-    #banner-disconnesso.nascosto {
-      display: none;
-    }
-
-    /* =====================================================
-       NOTIFICHE
-       ===================================================== */
-
-    #contenitore-notifiche-gioco {
-      position: fixed;
-
-      top:
-        max(16px, env(safe-area-inset-top));
-
-      right:
-        max(16px, env(safe-area-inset-right));
-
-      z-index: 9500;
-
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-
-      width: min(90vw, 360px);
-
-      pointer-events: none;
-    }
-
-    .notifica-toast-gioco {
-      padding: 11px 14px;
-
-      background:
-        linear-gradient(
-          180deg,
-          rgba(18, 33, 46, 0.98),
-          rgba(7, 16, 24, 0.98)
-        );
-
-      border:
-        1px solid rgba(255,255,255,0.09);
-
-      border-left:
-        3px solid #e8b94f;
-
-      border-radius: 11px;
-
-      color: #f4f7fa;
-
-      font-size: 12px;
-      line-height: 1.35;
-
-      box-shadow:
-        0 12px 30px rgba(0,0,0,0.38);
-
-      animation:
-        notifica-entrata 0.25s ease;
-    }
-
-    @keyframes notifica-entrata {
-      from {
-        opacity: 0;
-        transform: translateY(-8px);
-      }
-
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    /* =====================================================
-       ACCESSIBILITÀ
-       ===================================================== */
-
-    #area-dadi:focus-visible,
-    #btn-menu:focus-visible,
-    #btn-chat:focus-visible,
-    #btn-giocatori:focus-visible,
-    #pannello-menu button:focus-visible,
-    button:focus-visible,
-    input:focus-visible {
-      outline: 2px solid #ffd970;
-      outline-offset: 3px;
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      #overlay-caricamento,
-      #caricamento-spinner,
-      .notifica-toast-gioco {
-        animation: none !important;
-        transition: none !important;
-      }
-    }
-  </style>
+<title>Gioco dell'Oca - Partita</title>
+<link rel="stylesheet" href="gioco.css">
 </head>
-
 <body>
 
-  <!-- =====================================================
-       OVERLAY CARICAMENTO
-       ===================================================== -->
+<div id="scena">
 
-  <div
-    id="overlay-caricamento"
-    aria-live="polite"
-    aria-atomic="true"
-    role="status"
-  >
-    <div id="caricamento-box">
-      <div id="caricamento-logo">GIOCHI SOCIETA</div>
+  <div id="area-tabellone">
+    <img id="immagine-tabellone" src="https://gioco-oca-server.onrender.com/Immagini/tabellone.png" alt="Tabellone">
+    <div id="contenitore-pedine"></div>
+    <div id="area-dadi" class="disabilitato" title="Clicca per tirare">
+      <div id="dado1"></div>
+      <div id="dado2"></div>
+    </div>
+  </div>
 
-      <div
-        id="caricamento-spinner"
-        aria-hidden="true"
-      ></div>
+  <div id="pannello-giocatori">
+    <div id="riga-turno">Caricamento...</div>
+    <div id="lista-giocatori"></div>
+  </div>
 
-      <div id="caricamento-testo">
-        Caricamento grafica
+  <div id="menu-wrapper">
+    <button id="btn-menu" title="Menu">☰</button>
+    <div id="pannello-menu" class="nascosto">
+      <button onclick="apriProfilo()">👤 Profilo</button>
+      <button onclick="apriImpostazioni()">⚙️ Impostazioni</button>
+      <button class="voce-pericolo" onclick="abbandonaPartita()">🚪 Abbandona partita</button>
+    </div>
+  </div>
+
+  <div id="messaggi-gioco"></div>
+  <div id="media-wrapper">
+    <div id="media-stato"></div>
+    <div id="media-videos"></div>
+    <div id="media-controls">
+      <button id="btn-microfono" type="button">🎤 Microfono</button>
+      <button id="btn-webcam" type="button">📷 Webcam</button>
+    </div>
+  </div>
+
+
+  <style>
+    /* ===== CHAT AUDIO/VIDEO ===== */
+    #media-wrapper {
+      position: fixed;
+      left: 20px;
+      bottom: 20px;
+      z-index: 1200;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+      pointer-events: none;
+    }
+    #media-controls {
+      display: flex;
+      gap: 8px;
+      pointer-events: auto;
+    }
+    #media-controls button {
+      border: 0;
+      border-radius: 12px;
+      padding: 9px 12px;
+      background: rgba(20,20,20,.9);
+      color: #fff;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(0,0,0,.25);
+      font-weight: 600;
+    }
+    #media-controls button:hover { filter: brightness(1.12); }
+    #media-videos {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(120px, 180px));
+      gap: 8px;
+      max-width: min(70vw, 580px);
+      pointer-events: auto;
+    }
+    .media-tile {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 10;
+      background: #151515;
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 8px 22px rgba(0,0,0,.28);
+    }
+    .media-tile video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      background: #111;
+    }
+    .media-tile .media-name {
+      position: absolute;
+      left: 7px;
+      bottom: 6px;
+      padding: 4px 7px;
+      border-radius: 8px;
+      background: rgba(0,0,0,.65);
+      color: #fff;
+      font-size: 12px;
+      max-width: calc(100% - 14px);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .media-tile.audio-only::before {
+      content: "🎤";
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      font-size: 34px;
+      background: radial-gradient(circle at center, #262626 0, #111 70%);
+      z-index: 0;
+    }
+    .media-tile.audio-only video { opacity: 0; }
+    #media-stato {
+      color: #fff;
+      background: rgba(20,20,20,.9);
+      border-radius: 10px;
+      padding: 7px 10px;
+      font-size: 12px;
+      box-shadow: 0 6px 20px rgba(0,0,0,.2);
+      display: none;
+    }
+    @media (max-width: 700px) {
+      #media-wrapper { left: 10px; bottom: 10px; }
+      #media-videos { grid-template-columns: repeat(2, minmax(110px, 150px)); max-width: 86vw; }
+      #media-controls button { padding: 8px 10px; font-size: 12px; }
+    }
+  </style>
+
+  <div id="chat-wrapper">
+    <button id="btn-chat" title="Apri chat">💬</button>
+    <div id="pannello-chat" class="nascosto">
+      <div id="chat-messaggi"></div>
+      <div id="chat-input-riga">
+        <input id="chat-input" placeholder="Scrivi un messaggio">
+        <button onclick="inviaChatPartita()">➤</button>
       </div>
     </div>
   </div>
 
-  <!-- =====================================================
-       CONNESSIONE
-       ===================================================== -->
+</div>
 
-  <div
-    id="banner-disconnesso"
-    class="nascosto"
-    role="status"
-    aria-live="assertive"
-  >
-    🔴 Connessione persa — riconnessione in corso...
+<div id="overlay-vittoria" class="overlay">
+  <div class="popup-vittoria">
+    <h2 id="testo-vincitore"></h2>
+    <button onclick="tornaAllaLobby()">Torna alla Lobby</button>
   </div>
+</div>
 
-  <!-- =====================================================
-       NOTIFICHE
-       ===================================================== -->
-
-  <div
-    id="contenitore-notifiche-gioco"
-    aria-live="polite"
-    aria-atomic="false"
-  ></div>
-
-  <!-- =====================================================
-       SCENA PRINCIPALE
-       ===================================================== -->
-
-  <main id="scena">
-
-    <div id="mondo-ruotato">
-
-      <!-- =================================================
-           MESSAGGIO FLASH
-           ================================================= -->
-
-      <div
-        id="flash-messaggio-gioco"
-        aria-live="assertive"
-        aria-atomic="true"
-      >
-        <span></span>
-      </div>
-
-      <!-- =================================================
-           DETERMINAZIONE ORDINE
-           ================================================= -->
-
-      <div
-        id="overlay-determinazione"
-        class="overlay"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="titolo-determinazione"
-      >
-        <div class="popup-determinazione">
-
-          <h2 id="titolo-determinazione">
-            🎲 CHI INIZIA?
-          </h2>
-
-          <p
-            class="sottotitolo-determinazione"
-            id="sottotitolo-determinazione"
-          >
-            I giocatori tirano i dadi uno alla volta per stabilire l'ordine.
-          </p>
-
-          <div id="lista-determinazione"></div>
-
-          <div id="slot-dadi-determinazione"></div>
-
-        </div>
-      </div>
-
-      <!-- =================================================
-           RICHIESTA AUDIO
-           ================================================= -->
-
-      <div
-        id="popup-richiesta-audio"
-        class="nascosto"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="testo-richiesta-audio"
-      >
-        <div class="popup-richiesta-audio-box">
-
-          <p id="testo-richiesta-audio"></p>
-
-          <div class="richiesta-audio-bottoni">
-
-            <button
-              type="button"
-              class="btn-rifiuta-audio"
-              onclick="rispondiRichiestaAudioRicevuta(false)"
-            >
-              Rifiuta
-            </button>
-
-            <button
-              type="button"
-              class="btn-accetta-audio"
-              onclick="rispondiRichiestaAudioRicevuta(true)"
-            >
-              Accetta
-            </button>
-
-          </div>
-        </div>
-      </div>
-
-      <!-- =================================================
-           TABELLONE
-           ================================================= -->
-
-      <section id="area-tabellone" aria-label="Tabellone di gioco">
-
-        <img
-          id="immagine-tabellone"
-          src="https://gioco-oca-server.onrender.com/Immagini/tabellone.png"
-          alt="Tabellone del Gioco dell'Oca"
-          draggable="false"
-          decoding="async"
-          fetchpriority="high"
-        >
-
-        <div
-          id="contenitore-pedine"
-          aria-hidden="true"
-        ></div>
-
-        <!-- =================================================
-             DADI
-             ================================================= -->
-
-        <div
-          id="area-dadi"
-          class="disabilitato"
-          title="Clicca per tirare"
-          role="button"
-          aria-label="Tira i dadi"
-          aria-disabled="true"
-          tabindex="0"
-        >
-
-          <!-- DADO 1 -->
-
-          <div
-            id="dado1"
-            class="dado-3d"
-            aria-hidden="true"
-          >
-            <div class="cubo">
-
-              <div class="faccia faccia-1">
-                <span
-                  class="pip pip-rossa"
-                  style="grid-area:2/2;"
-                ></span>
-              </div>
-
-              <div class="faccia faccia-2">
-                <span
-                  class="pip"
-                  style="grid-area:1/3;"
-                ></span>
-                <span
-                  class="pip"
-                  style="grid-area:3/1;"
-                ></span>
-              </div>
-
-              <div class="faccia faccia-3">
-                <span
-                  class="pip"
-                  style="grid-area:1/3;"
-                ></span>
-                <span
-                  class="pip"
-                  style="grid-area:2/2;"
-                ></span>
-                <span
-                  class="pip"
-                  style="grid-area:3/1;"
-                ></span>
-              </div>
-
-              <div class="faccia faccia-4">
-                <span
-                  class="pip pip-rossa"
-                  style="grid-area:1/1;"
-                ></span>
-                <span
-                  class="pip pip-rossa"
-                  style="grid-area:1/3;"
-                ></span>
-                <span
-                  class="pip pip-rossa"
-                  style="grid-area:3/1;"
-                ></span>
-                <span
-                  class="pip pip-rossa"
-                  style="grid-area:3/3;"
-                ></span>
-              </div>
-
-              <div class="faccia faccia-5">
-                <span
-                  class="pip"
-                  style="grid-area:1/1;"
-                ></span>
-                <span
-                  class="pip"
-                  style="grid-area:1/3;"
-                ></span>
-                <span
-                  class="pip"
-                  style="grid-area:2/2;"
-                ></span>
-                <span
-                  class="pip"
-                  style="grid-area:3/1;"
-                ></span>
-                <span
-                  class="pip"
-                  style="grid-area:3/3;"
-                ></span>
-              </div>
-
-              <div class="faccia faccia-6">
-                <span
-                  class="pip"
-                  style="grid-area:1/1;"
-                ></span>
-                <span
-                  class="pip"
-                  style="grid-area:2/1;"
-                ></span>
-                <span
-                  class="pip"
-                  style="grid-area:3/1;"
-                ></span>
-                <span
-                  class="pip"
-                  style="grid-area:1/3;"
-                ></span>
-                <span
-                  class="pip"
-                  style="grid-area:2/3;"
-                ></span>
-                <span
-                  class="pip"
-                  style="grid-area:3/3;"
-                ></span>
-              </div>
-
-            </div>
-          </div>
-
-          <!-- DADO 2 -->
-
-          <div
-            id="dado2"
-            class="dado-3d"
-            aria-hidden="true"
-          >
-            <div class="cubo">
-
-              <div class="faccia faccia-1">
-                <span
-                  class="pip pip-rossa"
-                  style="grid-area:2/2;"
-                ></span>
-              </div>
-
-              <div class="faccia faccia-2">
-                <span
-                  class="pip"
-                  style="grid-area:1/3;"
-                ></span>
-                <span
-                  class="pip"
-                  style="grid-area:3/1;"
-                ></span>
-              </div>
-
-              <div class="faccia faccia-3">
-                <span
-                  class="pip"
-                  style="grid-area:1/3;"
-                ></span>
-                <span
-                  class="pip"
-                  style="grid-area:2/2;"
-                ></span>
-                <span
-                  class="pip"
-                  style="grid-area:3/1;"
-                ></span>
-              </div>
-
-              <div class="faccia faccia-4">
-                <span
-                  class="pip pip-rossa"
-                  style="grid-area:1/1;"
-                ></span>
-                <span
-                  class="pip pip-rossa"
-                  style="grid-area:1/3;"
-                ></span>
-                <span
-                  class="pip pip-rossa"
-                  style="grid-area:3/1;"
-                ></span>
-                <span
-                  class="pip pip-rossa"
-                  style="grid-area:3/3;"
-                ></span>
-              </div>
-
-              <div class="faccia faccia-5">
-                <span
-                  class="pip"
-                  style="grid-area:1/1;"
-                ></span>
-                <span
-                  class="pip"
-                  style="grid-area:1/3;"
-                ></span>
-                <span
-                  class="pip"
-                  style="grid-area:2/2;"
-                ></span>
-                <span
-                  class="pip"
-                  style="grid-area:3/1;"
-                ></span>
-                <span
-                  class="pip"
-                  style="grid-area:3/3;"
-                ></span>
-              </div>
-
-              <div class="faccia faccia-6">
-                <span
-                  class="pip"
-                  style="grid-area:1/1;"
-                ></span>
-                <span
-                  class="pip"
-                  style="grid-area:2/1;"
-                ></span>
-                <span
-                  class="pip"
-                  style="grid-area:3/1;"
-                ></span>
-                <span
-                  class="pip"
-                  style="grid-area:1/3;"
-                ></span>
-                <span
-                  class="pip"
-                  style="grid-area:2/3;"
-                ></span>
-                <span
-                  class="pip"
-                  style="grid-area:3/3;"
-                ></span>
-              </div>
-
-            </div>
-          </div>
-
-        </div>
-      </section>
-
-      <!-- =================================================
-           GIOCATORI
-           ================================================= -->
-
-      <aside
-        id="pannello-giocatori"
-        aria-label="Giocatori della partita"
-      >
-
-        <div id="riga-turno">
-          Caricamento...
-        </div>
-
-        <div id="lista-giocatori"></div>
-
-      </aside>
-
-      <div id="giocatori-wrapper">
-        <button
-          id="btn-giocatori"
-          type="button"
-          title="Giocatori"
-          aria-label="Apri giocatori"
-          aria-controls="pannello-giocatori"
-        >
-          👤
-        </button>
-      </div>
-
-      <!-- =================================================
-           MENU
-           ================================================= -->
-
-      <div id="menu-wrapper">
-
-        <button
-          id="btn-menu"
-          type="button"
-          title="Menu"
-          aria-label="Apri menu"
-          aria-controls="pannello-menu"
-          aria-expanded="false"
-        >
-          ☰
-        </button>
-
-        <div
-          id="pannello-menu"
-          class="nascosto"
-          role="menu"
-        >
-
-          <button
-            type="button"
-            role="menuitem"
-            onclick="apriProfilo()"
-          >
-            👤 Profilo
-          </button>
-
-          <button
-            type="button"
-            role="menuitem"
-            onclick="apriImpostazioni()"
-          >
-            ⚙️ Impostazioni
-          </button>
-
-          <button
-            id="btn-toggle-suoni"
-            type="button"
-            role="menuitem"
-            onclick="toggleSuoni()"
-          >
-            🔊 Suoni: On
-          </button>
-
-          <button
-            id="btn-toggle-fullscreen"
-            type="button"
-            role="menuitem"
-            onclick="toggleFullscreen()"
-          >
-            ⛶ Tutto schermo
-          </button>
-
-          <button
-            id="btn-toggle-microfono"
-            type="button"
-            role="menuitem"
-            onclick="toggleMicrofono()"
-          >
-            🎤 Microfono: Off
-          </button>
-
-          <button
-            class="voce-pericolo"
-            type="button"
-            role="menuitem"
-            onclick="abbandonaPartita()"
-          >
-            🚪 Abbandona partita
-          </button>
-
-        </div>
-      </div>
-
-      <!-- =================================================
-           MESSAGGI
-           ================================================= -->
-
-      <div
-        id="messaggi-gioco"
-        aria-live="polite"
-        aria-atomic="true"
-      ></div>
-
-      <!-- =================================================
-           VITTORIA
-           ================================================= -->
-
-      <div
-        id="overlay-vittoria"
-        class="overlay"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="testo-vincitore"
-      >
-
-        <div class="popup-vittoria">
-
-          <h2 id="testo-vincitore"></h2>
-
-          <button
-            type="button"
-            onclick="tornaAllaLobby()"
-          >
-            Torna alla Lobby
-          </button>
-
-        </div>
-      </div>
-
-    </div>
-
-    <!-- =====================================================
-         BACKDROP GIOCATORI
-         ===================================================== -->
-
-    <div id="backdrop-giocatori"></div>
-
-    <!-- =====================================================
-         CHAT
-         ===================================================== -->
-
-    <div id="chat-wrapper">
-
-      <button
-        id="btn-chat"
-        type="button"
-        title="Apri chat"
-        aria-label="Apri chat"
-        aria-controls="pannello-chat"
-        aria-expanded="false"
-      >
-        💬
-
-        <span
-          id="badge-chat-partita"
-          class="badge-chat-partita"
-          style="display:none;"
-          aria-hidden="true"
-        >
-          0
-        </span>
-      </button>
-
-      <div
-        id="pannello-chat"
-        class="nascosto"
-        role="region"
-        aria-label="Chat della partita"
-      >
-
-        <div
-          id="chat-messaggi"
-          aria-live="polite"
-          aria-atomic="false"
-        ></div>
-
-        <div id="chat-input-riga">
-
-          <input
-            id="chat-input"
-            type="text"
-            placeholder="Scrivi un messaggio"
-            autocomplete="off"
-            maxlength="500"
-            aria-label="Messaggio chat"
-          >
-
-          <button
-            type="button"
-            onclick="inviaChatPartita()"
-            aria-label="Invia messaggio"
-            title="Invia messaggio"
-          >
-            ➤
-          </button>
-
-        </div>
-      </div>
-    </div>
-  </main>
-
-  <!-- =====================================================
-       ROTAZIONE TELEFONO
-       ===================================================== -->
-
-  <div
-    id="overlayRuotaTelefono"
-    aria-live="assertive"
-    aria-atomic="true"
-  >
-    <div
-      class="ruota-icona"
-      aria-hidden="true"
-    >
-      ↻
-    </div>
-
-    <p class="ruota-testo">
-      Ruota il dispositivo
-    </p>
-
-    <p class="ruota-sottotesto">
-      Il gioco è ottimizzato per questa modalità di visualizzazione.
-    </p>
-  </div>
-
-  <!-- =====================================================
-       CARICAMENTO GIOCO.JS
-       ===================================================== -->
-
-  <script>
-    (() => {
-      "use strict";
-
-      const overlay =
-        document.getElementById("overlay-caricamento");
-
-      const testo =
-        document.getElementById("caricamento-testo");
-
-      const immagine =
-        document.getElementById("immagine-tabellone");
-
-      let caricamentoCompletato = false;
-
-      function cambiaTesto(messaggio) {
-        if (testo) {
-          testo.textContent = messaggio;
-        }
-      }
-
-      function attendiFrame() {
-        return new Promise((resolve) => {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(resolve);
-          });
-        });
-      }
-
-      function attendiImmagine() {
-        return new Promise((resolve) => {
-
-          if (!immagine) {
-            resolve();
-            return;
-          }
-
-          if (
-            immagine.complete &&
-            immagine.naturalWidth > 0
-          ) {
-            if (
-              typeof immagine.decode === "function"
-            ) {
-              immagine.decode()
-                .catch(() => {})
-                .finally(resolve);
-            } else {
-              resolve();
-            }
-
-            return;
-          }
-
-          let completata = false;
-
-          const completa = () => {
-            if (completata) return;
-
-            completata = true;
-            resolve();
-          };
-
-          immagine.addEventListener(
-            "load",
-            () => {
-
-              if (
-                typeof immagine.decode === "function"
-              ) {
-                immagine.decode()
-                  .catch(() => {})
-                  .finally(completa);
-              } else {
-                completa();
-              }
-
-            },
-            { once: true }
-          );
-
-          immagine.addEventListener(
-            "error",
-            completa,
-            { once: true }
-          );
-
-          /*
-           * Fallback di sicurezza: se l'immagine resta
-           * appesa per qualche motivo, non blocchiamo
-           * indefinitamente il caricamento del gioco.
-           */
-          setTimeout(completa, 8000);
-        });
-      }
-
-      async function preparaGrafica() {
-        cambiaTesto("Caricamento grafica");
-
-        await attendiImmagine();
-        await attendiFrame();
-      }
-
-      async function preparaSuoni() {
-        /*
-         * Non inizializziamo qui AudioContext.
-         * I browser possono bloccarlo prima di un gesto
-         * dell'utente. Il tuo gioco.js lo inizializza
-         * correttamente al primo utilizzo.
-         */
-        cambiaTesto("Preparazione audio");
-
-        await attendiFrame();
-      }
-
-      async function preparaServer() {
-        cambiaTesto("Connessione al server");
-
-        try {
-
-          const risposta = await fetch(
-            "https://gioco-oca-server.onrender.com/api/me",
-            {
-              method: "GET",
-              credentials: "include",
-              cache: "no-store"
-            }
-          );
-
-          /*
-           * 401 non significa che il server è spento:
-           * significa semplicemente che la sessione non è
-           * autenticata. Sarà gioco.js a gestire il login.
-           */
-          if (risposta.status >= 500) {
-            throw new Error(
-              "Il server ha restituito un errore."
-            );
-          }
-
-          return true;
-
-        } catch (errore) {
-
-          /*
-           * Il server Render può essere in avvio.
-           * Facciamo un controllo leggero alternativo.
-           */
-          try {
-
-            const controllo =
-              await fetch(
-                "https://gioco-oca-server.onrender.com/immagini/tabellone.png?check=" +
-                Date.now(),
-                {
-                  method: "GET",
-                  cache: "no-store"
-                }
-              );
-
-            if (!controllo.ok) {
-              throw new Error(
-                "Server non raggiungibile."
-              );
-            }
-
-            return true;
-
-          } catch (erroreFinale) {
-
-            console.warn(
-              "Controllo server non disponibile:",
-              erroreFinale
-            );
-
-            /*
-             * Non blocchiamo il gioco qui.
-             * gioco.js gestisce già autenticazione,
-             * WebSocket e riconnessione.
-             */
-            return false;
-          }
-        }
-      }
-
-      function caricaGiocoJS() {
-        return new Promise((resolve, reject) => {
-
-          /*
-           * Evita di caricare gioco.js due volte.
-           */
-          const esistente =
-            document.querySelector(
-              'script[data-gioco-js="true"]'
-            );
-
-          if (esistente) {
-            resolve();
-            return;
-          }
-
-          const script =
-            document.createElement("script");
-
-          script.src = "gioco.js";
-          script.defer = true;
-          script.dataset.giocoJs = "true";
-
-          script.onload = () => {
-            resolve();
-          };
-
-          script.onerror = () => {
-            reject(
-              new Error(
-                "Impossibile caricare gioco.js"
-              )
-            );
-          };
-
-          document.body.appendChild(script);
-        });
-      }
-
-      async function chiudiOverlayCaricamento() {
-
-        if (caricamentoCompletato) {
-          return;
-        }
-
-        caricamentoCompletato = true;
-
-        document.body.classList.remove(
-          "caricamento-in-corso"
-        );
-
-        if (!overlay) {
-          return;
-        }
-
-        overlay.classList.add(
-          "caricamento-finito"
-        );
-
-        await new Promise((resolve) => {
-          setTimeout(resolve, 450);
-        });
-
-        if (overlay.parentNode) {
-          overlay.remove();
-        }
-      }
-
-      async function mostraErroreCaricamento(messaggio) {
-
-        cambiaTesto(messaggio);
-
-        const spinner =
-          document.getElementById(
-            "caricamento-spinner"
-          );
-
-        if (spinner) {
-          spinner.style.animation =
-            "none";
-
-          spinner.style.borderTopColor =
-            "#ef6464";
-        }
-      }
-
-      async function avviaCaricamento() {
-
-        document.body.classList.add(
-          "caricamento-in-corso"
-        );
-
-        try {
-
-          await preparaGrafica();
-          await preparaSuoni();
-
-          cambiaTesto(
-            "Connessione al server"
-          );
-
-          await preparaServer();
-
-          cambiaTesto(
-            "Avvio partita"
-          );
-
-          await attendiFrame();
-
-          await caricaGiocoJS();
-
-          await attendiFrame();
-
-          await chiudiOverlayCaricamento();
-
-        } catch (errore) {
-
-          console.error(
-            "Errore durante il caricamento del gioco:",
-            errore
-          );
-
-          await mostraErroreCaricamento(
-            "Errore nel caricamento della partita"
-          );
-
-          /*
-           * Mostriamo l'errore senza lasciare la pagina
-           * completamente inutilizzabile.
-           */
-          setTimeout(async () => {
-
-            /*
-             * Un secondo tentativo di caricamento può essere
-             * utile se il server era semplicemente in avvio.
-             */
-            if (!caricamentoCompletato) {
-
-              try {
-                await caricaGiocoJS();
-                await chiudiOverlayCaricamento();
-              } catch (secondoErrore) {
-                console.error(
-                  "Secondo tentativo fallito:",
-                  secondoErrore
-                );
-              }
-            }
-
-          }, 1200);
-        }
-      }
-
-      /*
-       * Accessibilità: permette di premere Invio o Spazio
-       * sul contenitore dei dadi.
-       *
-       * gioco.js continua a gestire il click principale.
-       */
-      const areaDadi =
-        document.getElementById("area-dadi");
-
-      if (areaDadi) {
-
-        areaDadi.addEventListener(
-          "keydown",
-          (evento) => {
-
-            if (
-              evento.key === "Enter" ||
-              evento.key === " "
-            ) {
-              evento.preventDefault();
-
-              if (
-                !areaDadi.classList.contains(
-                  "disabilitato"
-                )
-              ) {
-                areaDadi.click();
-              }
-            }
-
-          }
-        );
-      }
-
-      /*
-       * Aggiorna aria-expanded del menu senza modificare
-       * il funzionamento già presente in gioco.js.
-       */
-      const btnMenu =
-        document.getElementById("btn-menu");
-
-      const pannelloMenu =
-        document.getElementById("pannello-menu");
-
-      if (btnMenu && pannelloMenu) {
-
-        const observer =
-          new MutationObserver(() => {
-
-            const aperto =
-              !pannelloMenu.classList.contains(
-                "nascosto"
-              );
-
-            btnMenu.setAttribute(
-              "aria-expanded",
-              aperto ? "true" : "false"
-            );
-
-          });
-
-        observer.observe(
-          pannelloMenu,
-          {
-            attributes: true,
-            attributeFilter: ["class"]
-          }
-        );
-      }
-
-      /*
-       * Aggiorna aria-expanded della chat.
-       */
-      const btnChat =
-        document.getElementById("btn-chat");
-
-      const pannelloChat =
-        document.getElementById("pannello-chat");
-
-      if (btnChat && pannelloChat) {
-
-        const observerChat =
-          new MutationObserver(() => {
-
-            const aperto =
-              !pannelloChat.classList.contains(
-                "nascosto"
-              );
-
-            btnChat.setAttribute(
-              "aria-expanded",
-              aperto ? "true" : "false"
-            );
-
-          });
-
-        observerChat.observe(
-          pannelloChat,
-          {
-            attributes: true,
-            attributeFilter: ["class"]
-          }
-        );
-      }
-
-      /*
-       * Il tuo gioco.js utilizza il mondo ruotato
-       * su dispositivi mobili.
-       */
-      function aggiornaModalitaMobile() {
-
-        const desktop =
-          window.matchMedia &&
-          window.matchMedia(
-            "(pointer: fine)"
-          ).matches &&
-          window.innerWidth >= 1000;
-
-        document.body.classList.toggle(
-          "modalita-desktop",
-          desktop
-        );
-
-        document.body.classList.toggle(
-          "tabellone-ruotato",
-          !desktop
-        );
-      }
-
-      aggiornaModalitaMobile();
-
-      window.addEventListener(
-        "resize",
-        aggiornaModalitaMobile,
-        { passive: true }
-      );
-
-      window.addEventListener(
-        "orientationchange",
-        () => {
-          setTimeout(
-            aggiornaModalitaMobile,
-            300
-          );
-        },
-        { passive: true }
-      );
-
-      /*
-       * Avvio finale.
-       */
-      avviaCaricamento();
-
-    })();
-  </script>
-
+<script src="gioco.js"></script>
 </body>
 </html>
