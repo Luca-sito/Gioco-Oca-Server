@@ -34,25 +34,208 @@ const coloriGiocatori = [
 ];
 
 const DURATA_SALTO_MS = 380;
+const DURATA_ANIMAZIONE_DADI_MS = 640;
 
 const params = new URLSearchParams(window.location.search);
 const partitaId = params.get("partita");
 const stanza = params.get("stanza");
 
 let mioUid = null;
-let socket;
+let socket = null;
+
 let ultimoStatoGiocatori = [];
 let mioTurno = false;
 let turnoAttualeId = null;
+
 let timerRiconnessione = null;
 
+let determinazioneAttiva = false;
+let determinazioneTurnoUid = null;
+let risultatiDeterminazione = {};
+let ordineDeterminazione = [];
+let gruppoSpareggioAttuale = [];
+
+let timerDeterminazione = null;
+let scadenzaDeterminazione = null;
+
+let timerTurno = null;
+let scadenzaTurnoServer = null;
+
+let partitaTerminata = false;
+
 // =========================================================
-// AUDIO / WEBCAM - WEBRTC AUTOMATICO
+// CREAZIONE DINAMICA ELEMENTI MEDIA
+// =========================================================
+
+function creaInterfacciaMedia() {
+  let box = document.getElementById("media-box");
+
+  if (!box) {
+    box = document.createElement("div");
+    box.id = "media-box";
+
+    box.style.position = "fixed";
+    box.style.bottom = "18px";
+    box.style.left = "18px";
+    box.style.zIndex = "80";
+    box.style.display = "flex";
+    box.style.flexDirection = "column";
+    box.style.gap = "8px";
+    box.style.maxWidth = "min(420px, calc(100vw - 36px))";
+    box.style.pointerEvents = "none";
+
+    document.body.appendChild(box);
+  }
+
+  let controlli = document.getElementById("media-controlli");
+
+  if (!controlli) {
+    controlli = document.createElement("div");
+    controlli.id = "media-controlli";
+
+    controlli.style.display = "flex";
+    controlli.style.gap = "8px";
+    controlli.style.pointerEvents = "auto";
+
+    controlli.innerHTML = `
+      <button id="btn-microfono" type="button"
+        style="
+          border:none;
+          border-radius:12px;
+          padding:9px 12px;
+          background:rgba(10,16,22,.88);
+          color:#fff;
+          border:1px solid rgba(255,215,0,.3);
+          cursor:pointer;
+          font-weight:bold;
+        ">
+        🔇 Microfono: Off
+      </button>
+
+      <button id="btn-webcam" type="button"
+        style="
+          border:none;
+          border-radius:12px;
+          padding:9px 12px;
+          background:rgba(10,16,22,.88);
+          color:#fff;
+          border:1px solid rgba(255,215,0,.3);
+          cursor:pointer;
+          font-weight:bold;
+        ">
+        🚫 Webcam: Off
+      </button>
+    `;
+
+    box.appendChild(controlli);
+  }
+
+  let stato = document.getElementById("media-stato");
+
+  if (!stato) {
+    stato = document.createElement("div");
+    stato.id = "media-stato";
+
+    stato.style.display = "none";
+    stato.style.background = "rgba(10,16,22,.88)";
+    stato.style.border = "1px solid rgba(255,215,0,.25)";
+    stato.style.borderRadius = "10px";
+    stato.style.padding = "8px 10px";
+    stato.style.fontSize = "12px";
+    stato.style.color = "#fff";
+    stato.style.pointerEvents = "none";
+
+    box.appendChild(stato);
+  }
+
+  let videos = document.getElementById("media-videos");
+
+  if (!videos) {
+    videos = document.createElement("div");
+    videos.id = "media-videos";
+
+    videos.style.display = "grid";
+    videos.style.gridTemplateColumns = "repeat(2, minmax(120px, 1fr))";
+    videos.style.gap = "8px";
+    videos.style.pointerEvents = "none";
+
+    box.appendChild(videos);
+  }
+
+  if (!document.getElementById("media-styles")) {
+    const style = document.createElement("style");
+    style.id = "media-styles";
+
+    style.textContent = `
+      .media-tile {
+        position:relative;
+        width:150px;
+        height:106px;
+        background:#111820;
+        border:1px solid rgba(255,215,0,.24);
+        border-radius:12px;
+        overflow:hidden;
+        box-shadow:0 8px 24px rgba(0,0,0,.45);
+      }
+
+      .media-tile video {
+        width:100%;
+        height:100%;
+        object-fit:cover;
+        display:block;
+        background:#000;
+      }
+
+      .media-name {
+        position:absolute;
+        left:7px;
+        right:7px;
+        bottom:6px;
+        padding:4px 6px;
+        border-radius:7px;
+        background:rgba(0,0,0,.58);
+        color:#fff;
+        font-size:11px;
+        font-weight:bold;
+      }
+
+      .media-tile.audio-only {
+        height:52px;
+      }
+
+      .media-tile.audio-only video {
+        display:none;
+      }
+
+      @media (max-width:600px) {
+        #media-box {
+          left:8px !important;
+          bottom:8px !important;
+          max-width:calc(100vw - 16px) !important;
+        }
+
+        .media-tile {
+          width:120px;
+          height:84px;
+        }
+      }
+    `;
+
+    document.head.appendChild(style);
+  }
+}
+
+creaInterfacciaMedia();
+
+// =========================================================
+// AUDIO / WEBCAM - WEBRTC
 // =========================================================
 
 const CONFIGURAZIONE_ICE = {
   iceServers: [
-    { urls: "stun:stun.l.google.com:19302" }
+    {
+      urls: "stun:stun.l.google.com:19302"
+    }
   ]
 };
 
@@ -80,7 +263,7 @@ function aggiornaPulsantiMedia() {
       ? "🎤 Microfono: On"
       : "🔇 Microfono: Off";
 
-    m.style.opacity = microfonoLocaleAttivo ? "1" : ".72";
+    m.style.opacity = microfonoLocaleAttivo ? "1" : ".7";
   }
 
   if (c) {
@@ -88,7 +271,7 @@ function aggiornaPulsantiMedia() {
       ? "📷 Webcam: On"
       : "🚫 Webcam: Off";
 
-    c.style.opacity = webcamLocaleAttiva ? "1" : ".72";
+    c.style.opacity = webcamLocaleAttiva ? "1" : ".7";
   }
 }
 
@@ -111,38 +294,57 @@ async function ottieniMediaLocale({ audio = true, video = true } = {}) {
     !navigator.mediaDevices ||
     !navigator.mediaDevices.getUserMedia
   ) {
-    aggiornaStatoMedia(
-      "Il browser non supporta audio/video."
-    );
+    aggiornaStatoMedia("Il browser non supporta audio/video.");
     return false;
   }
 
   try {
+    let constraints = {
+      audio: !!audio,
+      video: !!video
+    };
+
+    if (!audio && !video) {
+      constraints = {
+        audio: false,
+        video: false
+      };
+    }
+
     if (!flussoMediaLocale) {
       flussoMediaLocale =
-        await navigator.mediaDevices.getUserMedia({
-          audio: !!audio,
-          video: !!video
+        await navigator.mediaDevices.getUserMedia(constraints);
+    } else {
+      const audioRichiesto = !!audio;
+      const videoRichiesto = !!video;
+
+      const haAudio =
+        flussoMediaLocale.getAudioTracks().length > 0;
+
+      const haVideo =
+        flussoMediaLocale.getVideoTracks().length > 0;
+
+      if (audioRichiesto !== haAudio || videoRichiesto !== haVideo) {
+        flussoMediaLocale.getTracks().forEach(track => {
+          try {
+            track.stop();
+          } catch (_) {}
         });
+
+        flussoMediaLocale =
+          await navigator.mediaDevices.getUserMedia(constraints);
+      }
     }
 
     microfonoLocaleAttivo =
       flussoMediaLocale
         .getAudioTracks()
-        .some(
-          track =>
-            track.readyState === "live" &&
-            track.enabled
-        );
+        .some(track => track.enabled && track.readyState === "live");
 
     webcamLocaleAttiva =
       flussoMediaLocale
         .getVideoTracks()
-        .some(
-          track =>
-            track.readyState === "live" &&
-            track.enabled
-        );
+        .some(track => track.enabled && track.readyState === "live");
 
     aggiornaPulsantiMedia();
     creaTileLocale();
@@ -154,10 +356,7 @@ async function ottieniMediaLocale({ audio = true, video = true } = {}) {
 
     return true;
   } catch (errore) {
-    console.error(
-      "Errore accesso dispositivi multimediali:",
-      errore
-    );
+    console.error("Errore accesso dispositivi multimediali:", errore);
 
     aggiornaStatoMedia(
       "Permesso microfono/webcam non concesso."
@@ -171,13 +370,9 @@ function creaTileLocale() {
   const box = document.getElementById("media-videos");
   if (!box) return;
 
-  let tile =
-    document.getElementById("media-locale");
+  let tile = document.getElementById("media-locale");
 
-  if (
-    !flussoMediaLocale ||
-    !webcamLocaleAttiva
-  ) {
+  if (!flussoMediaLocale || !webcamLocaleAttiva) {
     if (tile) tile.remove();
     return;
   }
@@ -188,11 +383,7 @@ function creaTileLocale() {
     tile.className = "media-tile";
 
     tile.innerHTML = `
-      <video
-        autoplay
-        muted
-        playsinline>
-      </video>
+      <video autoplay muted playsinline></video>
       <div class="media-name">Tu</div>
     `;
 
@@ -201,10 +392,7 @@ function creaTileLocale() {
 
   const video = tile.querySelector("video");
 
-  if (
-    video &&
-    video.srcObject !== flussoMediaLocale
-  ) {
+  if (video && video.srcObject !== flussoMediaLocale) {
     video.srcObject = flussoMediaLocale;
   }
 }
@@ -220,28 +408,23 @@ function chiudiConnessioneMedia(uid) {
     delete connessioniMedia[uid];
   }
 
-  const tile =
-    document.getElementById(
-      "media-remoto-" + uid
-    );
+  delete peerInfoMedia[uid];
+
+  const tile = document.getElementById(
+    "media-remoto-" + uid
+  );
 
   if (tile) tile.remove();
 }
 
-function creaTileRemoto(
-  uid,
-  nome,
-  videoAttivo
-) {
-  const box =
-    document.getElementById("media-videos");
+function creaTileRemoto(uid, nome, videoAttivo) {
+  const box = document.getElementById("media-videos");
 
   if (!box) return null;
 
-  let tile =
-    document.getElementById(
-      "media-remoto-" + uid
-    );
+  let tile = document.getElementById(
+    "media-remoto-" + uid
+  );
 
   if (!tile) {
     tile = document.createElement("div");
@@ -254,10 +437,7 @@ function creaTileRemoto(
       (videoAttivo ? "" : " audio-only");
 
     tile.innerHTML = `
-      <video
-        autoplay
-        playsinline>
-      </video>
+      <video autoplay playsinline></video>
       <div class="media-name"></div>
     `;
 
@@ -280,25 +460,14 @@ function creaTileRemoto(
   return tile.querySelector("video");
 }
 
-function aggiungiStreamRemoto(
-  uid,
-  nome,
-  stream
-) {
+function aggiungiStreamRemoto(uid, nome, stream) {
   const hasVideo =
     stream
       .getVideoTracks()
-      .some(
-        track =>
-          track.readyState !== "ended"
-      );
+      .some(track => track.readyState !== "ended");
 
   const video =
-    creaTileRemoto(
-      uid,
-      nome,
-      hasVideo
-    );
+    creaTileRemoto(uid, nome, hasVideo);
 
   if (!video) return;
 
@@ -318,7 +487,8 @@ function aggiungiStreamRemoto(
 async function creaConnessioneMedia(
   uid,
   nome,
-  deveCreareOfferta
+  deveCreareOfferta,
+  videoAttivoRemoto = true
 ) {
   if (!uid || uid === mioUid) {
     return null;
@@ -335,36 +505,33 @@ async function creaConnessioneMedia(
     return connessioniMedia[uid];
   }
 
-  const pc =
-    new RTCPeerConnection(
-      CONFIGURAZIONE_ICE
-    );
+  const pc = new RTCPeerConnection(
+    CONFIGURAZIONE_ICE
+  );
 
   connessioniMedia[uid] = pc;
 
   peerInfoMedia[uid] = {
-    nome:
-      nome || "Giocatore"
+    nome: nome || "Giocatore",
+    webcamAttiva: !!videoAttivoRemoto
   };
 
   if (!flussoMediaLocale) {
     await ottieniMediaLocale({
       audio: true,
-      video: true
+      video: webcamLocaleAttiva
     });
   }
 
   if (flussoMediaLocale) {
-    flussoMediaLocale
-      .getTracks()
-      .forEach(track => {
-        try {
-          pc.addTrack(
-            track,
-            flussoMediaLocale
-          );
-        } catch (_) {}
-      });
+    flussoMediaLocale.getTracks().forEach(track => {
+      try {
+        pc.addTrack(
+          track,
+          flussoMediaLocale
+        );
+      } catch (_) {}
+    });
   }
 
   pc.onicecandidate = event => {
@@ -388,8 +555,7 @@ async function creaConnessioneMedia(
 
   pc.ontrack = event => {
     const stream =
-      event.streams &&
-      event.streams[0]
+      event.streams && event.streams[0]
         ? event.streams[0]
         : null;
 
@@ -405,8 +571,7 @@ async function creaConnessioneMedia(
   pc.onconnectionstatechange = () => {
     if (
       pc.connectionState === "failed" ||
-      pc.connectionState === "closed" ||
-      pc.connectionState === "disconnected"
+      pc.connectionState === "closed"
     ) {
       chiudiConnessioneMedia(uid);
     }
@@ -414,12 +579,9 @@ async function creaConnessioneMedia(
 
   if (deveCreareOfferta) {
     try {
-      const offer =
-        await pc.createOffer();
+      const offer = await pc.createOffer();
 
-      await pc.setLocalDescription(
-        offer
-      );
+      await pc.setLocalDescription(offer);
 
       if (
         socket &&
@@ -445,23 +607,28 @@ async function creaConnessioneMedia(
   return pc;
 }
 
-async function gestisciAvvioMediaAutomatico(
-  dati
-) {
+async function gestisciAvvioMediaAutomatico(dati) {
   const peers =
     Array.isArray(dati.peer)
       ? dati.peer
       : [];
 
-  if (!peers.length) return;
+  if (!peers.length) {
+    return;
+  }
+
+  const vuoleAudio =
+    peers.length > 0;
 
   const ok =
     await ottieniMediaLocale({
-      audio: true,
-      video: true
+      audio: vuoleAudio,
+      video: webcamLocaleAttiva
     });
 
-  if (!ok) return;
+  if (!ok) {
+    return;
+  }
 
   const offerte =
     new Set(
@@ -469,21 +636,21 @@ async function gestisciAvvioMediaAutomatico(
     );
 
   for (const peer of peers) {
-    if (!peer || !peer.uid) continue;
+    if (!peer || !peer.uid) {
+      continue;
+    }
 
     await creaConnessioneMedia(
       peer.uid,
       peer.nome,
-      offerte.has(peer.uid)
+      offerte.has(peer.uid),
+      !!peer.webcamAttiva
     );
   }
 }
 
-async function gestisciWebRTCOffer(
-  dati
-) {
-  const uid =
-    dati.mittenteUid;
+async function gestisciWebRTCOffer(dati) {
+  const uid = dati.mittenteUid;
 
   if (!uid || !dati.sdp) return;
 
@@ -493,24 +660,23 @@ async function gestisciWebRTCOffer(
       peerInfoMedia[uid]
         ? peerInfoMedia[uid].nome
         : "Giocatore",
-      false
+      false,
+      peerInfoMedia[uid]
+        ? !!peerInfoMedia[uid].webcamAttiva
+        : true
     );
 
   if (!pc) return;
 
   try {
     await pc.setRemoteDescription(
-      new RTCSessionDescription(
-        dati.sdp
-      )
+      new RTCSessionDescription(dati.sdp)
     );
 
     const answer =
       await pc.createAnswer();
 
-    await pc.setLocalDescription(
-      answer
-    );
+    await pc.setLocalDescription(answer);
 
     if (
       socket &&
@@ -533,11 +699,8 @@ async function gestisciWebRTCOffer(
   }
 }
 
-async function gestisciWebRTCAnswer(
-  dati
-) {
-  const uid =
-    dati.mittenteUid;
+async function gestisciWebRTCAnswer(dati) {
+  const uid = dati.mittenteUid;
 
   const pc =
     connessioniMedia[uid];
@@ -546,9 +709,7 @@ async function gestisciWebRTCAnswer(
 
   try {
     await pc.setRemoteDescription(
-      new RTCSessionDescription(
-        dati.sdp
-      )
+      new RTCSessionDescription(dati.sdp)
     );
   } catch (errore) {
     console.error(
@@ -558,9 +719,7 @@ async function gestisciWebRTCAnswer(
   }
 }
 
-async function gestisciICECandidate(
-  dati
-) {
+async function gestisciICECandidate(dati) {
   const uid =
     dati.mittenteUid;
 
@@ -571,9 +730,7 @@ async function gestisciICECandidate(
 
   try {
     await pc.addIceCandidate(
-      new RTCIceCandidate(
-        dati.candidate
-      )
+      new RTCIceCandidate(dati.candidate)
     );
   } catch (errore) {
     console.warn(
@@ -583,11 +740,11 @@ async function gestisciICECandidate(
   }
 }
 
-function toggleMicrofonoLocale() {
+async function toggleMicrofonoLocale() {
   if (!flussoMediaLocale) {
-    ottieniMediaLocale({
+    await ottieniMediaLocale({
       audio: true,
-      video: true
+      video: webcamLocaleAttiva
     });
 
     return;
@@ -597,7 +754,7 @@ function toggleMicrofonoLocale() {
     flussoMediaLocale.getAudioTracks();
 
   if (!tracks.length) {
-    ottieniMediaLocale({
+    await ottieniMediaLocale({
       audio: true,
       video: webcamLocaleAttiva
     });
@@ -616,10 +773,10 @@ function toggleMicrofonoLocale() {
   aggiornaPulsantiMedia();
 }
 
-function toggleWebcamLocale() {
+async function toggleWebcamLocale() {
   if (!flussoMediaLocale) {
-    ottieniMediaLocale({
-      audio: true,
+    await ottieniMediaLocale({
+      audio: microfonoLocaleAttivo,
       video: true
     });
 
@@ -630,7 +787,7 @@ function toggleWebcamLocale() {
     flussoMediaLocale.getVideoTracks();
 
   if (!tracks.length) {
-    ottieniMediaLocale({
+    await ottieniMediaLocale({
       audio: microfonoLocaleAttivo,
       video: true
     });
@@ -654,31 +811,498 @@ function toggleWebcamLocale() {
         "media-locale"
       );
 
-    if (tile) tile.remove();
+    if (tile) {
+      tile.remove();
+    }
   }
 
   aggiornaPulsantiMedia();
 }
 
 function chiudiTutteConnessioniMedia() {
-  Object.keys(
-    connessioniMedia
-  ).forEach(uid =>
-    chiudiConnessioneMedia(uid)
-  );
+  Object.keys(connessioniMedia).forEach(uid => {
+    chiudiConnessioneMedia(uid);
+  });
 
   fermaMediaLocale();
 
   const box =
-    document.getElementById(
-      "media-videos"
-    );
+    document.getElementById("media-videos");
 
   if (box) {
     box.innerHTML = "";
   }
 
   aggiornaPulsantiMedia();
+}
+
+// =========================================================
+// INTERFACCIA "CHI INIZIA?"
+//
+// Viene creata direttamente dal JS, quindi non devi
+// modificare gioco.html.
+// =========================================================
+
+function creaOverlayDeterminazione() {
+  let overlay =
+    document.getElementById(
+      "overlay-determinazione"
+    );
+
+  if (overlay) {
+    return overlay;
+  }
+
+  overlay =
+    document.createElement("div");
+
+  overlay.id =
+    "overlay-determinazione";
+
+  overlay.style.position = "fixed";
+  overlay.style.inset = "0";
+  overlay.style.display = "none";
+  overlay.style.alignItems = "center";
+  overlay.style.justifyContent = "center";
+  overlay.style.background = "rgba(0,0,0,.76)";
+  overlay.style.zIndex = "900";
+  overlay.style.padding = "20px";
+
+  const popup =
+    document.createElement("div");
+
+  popup.style.width =
+    "min(520px, 94vw)";
+
+  popup.style.maxHeight =
+    "88vh";
+
+  popup.style.overflow =
+    "auto";
+
+  popup.style.background =
+    "#121c26";
+
+  popup.style.border =
+    "2px solid #ffd700";
+
+  popup.style.borderRadius =
+    "16px";
+
+  popup.style.padding =
+    "24px";
+
+  popup.style.boxShadow =
+    "0 20px 60px rgba(0,0,0,.55)";
+
+  popup.innerHTML = `
+    <h2
+      style="
+        margin:0;
+        color:#ffd700;
+        text-align:center;
+      ">
+      🎲 Chi inizia?
+    </h2>
+
+    <p
+      id="determinazione-sottotitolo"
+      style="
+        margin:8px 0 18px;
+        text-align:center;
+        color:#ccc;
+        font-size:14px;
+      ">
+      Ogni giocatore tira due dadi.
+    </p>
+
+    <div id="lista-determinazione"></div>
+
+    <div
+      id="determinazione-controlli"
+      style="
+        display:flex;
+        justify-content:center;
+        margin-top:16px;
+      ">
+    </div>
+  `;
+
+  overlay.appendChild(popup);
+  document.body.appendChild(overlay);
+
+  return overlay;
+}
+
+function aggiornaOverlayDeterminazione() {
+  const overlay =
+    creaOverlayDeterminazione();
+
+  overlay.style.display =
+    determinazioneAttiva
+      ? "flex"
+      : "none";
+
+  const lista =
+    document.getElementById(
+      "lista-determinazione"
+    );
+
+  if (!lista) return;
+
+  lista.innerHTML = "";
+
+  ordineDeterminazione.forEach(uid => {
+    const giocatore =
+      ultimoStatoGiocatori.find(
+        g => g.id === uid
+      );
+
+    const riga =
+      document.createElement("div");
+
+    riga.style.display = "flex";
+    riga.style.alignItems = "center";
+    riga.style.gap = "10px";
+    riga.style.padding = "10px 12px";
+    riga.style.marginBottom = "8px";
+    riga.style.borderRadius = "10px";
+    riga.style.background =
+      uid === determinazioneTurnoUid
+        ? "rgba(255,215,0,.13)"
+        : "rgba(255,255,255,.04)";
+
+    riga.style.border =
+      uid === determinazioneTurnoUid
+        ? "1px solid rgba(255,215,0,.45)"
+        : "1px solid rgba(255,255,255,.06)";
+
+    const nome =
+      giocatore
+        ? giocatore.nome
+        : "Giocatore";
+
+    const risultato =
+      risultatiDeterminazione[uid];
+
+    let testoRisultato =
+      "In attesa...";
+
+    let coloreRisultato =
+      "#888";
+
+    if (risultato != null) {
+      testoRisultato =
+        "🎲 " + risultato;
+
+      coloreRisultato =
+        "#ffd700";
+    } else if (
+      uid === determinazioneTurnoUid
+    ) {
+      testoRisultato =
+        "È il suo turno";
+
+      coloreRisultato =
+        "#ffd700";
+    }
+
+    riga.innerHTML = `
+      <div
+        style="
+          width:28px;
+          height:28px;
+          border-radius:50%;
+          background:${coloriGiocatori[
+            Math.max(
+              0,
+              ordineDeterminazione.indexOf(uid)
+            ) % coloriGiocatori.length
+          ]};
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          font-weight:bold;
+          color:#fff;
+          flex-shrink:0;
+        ">
+        ${iniziale(nome)}
+      </div>
+
+      <div
+        style="
+          flex:1;
+          min-width:0;
+          color:#eee;
+          font-weight:
+            ${uid === determinazioneTurnoUid ? "bold" : "normal"};
+        ">
+        ${nome}
+      </div>
+
+      <div
+        style="
+          color:${coloreRisultato};
+          font-weight:bold;
+          font-size:13px;
+          flex-shrink:0;
+        ">
+        ${testoRisultato}
+      </div>
+    `;
+
+    lista.appendChild(riga);
+  });
+
+  const gruppo =
+    gruppoSpareggioAttuale || [];
+
+  const sottotitolo =
+    document.getElementById(
+      "determinazione-sottotitolo"
+    );
+
+  if (sottotitolo) {
+    if (gruppo.length > 1) {
+      const nomi =
+        gruppo
+          .map(uid => {
+            const g =
+              ultimoStatoGiocatori.find(
+                x => x.id === uid
+              );
+
+            return g
+              ? g.nome
+              : "Giocatore";
+          })
+          .join(", ");
+
+      sottotitolo.textContent =
+        "Pareggio! Nuovo spareggio tra: " +
+        nomi;
+    } else if (
+      determinazioneTurnoUid === mioUid
+    ) {
+      sottotitolo.textContent =
+        "È il tuo turno: tira i dadi!";
+    } else {
+      sottotitolo.textContent =
+        "Aspetta che gli altri giocatori tirino.";
+    }
+  }
+
+  const controlli =
+    document.getElementById(
+      "determinazione-controlli"
+    );
+
+  if (!controlli) return;
+
+  controlli.innerHTML = "";
+
+  if (
+    determinazioneTurnoUid === mioUid &&
+    !risultatiDeterminazione[mioUid]
+  ) {
+    const btn =
+      document.createElement("button");
+
+    btn.id =
+      "btn-tira-determinazione";
+
+    btn.textContent =
+      "🎲 Tira i dadi";
+
+    btn.style.border = "none";
+    btn.style.borderRadius = "10px";
+    btn.style.padding = "12px 22px";
+    btn.style.background = "#ffd700";
+    btn.style.color = "#000";
+    btn.style.fontWeight = "bold";
+    btn.style.cursor = "pointer";
+    btn.style.fontSize = "14px";
+
+    btn.onclick =
+      tiraDeterminazione;
+
+    controlli.appendChild(btn);
+  } else if (
+    determinazioneTurnoUid
+  ) {
+    const attesa =
+      document.createElement("div");
+
+    attesa.textContent =
+      "⏳ In attesa...";
+
+    attesa.style.color =
+      "#aaa";
+
+    attesa.style.fontSize =
+      "13px";
+
+    controlli.appendChild(
+      attesa
+    );
+  }
+}
+
+function apriDeterminazione(
+  giocatori,
+  turnoUid,
+  risultati,
+  gruppo
+) {
+  ultimoStatoGiocatori =
+    Array.isArray(giocatori)
+      ? giocatori
+      : ultimoStatoGiocatori;
+
+  determinazioneAttiva =
+    true;
+
+  determinazioneTurnoUid =
+    turnoUid || null;
+
+  risultatiDeterminazione =
+    risultati || {};
+
+  ordineDeterminazione =
+    Array.isArray(
+      giocatori
+    )
+      ? giocatori.map(g => g.id)
+      : ordineDeterminazione;
+
+  gruppoSpareggioAttuale =
+    Array.isArray(gruppo)
+      ? gruppo
+      : [];
+
+  aggiornaOverlayDeterminazione();
+
+  fermaTimerDeterminazione();
+}
+
+function chiudiDeterminazione() {
+  determinazioneAttiva =
+    false;
+
+  determinazioneTurnoUid =
+    null;
+
+  risultatiDeterminazione =
+    {};
+
+  gruppoSpareggioAttuale =
+    [];
+
+  fermaTimerDeterminazione();
+
+  const overlay =
+    document.getElementById(
+      "overlay-determinazione"
+    );
+
+  if (overlay) {
+    overlay.style.display =
+      "none";
+  }
+}
+
+function fermaTimerDeterminazione() {
+  if (timerDeterminazione) {
+    clearInterval(
+      timerDeterminazione
+    );
+
+    timerDeterminazione =
+      null;
+  }
+
+  scadenzaDeterminazione =
+    null;
+}
+
+function avviaTimerDeterminazioneLocale(
+  tempoInizio,
+  durata
+) {
+  fermaTimerDeterminazione();
+
+  if (!tempoInizio || !durata) {
+    return;
+  }
+
+  scadenzaDeterminazione =
+    Number(tempoInizio) +
+    Number(durata);
+
+  timerDeterminazione =
+    setInterval(() => {
+      if (
+        !determinazioneAttiva
+      ) {
+        fermaTimerDeterminazione();
+        return;
+      }
+
+      if (
+        Date.now() >=
+        scadenzaDeterminazione
+      ) {
+        aggiornaOverlayDeterminazione();
+        return;
+      }
+
+      aggiornaOverlayDeterminazione();
+    }, 250);
+}
+
+function tiraDeterminazione() {
+  if (
+    !determinazioneAttiva ||
+    determinazioneTurnoUid !== mioUid
+  ) {
+    return;
+  }
+
+  if (
+    risultatiDeterminazione[mioUid] != null
+  ) {
+    return;
+  }
+
+  if (
+    !socket ||
+    socket.readyState !== WebSocket.OPEN
+  ) {
+    return;
+  }
+
+  const btn =
+    document.getElementById(
+      "btn-tira-determinazione"
+    );
+
+  if (btn) {
+    btn.disabled =
+      true;
+
+    btn.style.opacity =
+      ".5";
+
+    btn.textContent =
+      "🎲 Tiro in corso...";
+  }
+
+  socket.send(
+    JSON.stringify({
+      tipo: "tiraDeterminazione",
+      partitaId
+    })
+  );
 }
 
 // =========================================================
@@ -702,9 +1326,8 @@ function creaFacciaDado(valore) {
 
   const pips =
     posizioniPip[valore]
-      .map(
-        ([x, y]) =>
-          `<circle cx="${x}" cy="${y}" r="8" fill="${colorePip}"/>`
+      .map(([x, y]) =>
+        `<circle cx="${x}" cy="${y}" r="8" fill="${colorePip}"/>`
       )
       .join("");
 
@@ -728,15 +1351,21 @@ function creaFacciaDado(valore) {
 }
 
 function mostraDadi(v1, v2) {
-  document.getElementById(
-    "dado1"
-  ).innerHTML =
-    creaFacciaDado(v1);
+  const d1 =
+    document.getElementById("dado1");
 
-  document.getElementById(
-    "dado2"
-  ).innerHTML =
-    creaFacciaDado(v2);
+  const d2 =
+    document.getElementById("dado2");
+
+  if (d1) {
+    d1.innerHTML =
+      creaFacciaDado(v1);
+  }
+
+  if (d2) {
+    d2.innerHTML =
+      creaFacciaDado(v2);
+  }
 }
 
 function animaLancioDadi(
@@ -749,6 +1378,14 @@ function animaLancioDadi(
 
   const dado2El =
     document.getElementById("dado2");
+
+  if (!dado1El || !dado2El) {
+    if (callback) {
+      callback();
+    }
+
+    return;
+  }
 
   dado1El.classList.add(
     "dado-rotola"
@@ -785,7 +1422,10 @@ function animaLancioDadi(
           "dado-rotola"
         );
 
-        mostraDadi(vf1, vf2);
+        mostraDadi(
+          vf1,
+          vf2
+        );
 
         if (callback) {
           callback();
@@ -810,46 +1450,28 @@ function scuriscColore(hex, p) {
   );
 }
 
-function mescolaColore(
-  hex,
-  target,
-  p
-) {
+function mescolaColore(hex, target, p) {
   const num =
     parseInt(
-      hex.replace("#", ""),
+      String(hex).replace("#", ""),
       16
     );
 
-  let r =
-    (num >> 16) & 255;
+  let r = (num >> 16) & 255;
+  let g = (num >> 8) & 255;
+  let b = num & 255;
 
-  let g =
-    (num >> 8) & 255;
+  r = Math.round(
+    r + (target - r) * (p / 100)
+  );
 
-  let b =
-    num & 255;
+  g = Math.round(
+    g + (target - g) * (p / 100)
+  );
 
-  r =
-    Math.round(
-      r +
-        (target - r) *
-          (p / 100)
-    );
-
-  g =
-    Math.round(
-      g +
-        (target - g) *
-          (p / 100)
-    );
-
-  b =
-    Math.round(
-      b +
-        (target - b) *
-          (p / 100)
-    );
+  b = Math.round(
+    b + (target - b) * (p / 100)
+  );
 
   return `rgb(${r},${g},${b})`;
 }
@@ -863,21 +1485,33 @@ function iniziale(nome) {
     .toUpperCase();
 }
 
-function coordinatePerCasella(
-  casellaNumero
-) {
+// =========================================================
+// TABELLONE / PEDINE
+// =========================================================
+
+function coordinatePerCasella(casellaNumero) {
   const immagine =
     document.getElementById(
       "immagine-tabellone"
     );
 
+  if (!immagine) {
+    return null;
+  }
+
+  const naturalWidth =
+    immagine.naturalWidth || 1;
+
+  const naturalHeight =
+    immagine.naturalHeight || 1;
+
   const scaleX =
     immagine.clientWidth /
-    immagine.naturalWidth;
+    naturalWidth;
 
   const scaleY =
     immagine.clientHeight /
-    immagine.naturalHeight;
+    naturalHeight;
 
   const casella =
     casellaNumero === 0
@@ -895,9 +1529,12 @@ function coordinatePerCasella(
 
   return {
     left:
-      casella.x * scaleX,
+      casella.x *
+      scaleX,
+
     top:
-      casella.y * scaleY
+      casella.y *
+      scaleY
   };
 }
 
@@ -910,7 +1547,9 @@ function posizionaPedina(
       casellaNumero
     );
 
-  if (!coord) return;
+  if (!coord) {
+    return;
+  }
 
   pedina.style.left =
     coord.left + "px";
@@ -926,7 +1565,8 @@ function ottieniOCreaPedina(
 ) {
   let pedina =
     document.getElementById(
-      "pedina-" + idGiocatore
+      "pedina-" +
+      idGiocatore
     );
 
   if (!pedina) {
@@ -934,13 +1574,15 @@ function ottieniOCreaPedina(
       document.createElement("div");
 
     pedina.id =
-      "pedina-" + idGiocatore;
+      "pedina-" +
+      idGiocatore;
 
     pedina.className =
       "pedina";
 
     const idGradiente =
-      "gradPedina" + indice;
+      "gradPedina" +
+      indice;
 
     pedina.innerHTML = `
       <svg
@@ -1024,11 +1666,16 @@ function ottieniOCreaPedina(
       </svg>
     `;
 
-    document
-      .getElementById(
+    const contenitore =
+      document.getElementById(
         "contenitore-pedine"
-      )
-      .appendChild(pedina);
+      );
+
+    if (contenitore) {
+      contenitore.appendChild(
+        pedina
+      );
+    }
   }
 
   return pedina;
@@ -1040,10 +1687,13 @@ function animaSaltoPedina(
   callback
 ) {
   if (
-    !percorso ||
+    !Array.isArray(percorso) ||
     percorso.length === 0
   ) {
-    if (callback) callback();
+    if (callback) {
+      callback();
+    }
+
     return;
   }
 
@@ -1055,16 +1705,28 @@ function animaSaltoPedina(
 
   const colore =
     coloriGiocatori[
-      (indice >= 0 ? indice : 0) %
-        coloriGiocatori.length
+      (indice >= 0
+        ? indice
+        : 0) %
+      coloriGiocatori.length
     ];
 
   const pedina =
     ottieniOCreaPedina(
       idGiocatore,
       colore,
-      indice >= 0 ? indice : 0
+      indice >= 0
+        ? indice
+        : 0
     );
+
+  if (!pedina) {
+    if (callback) {
+      callback();
+    }
+
+    return;
+  }
 
   let passo = 0;
 
@@ -1091,23 +1753,22 @@ function animaSaltoPedina(
       casella
     );
 
-    const etichettaCasella =
+    const etichetta =
       document.getElementById(
-        "casella-" + idGiocatore
+        "casella-" +
+        idGiocatore
       );
 
-    if (etichettaCasella) {
-      etichettaCasella.textContent =
+    if (etichetta) {
+      etichetta.textContent =
         casella;
     }
 
-    setTimeout(
-      () =>
-        pedina.classList.remove(
-          "pedina-salta"
-        ),
-      DURATA_SALTO_MS * 0.6
-    );
+    setTimeout(() => {
+      pedina.classList.remove(
+        "pedina-salta"
+      );
+    }, DURATA_SALTO_MS * 0.6);
 
     passo++;
 
@@ -1120,397 +1781,15 @@ function animaSaltoPedina(
   saltaProssimo();
 }
 
-// =========================================================
-// AVVIO
-// =========================================================
-
-async function avvia() {
-  try {
-    const risposta =
-      await fetch(
-        "https://gioco-oca-server.onrender.com/api/me",
-        {
-          credentials: "include"
-        }
-      );
-
-    if (!risposta.ok) {
-      window.location.href =
-        "login.html?redirect=" +
-        encodeURIComponent(
-          window.location.href
-        );
-
-      return;
-    }
-
-    const dati =
-      await risposta.json();
-
-    mioUid = dati.uid;
-
-    connetti();
-  } catch (e) {
-    window.location.href =
-      "login.html?redirect=" +
-      encodeURIComponent(
-        window.location.href
-      );
-  }
-}
-
-function connetti() {
-  socket =
-    new WebSocket(
-      "wss://gioco-oca-server.onrender.com"
-    );
-
-  socket.onopen = () => {
-    if (timerRiconnessione) {
-      clearTimeout(
-        timerRiconnessione
-      );
-
-      timerRiconnessione =
-        null;
-    }
-
-    socket.send(
-      JSON.stringify({
-        tipo:
-          "riprendiPartita",
-        partitaId
-      })
-    );
-  };
-
-  socket.onclose = () => {
-    const riga =
-      document.getElementById(
-        "riga-turno"
-      );
-
-    if (riga) {
-      riga.textContent =
-        "🔴 Disconnesso, riconnessione...";
-    }
-
-    if (!timerRiconnessione) {
-      timerRiconnessione =
-        setTimeout(() => {
-          timerRiconnessione = null;
-          connetti();
-        }, 3000);
-    }
-  };
-
-  socket.onmessage = (
-    msg
-  ) => {
-    let dati;
-
-    try {
-      dati =
-        JSON.parse(msg.data);
-    } catch (e) {
-      return;
-    }
-
-    if (
-      dati.tipo ===
-      "sessioneScaduta"
-    ) {
-      window.location.href =
-        "login.html?redirect=" +
-        encodeURIComponent(
-          window.location.href
-        );
-
-      return;
-    }
-
-    // =====================================================
-    // AUDIO / VIDEO AUTOMATICO
-    // =====================================================
-
-    if (
-      dati.tipo ===
-      "vocaleAutoAvvio"
-    ) {
-      gestisciAvvioMediaAutomatico(
-        dati
-      );
-      return;
-    }
-
-    if (
-      dati.tipo ===
-      "webrtc-offer"
-    ) {
-      gestisciWebRTCOffer(
-        dati
-      );
-      return;
-    }
-
-    if (
-      dati.tipo ===
-      "webrtc-answer"
-    ) {
-      gestisciWebRTCAnswer(
-        dati
-      );
-      return;
-    }
-
-    if (
-      dati.tipo ===
-      "webrtc-ice-candidate"
-    ) {
-      gestisciICECandidate(
-        dati
-      );
-      return;
-    }
-
-    // =====================================================
-    // STATO PARTITA
-    // =====================================================
-
-    if (
-      dati.tipo ===
-      "statoPartita"
-    ) {
-      ultimoStatoGiocatori =
-        dati.giocatori;
-
-      if (dati.vittoria) {
-        turnoAttualeId =
-          null;
-
-        document
-          .getElementById(
-            "area-dadi"
-          )
-          .classList.add(
-            "disabilitato"
-          );
-
-        disegnaGiocatori();
-
-        mostraVittoria(
-          dati.vincitore
-        );
-      } else {
-        aggiornaTurno(
-          dati.turnoDiId
-        );
-
-        disegnaGiocatori();
-      }
-
-      if (
-        dati.messaggi &&
-        dati.messaggi.length
-      ) {
-        document.getElementById(
-          "messaggi-gioco"
-        ).textContent =
-          dati.messaggi.join(
-            " "
-          );
-      }
-
-      mostraDadi(1, 1);
-    }
-
-    if (
-      dati.tipo ===
-      "aggiornamentoPartita"
-    ) {
-      animaLancioDadi(
-        dati.dado1,
-        dati.dado2,
-        () => {
-          if (
-            dati.percorso &&
-            dati.idGiocatoreCheHaTirato
-          ) {
-            animaSaltoPedina(
-              dados = dados,
-              dati.idGiocatoreCheHaTirato,
-              dati.percorso,
-              () => {
-                ultimoStatoGiocatori =
-                  dati.giocatori;
-
-                document.getElementById(
-                  "messaggi-gioco"
-                ).textContent =
-                  "🎲 " +
-                  dados.dado1 +
-                  " + " +
-                  dados.dado2 +
-                  " = " +
-                  dados.valoreDado +
-                  (
-                    dados.messaggi &&
-                    dados.messaggi.length
-                      ? " — " +
-                        dados.messaggi.join(
-                          " "
-                        )
-                      : ""
-                  );
-
-                if (dados.vittoria) {
-                  turnoAttualeId =
-                    null;
-
-                  document
-                    .getElementById(
-                      "area-dadi"
-                    )
-                    .classList.add(
-                      "disabilitato"
-                    );
-
-                  disegnaGiocatori();
-
-                  mostraVittoria(
-                    dados.vincitore
-                  );
-                } else {
-                  aggiornaTurno(
-                    dados.turnoDiId
-                  );
-
-                  disegnaGiocatori();
-                }
-              }
-            );
-          } else {
-            ultimoStatoGiocatori =
-              dati.giocatori;
-
-            document.getElementById(
-              "messaggi-gioco"
-            ).textContent =
-              "🎲 " +
-              dati.dado1 +
-              " + " +
-              dati.dado2 +
-              " = " +
-              dati.valoreDado +
-              (
-                dati.messaggi &&
-                dati.messaggi.length
-                  ? " — " +
-                    dati.messaggi.join(
-                      " "
-                    )
-                  : ""
-              );
-
-            if (dati.vittoria) {
-              turnoAttualeId =
-                null;
-
-              document
-                .getElementById(
-                  "area-dadi"
-                )
-                .classList.add(
-                  "disabilitato"
-                );
-
-              disegnaGiocatori();
-
-              mostraVittoria(
-                dati.vincitore
-              );
-            } else {
-              aggiornaTurno(
-                dati.turnoDiId
-              );
-
-              disegnaGiocatori();
-            }
-          }
-        }
-      );
-    }
-
-    if (
-      dati.tipo ===
-      "chatPartita"
-    ) {
-      aggiungiMessaggioChatPartita(
-        dati.nome,
-        dati.testo
-      );
-    }
-
-    if (
-      dati.tipo ===
-      "errore"
-    ) {
-      alert(
-        dati.messaggio
-      );
-
-      if (mioTurno) {
-        document
-          .getElementById(
-            "area-dadi"
-          )
-          .classList.remove(
-            "disabilitato"
-          );
-      }
-    }
-  };
-}
-
-// =========================================================
-// TURNO
-// =========================================================
-
-function aggiornaTurno(
-  turnoDiId
-) {
-  turnoAttualeId =
-    turnoDiId;
-
-  mioTurno =
-    turnoDiId === mioUid;
-
-  document.getElementById(
-    "riga-turno"
-  ).textContent =
-    mioTurno
-      ? "🎲 È il tuo turno!"
-      : "⏳ In attesa...";
-
-  document
-    .getElementById(
-      "area-dadi"
-    )
-    .classList.toggle(
-      "disabilitato",
-      !mioTurno
-    );
-}
-
-// =========================================================
-// GIOCATORI
-// =========================================================
-
 function disegnaGiocatori() {
   const contenitore =
     document.getElementById(
       "contenitore-pedine"
     );
+
+  if (!contenitore) {
+    return;
+  }
 
   Array.from(
     contenitore.children
@@ -1519,7 +1798,7 @@ function disegnaGiocatori() {
       !ultimoStatoGiocatori.some(
         g =>
           "pedina-" +
-            g.id ===
+          g.id ===
           pedina.id
       )
     ) {
@@ -1532,18 +1811,19 @@ function disegnaGiocatori() {
       "lista-giocatori"
     );
 
+  if (!listaPannello) {
+    return;
+  }
+
   listaPannello.innerHTML =
     "";
 
   ultimoStatoGiocatori.forEach(
-    (
-      giocatore,
-      indice
-    ) => {
+    (giocatore, indice) => {
       const colore =
         coloriGiocatori[
           indice %
-            coloriGiocatori.length
+          coloriGiocatori.length
         ];
 
       const pedina =
@@ -1553,10 +1833,12 @@ function disegnaGiocatori() {
           indice
         );
 
-      posizionaPedina(
-        pedina,
-        giocatore.posizione
-      );
+      if (pedina) {
+        posizionaPedina(
+          pedina,
+          giocatore.posizione
+        );
+      }
 
       const avatarHtml =
         giocatore.avatar
@@ -1620,36 +1902,899 @@ function disegnaGiocatori() {
 }
 
 // =========================================================
+// TURNO / COUNTDOWN
+// =========================================================
+
+function aggiornaTurno(
+  turnoDiId
+) {
+  turnoAttualeId =
+    turnoDiId || null;
+
+  mioTurno =
+    turnoDiId === mioUid;
+
+  const riga =
+    document.getElementById(
+      "riga-turno"
+    );
+
+  if (riga) {
+    riga.textContent =
+      mioTurno
+        ? "🎲 È il tuo turno!"
+        : "⏳ In attesa...";
+  }
+
+  const areaDadi =
+    document.getElementById(
+      "area-dadi"
+    );
+
+  if (areaDadi) {
+    areaDadi.classList.toggle(
+      "disabilitato",
+      !mioTurno
+    );
+  }
+}
+
+function aggiornaCountdownTurno(
+  scadenzaTurno
+) {
+  scadenzaTurnoServer =
+    scadenzaTurno
+      ? Number(scadenzaTurno)
+      : null;
+
+  const riga =
+    document.getElementById(
+      "riga-turno"
+    );
+
+  if (!riga) {
+    return;
+  }
+
+  clearInterval(
+    timerTurno
+  );
+
+  if (
+    !scadenzaTurnoServer ||
+    !mioTurno
+  ) {
+    return;
+  }
+
+  timerTurno =
+    setInterval(() => {
+      const rimanente =
+        Math.max(
+          0,
+          scadenzaTurnoServer -
+            Date.now()
+        );
+
+      const secondi =
+        Math.ceil(
+          rimanente /
+          1000
+        );
+
+      if (mioTurno) {
+        riga.textContent =
+          secondi > 0
+            ? `🎲 È il tuo turno! (${secondi}s)`
+            : "🎲 È il tuo turno! (0s)";
+      }
+
+      if (secondi <= 0) {
+        clearInterval(
+          timerTurno
+        );
+      }
+    }, 200);
+}
+
+// =========================================================
+// AVVIO
+// =========================================================
+
+async function avvia() {
+  try {
+    if (!partitaId) {
+      console.error(
+        "Partita non specificata nell'URL."
+      );
+
+      return;
+    }
+
+    const risposta =
+      await fetch(
+        "https://gioco-oca-server.onrender.com/api/me",
+        {
+          credentials: "include"
+        }
+      );
+
+    if (!risposta.ok) {
+      window.location.href =
+        "login.html?redirect=" +
+        encodeURIComponent(
+          window.location.href
+        );
+
+      return;
+    }
+
+    const dati =
+      await risposta.json();
+
+    mioUid =
+      dati.uid;
+
+    connetti();
+
+  } catch (e) {
+    console.error(
+      "Errore avvio:",
+      e
+    );
+
+    window.location.href =
+      "login.html?redirect=" +
+      encodeURIComponent(
+        window.location.href
+      );
+  }
+}
+
+function connetti() {
+  socket =
+    new WebSocket(
+      "wss://gioco-oca-server.onrender.com"
+    );
+
+  socket.onopen = () => {
+    if (timerRiconnessione) {
+      clearTimeout(
+        timerRiconnessione
+      );
+
+      timerRiconnessione =
+        null;
+    }
+
+    socket.send(
+      JSON.stringify({
+        tipo:
+          "riprendiPartita",
+        partitaId
+      })
+    );
+  };
+
+  socket.onclose = () => {
+    const riga =
+      document.getElementById(
+        "riga-turno"
+      );
+
+    if (riga) {
+      riga.textContent =
+        "🔴 Disconnesso, riconnessione...";
+    }
+
+    if (!timerRiconnessione) {
+      timerRiconnessione =
+        setTimeout(() => {
+          timerRiconnessione =
+            null;
+
+          connetti();
+        }, 3000);
+    }
+  };
+
+  socket.onerror = errore => {
+    console.error(
+      "WebSocket:",
+      errore
+    );
+  };
+
+  socket.onmessage = msg => {
+    let dati;
+
+    try {
+      dati =
+        JSON.parse(msg.data);
+    } catch (e) {
+      return;
+    }
+
+    // =====================================================
+    // SESSIONE
+    // =====================================================
+
+    if (
+      dati.tipo ===
+      "sessioneScaduta"
+    ) {
+      window.location.href =
+        "login.html?redirect=" +
+        encodeURIComponent(
+          window.location.href
+        );
+
+      return;
+    }
+
+    // =====================================================
+    // MEDIA
+    // =====================================================
+
+    if (
+      dati.tipo ===
+      "vocaleAutoAvvio"
+    ) {
+      gestisciAvvioMediaAutomatico(
+        dati
+      );
+
+      return;
+    }
+
+    if (
+      dati.tipo ===
+      "webrtc-offer"
+    ) {
+      gestisciWebRTCOffer(
+        dati
+      );
+
+      return;
+    }
+
+    if (
+      dati.tipo ===
+      "webrtc-answer"
+    ) {
+      gestisciWebRTCAnswer(
+        dati
+      );
+
+      return;
+    }
+
+    if (
+      dati.tipo ===
+      "webrtc-ice-candidate"
+    ) {
+      gestisciICECandidate(
+        dati
+      );
+
+      return;
+    }
+
+    // =====================================================
+    // CHI INIZIA
+    // =====================================================
+
+    if (
+      dati.tipo ===
+      "statoDeterminazione"
+    ) {
+      const giocatori =
+        Array.isArray(
+          dati.giocatori
+        )
+          ? dati.giocatori.map(g => ({
+              id: g.uid,
+              nome: g.nome,
+              avatar: g.avatar || null,
+              posizione: 0
+            }))
+          : [];
+
+      ultimoStatoGiocatori =
+        giocatori;
+
+      risultatiDeterminazione =
+        {};
+
+      giocatori.forEach(g => {
+        if (
+          dati.risultato != null
+        ) {
+          risultatiDeterminazione[g.id] =
+            dati.risultato;
+        }
+      });
+
+      ordineDeterminazione =
+        giocatori.map(
+          g => g.id
+        );
+
+      determinazioneAttiva =
+        true;
+
+      determinazioneTurnoUid =
+        dati.turnoInCorsoUid ||
+        null;
+
+      gruppoSpareggioAttuale =
+        Array.isArray(
+          dati.gruppoSpareggioAttuale
+        )
+          ? dati.gruppoSpareggioAttuale
+          : [];
+
+      apriDeterminazione(
+        giocatori,
+        determinazioneTurnoUid,
+        risultatiDeterminazione,
+        gruppoSpareggioAttuale
+      );
+
+      avviaTimerDeterminazioneLocale(
+        dati.tempoInizioTurno,
+        dati.durataMossaMs
+      );
+
+      disegnaGiocatori();
+
+      return;
+    }
+
+    if (
+      dati.tipo ===
+      "risultatoDeterminazione"
+    ) {
+      risultatiDeterminazione[
+        dati.uid
+      ] =
+        dati.valoreDado;
+
+      const giocatore =
+        ultimoStatoGiocatori.find(
+          g =>
+            g.id ===
+            dati.uid
+        );
+
+      if (giocatore) {
+        giocatore.posizione =
+          0;
+      }
+
+      aggiornaOverlayDeterminazione();
+
+      if (
+        dati.uid === mioUid
+      ) {
+        const btn =
+          document.getElementById(
+            "btn-tira-determinazione"
+          );
+
+        if (btn) {
+          btn.disabled =
+            true;
+
+          btn.style.opacity =
+            ".5";
+
+          btn.textContent =
+            "🎲 Risultato registrato";
+        }
+      }
+
+      const messaggi =
+        document.getElementById(
+          "messaggi-gioco"
+        );
+
+      if (messaggi) {
+        messaggi.textContent =
+          `${dati.nome}: 🎲 ${dati.valoreDado}`;
+      }
+
+      return;
+    }
+
+    if (
+      dati.tipo ===
+      "ordineFinaleCalcolato"
+    ) {
+      const sottotitolo =
+        document.getElementById(
+          "determinazione-sottotitolo"
+        );
+
+      if (sottotitolo) {
+        sottotitolo.textContent =
+          "Ordine deciso! La partita sta per iniziare...";
+      }
+
+      const lista =
+        document.getElementById(
+          "lista-determinazione"
+        );
+
+      if (lista) {
+        lista.innerHTML = "";
+
+        const ordine =
+          Array.isArray(
+            dati.ordineGiocatori
+          )
+            ? dati.ordineGiocatori
+            : [];
+
+        ordine.forEach(
+          (nome, indice) => {
+            const riga =
+              document.createElement(
+                "div"
+              );
+
+            riga.style.display =
+              "flex";
+
+            riga.style.alignItems =
+              "center";
+
+            riga.style.gap =
+              "10px";
+
+            riga.style.padding =
+              "10px 12px";
+
+            riga.style.marginBottom =
+              "8px";
+
+            riga.style.borderRadius =
+              "10px";
+
+            riga.style.background =
+              "rgba(255,215,0,.08)";
+
+            riga.innerHTML = `
+              <strong
+                style="
+                  color:#ffd700;
+                  width:24px;">
+                ${indice + 1}
+              </strong>
+
+              <span
+                style="
+                  flex:1;
+                  color:#eee;
+                  font-weight:bold;">
+                ${nome}
+              </span>
+
+              <span
+                style="
+                  color:#ffd700;
+                  font-weight:bold;">
+                ${dati.punteggi &&
+                dati.punteggi[nome] != null
+                  ? "🎲 " +
+                    dati.punteggi[nome]
+                  : ""}
+              </span>
+            `;
+
+            lista.appendChild(
+              riga
+            );
+          }
+        );
+      }
+
+      return;
+    }
+
+    if (
+      dati.tipo ===
+      "determinazioneCompletata"
+    ) {
+      chiudiDeterminazione();
+
+      partitaTerminata =
+        false;
+
+      ultimoStatoGiocatori =
+        Array.isArray(
+          dati.giocatori
+        )
+          ? dati.giocatori
+          : ultimoStatoGiocatori;
+
+      turnoAttualeId =
+        dati.turnoDiId ||
+        null;
+
+      mioTurno =
+        turnoAttualeId ===
+        mioUid;
+
+      aggiornaTurno(
+        dati.turnoDiId
+      );
+
+      aggiornaCountdownTurno(
+        dati.scadenzaTurno
+      );
+
+      disegnaGiocatori();
+
+      if (
+        dati.punteggiOrdineIniziale
+      ) {
+        const msg =
+          document.getElementById(
+            "messaggi-gioco"
+          );
+
+        if (msg) {
+          msg.textContent =
+            dati.primoMovimento &&
+            dati.primoMovimento.messaggi
+              ? dati.primoMovimento.messaggi.join(" ")
+              : "🎲 Ordine deciso!";
+        }
+      }
+
+      return;
+    }
+
+    // =====================================================
+    // STATO PARTITA
+    // =====================================================
+
+    if (
+      dati.tipo ===
+      "statoPartita"
+    ) {
+      ultimoStatoGiocatori =
+        Array.isArray(
+          dati.giocatori
+        )
+          ? dati.giocatori
+          : [];
+
+      partitaTerminata =
+        !!dati.vittoria;
+
+      if (
+        dati.vittoria
+      ) {
+        turnoAttualeId =
+          null;
+
+        mioTurno =
+          false;
+
+        const areaDadi =
+          document.getElementById(
+            "area-dadi"
+          );
+
+        if (areaDadi) {
+          areaDadi.classList.add(
+            "disabilitato"
+          );
+        }
+
+        disegnaGiocatori();
+
+        mostraVittoria(
+          dati.vincitore
+        );
+      } else {
+        aggiornaTurno(
+          dati.turnoDiId
+        );
+
+        aggiornaCountdownTurno(
+          dati.scadenzaTurno
+        );
+
+        disegnaGiocatori();
+      }
+
+      if (
+        dati.messaggi &&
+        dati.messaggi.length
+      ) {
+        const msg =
+          document.getElementById(
+            "messaggi-gioco"
+          );
+
+        if (msg) {
+          msg.textContent =
+            dati.messaggi.join(" ");
+        }
+      }
+
+      return;
+    }
+
+    // =====================================================
+    // AGGIORNAMENTO PARTITA / TIRO
+    // =====================================================
+
+    if (
+      dati.tipo ===
+      "aggiornamentoPartita"
+    ) {
+      animaLancioDadi(
+        dati.dado1,
+        dati.dado2,
+        () => {
+          if (
+            dati.percorso &&
+            dati.idGiocatoreCheHaTirato
+          ) {
+            animaSaltoPedina(
+              dati.idGiocatoreCheHaTirato,
+              dati.percorso,
+              () => {
+                ultimoStatoGiocatori =
+                  Array.isArray(
+                    dati.giocatori
+                  )
+                    ? dati.giocatori
+                    : [];
+
+                const msg =
+                  document.getElementById(
+                    "messaggi-gioco"
+                  );
+
+                if (msg) {
+                  msg.textContent =
+                    "🎲 " +
+                    dati.dado1 +
+                    " + " +
+                    dati.dado2 +
+                    " = " +
+                    dati.valoreDado +
+                    (
+                      dati.messaggi &&
+                      dati.messaggi.length
+                        ? " — " +
+                          dati.messaggi.join(" ")
+                        : ""
+                    );
+                }
+
+                if (
+                  dati.vittoria
+                ) {
+                  turnoAttualeId =
+                    null;
+
+                  mioTurno =
+                    false;
+
+                  const areaDadi =
+                    document.getElementById(
+                      "area-dadi"
+                    );
+
+                  if (areaDadi) {
+                    areaDadi.classList.add(
+                      "disabilitato"
+                    );
+                  }
+
+                  partitaTerminata =
+                    true;
+
+                  disegnaGiocatori();
+
+                  mostraVittoria(
+                    dati.vincitore
+                  );
+                } else {
+                  aggiornaTurno(
+                    null
+                  );
+
+                  disegnaGiocatori();
+                }
+              }
+            );
+          } else {
+            ultimoStatoGiocatori =
+              Array.isArray(
+                dati.giocatori
+              )
+                ? dati.giocatori
+                : [];
+
+            const msg =
+              document.getElementById(
+                "messaggi-gioco"
+              );
+
+            if (msg) {
+              msg.textContent =
+                "🎲 " +
+                dati.dado1 +
+                " + " +
+                dati.dado2 +
+                " = " +
+                dati.valoreDado +
+                (
+                  dati.messaggi &&
+                  dati.messaggi.length
+                    ? " — " +
+                      dati.messaggi.join(" ")
+                    : ""
+                );
+            }
+
+            if (
+              dati.vittoria
+            ) {
+              turnoAttualeId =
+                null;
+
+              mioTurno =
+                false;
+
+              const areaDadi =
+                document.getElementById(
+                  "area-dadi"
+                );
+
+              if (areaDadi) {
+                areaDadi.classList.add(
+                  "disabilitato"
+                );
+              }
+
+              partitaTerminata =
+                true;
+
+              disegnaGiocatori();
+
+              mostraVittoria(
+                dati.vincitore
+              );
+            } else {
+              aggiornaTurno(
+                null
+              );
+
+              disegnaGiocatori();
+            }
+          }
+        }
+      );
+
+      return;
+    }
+
+    // =====================================================
+    // CHAT
+    // =====================================================
+
+    if (
+      dati.tipo ===
+      "chatPartita"
+    ) {
+      aggiungiMessaggioChatPartita(
+        dati.nome,
+        dati.testo
+      );
+
+      return;
+    }
+
+    // =====================================================
+    // ERRORI
+    // =====================================================
+
+    if (
+      dati.tipo ===
+      "errore"
+    ) {
+      console.error(
+        "Errore server:",
+        dati.messaggio
+      );
+
+      alert(
+        dati.messaggio ||
+        "Si è verificato un errore."
+      );
+
+      if (
+        mioTurno
+      ) {
+        const areaDadi =
+          document.getElementById(
+            "area-dadi"
+          );
+
+        if (areaDadi) {
+          areaDadi.classList.remove(
+            "disabilitato"
+          );
+        }
+      }
+
+      return;
+    }
+  };
+}
+
+// =========================================================
 // VITTORIA / USCITA
 // =========================================================
 
 function mostraVittoria(
   nomeVincitore
 ) {
-  document.getElementById(
-    "testo-vincitore"
-  ).textContent =
-    "🎉 Ha vinto " +
-    nomeVincitore +
-    "!";
+  const testo =
+    document.getElementById(
+      "testo-vincitore"
+    );
 
-  document
-    .getElementById(
+  if (testo) {
+    testo.textContent =
+      "🎉 Ha vinto " +
+      (nomeVincitore || "un giocatore") +
+      "!";
+  }
+
+  const overlay =
+    document.getElementById(
       "overlay-vittoria"
-    )
-    .classList.add(
+    );
+
+  if (overlay) {
+    overlay.classList.add(
       "aperto"
     );
+  }
 }
 
 function tornaAllaLobby() {
   chiudiTutteConnessioniMedia();
 
+  if (socket) {
+    try {
+      socket.close();
+    } catch (_) {}
+  }
+
   window.location.href =
-    `lobby.html?stanza=${stanza}`;
+    `lobby.html?stanza=${encodeURIComponent(
+      stanza || ""
+    )}`;
 }
 
 function abbandonaPartita() {
+  if (
+    partitaTerminata
+  ) {
+    tornaAllaLobby();
+    return;
+  }
+
   if (
     !confirm(
       "Sei sicuro di voler abbandonare la partita?"
@@ -1660,8 +2805,7 @@ function abbandonaPartita() {
 
   if (
     socket &&
-    socket.readyState ===
-      WebSocket.OPEN
+    socket.readyState === WebSocket.OPEN
   ) {
     socket.send(
       JSON.stringify({
@@ -1674,7 +2818,12 @@ function abbandonaPartita() {
 
   chiudiTutteConnessioniMedia();
 
-  tornaAllaLobby();
+  setTimeout(() => {
+    window.location.href =
+      `lobby.html?stanza=${encodeURIComponent(
+        stanza || ""
+      )}`;
+  }, 150);
 }
 
 // =========================================================
@@ -1696,31 +2845,39 @@ function apriImpostazioni() {
 }
 
 function chiudiMenu() {
-  document
-    .getElementById(
+  const pannello =
+    document.getElementById(
       "pannello-menu"
-    )
-    .classList.add(
+    );
+
+  if (pannello) {
+    pannello.classList.add(
       "nascosto"
     );
+  }
 }
 
-document
-  .getElementById(
+const btnMenu =
+  document.getElementById(
     "btn-menu"
-  )
-  .onclick =
-  e => {
+  );
+
+if (btnMenu) {
+  btnMenu.onclick = e => {
     e.stopPropagation();
 
-    document
-      .getElementById(
+    const pannello =
+      document.getElementById(
         "pannello-menu"
-      )
-      .classList.toggle(
+      );
+
+    if (pannello) {
+      pannello.classList.toggle(
         "nascosto"
       );
+    }
   };
+}
 
 document.addEventListener(
   "click",
@@ -1740,6 +2897,10 @@ function aggiungiMessaggioChatPartita(
       "chat-messaggi"
     );
 
+  if (!box) {
+    return;
+  }
+
   const riga =
     document.createElement(
       "div"
@@ -1748,8 +2909,30 @@ function aggiungiMessaggioChatPartita(
   riga.className =
     "chat-msg";
 
-  riga.innerHTML =
-    `<b>${nome}:</b> ${testo}`;
+  const nomeEl =
+    document.createElement(
+      "b"
+    );
+
+  nomeEl.textContent =
+    (nome || "Giocatore") +
+    ": ";
+
+  const testoEl =
+    document.createElement(
+      "span"
+    );
+
+  testoEl.textContent =
+    testo || "";
+
+  riga.appendChild(
+    nomeEl
+  );
+
+  riga.appendChild(
+    testoEl
+  );
 
   box.appendChild(
     riga
@@ -1765,6 +2948,10 @@ function inviaChatPartita() {
       "chat-input"
     );
 
+  if (!input) {
+    return;
+  }
+
   const testo =
     input.value.trim();
 
@@ -1774,8 +2961,7 @@ function inviaChatPartita() {
 
   if (
     socket &&
-    socket.readyState ===
-      WebSocket.OPEN
+    socket.readyState === WebSocket.OPEN
   ) {
     socket.send(
       JSON.stringify({
@@ -1787,83 +2973,96 @@ function inviaChatPartita() {
     );
   }
 
-  input.value = "";
+  input.value =
+    "";
 }
 
-document
-  .getElementById(
+const chatInput =
+  document.getElementById(
     "chat-input"
-  )
-  .addEventListener(
+  );
+
+if (chatInput) {
+  chatInput.addEventListener(
     "keypress",
     e => {
       if (
         e.key ===
         "Enter"
       ) {
+        e.preventDefault();
         inviaChatPartita();
       }
     }
   );
+}
 
-document
-  .getElementById(
+const btnChat =
+  document.getElementById(
     "btn-chat"
-  )
-  .onclick =
-  e => {
-    e.stopPropagation();
+  );
 
-    document
-      .getElementById(
-        "pannello-chat"
-      )
-      .classList.toggle(
-        "nascosto"
-      );
-  };
+if (btnChat) {
+  btnChat.onclick =
+    e => {
+      e.stopPropagation();
+
+      const pannello =
+        document.getElementById(
+          "pannello-chat"
+        );
+
+      if (pannello) {
+        pannello.classList.toggle(
+          "nascosto"
+        );
+      }
+    };
+}
 
 // =========================================================
 // DADO
 // =========================================================
 
-document
-  .getElementById(
+const areaDadi =
+  document.getElementById(
     "area-dadi"
-  )
-  .onclick =
-  () => {
-    if (!mioTurno) {
-      return;
-    }
+  );
 
-    if (
-      !socket ||
-      socket.readyState !==
-        WebSocket.OPEN
-    ) {
-      return;
-    }
+if (areaDadi) {
+  areaDadi.onclick =
+    () => {
+      if (
+        !mioTurno ||
+        determinazioneAttiva ||
+        partitaTerminata
+      ) {
+        return;
+      }
 
-    document
-      .getElementById(
-        "area-dadi"
-      )
-      .classList.add(
+      if (
+        !socket ||
+        socket.readyState !== WebSocket.OPEN
+      ) {
+        return;
+      }
+
+      areaDadi.classList.add(
         "disabilitato"
       );
 
-    socket.send(
-      JSON.stringify({
-        tipo:
-          "tiraDadi",
-        partitaId
-      })
-    );
-  };
+      socket.send(
+        JSON.stringify({
+          tipo:
+            "tiraDadi",
+          partitaId
+        })
+      );
+    };
+}
 
 // =========================================================
-// PULSANTI AUDIO / VIDEO
+// MICROFONO / WEBCAM
 // =========================================================
 
 const btnMicrofono =
@@ -1894,12 +3093,31 @@ aggiornaPulsantiMedia();
 
 window.addEventListener(
   "beforeunload",
-  chiudiTutteConnessioniMedia
+  () => {
+    chiudiTutteConnessioniMedia();
+  }
+);
+
+// =========================================================
+// RESIZE TABELLONE
+// =========================================================
+
+window.addEventListener(
+  "resize",
+  () => {
+    disegnaGiocatori();
+  }
 );
 
 // =========================================================
 // AVVIO INIZIALE
 // =========================================================
 
-mostraDadi(1, 1);
+creaOverlayDeterminazione();
+
+mostraDadi(
+  1,
+  1
+);
+
 avvia();
