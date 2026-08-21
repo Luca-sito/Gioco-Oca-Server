@@ -33,7 +33,7 @@ html, body {
 #area-tabellone {
   position: relative;
 
-  width: auto;
+  width: min(78vw, 1000px);
   height: auto;
 
   flex-shrink: 0;
@@ -42,7 +42,6 @@ html, body {
 
   isolation: isolate;
 }
-
 
 #immagine-tabellone {
   width: 100%;
