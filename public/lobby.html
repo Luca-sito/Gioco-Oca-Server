@@ -1315,17 +1315,6 @@ body.tema-scuro .giocatore-online{
 </style>
 </head>
 <body>
-<div id="contenitoreNotifiche" aria-live="polite"></div>
-<div id="areaCampanella">
-  <button id="btnCampanella" type="button" onclick="toggleNotifiche()" aria-label="Apri notifiche">
-    🔔
-    <span id="badgeNotifiche" class="badge-notifiche" style="display:none;">0</span>
-  </button>
-  <div id="pannelloNotifiche" class="pannello-notifiche nascosto">
-    <div class="notifiche-titolo">Notifiche</div>
-    <div id="listaNotifiche"></div>
-  </div>
-</div>
 <div id="cardInvitoRicevuto" class="nascosto">
   <div id="testoInvitoRicevuto"></div>
   <div class="invito-bottoni">
@@ -1691,7 +1680,7 @@ const input = document.getElementById("messaggioMobile");
 if(!input) return;
 const testo = input.value.trim();
 if(!testo) return;
-  if (testo.length > 300) { mostraNotifica("Massimo 300 caratteri."); return; }
+  if (testo.length > 1000) { mostraNotifica("Massimo 1000 caratteri."); return; }
   if (!inviaMessaggioSocket({
    tipo:"chat",
    testo:testo
@@ -1978,8 +1967,8 @@ function entraPartita(id) {
 function inviaChat() {
   let testo = document.getElementById("messaggio").value.trim();
   if (testo === "") return;
-  if (testo.length > 300) {
-    mostraNotifica("Massimo 300 caratteri.");
+  if (testo.length > 1000) {
+    mostraNotifica("Massimo 1000 caratteri.");
     return;
   }
   if (!inviaMessaggioSocket({ tipo: "chat", testo: testo })) return;
