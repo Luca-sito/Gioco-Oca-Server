@@ -854,22 +854,6 @@ function inviaListaPartite(nomeStanza) {
   inviaAllaStanza(nomeStanza, { tipo: "listaPartite", partite: lista });
 }
 
-function rimuoviVecchieConnessioniOnline(nomeStanza, uid, socketIdDaConservare) {
-  if (!stanze[nomeStanza] || !uid) return;
-
-  for (const [sid, giocatoreOnline] of Object.entries(
-    stanze[nomeStanza].giocatoriOnline
-  )) {
-    if (
-      giocatoreOnline &&
-      giocatoreOnline.uid === uid &&
-      sid !== socketIdDaConservare
-    ) {
-      delete stanze[nomeStanza].giocatoriOnline[sid];
-    }
-  }
-}
-
 function inviaConteggioStanze() {
   const conteggi = {};
   const giocatoriPerStanza = {};
@@ -1482,13 +1466,12 @@ wss.on("connection", (socket, request) => {
 
   const nomeStanzaDaLasciare = stanzaAttuale;
 
-  // Rimuove questa specifica connessione dalla lista online.
+  // Rimuove esclusivamente questa connessione WebSocket.
   delete stanze[nomeStanzaDaLasciare].giocatoriOnline[socketId];
 
-  // Se il giocatore era dentro un tavolo ancora in attesa,
-  // lo rimuoviamo correttamente anche dal tavolo.
-  const partite =
-    stanze[nomeStanzaDaLasciare].partite || {};
+  // Se il giocatore aveva una partita ancora in attesa,
+  // deve essere rimosso anche dalla partita.
+  const partite = stanze[nomeStanzaDaLasciare].partite || {};
 
   for (const pid in partite) {
     const partita = partite[pid];
@@ -1499,9 +1482,7 @@ wss.on("connection", (socket, request) => {
 
     if (!giocatore) continue;
 
-    if (giocatore.socket && giocatore.socket !== socket) {
-      continue;
-    }
+    if (giocatore.socket && giocatore.socket !== socket) continue;
 
     await esciDaPartitaInAttesa(
       partita,
@@ -1510,31 +1491,11 @@ wss.on("connection", (socket, request) => {
     );
   }
 
-  // Controlliamo quanti UID distinti sono ancora online.
-  const numeroOnlineUnici = new Set(
-    Object.values(
-      stanze[nomeStanzaDaLasciare].giocatoriOnline
-    )
-      .filter(g => g && g.uid)
-      .map(g => g.uid)
-  ).size;
-
-  // Aggiorna immediatamente tutti i contatori e le liste.
+  // Aggiorna immediatamente tutti i dati della stanza.
+  inviaListaPartite(nomeStanzaDaLasciare);
   inviaConteggioStanze();
 
-  inviaAllaStanza(
-    nomeStanzaDaLasciare,
-    {
-      tipo: "online",
-      numero: numeroOnlineUnici
-    }
-  );
-
-  inviaListaPartite(
-    nomeStanzaDaLasciare
-  );
-
-  // Questa connessione non appartiene più a nessuna stanza.
+  // Questa WebSocket non appartiene più alla stanza.
   stanzaAttuale = null;
 
   return;
@@ -1553,17 +1514,11 @@ wss.on("connection", (socket, request) => {
         }
         stanzaAttuale = dati.stanza; nickname = utenteDb.nickname; mioAvatar = utenteDb.avatar || null;
         if (!stanze[stanzaAttuale]) stanze[stanzaAttuale] = { giocatoriOnline: {}, partite: {} };
-        rimuoviVecchieConnessioniOnline(
-        stanzaAttuale,
-        uid,
-        socketId
-        );
         stanze[stanzaAttuale].giocatoriOnline[socketId] = {
   uid,
   nickname,
   avatar: mioAvatar,
   tipoDispositivo,
-  socket
 };
         inviaConteggioStanze();
         const numeroOnlineUnici = new Set(
@@ -1599,7 +1554,6 @@ inviaAllaStanza(stanzaAttuale, {
   nickname,
   avatar: mioAvatar,
   tipoDispositivo,
-  socket
 };
         inviaConteggioStanze();
 
@@ -1881,61 +1835,50 @@ inviaAllaStanza(stanzaAttuale, {
     }
   });
 
-  socket.on("close", async () => {
-    try {
-      delete socketsPerId[socketId];
+socket.on("close", async () => {
+  try {
+    delete socketsPerId[socketId];
 
-      if (stanzaAttuale && stanze[stanzaAttuale]) {
-  const connessioneOnline =
-    stanze[stanzaAttuale].giocatoriOnline[socketId];
+    if (!stanzaAttuale || !stanze[stanzaAttuale]) return;
 
-  if (connessioneOnline) {
-    delete stanze[stanzaAttuale].giocatoriOnline[socketId];
+    const nomeStanza = stanzaAttuale;
 
-    // Ricontrolliamo se lo stesso UID è ancora collegato
-    // con un'altra connessione WebSocket.
-    const uidAncoraOnline = Object.values(
-      stanze[stanzaAttuale].giocatoriOnline
-    ).some(g => g && g.uid === uid);
+    // Rimuove esclusivamente questa connessione.
+    delete stanze[nomeStanza].giocatoriOnline[socketId];
 
+    // Se il socket apparteneva a una partita ancora in attesa,
+    // rimuove il giocatore dalla partita.
+    const partite = stanze[nomeStanza].partite;
+
+    for (const pid in partite) {
+      const partita = partite[pid];
+
+      if (partita.fase !== "attesa_giocatori") continue;
+
+      const giocatore = partita.giocatori[uid];
+
+      if (!giocatore) continue;
+
+      // Se la partita è già associata a un'altra connessione dello stesso UID,
+      // questa chiusura è relativa al vecchio socket e non deve rimuovere il giocatore.
+      if (giocatore.socket && giocatore.socket !== socket) continue;
+
+      await esciDaPartitaInAttesa(
+        partita,
+        nomeStanza,
+        uid
+      );
+    }
+
+    inviaListaPartite(nomeStanza);
     inviaConteggioStanze();
 
-    // Se esiste ancora una connessione dello stesso UID,
-    // non dobbiamo diminuirne la presenza.
-    if (!uidAncoraOnline) {
-      const numeroOnlineUnici = new Set(
-        Object.values(stanze[stanzaAttuale].giocatoriOnline)
-          .filter(g => g && g.uid)
-          .map(g => g.uid)
-      ).size;
-
-      inviaAllaStanza(stanzaAttuale, {
-        tipo: "online",
-        numero: numeroOnlineUnici
-      });
-    }
+  } catch (erroreInterno) {
+    console.error(
+      "Errore nella chiusura di una connessione:",
+      erroreInterno
+    );
   }
-}
-
-      if (!stanzaAttuale || !stanze[stanzaAttuale] || !uid) return;
-
-      const partite = stanze[stanzaAttuale].partite;
-      for (const pid in partite) {
-        const partita = partite[pid];
-        if (partita.fase !== "attesa_giocatori") continue;
-        const giocatore = partita.giocatori[uid];
-        if (!giocatore) continue;
-        if (giocatore.socket && giocatore.socket !== socket) continue;
-        await esciDaPartitaInAttesa(partita, stanzaAttuale, uid);
-      }
-
-      inviaListaPartite(stanzaAttuale);
-      inviaConteggioStanze();
-
-    } catch (erroreInterno) {
-      console.error("Errore nella chiusura di una connessione:", erroreInterno);
-    }
-  });
 });
 
 server.listen(PORT, async () => {
