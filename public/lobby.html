@@ -628,6 +628,29 @@ button:disabled{
     text-decoration:none;
     margin-top:6px;
 }
+.conteggio-stanza{
+    display:inline-flex;
+    align-items:center;
+    gap:14px;
+    margin-left:10px;
+    vertical-align:middle;
+}
+
+.contatore-icona{
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    font-size:15px;
+    font-weight:bold;
+    color:#fff;
+}
+
+.contatore-icona img{
+    width:18px;
+    height:18px;
+    object-fit:contain;
+    display:block;
+}
 /* =========================================================
    MODAL INVITA GIOCATORI
 ========================================================= */
@@ -1388,9 +1411,23 @@ body.tema-scuro .giocatore-online{
     <h2 id="nomeStanza">
     STANZA
     <span class="conteggio-stanza">
-        👤 <span id="online">0</span>
-        &nbsp;
-        👥 <span id="amiciOnline">0</span>
+
+        <span class="contatore-icona">
+            <img
+                src="https://gioco-oca-server.onrender.com/Immagini/Giocatori.png"
+                alt="Giocatori online"
+            >
+            <span id="online">0</span>
+        </span>
+
+        <span class="contatore-icona">
+            <img
+                src="https://gioco-oca-server.onrender.com/Immagini/Amici.png"
+                alt="Amici online"
+            >
+            <span id="amiciOnline">0</span>
+        </span>
+
     </span>
 </h2>
     <div id="areaUtente"></div>
