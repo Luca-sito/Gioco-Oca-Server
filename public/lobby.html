@@ -1900,18 +1900,18 @@ function mostraGiocatori(lista) {
     const altri = listaOrdinata.filter(g => !mieiAmiciUid.has(g.uid));
     let html = "";
     if (amici.length) {
-      html += "<h3 style='margin:10px;color:#43a047;'>👥 Amici online</h3>";
+      html += "<h3 style='margin:10px;color:#43a047;'>AMICI ONLINE</h3>";
       html += amici.map(g => creaRigaGiocatore(g)).join("");
     }
     if (altri.length) {
-      html += "<h3 style='margin:10px;color:#666;'>🟢 Altri giocatori</h3>";
+      html += "<h3 style='margin:10px;color:#666;'>ALTRI GIOCATORI</h3>";
       html += altri.map(g => creaRigaGiocatore(g)).join("");
     }
     contenitore.innerHTML = html;
   }
   const contenutoMobile = document.getElementById("contenutoMobile");
   if (contenutoMobile && contenutoMobile.dataset.vista === "online") {
-    contenutoMobile.innerHTML = `<h2>👥 Giocatori online</h2>${contenitore.innerHTML}`;
+    contenutoMobile.innerHTML = `<h2>GIOCATORI ONLINE</h2>${contenitore.innerHTML}`;
   }
 }
 function creaRigaGiocatore(g) {
