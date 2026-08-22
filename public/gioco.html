@@ -1,68 +1,40 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gioco dell'Oca - Partita</title>
-<link rel="stylesheet" href="gioco.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0d1620">
+  <title>Gioco dell'Oca - Partita</title>
+  <link rel="stylesheet" href="gioco.css">
 </head>
-<body>
+<body class="caricamento-in-corso">
 
 <div id="overlay-caricamento" aria-live="polite" aria-atomic="true">
-  <div class="caricamento-box">
-
-    <div class="caricamento-logo">
-      GIOCHI SOCIETA
-    </div>
-
-    <div class="caricamento-titolo">
-      Preparazione partita
-    </div>
-
-    <div class="caricamento-spinner" aria-hidden="true"></div>
-
-    <div id="caricamento-testo">
-      Caricamento grafica
-    </div>
-
-    <div class="caricamento-progress">
+  <div id="caricamento-box">
+    <div id="caricamento-logo">GIOCHI SOCIETA</div>
+    <div id="caricamento-titolo">Preparazione partita</div>
+    <div id="caricamento-spinner" aria-hidden="true"></div>
+    <div id="caricamento-testo">Caricamento grafica…</div>
+    <div id="caricamento-progress" role="progressbar" aria-label="Avanzamento caricamento" aria-valuemin="0" aria-valuemax="100" aria-valuenow="10">
       <div id="caricamento-progress-bar"></div>
     </div>
-
   </div>
 </div>
 
-<div id="contenitore-notifiche-gioco"></div>
+<div id="banner-disconnesso" class="nascosto" role="status" aria-live="assertive">
+  Connessione al server interrotta. Nuovo tentativo in corso…
+</div>
 
-<div id="scena">
+<div id="contenitore-notifiche-gioco" role="status" aria-live="polite" aria-atomic="false"></div>
+
+<main id="scena">
   <div id="mondo-ruotato">
-
-    <div id="flash-messaggio-gioco"><span></span></div>
-
-    <div id="overlay-determinazione" class="overlay">
-      <div class="popup-determinazione">
-        <h2>🎲 CHI INIZIA?</h2>
-        <p class="sottotitolo-determinazione" id="sottotitolo-determinazione">I giocatori tirano i dadi uno alla volta per stabilire l'ordine.</p>
-        <div id="lista-determinazione"></div>
-        <div id="slot-dadi-determinazione"></div>
-      </div>
-    </div>
-
-    <div id="popup-richiesta-audio" class="nascosto">
-      <div class="popup-richiesta-audio-box">
-        <p id="testo-richiesta-audio"></p>
-        <div class="richiesta-audio-bottoni">
-          <button class="btn-rifiuta-audio" onclick="rispondiRichiestaAudioRicevuta(false)">Rifiuta</button>
-          <button class="btn-accetta-audio" onclick="rispondiRichiestaAudioRicevuta(true)">Accetta</button>
-        </div>
-      </div>
-    </div>
-
     <div id="area-tabellone">
-      <img id="immagine-tabellone" src="https://gioco-oca-server.onrender.com/Immagini/tabellone.png" alt="Tabellone">
-      <div id="contenitore-pedine"></div>
-      <div id="area-dadi" class="disabilitato" title="Clicca per tirare">
-        <div id="dado1" class="dado-3d">
+      <img id="immagine-tabellone" src="Immagini/tabellone.png" width="2500" height="1875" alt="Tabellone del Gioco dell'Oca" draggable="false" fetchpriority="high">
+      <div id="contenitore-pedine" aria-hidden="true"></div>
+
+      <div id="area-dadi" class="disabilitato" role="button" tabindex="0" aria-label="Tira i dadi" aria-disabled="true">
+        <div id="dado1" class="dado-3d" aria-hidden="true">
           <div class="cubo">
             <div class="faccia faccia-1"><span class="pip pip-rossa" style="grid-area:2/2;"></span></div>
             <div class="faccia faccia-2"><span class="pip" style="grid-area:1/3;"></span><span class="pip" style="grid-area:3/1;"></span></div>
@@ -72,7 +44,8 @@
             <div class="faccia faccia-6"><span class="pip" style="grid-area:1/1;"></span><span class="pip" style="grid-area:2/1;"></span><span class="pip" style="grid-area:3/1;"></span><span class="pip" style="grid-area:1/3;"></span><span class="pip" style="grid-area:2/3;"></span><span class="pip" style="grid-area:3/3;"></span></div>
           </div>
         </div>
-        <div id="dado2" class="dado-3d">
+
+        <div id="dado2" class="dado-3d" aria-hidden="true">
           <div class="cubo">
             <div class="faccia faccia-1"><span class="pip pip-rossa" style="grid-area:2/2;"></span></div>
             <div class="faccia faccia-2"><span class="pip" style="grid-area:1/3;"></span><span class="pip" style="grid-area:3/1;"></span></div>
@@ -84,53 +57,74 @@
         </div>
       </div>
     </div>
+  </div>
 
-    <div id="pannello-giocatori">
-      <div id="riga-turno">Caricamento...</div>
-      <div id="lista-giocatori"></div>
+  <div id="flash-messaggio-gioco" role="status" aria-live="assertive"><span></span></div>
+
+  <div id="overlay-determinazione" class="overlay" role="dialog" aria-modal="true" aria-labelledby="titolo-determinazione">
+    <div class="popup-determinazione">
+      <h2 id="titolo-determinazione">🎲 CHI INIZIA?</h2>
+      <p class="sottotitolo-determinazione" id="sottotitolo-determinazione">I giocatori tirano i dadi uno alla volta per stabilire l'ordine.</p>
+      <div id="countdown-determinazione" class="countdown-determinazione" aria-live="polite">⏱ --s</div>
+      <div id="lista-determinazione"></div>
+      <div id="slot-dadi-determinazione"></div>
     </div>
+  </div>
 
-    <div id="giocatori-wrapper">
-      <button id="btn-giocatori" title="Giocatori">👤</button>
-    </div>
-
-    <div id="menu-wrapper">
-      <button id="btn-menu" title="Menu">☰</button>
-      <div id="pannello-menu" class="nascosto">
-        <button onclick="apriProfilo()">👤 Profilo</button>
-        <button onclick="apriImpostazioni()">⚙️ Impostazioni</button>
-        <button id="btn-toggle-suoni" onclick="toggleSuoni()">🔊 Suoni: On</button>
-        <button id="btn-toggle-fullscreen" onclick="toggleFullscreen()">⛶ Tutto schermo</button>
-        <button id="btn-toggle-microfono" onclick="toggleMicrofono()">🎤 Microfono: Off</button>
-        <button class="voce-pericolo" onclick="abbandonaPartita()">🚪 Abbandona partita</button>
+  <div id="popup-richiesta-audio" class="nascosto" role="dialog" aria-modal="true" aria-labelledby="testo-richiesta-audio">
+    <div class="popup-richiesta-audio-box">
+      <p id="testo-richiesta-audio"></p>
+      <div class="richiesta-audio-bottoni">
+        <button type="button" class="btn-rifiuta-audio" onclick="rispondiRichiestaAudioRicevuta(false)">Rifiuta</button>
+        <button type="button" class="btn-accetta-audio" onclick="rispondiRichiestaAudioRicevuta(true)">Accetta</button>
       </div>
     </div>
-
-    <div id="messaggi-gioco"></div>
-
-    <div id="overlay-vittoria" class="overlay">
-      <div class="popup-vittoria">
-        <h2 id="testo-vincitore"></h2>
-        <button onclick="tornaAllaLobby()">Torna alla Lobby</button>
-      </div>
-    </div>
-
   </div>
 
   <div id="backdrop-giocatori"></div>
 
-  <!-- Il pulsante chat resta SEMPRE fuori dal mondo ruotato, come richiesto -->
-  <div id="chat-wrapper">
-    <button id="btn-chat" title="Apri chat">💬<span id="badge-chat-partita" class="badge-chat-partita" style="display:none;">0</span></button>
-    <div id="pannello-chat" class="nascosto">
-      <div id="chat-messaggi"></div>
-      <div id="chat-input-riga">
-        <input id="chat-input" placeholder="Scrivi un messaggio">
-        <button onclick="inviaChatPartita()">➤</button>
-      </div>
+  <aside id="pannello-giocatori" aria-label="Giocatori della partita">
+    <div id="riga-turno" aria-live="polite">Caricamento…</div>
+    <div id="lista-giocatori"></div>
+  </aside>
+
+  <div id="giocatori-wrapper">
+    <button type="button" id="btn-giocatori" aria-label="Mostra giocatori" aria-controls="pannello-giocatori" aria-expanded="false">👤</button>
+  </div>
+
+  <div id="menu-wrapper">
+    <button type="button" id="btn-menu" aria-label="Apri menu" aria-controls="pannello-menu" aria-expanded="false">☰</button>
+    <div id="pannello-menu" class="nascosto">
+      <button type="button" onclick="apriProfilo()">👤 Profilo</button>
+      <button type="button" onclick="apriImpostazioni()">⚙️ Impostazioni</button>
+      <button type="button" id="btn-toggle-suoni" onclick="toggleSuoni()">🔊 Suoni: On</button>
+      <button type="button" id="btn-toggle-fullscreen" onclick="toggleFullscreen()">⛶ Tutto schermo</button>
+      <button type="button" id="btn-toggle-microfono" onclick="toggleMicrofono()">🎤 Microfono: Off</button>
+      <button type="button" class="voce-pericolo" onclick="abbandonaPartita()">🚪 Abbandona partita</button>
     </div>
   </div>
-</div>
+
+  <div id="messaggi-gioco" role="status" aria-live="polite"></div>
+
+  <div id="overlay-vittoria" class="overlay" role="dialog" aria-modal="true" aria-labelledby="testo-vincitore">
+    <div class="popup-vittoria">
+      <h2 id="testo-vincitore"></h2>
+      <button type="button" onclick="tornaAllaLobby()">Torna alla Lobby</button>
+    </div>
+  </div>
+
+  <div id="chat-wrapper">
+    <button type="button" id="btn-chat" aria-label="Apri chat" aria-controls="pannello-chat" aria-expanded="false">💬<span id="badge-chat-partita" class="badge-chat-partita" style="display:none;">0</span></button>
+    <section id="pannello-chat" class="nascosto" aria-label="Chat della partita">
+      <div id="chat-messaggi" role="log" aria-live="polite" aria-relevant="additions"></div>
+      <div id="chat-input-riga">
+        <label class="solo-lettori-schermo" for="chat-input">Messaggio</label>
+        <input id="chat-input" type="text" maxlength="300" autocomplete="off" placeholder="Scrivi un messaggio" aria-label="Messaggio per la chat">
+        <button type="button" onclick="inviaChatPartita()" aria-label="Invia messaggio">➤</button>
+      </div>
+    </section>
+  </div>
+</main>
 
 <script src="gioco.js"></script>
 </body>
