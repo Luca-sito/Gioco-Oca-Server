@@ -932,6 +932,16 @@ button:disabled{
         box-shadow:none !important;
         z-index:99999 !important;
     }
+    .overlay-popup-giocatore,
+    .overlay-modal-invito{
+        z-index:100100;
+    }
+    #cardInvitoRicevuto{
+        z-index:100200;
+    }
+    #contenitoreNotifiche{
+        z-index:100300;
+    }
     /* =====================================================
        CONTENUTO POPUP
     ===================================================== */
@@ -1305,6 +1315,17 @@ body.tema-scuro .giocatore-online{
 </style>
 </head>
 <body>
+<div id="contenitoreNotifiche" aria-live="polite"></div>
+<div id="areaCampanella">
+  <button id="btnCampanella" type="button" onclick="toggleNotifiche()" aria-label="Apri notifiche">
+    🔔
+    <span id="badgeNotifiche" class="badge-notifiche" style="display:none;">0</span>
+  </button>
+  <div id="pannelloNotifiche" class="pannello-notifiche nascosto">
+    <div class="notifiche-titolo">Notifiche</div>
+    <div id="listaNotifiche"></div>
+  </div>
+</div>
 <div id="cardInvitoRicevuto" class="nascosto">
   <div id="testoInvitoRicevuto"></div>
   <div class="invito-bottoni">
@@ -1400,7 +1421,7 @@ body.tema-scuro .giocatore-online{
 </div>
   <div style="display:flex; gap:5px;">
     <button onclick="apriEmoji()" style="width:45px;">😊</button>
-    <input id="messaggio" placeholder="Scrivi un messaggio">
+    <input id="messaggio" maxlength="300" placeholder="Scrivi un messaggio">
     <button onclick="inviaChat()">Invia</button>
   </div>
 </div>
@@ -1436,9 +1457,16 @@ body.tema-scuro .giocatore-online{
   </div>
 </div>
 <script>
-let socket;
+let socket = null;
+let timerRiconnessione = null;
+let sessioneVerificata = false;
+let paginaInUscita = false;
+const URL_SERVER_WS = "wss://gioco-oca-server.onrender.com";
+const STANZE_VALIDE = new Set(["BAR", "PUB", "DISCOPUB", "SERATE"]);
 const parametri = new URLSearchParams(window.location.search);
-const stanza = parametri.get("stanza") || "BAR";
+const stanzaRichiesta = (parametri.get("stanza") || "BAR").toUpperCase();
+const stanza = STANZE_VALIDE.has(stanzaRichiesta) ? stanzaRichiesta : "BAR";
+const stanzaCodificata = encodeURIComponent(stanza);
 document.getElementById("nomeStanza").firstChild.textContent = stanza + " ";
 let mioUid = null;
 let mieiAmiciUid = new Set();
@@ -1446,6 +1474,7 @@ let ultimaListaOnlineStanza = [];
 let aspettaPropriaPartitaPrivata = false;
 let partitaDaInvitareId = null;
 let invitoAttivoPartitaId = null;
+let richiestaProfiloCorrente = 0;
 // ===== NUOVO: notifiche interne al posto di alert() =====
 function mostraNotifica(testo) {
   const contenitore = document.getElementById("contenitoreNotifiche");
@@ -1456,11 +1485,25 @@ function mostraNotifica(testo) {
   contenitore.appendChild(toast);
   setTimeout(() => toast.remove(), 5000);
 }
+function pulisciTestoHtml(valore) {
+  return String(valore ?? "").replace(/[&<>"']/g, carattere => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  })[carattere]);
+}
+function inviaMessaggioSocket(dati) {
+  if (!socket || socket.readyState !== WebSocket.OPEN) {
+    mostraNotifica("Connessione al server non disponibile. Riprova tra qualche secondo.");
+    return false;
+  }
+  socket.send(JSON.stringify(dati));
+  return true;
+}
 function iniziale(nome) { return (nome || "?").trim().charAt(0).toUpperCase(); }
 function coloreDaNome(nome) {
   const colori = ["#6a2c70", "#1e40af", "#43a047", "#f57c00", "#c0ca33", "#e53935", "#00838f", "#8d6e63"];
+  const testo = String(nome || "?");
   let somma = 0;
-  for (let i = 0; i < nome.length; i++) somma += nome.charCodeAt(i);
+  for (let i = 0; i < testo.length; i++) somma += testo.charCodeAt(i);
   return colori[somma % colori.length];
 }
 function iconaDispositivo(tipo) {
@@ -1473,6 +1516,16 @@ function rilevaTipoDispositivoClient() {
   if (/iPad/i.test(ua) || (/Android/i.test(ua) && !/Mobile/i.test(ua))) return "tablet";
   if (/iPhone|iPod/i.test(ua) || (/Android/i.test(ua) && /Mobile/i.test(ua))) return "cellulare";
   return "computer";
+}
+function aggiornaConteggioOnline(numero) {
+  const conteggio = Math.max(0, Number(numero) || 0);
+  const contatoreDesktop = document.getElementById("online");
+  if (contatoreDesktop) contatoreDesktop.textContent = conteggio;
+  const badgeMobile = document.getElementById("badgeOnlineMobile");
+  if (badgeMobile) {
+    badgeMobile.textContent = conteggio > 99 ? "99+" : conteggio;
+    badgeMobile.style.display = conteggio > 0 ? "flex" : "none";
+  }
 }
 // ===== MENU MOBILE =====
 function apriCreaMobile(){
@@ -1527,13 +1580,14 @@ apriMobile();
 }
 function creaPartitaMobile() {
   const tipo = document.getElementById("tipoPartitaMobile").value;
-  socket.send(JSON.stringify({
+  const inviato = inviaMessaggioSocket({
     tipo: "creaPartita",
     tempo: document.getElementById("tempoMobile").value,
     punti: document.getElementById("puntiMobile").value,
     modalita: tipo,
     maxGiocatori: document.getElementById("numeroGiocatoriMobile").value
-  }));
+  });
+  if (!inviato) return;
   if (tipo === "privata") aspettaPropriaPartitaPrivata = true;
   chiudiMobile();
 }
@@ -1555,17 +1609,17 @@ document.getElementById("contenutoMobile").dataset.vista = "chat";
 nuoviMessaggiMobile = 0;
 aggiornaBadgeChatMobile();
 document.getElementById("contenutoMobile").innerHTML=`
-<div style="
+<div class="chat-mobile-schermata" style="
 height:100%;
 display:flex;
 flex-direction:column;
 ">
-<h2 style="
+<h2 class="chat-mobile-titolo" style="
 margin-bottom:10px;
 ">
 CHAT
 </h2>
-<div id="chatMobile" style="flex:1; overflow-y:auto;">
+<div id="chatMobile" class="chat-mobile-messaggi" style="flex:1; overflow-y:auto;">
 ${document.getElementById("chat").innerHTML}
 </div>
 <div id="emojiMobile" style="
@@ -1593,10 +1647,9 @@ margin-bottom:8px;
 <span onclick="aggiungiEmojiMobile('🏆')">🏆</span>
 <span onclick="aggiungiEmojiMobile('🎉')">🎉</span>
 </div>
-<div style="
+<div class="chat-mobile-input" style="
 display:flex;
 gap:6px;
-height:45px;
 ">
 <button onclick="mostraEmojiMobile()"
 style="
@@ -1607,13 +1660,14 @@ padding:0;
 😊
 </button>
 <input id="messaggioMobile"
+maxlength="300"
 placeholder="Scrivi un messaggio..."
 style="
 flex:1;
 margin:0;
 width:auto;
 ">
-<button onclick="inviaChatMobile()"
+<button class="chat-mobile-invia" onclick="inviaChatMobile()"
 style="
 width:70px;
 margin:0;
@@ -1637,12 +1691,12 @@ const input = document.getElementById("messaggioMobile");
 if(!input) return;
 const testo = input.value.trim();
 if(!testo) return;
-if (testo.length > 200) { mostraNotifica("Massimo 200 caratteri."); return; }
-socket.send(JSON.stringify({
- tipo:"chat",
- testo:testo
-}));
-input.value="";
+  if (testo.length > 300) { mostraNotifica("Massimo 300 caratteri."); return; }
+  if (!inviaMessaggioSocket({
+   tipo:"chat",
+   testo:testo
+  })) return;
+  input.value="";
 }
 function mostraEmojiMobile() {
   const pannello = document.getElementById("emojiMobile");
@@ -1692,6 +1746,8 @@ margin:0;
 </select>
 </div>
 `;
+const selettoreTema = document.getElementById("temaMobile");
+if (selettoreTema) selettoreTema.value = localStorage.getItem("tema") === "scuro" ? "scuro" : "chiaro";
 apriMobile();
 }
 function apriMobile(){
@@ -1700,21 +1756,7 @@ popup.classList.add("aperto");
 }
 function cambiaTema(){
 const tema=document.getElementById("temaMobile").value;
-if(tema==="scuro"){
-document.body.style.background="#111";
-document.querySelectorAll(".centro,.sinistra,.destra,.popup-mobile")
-.forEach(e=>{
-e.style.background="#222";
-e.style.color="white";
-});
-}else{
-document.body.style.background="#f2f2f2";
-document.querySelectorAll(".centro,.sinistra,.destra,.popup-mobile")
-.forEach(e=>{
-e.style.background="white";
-e.style.color="#111";
-});
-}
+document.body.classList.toggle("tema-scuro", tema === "scuro");
 localStorage.setItem("tema",tema);
 }
 function chiudiMobile(){
@@ -1728,39 +1770,56 @@ async function verificaSessione() {
     if (!risposta.ok) { window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href); return; }
     const dati = await risposta.json();
     mioUid = dati.uid;
+    sessioneVerificata = true;
     connetti();
     caricaAmici();
     caricaNotifiche(false);
   } catch (e) {
+    sessioneVerificata = false;
     window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href);
   }
 }
-function vaiAccount() { window.location.href = "opzioni-account.html"; }
+function vaiAccount() { window.location.href = "account.html"; }
 async function esci() {
+  paginaInUscita = true;
   try { await fetch("https://gioco-oca-server.onrender.com/api/logout", { method: "POST", credentials: "include" }); } catch (e) {}
   window.location.href = "login.html";
 }
 function connetti() {
-  socket = new WebSocket("wss://gioco-oca-server.onrender.com");
-  socket.onopen = () => {
-    socket.send(JSON.stringify({ tipo: "entraLobby", stanza: stanza }));
-  };
-function connetti() {
-  socket = new WebSocket("wss://gioco-oca-server.onrender.com");
+  if (!sessioneVerificata || paginaInUscita) return;
+  if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) return;
 
-  socket.onopen = () => {
-    socket.send(JSON.stringify({
+  const connessione = new WebSocket(URL_SERVER_WS);
+  socket = connessione;
+
+  connessione.onopen = () => {
+    if (socket !== connessione) return;
+    if (timerRiconnessione) {
+      clearTimeout(timerRiconnessione);
+      timerRiconnessione = null;
+    }
+    connessione.send(JSON.stringify({
       tipo: "entraLobby",
       stanza: stanza
     }));
   };
 
-  socket.onclose = () => {
-    setTimeout(() => location.reload(), 3000);
+  connessione.onclose = () => {
+    if (socket === connessione) socket = null;
+    if (paginaInUscita || !sessioneVerificata) return;
+    clearTimeout(timerRiconnessione);
+    timerRiconnessione = setTimeout(connetti, 3000);
   };
 
-  socket.onmessage = (msg) => {
-    const dati = JSON.parse(msg.data);
+  connessione.onmessage = (msg) => {
+    if (socket !== connessione) return;
+    let dati;
+    try {
+      dati = JSON.parse(msg.data);
+    } catch (e) {
+      console.error("Messaggio WebSocket non valido:", e);
+      return;
+    }
 
     if (dati.tipo === "sessioneScaduta") {
       window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href);
@@ -1768,11 +1827,13 @@ function connetti() {
     }
 
     if (dati.tipo === "online") {
-      document.getElementById("online").innerHTML = dati.numero;
+      aggiornaConteggioOnline(dati.numero);
     }
 
     if (dati.tipo === "conteggioStanze" && dati.giocatori) {
-      mostraGiocatori(dati.giocatori[stanza] || []);
+      const giocatoriStanza = dati.giocatori[stanza] || [];
+      mostraGiocatori(giocatoriStanza);
+      aggiornaConteggioOnline(dati.stanze && dati.stanze[stanza] != null ? dati.stanze[stanza] : giocatoriStanza.length);
     }
 
     if (dati.tipo === "chat") {
@@ -1789,7 +1850,7 @@ function connetti() {
 
     if (dati.tipo === "partitaAvviata") {
       window.location.href =
-        `gioco.html?partita=${dati.partitaId}&stanza=${stanza}`;
+        `gioco.html?partita=${encodeURIComponent(dati.partitaId)}&stanza=${stanzaCodificata}`;
     }
 
     if (dati.tipo === "invitoRicevuto") {
@@ -1810,42 +1871,47 @@ function connetti() {
 }
 
 window.addEventListener("pagehide", () => {
+  paginaInUscita = true;
+  clearTimeout(timerRiconnessione);
+  timerRiconnessione = null;
+  const connessione = socket;
+  socket = null;
   try {
-    if (socket && socket.readyState === WebSocket.OPEN) {
-      socket.send(JSON.stringify({
+    if (connessione && connessione.readyState === WebSocket.OPEN) {
+      connessione.send(JSON.stringify({
         tipo: "lasciaLobby"
       }));
-      socket.close();
     }
+    if (connessione && connessione.readyState < WebSocket.CLOSING) connessione.close();
   } catch (e) {}
 });
 
 window.addEventListener("pageshow", () => {
-  if (!socket || socket.readyState !== WebSocket.OPEN) {
-    connetti();
-  }
+  paginaInUscita = false;
+  if (sessioneVerificata) connetti();
 });
 // ===== CREAZIONE / LISTA PARTITE =====
 function creaPartita() {
   const tipo = document.getElementById("tipoPartita").value;
-  socket.send(JSON.stringify({
+  const inviato = inviaMessaggioSocket({
     tipo: "creaPartita",
     tempo: document.getElementById("tempo").value,
     punti: document.getElementById("punti").value,
     modalita: tipo,
     maxGiocatori: document.getElementById("numeroGiocatori").value
-  }));
+  });
+  if (!inviato) return;
   if (tipo === "privata") aspettaPropriaPartitaPrivata = true;
 }
 function eliminaPartita() {
   if (!confirm("Vuoi eliminare la partita creata?")) return;
-  socket.send(JSON.stringify({ tipo: "eliminaPartita" }));
+  inviaMessaggioSocket({ tipo: "eliminaPartita" });
 }
 // NUOVO: il creatore (o un giocatore già dentro) lascia un tavolo non ancora
 // avviato senza distruggerlo per gli altri
 function alzatiDaPartita(id) {
   if (!confirm("Vuoi alzarti da questo tavolo?")) return;
-  socket.send(JSON.stringify({ tipo: "abbandonaPartita", partitaId: id }));
+  inviaMessaggioSocket({ tipo: "abbandonaPartita", partitaId: id });
 }
 function mostraPartite(lista) {
   let html = "";
@@ -1854,12 +1920,15 @@ function mostraPartite(lista) {
     const piena = partita.numGiocatoriAttuali >= partita.maxGiocatori;
     const eMia = partita.creatoDa === mioUid;
     const cePartecipo = partita.giocatori && partita.giocatori.some(g => g.uid === mioUid);
+    const creatorePulito = pulisciTestoHtml(partita.creatore || "Giocatore");
+    const tempoPulito = pulisciTestoHtml(partita.tempo);
+    const puntiPuliti = pulisciTestoHtml(partita.punti);
     let azioniHtml;
 
     if (partita.iniziata) {
       // Partita già avviata: chi ne fa parte può rientrare, gli altri la vedono solo "in corso"
       if (cePartecipo) {
-        azioniHtml = `<button class="btn-riprendi-scheda" onclick="window.location.href='gioco.html?partita=${partita.id}&stanza=${stanza}'">Riprendi</button>`;
+        azioniHtml = `<button class="btn-riprendi-scheda" onclick="window.location.href='gioco.html?partita=${encodeURIComponent(partita.id)}&stanza=${stanzaCodificata}'">Riprendi</button>`;
       } else {
         azioniHtml = `<button disabled>🎲 In corso</button>`;
       }
@@ -1876,7 +1945,7 @@ function mostraPartite(lista) {
       }
     } else if (cePartecipo) {
       // Ti sei unito ma non sei il creatore, partita non ancora avviata
-      azioniHtml = `<button disabled>Sei dentro</button>`;
+      azioniHtml = `<button class="btn-alzati-scheda" onclick="alzatiDaPartita('${partita.id}')">Alzati</button>`;
     } else if (partita.modalita === "privata") {
       azioniHtml = `<button disabled>🔒 Solo su invito</button>`;
     } else {
@@ -1884,12 +1953,12 @@ function mostraPartite(lista) {
     }
 
     html += `
-    <div class="scheda-partita">
+      <div class="scheda-partita">
       <div class="info-partita">
-        🎲 ${partita.creatore}<br>
+        🎲 ${creatorePulito}<br>
         ${partita.modalita === "privata" ? "🔒 Privata" : "🔓 Pubblica"}<br>
-        ⏱ ${partita.tempo} secondi<br>
-        🏆 ${partita.punti} punti
+        ⏱ ${tempoPulito} secondi<br>
+        🏆 ${puntiPuliti} punti
         <div style="margin-top:8px;">👥 ${partita.numGiocatoriAttuali} su ${partita.maxGiocatori}</div>
       </div>
       <div class="giocatori-mini">${creaGiocatoriPartita(partita)}</div>
@@ -1903,17 +1972,17 @@ function mostraPartite(lista) {
   }
 }
 function entraPartita(id) {
-  socket.send(JSON.stringify({ tipo: "entraPartita", id: id }));
+  inviaMessaggioSocket({ tipo: "entraPartita", id: id });
 }
 // ===== CHAT =====
 function inviaChat() {
   let testo = document.getElementById("messaggio").value.trim();
   if (testo === "") return;
-  if (testo.length > 1000) {
-    mostraNotifica("Massimo 1000 caratteri.");
+  if (testo.length > 300) {
+    mostraNotifica("Massimo 300 caratteri.");
     return;
   }
-  socket.send(JSON.stringify({ tipo: "chat", testo: testo }));
+  if (!inviaMessaggioSocket({ tipo: "chat", testo: testo })) return;
   document.getElementById("messaggio").value = "";
 }
 document.getElementById("messaggio").addEventListener("keydown", function(e) {
@@ -1939,10 +2008,7 @@ document.getElementById("pannelloEmoji").addEventListener("click", function(e) {
 });
 let nuoviMessaggiMobile = 0;
 function pulisciTestoChat(testo) {
-  return testo
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+  return pulisciTestoHtml(testo);
 }
 function aggiornaBadgeChatMobile(){
   const badge = document.getElementById("badgeChatMobile");
@@ -1957,9 +2023,10 @@ function aggiornaBadgeChatMobile(){
 function aggiungiMessaggio(uid, nome, testo) {
   const chat = document.getElementById("chat");
   const cliccabile = uid && uid !== mioUid;
+  const nomePulito = pulisciTestoHtml(nome || "Giocatore");
   const nomeHtml = cliccabile
-    ? `<span class="nickname-riga" style="cursor:pointer;color:#ff6600;" onclick="apriPopupGiocatore('${uid}','${nome}')">${nome}</span>`
-    : `<b>${nome}</b>`;
+    ? `<span class="nickname-riga" style="cursor:pointer;color:#ff6600;" onclick="apriPopupGiocatore('${uid}','${nomePulito}')">${nomePulito}</span>`
+    : `<b>${nomePulito}</b>`;
   const ora = new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
   const rigaHtml = `
     <div class="messaggio">
@@ -1975,7 +2042,7 @@ function aggiungiMessaggio(uid, nome, testo) {
   if (chatMobile && vistaChatAttiva) {
     chatMobile.innerHTML += rigaHtml;
     chatMobile.scrollTop = chatMobile.scrollHeight;
-  } else {
+  } else if (uid !== mioUid) {
     nuoviMessaggiMobile++;
     aggiornaBadgeChatMobile();
   }
@@ -1983,6 +2050,7 @@ function aggiungiMessaggio(uid, nome, testo) {
 // ===== ONLINE IN QUESTA STANZA =====
 function mostraGiocatori(lista) {
   ultimaListaOnlineStanza = lista || [];
+  aggiornaConteggioOnline(ultimaListaOnlineStanza.length);
   aggiornaContatoreAmiciOnline();
   const contenitore = document.getElementById("listaOnline");
   if (!contenitore) return;
@@ -2015,15 +2083,16 @@ function mostraGiocatori(lista) {
   }
 }
 function creaRigaGiocatore(g) {
+    const nicknamePulito = pulisciTestoHtml(g.nickname || "Giocatore");
     const immagine = g.avatar
-      ? `<img class="avatar-mini" src="${g.avatar}">`
+      ? `<img class="avatar-mini" src="${pulisciTestoHtml(g.avatar)}" alt="Avatar di ${nicknamePulito}">`
       : `<div class="avatar-mini" style="background:${coloreDaNome(g.nickname)};">${iniziale(g.nickname)}</div>`;
     const cliccabile = g.uid && g.uid !== mioUid;
     return `
       <div class="giocatore-online" ${cliccabile ? `onclick="apriPopupGiocatore('${g.uid}','${g.nickname}')" style="cursor:pointer;"` : ""}>
         ${immagine}
         <div>
-  <span class="nickname-riga">${g.nickname}</span>
+  <span class="nickname-riga">${nicknamePulito}</span>
   <div style="font-size:13px;color:#777;">
     ${iconaDispositivo(g.tipoDispositivo)}
   </div>
@@ -2068,7 +2137,7 @@ async function caricaTopGiocatori() {
                 href="profilo-pubblico.html?nickname=${encodeURIComponent(g.nickname)}"
                 style="color:inherit;"
               >
-                ${g.nickname}
+                ${pulisciTestoHtml(g.nickname)}
               </a>
             </b>
 
@@ -2096,7 +2165,7 @@ async function caricaAmici() {
     if (!r.ok) return;
     const d = await r.json();
     mieiAmiciUid = new Set((d.amici || []).map(a => a.uid));
-    aggiornaContatoreAmiciOnline();
+    mostraGiocatori(ultimaListaOnlineStanza);
   } catch (e) {}
 }
 function aggiornaContatoreAmiciOnline() {
@@ -2107,47 +2176,54 @@ function aggiornaContatoreAmiciOnline() {
 // ===== POPUP PICCOLO SU UN GIOCATORE =====
 function apriPopupGiocatore(uidTarget, nomeTarget) {
   if (!uidTarget || uidTarget === mioUid) return;
+  const idRichiesta = ++richiestaProfiloCorrente;
   const overlay = document.getElementById("overlayPopupGiocatore");
   document.getElementById("popupGiocatoreContenuto").innerHTML = "Caricamento...";
   overlay.classList.add("aperto");
-  caricaDatiPopupGiocatore(nomeTarget);
+  caricaDatiPopupGiocatore(nomeTarget, idRichiesta);
 }
 function chiudiPopupGiocatore() {
+  richiestaProfiloCorrente++;
   document.getElementById("overlayPopupGiocatore").classList.remove("aperto");
 }
 document.getElementById("overlayPopupGiocatore").addEventListener("click", (e) => {
   if (e.target.id === "overlayPopupGiocatore") chiudiPopupGiocatore();
 });
-async function caricaDatiPopupGiocatore(nomeTarget) {
+async function caricaDatiPopupGiocatore(nomeTarget, idRichiesta) {
   try {
     const risposta = await fetch("https://gioco-oca-server.onrender.com/api/profilo-pubblico/" + encodeURIComponent(nomeTarget), { credentials: "include" });
+    if (idRichiesta !== richiestaProfiloCorrente) return;
     if (!risposta.ok) { document.getElementById("popupGiocatoreContenuto").innerHTML = "Errore nel caricamento."; return; }
     const dati = await risposta.json();
+    if (idRichiesta !== richiestaProfiloCorrente) return;
     disegnaPopupGiocatore(dati);
   } catch (e) {
+    if (idRichiesta !== richiestaProfiloCorrente) return;
     document.getElementById("popupGiocatoreContenuto").innerHTML = "Errore di connessione.";
   }
 }
 function creaGiocatoriPartita(partita){
   if(!partita.giocatori) return "";
   return partita.giocatori.map(g=>{
+    const nomePulito = pulisciTestoHtml(g.nome || "Giocatore");
     const avatar = g.avatar
-    ? `<img class="avatar-partita-mini" src="${g.avatar}">`
+    ? `<img class="avatar-partita-mini" src="${pulisciTestoHtml(g.avatar)}" alt="Avatar di ${nomePulito}">`
     : `<div class="avatar-partita-mini" style="background:${coloreDaNome(g.nome)}">
         ${iniziale(g.nome)}
        </div>`;
     return `
       <div class="mini-giocatore">
         ${avatar}
-        ${g.nome} 🟢
+        ${nomePulito} 🟢
       </div>
     `;
   }).join("");
 }
 function disegnaPopupGiocatore(dati) {
   const online = ultimaListaOnlineStanza.some(g => g.uid === dati.uid);
+  const nicknamePulito = pulisciTestoHtml(dati.nickname || "Giocatore");
   const immagine = dati.avatar
-    ? `<img class="popup-avatar" src="${dati.avatar}">`
+    ? `<img class="popup-avatar" src="${pulisciTestoHtml(dati.avatar)}" alt="Avatar di ${nicknamePulito}">`
     : `<div class="popup-avatar" style="background:${coloreDaNome(dati.nickname)};">${iniziale(dati.nickname)}</div>`;
   let azioneHtml;
   if (dati.statoAmicizia === "amici") {
@@ -2161,7 +2237,7 @@ function disegnaPopupGiocatore(dati) {
   }
   document.getElementById("popupGiocatoreContenuto").innerHTML = `
     <div class="popup-avatar-container">${immagine}</div>
-    <div class="popup-nickname">${dati.nickname}</div>
+    <div class="popup-nickname">${nicknamePulito}</div>
     <div class="popup-stato-online">${online ? "Online ora in questa stanza" : "⚫ Non online in questa stanza al momento"}</div>
     <div class="popup-azioni">${azioneHtml}</div>
     <a href="profilo-pubblico.html?nickname=${encodeURIComponent(dati.nickname)}" class="popup-link-profilo">Vedi profilo completo</a>
@@ -2184,19 +2260,26 @@ async function accettaAmicizia(daUid) {
       method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ daUid })
     });
-    if (!r.ok) { const d = await r.json(); mostraNotifica(d.errore || "Errore."); return; }
+    if (!r.ok) { const d = await r.json(); mostraNotifica(d.errore || "Errore."); return false; }
     chiudiPopupGiocatore();
-    caricaAmici();
-  } catch (e) { mostraNotifica("Errore di connessione."); }
+    await caricaAmici();
+    return true;
+  } catch (e) { mostraNotifica("Errore di connessione."); return false; }
 }
 async function rifiutaAmicizia(daUid) {
   try {
-    await fetch("https://gioco-oca-server.onrender.com/api/amici/rifiuta", {
+    const r = await fetch("https://gioco-oca-server.onrender.com/api/amici/rifiuta", {
       method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ daUid })
     });
+    if (!r.ok) {
+      const d = await r.json().catch(() => ({}));
+      mostraNotifica(d.errore || "Errore.");
+      return false;
+    }
     chiudiPopupGiocatore();
-  } catch (e) { mostraNotifica("Errore di connessione."); }
+    return true;
+  } catch (e) { mostraNotifica("Errore di connessione."); return false; }
 }
 async function rimuoviAmico(altroUid) {
   if (!confirm("Vuoi rimuovere questa persona dai tuoi amici?")) return;
@@ -2222,6 +2305,7 @@ async function caricaNotifiche(apriPannello) {
 }
 function aggiornaBadgeNotifiche(n) {
   const badge = document.getElementById("badgeNotifiche");
+  if (!badge) return;
   if (n > 0) { badge.style.display = "flex"; badge.textContent = n > 9 ? "9+" : n; }
   else badge.style.display = "none";
 }
@@ -2241,32 +2325,33 @@ function disegnaListaNotifiche(lista) {
       azioni = `<a class="btn-mini btn-vai" href="messaggi.html">Vedi avviso</a>`;
     }
     return `<div class="notifica-riga">
-      <div class="notifica-testo">🔔 ${n.testo}</div>
+      <div class="notifica-testo">🔔 ${pulisciTestoHtml(n.testo || "Notifica")}</div>
       <div class="notifica-data">${new Date(n.data).toLocaleString("it-IT")}</div>
       ${azioni}
     </div>`;
   }).join("");
 }
-function toggleNotifiche() {
+async function toggleNotifiche() {
   const pannello = document.getElementById("pannelloNotifiche");
   const aperto = !pannello.classList.contains("nascosto");
   if (aperto) { pannello.classList.add("nascosto"); return; }
   pannello.classList.remove("nascosto");
-  caricaNotifiche(true);
-  fetch("https://gioco-oca-server.onrender.com/api/notifiche/segna-lette", { method: "POST", credentials: "include" })
-    .then(() => aggiornaBadgeNotifiche(0))
-    .catch(() => {});
+  await caricaNotifiche(true);
+  try {
+    const risposta = await fetch("https://gioco-oca-server.onrender.com/api/notifiche/segna-lette", { method: "POST", credentials: "include" });
+    if (risposta.ok) aggiornaBadgeNotifiche(0);
+  } catch (e) {}
 }
 document.addEventListener("click", (e) => {
-  if (!e.target.closest("#areaCampanella")) document.getElementById("pannelloNotifiche").classList.add("nascosto");
+  const pannello = document.getElementById("pannelloNotifiche");
+  if (pannello && !e.target.closest("#areaCampanella")) pannello.classList.add("nascosto");
 });
 async function accettaAmiciziaDaNotifica(daUid, bottone) {
-  await accettaAmicizia(daUid);
+  if (!(await accettaAmicizia(daUid))) return;
   bottone.closest(".notifica-riga").remove();
-  caricaAmici();
 }
 async function rifiutaAmiciziaDaNotifica(daUid, bottone) {
-  await rifiutaAmicizia(daUid);
+  if (!(await rifiutaAmicizia(daUid))) return;
   bottone.closest(".notifica-riga").remove();
 }
 setInterval(() => caricaNotifiche(false), 10000);
@@ -2284,23 +2369,24 @@ document.getElementById("overlayModalInvito").addEventListener("click", (e) => {
   if (e.target.id === "overlayModalInvito") chiudiModalInvito();
 });
 function disegnaListaModalInvito() {
-  const altri = ultimaListaOnlineStanza.filter(g => g.uid !== mioUid);
+  const altri = ultimaListaOnlineStanza.filter(g => g.uid !== mioUid && g.stato !== "partita");
   const box = document.getElementById("listaModalInvito");
   if (!altri.length) { box.innerHTML = "<p style='text-align:center;color:#999;padding:20px;'>Nessun altro giocatore online in questa stanza al momento.</p>"; return; }
   box.innerHTML = altri.map(g => {
+    const nicknamePulito = pulisciTestoHtml(g.nickname || "Giocatore");
     const immagine = g.avatar
-      ? `<img class="modal-invito-avatar" src="${g.avatar}">`
+      ? `<img class="modal-invito-avatar" src="${pulisciTestoHtml(g.avatar)}" alt="Avatar di ${nicknamePulito}">`
       : `<div class="modal-invito-avatar" style="background:${coloreDaNome(g.nickname)};">${iniziale(g.nickname)}</div>`;
     return `
       <div class="modal-invito-riga" id="rigaInvito-${g.uid}" onclick="invitaGiocatore('${g.uid}')">
         ${immagine}
-        <span>${g.nickname}</span>
+        <span>${nicknamePulito}</span>
       </div>`;
   }).join("");
 }
 function invitaGiocatore(destinatarioUid) {
   if (!partitaDaInvitareId) return;
-  socket.send(JSON.stringify({ tipo: "invitaPartita", partitaId: partitaDaInvitareId, destinatarioUid }));
+  inviaMessaggioSocket({ tipo: "invitaPartita", partitaId: partitaDaInvitareId, destinatarioUid });
 }
 function segnaInvitatoNelModal(destinatarioUid) {
   const riga = document.getElementById("rigaInvito-" + destinatarioUid);
@@ -2317,7 +2403,7 @@ function mostraInvitoRicevuto(dati) {
 }
 function rispondiInvito(accettato) {
   if (!invitoAttivoPartitaId) return;
-  socket.send(JSON.stringify({ tipo: "rispostaInvito", partitaId: invitoAttivoPartitaId, accettato }));
+  if (!inviaMessaggioSocket({ tipo: "rispostaInvito", partitaId: invitoAttivoPartitaId, accettato })) return;
   document.getElementById("cardInvitoRicevuto").classList.add("nascosto");
   invitoAttivoPartitaId = null;
 }
