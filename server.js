@@ -855,18 +855,48 @@ function inviaListaPartite(nomeStanza) {
 }
 
 function inviaConteggioStanze() {
-  const conteggi = {}, giocatoriPerStanza = {};
+  const conteggi = {};
+  const giocatoriPerStanza = {};
+
   for (const nome in stanze) {
-    const valori = Object.values(stanze[nome].giocatoriOnline);
+    const valori = Object.values(stanze[nome].giocatoriOnline || {});
     const uidInPartita = calcolaUidInPartita(nome);
+
+    // Ogni UID può comparire una sola volta.
     const vistiUid = new Map();
-    valori.forEach(g => vistiUid.set(g.uid, g));
+
+    for (const g of valori) {
+      if (!g || !g.uid) continue;
+
+      // Se esistono più connessioni dello stesso utente,
+      // manteniamo una sola presenza.
+      vistiUid.set(g.uid, g);
+    }
+
     const valoriUnici = Array.from(vistiUid.values());
+
     conteggi[nome] = valoriUnici.length;
-    giocatoriPerStanza[nome] = valoriUnici.map(g => ({ uid: g.uid, nickname: g.nickname, avatar: g.avatar || null, tipoDispositivo: g.tipoDispositivo || "computer", stato: uidInPartita.has(g.uid) ? "partita" : "lobby" }));
+
+    giocatoriPerStanza[nome] = valoriUnici.map(g => ({
+      uid: g.uid,
+      nickname: g.nickname,
+      avatar: g.avatar || null,
+      tipoDispositivo: g.tipoDispositivo || "computer",
+      stato: uidInPartita.has(g.uid) ? "partita" : "lobby"
+    }));
   }
-  const messaggio = JSON.stringify({ tipo: "conteggioStanze", stanze: conteggi, giocatori: giocatoriPerStanza });
-  wss.clients.forEach(client => { if (client.readyState === WebSocket.OPEN) client.send(messaggio); });
+
+  const messaggio = JSON.stringify({
+    tipo: "conteggioStanze",
+    stanze: conteggi,
+    giocatori: giocatoriPerStanza
+  });
+
+  wss.clients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(messaggio);
+    }
+  });
 }
 
 const HEARTBEAT_MS = 15000;
@@ -1751,10 +1781,36 @@ wss.on("connection", (socket, request) => {
       delete socketsPerId[socketId];
 
       if (stanzaAttuale && stanze[stanzaAttuale]) {
-        delete stanze[stanzaAttuale].giocatoriOnline[socketId];
-        inviaConteggioStanze();
-        inviaAllaStanza(stanzaAttuale, { tipo: "online", numero: Object.keys(stanze[stanzaAttuale].giocatoriOnline).length });
-      }
+  const connessioneOnline =
+    stanze[stanzaAttuale].giocatoriOnline[socketId];
+
+  if (connessioneOnline) {
+    delete stanze[stanzaAttuale].giocatoriOnline[socketId];
+
+    // Ricontrolliamo se lo stesso UID è ancora collegato
+    // con un'altra connessione WebSocket.
+    const uidAncoraOnline = Object.values(
+      stanze[stanzaAttuale].giocatoriOnline
+    ).some(g => g && g.uid === uid);
+
+    inviaConteggioStanze();
+
+    // Se esiste ancora una connessione dello stesso UID,
+    // non dobbiamo diminuirne la presenza.
+    if (!uidAncoraOnline) {
+      const numeroOnlineUnici = new Set(
+        Object.values(stanze[stanzaAttuale].giocatoriOnline)
+          .filter(g => g && g.uid)
+          .map(g => g.uid)
+      ).size;
+
+      inviaAllaStanza(stanzaAttuale, {
+        tipo: "online",
+        numero: numeroOnlineUnici
+      });
+    }
+  }
+}
 
       if (!stanzaAttuale || !stanze[stanzaAttuale] || !uid) return;
 
