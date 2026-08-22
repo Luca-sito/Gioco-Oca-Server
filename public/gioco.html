@@ -61,6 +61,20 @@
 
   <div id="flash-messaggio-gioco" role="status" aria-live="assertive"><span></span></div>
 
+  <section id="videochiamata" class="nascosto" aria-label="Videochiamata della partita">
+    <div class="videochiamata-intestazione">
+      <strong>🎥 Videochiamata</strong>
+      <span id="stato-media-connessione" role="status" aria-live="polite">Avvio…</span>
+    </div>
+    <div id="griglia-video">
+      <figure id="video-tile-locale" class="video-tile video-locale">
+        <video id="video-locale" autoplay playsinline muted></video>
+        <figcaption>Tu</figcaption>
+      </figure>
+    </div>
+    <button type="button" id="btn-sblocca-media" class="nascosto" onclick="sbloccaRiproduzioneMedia()">🔊 Attiva l'audio</button>
+  </section>
+
   <div id="overlay-determinazione" class="overlay" role="dialog" aria-modal="true" aria-labelledby="titolo-determinazione">
     <div class="popup-determinazione">
       <h2 id="titolo-determinazione">🎲 CHI INIZIA?</h2>
@@ -68,16 +82,6 @@
       <div id="countdown-determinazione" class="countdown-determinazione" aria-live="polite">⏱ --s</div>
       <div id="lista-determinazione"></div>
       <div id="slot-dadi-determinazione"></div>
-    </div>
-  </div>
-
-  <div id="popup-richiesta-audio" class="nascosto" role="dialog" aria-modal="true" aria-labelledby="testo-richiesta-audio">
-    <div class="popup-richiesta-audio-box">
-      <p id="testo-richiesta-audio"></p>
-      <div class="richiesta-audio-bottoni">
-        <button type="button" class="btn-rifiuta-audio" onclick="rispondiRichiestaAudioRicevuta(false)">Rifiuta</button>
-        <button type="button" class="btn-accetta-audio" onclick="rispondiRichiestaAudioRicevuta(true)">Accetta</button>
-      </div>
     </div>
   </div>
 
@@ -99,7 +103,7 @@
       <button type="button" onclick="apriImpostazioni()">⚙️ Impostazioni</button>
       <button type="button" id="btn-toggle-suoni" onclick="toggleSuoni()">🔊 Suoni: On</button>
       <button type="button" id="btn-toggle-fullscreen" onclick="toggleFullscreen()">⛶ Tutto schermo</button>
-      <button type="button" id="btn-toggle-microfono" onclick="toggleMicrofono()">🎤 Microfono: Off</button>
+      <button type="button" id="btn-stato-media" disabled>🔇 Videochiamata: non attiva</button>
       <button type="button" class="voce-pericolo" onclick="abbandonaPartita()">🚪 Abbandona partita</button>
     </div>
   </div>
