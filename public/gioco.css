@@ -188,7 +188,6 @@ body.disconnesso #pannello-giocatori {
 }
 body.disconnesso #messaggi-gioco { top: calc(58px + env(safe-area-inset-top)); }
 body.disconnesso:not(.modalita-desktop) #messaggi-gioco { top: calc(120px + env(safe-area-inset-top)); }
-body.disconnesso #popup-richiesta-audio { top: calc(120px + env(safe-area-inset-top)); }
 
 .notifica-toast-gioco {
   padding: 12px 16px;
@@ -257,7 +256,7 @@ body.modalita-ruotata #mondo-ruotato {
 .pedina {
   position: absolute;
   transform: translate(-50%, -100%);
-  transition: left 0.28s ease, top 0.28s ease;
+  transition: left 0.5s ease, top 0.5s ease;
 }
 
 .pedina-interno { transition: transform 0.3s ease; }
@@ -323,6 +322,7 @@ body.modalita-ruotata #area-tabellone > #area-dadi {
   height: 100%;
   transform-style: preserve-3d;
   transition: transform 1.05s cubic-bezier(0.22, 0.85, 0.4, 1);
+  will-change: transform;
 }
 
 .faccia {
@@ -339,6 +339,8 @@ body.modalita-ruotata #area-tabellone > #area-dadi {
   border: 2px solid #ccc;
   border-radius: 9px;
   box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.08);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 .faccia-1 { transform: rotateY(0deg) translateZ(27px); }
@@ -452,21 +454,8 @@ body:not(.modalita-desktop) #pannello-giocatori.aperto #lista-giocatori { displa
 
 .countdown-turno.countdown-scaduto { color: #ff6b6b; background: rgba(255, 107, 107, 0.15); }
 .countdown-turno.countdown-fermo { color: #43a047; background: rgba(67, 160, 71, 0.15); }
-.stato-audio { flex: 0 0 auto; font-size: 13px; }
-.stato-audio.attivo { color: #43a047; }
-.stato-audio.in-attesa { opacity: 0.6; }
-
-.btn-chiama-audio {
-  flex: 0 0 auto;
-  min-width: 30px;
-  min-height: 28px;
-  padding: 3px 6px;
-  color: #66c56a;
-  background: rgba(67, 160, 71, 0.18);
-  border: 1px solid rgba(67, 160, 71, 0.45);
-  border-radius: 8px;
-  cursor: pointer;
-}
+.stato-media { flex: 0 0 auto; font-size: 13px; opacity: 0.55; }
+.stato-media.attivo { color: #66d26d; opacity: 1; }
 
 #backdrop-giocatori {
   display: none;
@@ -552,6 +541,8 @@ body.modalita-desktop #btn-chat {
 #pannello-menu button:last-child { border-bottom: 0; }
 #pannello-menu button:hover { background: rgba(255, 255, 255, 0.06); }
 #pannello-menu .voce-pericolo { color: #ff7b7b; }
+#pannello-menu #btn-stato-media:disabled { color: #aaa; cursor: default; opacity: 1; }
+#pannello-menu #btn-stato-media.media-attiva:disabled { color: #72d979; }
 body:not(.modalita-desktop) #btn-toggle-fullscreen { display: none; }
 
 #messaggi-gioco {
@@ -725,42 +716,114 @@ body:not(.modalita-desktop) #messaggi-gioco {
   padding-top: 6px;
 }
 
-/* ===== RICHIESTA AUDIO ===== */
-#popup-richiesta-audio {
+/* ===== VIDEOCHIAMATA DI TAVOLO ===== */
+#videochiamata {
   position: absolute;
-  top: calc(76px + env(safe-area-inset-top));
-  left: 50%;
-  z-index: 90;
-  width: min(320px, calc(100vw - 32px));
-  transform: translateX(-50%);
-}
-
-#popup-richiesta-audio.nascosto { display: none; }
-
-.popup-richiesta-audio-box {
-  padding: 16px;
-  background: var(--pannello);
-  border: 2px solid var(--colore-oro);
+  top: calc(84px + env(safe-area-inset-top));
+  right: calc(14px + env(safe-area-inset-right));
+  bottom: auto;
+  left: auto;
+  z-index: 55;
+  display: flex;
+  flex-direction: column;
+  width: min(176px, calc(100vw - 28px));
+  max-height: calc(var(--altezza-reale, 100vh) - 168px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  min-width: 0;
+  padding: 7px;
+  overflow: hidden;
+  background: rgba(10, 16, 22, 0.92);
+  border: 1px solid rgba(255, 215, 0, 0.3);
   border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-  text-align: center;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.38);
+  backdrop-filter: blur(5px);
 }
 
-.popup-richiesta-audio-box p { margin: 0 0 12px; color: #eee; font-size: 14px; }
-.richiesta-audio-bottoni { display: flex; gap: 10px; }
+#videochiamata.nascosto { display: none; }
 
-.richiesta-audio-bottoni button {
-  flex: 1;
-  min-height: 44px;
-  padding: 10px;
+.videochiamata-intestazione {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 1px 3px 6px;
+  color: var(--colore-oro);
+  font-size: 11px;
+}
+
+#stato-media-connessione { color: #bbb; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+#griglia-video {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
+  gap: 7px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-snap-type: y proximity;
+  scrollbar-width: thin;
+}
+
+.video-tile {
+  position: relative;
+  flex: 0 0 auto;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  margin: 0;
+  overflow: hidden;
+  background: #070b0f;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 9px;
+  scroll-snap-align: start;
+}
+
+body:not(.modalita-desktop) #videochiamata {
+  top: calc(72px + env(safe-area-inset-top));
+  right: auto;
+  bottom: auto;
+  left: calc(8px + env(safe-area-inset-left));
+  width: 102px;
+  max-height: calc(var(--altezza-reale, 100vh) - 144px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  padding: 5px;
+}
+
+body:not(.modalita-desktop) .videochiamata-intestazione strong { display: none; }
+body:not(.modalita-desktop) .videochiamata-intestazione { justify-content: center; padding-bottom: 4px; }
+
+.video-tile video { width: 100%; height: 100%; display: block; object-fit: cover; background: #070b0f; }
+.video-tile audio { display: none; }
+.video-tile figcaption {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  padding: 3px 6px;
+  overflow: hidden;
+  color: #fff;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.82));
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+}
+
+.video-locale { border-color: rgba(255, 215, 0, 0.65); }
+
+#btn-sblocca-media {
+  width: 100%;
+  min-height: 38px;
+  margin-top: 7px;
+  color: #111;
+  background: var(--colore-oro);
   border: 0;
   border-radius: 8px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 800;
   cursor: pointer;
 }
 
-.btn-rifiuta-audio { background: #e53935; color: #fff; }
-.btn-accetta-audio { background: #43a047; color: #fff; }
+#btn-sblocca-media.nascosto { display: none; }
 
 /* ===== CHAT ===== */
 #chat-wrapper {
@@ -904,17 +967,15 @@ body:not(.modalita-desktop) #messaggi-gioco {
     max-width: 42vw;
   }
 
-  #popup-richiesta-audio { top: calc(66px + env(safe-area-inset-top)); }
   #pannello-chat { height: min(230px, calc(var(--altezza-reale, 100vh) - 78px)); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    scroll-behavior: auto !important;
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+  html { scroll-behavior: auto; }
+
+  #caricamento-spinner,
+  .notifica-toast-gioco,
+  #flash-messaggio-gioco.aperto span {
+    animation: none !important;
   }
 }
