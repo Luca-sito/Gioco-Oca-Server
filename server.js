@@ -1558,9 +1558,24 @@ wss.on("connection", (socket, request) => {
         uid,
         socketId
         );
-        stanze[stanzaAttuale].giocatoriOnline[socketId] = { uid, nickname, avatar: mioAvatar, tipoDispositivo };
+        stanze[stanzaAttuale].giocatoriOnline[socketId] = {
+  uid,
+  nickname,
+  avatar: mioAvatar,
+  tipoDispositivo,
+  socket
+};
         inviaConteggioStanze();
-        inviaAllaStanza(stanzaAttuale, { tipo: "online", numero: Object.keys(stanze[stanzaAttuale].giocatoriOnline).length });
+        const numeroOnlineUnici = new Set(
+  Object.values(stanze[stanzaAttuale].giocatoriOnline)
+    .filter(g => g && g.uid)
+    .map(g => g.uid)
+).size;
+
+inviaAllaStanza(stanzaAttuale, {
+  tipo: "online",
+  numero: numeroOnlineUnici
+});
         inviaListaPartite(stanzaAttuale);
         socket.send(JSON.stringify({ tipo: "statoPartitaPersonale", partitaAttiva: trovaPartitaAttivaPerUid(uid) }));
         return;
@@ -1579,7 +1594,13 @@ wss.on("connection", (socket, request) => {
         nickname = mioGiocatore.nome; mioAvatar = mioGiocatore.avatar || null;
 
         if (!stanze[stanzaAttuale]) stanze[stanzaAttuale] = { giocatoriOnline: {}, partite: {} };
-        stanze[stanzaAttuale].giocatoriOnline[socketId] = { uid, nickname, avatar: mioAvatar, tipoDispositivo };
+        stanze[stanzaAttuale].giocatoriOnline[socketId] = {
+  uid,
+  nickname,
+  avatar: mioAvatar,
+  tipoDispositivo,
+  socket
+};
         inviaConteggioStanze();
 
         if (partita.fase === "determinazione_ordine") {
