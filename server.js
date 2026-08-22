@@ -1480,31 +1480,62 @@ wss.on("connection", (socket, request) => {
       if (dati.tipo === "lasciaLobby") {
   if (!uid || !stanzaAttuale || !stanze[stanzaAttuale]) return;
 
-  const connessione =
-    stanze[stanzaAttuale].giocatoriOnline[socketId];
+  const nomeStanzaDaLasciare = stanzaAttuale;
 
-  if (connessione) {
-    delete stanze[stanzaAttuale].giocatoriOnline[socketId];
+  // Rimuove questa specifica connessione dalla lista online.
+  delete stanze[nomeStanzaDaLasciare].giocatoriOnline[socketId];
+
+  // Se il giocatore era dentro un tavolo ancora in attesa,
+  // lo rimuoviamo correttamente anche dal tavolo.
+  const partite =
+    stanze[nomeStanzaDaLasciare].partite || {};
+
+  for (const pid in partite) {
+    const partita = partite[pid];
+
+    if (partita.fase !== "attesa_giocatori") continue;
+
+    const giocatore = partita.giocatori[uid];
+
+    if (!giocatore) continue;
+
+    if (giocatore.socket && giocatore.socket !== socket) {
+      continue;
+    }
+
+    await esciDaPartitaInAttesa(
+      partita,
+      nomeStanzaDaLasciare,
+      uid
+    );
   }
 
-  const uidAncoraOnline = Object.values(
-    stanze[stanzaAttuale].giocatoriOnline
-  ).some(g => g && g.uid === uid);
+  // Controlliamo quanti UID distinti sono ancora online.
+  const numeroOnlineUnici = new Set(
+    Object.values(
+      stanze[nomeStanzaDaLasciare].giocatoriOnline
+    )
+      .filter(g => g && g.uid)
+      .map(g => g.uid)
+  ).size;
 
+  // Aggiorna immediatamente tutti i contatori e le liste.
   inviaConteggioStanze();
 
-  if (!uidAncoraOnline) {
-    const numeroOnlineUnici = new Set(
-      Object.values(stanze[stanzaAttuale].giocatoriOnline)
-        .filter(g => g && g.uid)
-        .map(g => g.uid)
-    ).size;
-
-    inviaAllaStanza(stanzaAttuale, {
+  inviaAllaStanza(
+    nomeStanzaDaLasciare,
+    {
       tipo: "online",
       numero: numeroOnlineUnici
-    });
-  }
+    }
+  );
+
+  inviaListaPartite(
+    nomeStanzaDaLasciare
+  );
+
+  // Questa connessione non appartiene più a nessuna stanza.
+  stanzaAttuale = null;
 
   return;
 }
