@@ -8,12 +8,27 @@
 </head>
 <body>
 
-<div id="overlay-caricamento">
+<div id="overlay-caricamento" aria-live="polite" aria-atomic="true">
   <div class="caricamento-box">
-    <div class="caricamento-titolo"></div>
-    <div class="caricamento-passo" id="step-caricamento-grafica"><span class="caricamento-icona">🎨</span> Grafica</div>
-    <div class="caricamento-passo" id="step-caricamento-suoni"><span class="caricamento-icona">🔊</span> Suoni</div>
-    <div class="caricamento-passo" id="step-caricamento-gioco"><span class="caricamento-icona">🎮</span> Gioco</div>
+
+    <div class="caricamento-logo">
+      GIOCHI SOCIETA
+    </div>
+
+    <div class="caricamento-titolo">
+      Preparazione partita
+    </div>
+
+    <div class="caricamento-spinner" aria-hidden="true"></div>
+
+    <div id="caricamento-testo">
+      Caricamento grafica
+    </div>
+
+    <div class="caricamento-progress">
+      <div id="caricamento-progress-bar"></div>
+    </div>
+
   </div>
 </div>
 
