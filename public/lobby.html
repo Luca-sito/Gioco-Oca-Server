@@ -1745,24 +1745,86 @@ function connetti() {
   socket.onopen = () => {
     socket.send(JSON.stringify({ tipo: "entraLobby", stanza: stanza }));
   };
-socket.onclose = () => { setTimeout(() => location.reload(), 3000); };
+function connetti() {
+  socket = new WebSocket("wss://gioco-oca-server.onrender.com");
+
+  socket.onopen = () => {
+    socket.send(JSON.stringify({
+      tipo: "entraLobby",
+      stanza: stanza
+    }));
+  };
+
+  socket.onclose = () => {
+    setTimeout(() => location.reload(), 3000);
+  };
+
   socket.onmessage = (msg) => {
     const dati = JSON.parse(msg.data);
+
     if (dati.tipo === "sessioneScaduta") {
       window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href);
       return;
     }
-    if (dati.tipo === "online") document.getElementById("online").innerHTML = dati.numero;
-    if (dati.tipo === "conteggioStanze" && dati.giocatori) mostraGiocatori(dati.giocatori[stanza] || []);
-    if (dati.tipo === "chat") aggiungiMessaggio(dati.uid, dati.nome, dati.testo);
-    if (dati.tipo === "listaPartite") mostraPartite(dati.partite);
-    if (dati.tipo === "errore") mostraNotifica(dati.messaggio);
-    if (dati.tipo === "partitaAvviata") window.location.href = `gioco.html?partita=${dati.partitaId}&stanza=${stanza}`;
-    if (dati.tipo === "invitoRicevuto") mostraInvitoRicevuto(dati);
-    if (dati.tipo === "invitoInviato") segnaInvitatoNelModal(dati.destinatarioUid);
-    if (dati.tipo === "invitoRifiutato") mostraNotifica((dati.destinatarioNome || "Il giocatore") + " ha rifiutato l'invito.");
+
+    if (dati.tipo === "online") {
+      document.getElementById("online").innerHTML = dati.numero;
+    }
+
+    if (dati.tipo === "conteggioStanze" && dati.giocatori) {
+      mostraGiocatori(dati.giocatori[stanza] || []);
+    }
+
+    if (dati.tipo === "chat") {
+      aggiungiMessaggio(dati.uid, dati.nome, dati.testo);
+    }
+
+    if (dati.tipo === "listaPartite") {
+      mostraPartite(dati.partite);
+    }
+
+    if (dati.tipo === "errore") {
+      mostraNotifica(dati.messaggio);
+    }
+
+    if (dati.tipo === "partitaAvviata") {
+      window.location.href =
+        `gioco.html?partita=${dati.partitaId}&stanza=${stanza}`;
+    }
+
+    if (dati.tipo === "invitoRicevuto") {
+      mostraInvitoRicevuto(dati);
+    }
+
+    if (dati.tipo === "invitoInviato") {
+      segnaInvitatoNelModal(dati.destinatarioUid);
+    }
+
+    if (dati.tipo === "invitoRifiutato") {
+      mostraNotifica(
+        (dati.destinatarioNome || "Il giocatore") +
+        " ha rifiutato l'invito."
+      );
+    }
   };
 }
+
+window.addEventListener("pagehide", () => {
+  try {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({
+        tipo: "lasciaLobby"
+      }));
+      socket.close();
+    }
+  } catch (e) {}
+});
+
+window.addEventListener("pageshow", () => {
+  if (!socket || socket.readyState !== WebSocket.OPEN) {
+    connetti();
+  }
+});
 // ===== CREAZIONE / LISTA PARTITE =====
 function creaPartita() {
   const tipo = document.getElementById("tipoPartita").value;
