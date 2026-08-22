@@ -620,137 +620,249 @@ function aggiornaCountdownTurno() {
   if (sec <= 3 && sec >= 1 && sec !== ultimoSecondoAvviso) { ultimoSecondoAvviso = sec; suonaAvvisoTempo(); }
 }
 
-// ===== MICROFONO: consenso reciproco per coppia, aperto a chiunque nella partita =====
-let microfonoAttivo = false;
-let flussoAudioLocale = null;
+// ===== VIDEOCHIAMATA DI TAVOLO: consenso in lobby, collegamento automatico =====
+const mediaRichiestaDaLobby = params.get("media") === "1";
+let mediaPartitaAttiva = false;
+let flussoMediaLocale = null;
+let avvioMediaInCorso = null;
+let mediaProntoSegnalato = false;
+let mediaRichiedeRiprovaManuale = false;
+let puliziaMediaInCorso = false;
 let connessioniPeer = {};
-let elementiAudioRemoti = {};
-let uidRichiestaAudioInAttesa = null;
-let codaRichiesteAudio = [];
-let richiesteInviate = new Set();
-let coppieAudioAttive = new Set();
-let timerRichiesteAudio = {};
+let elementiVideoRemoti = {};
 let candidatiIceInAttesa = {};
-const CONFIGURAZIONE_ICE = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+let timerRiprovaPeer = {};
+let timerDisconnessionePeer = {};
+let partecipantiMediaPronti = new Set();
+const nomiPartecipantiMedia = new Map();
+let CONFIGURAZIONE_ICE = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+const VINCOLI_MEDIA = {
+  audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+  video: { width: { ideal: 320, max: 640 }, height: { ideal: 240, max: 480 }, frameRate: { ideal: 15, max: 20 }, facingMode: "user" }
+};
 
-async function toggleMicrofono() { if (microfonoAttivo) disattivaMicrofono(); else await attivaMicrofono(); }
-async function attivaMicrofono() {
-  try {
-    if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== "function") throw new Error("getUserMedia non disponibile");
-    flussoAudioLocale = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-  } catch (e) {
-    mostraNotificaGioco("Non è stato possibile accedere al microfono. Controlla i permessi del browser.");
-    return;
-  }
-  microfonoAttivo = true;
-  aggiornaTestoBottoneMicrofono();
-  disegnaGiocatori();
+function aggiornaNomiPartecipanti(dati) {
+  if (!dati || !Array.isArray(dati.giocatori)) return;
+  dati.giocatori.forEach(giocatore => {
+    const uidGiocatore = giocatore && (giocatore.id || giocatore.uid);
+    if (uidGiocatore) nomiPartecipantiMedia.set(uidGiocatore, giocatore.nome || "Giocatore");
+  });
+  Object.entries(elementiVideoRemoti).forEach(([uidGiocatore, elementi]) => {
+    if (elementi && elementi.didascalia) elementi.didascalia.textContent = nomiPartecipantiMedia.get(uidGiocatore) || "Giocatore";
+  });
 }
-function disattivaMicrofono() {
-  microfonoAttivo = false;
-  if (flussoAudioLocale) { flussoAudioLocale.getTracks().forEach(t => t.stop()); flussoAudioLocale = null; }
-  Object.keys(connessioniPeer).forEach(chiudiConnessioneAudio);
-  Object.values(timerRichiesteAudio).forEach(clearTimeout);
-  timerRichiesteAudio = {};
-  richiesteInviate.clear();
-  coppieAudioAttive.clear();
-  aggiornaTestoBottoneMicrofono();
-  disegnaGiocatori();
-}
-function aggiornaTestoBottoneMicrofono() {
-  const b = document.getElementById("btn-toggle-microfono");
-  if (b) b.textContent = microfonoAttivo ? "🎤 Microfono: On" : "🔇 Microfono: Off";
-}
-function richiediAudioCon(altroUid) {
-  if (!microfonoAttivo) { mostraNotificaGioco("Attiva prima il tuo microfono dal menu ☰."); return; }
-  if (richiesteInviate.has(altroUid) || coppieAudioAttive.has(altroUid)) return;
-  if (!inviaSocket({ tipo: "richiestaAudio", partitaId, destinatarioUid: altroUid })) {
-    mostraNotificaGioco("Connessione assente: richiesta audio non inviata.");
-    return;
-  }
-  richiesteInviate.add(altroUid);
-  if (timerRichiesteAudio[altroUid]) clearTimeout(timerRichiesteAudio[altroUid]);
-  timerRichiesteAudio[altroUid] = setTimeout(() => {
-    richiesteInviate.delete(altroUid);
-    delete timerRichiesteAudio[altroUid];
-    disegnaGiocatori();
-  }, 20000);
-  disegnaGiocatori();
-}
-function mostraRichiestaAudioRicevuta(mittenteUid, mittenteNome) {
-  if (!mittenteUid) return;
-  if (mittenteUid === uidRichiestaAudioInAttesa || codaRichiesteAudio.some(r => r.uid === mittenteUid)) return;
-  if (uidRichiestaAudioInAttesa) {
-    codaRichiesteAudio.push({ uid: mittenteUid, nome: mittenteNome });
-    return;
-  }
-  uidRichiestaAudioInAttesa = mittenteUid;
-  suonaRichiestaAudio();
-  document.getElementById("testo-richiesta-audio").textContent = (mittenteNome || "Un giocatore") + " ti sta chiedendo di parlare in chiamata audio";
-  document.getElementById("popup-richiesta-audio").classList.remove("nascosto");
-}
-function mostraProssimaRichiestaAudio() {
-  if (uidRichiestaAudioInAttesa || !codaRichiesteAudio.length) return;
-  const prossima = codaRichiesteAudio.shift();
-  mostraRichiestaAudioRicevuta(prossima.uid, prossima.nome);
-}
-async function rispondiRichiestaAudioRicevuta(accettato) {
-  const mittenteUid = uidRichiestaAudioInAttesa;
-  document.getElementById("popup-richiesta-audio").classList.add("nascosto");
-  uidRichiestaAudioInAttesa = null;
-  if (!mittenteUid) { mostraProssimaRichiestaAudio(); return; }
 
-  if (accettato && !microfonoAttivo) {
-    await attivaMicrofono();
-    if (!microfonoAttivo) {
-      inviaSocket({ tipo: "rispostaAudio", partitaId, destinatarioUid: mittenteUid, accettato: false });
-      mostraProssimaRichiestaAudio();
-      return;
+function aggiornaConfigurazioneIce(configurazione) {
+  if (!configurazione || !Array.isArray(configurazione.iceServers)) return;
+  const iceServers = configurazione.iceServers.slice(0, 4).filter(server => {
+    const urls = Array.isArray(server && server.urls) ? server.urls : [server && server.urls];
+    return urls.length > 0 && urls.every(url => typeof url === "string" && /^(stun|stuns|turn|turns):/i.test(url));
+  }).map(server => ({
+    urls: server.urls,
+    ...(typeof server.username === "string" ? { username: server.username } : {}),
+    ...(typeof server.credential === "string" ? { credential: server.credential } : {})
+  }));
+  if (iceServers.length) CONFIGURAZIONE_ICE = { iceServers };
+}
+
+function aggiornaInterfacciaMedia(testo, errore) {
+  document.body.classList.toggle("media-partita", mediaPartitaAttiva);
+  const pannello = document.getElementById("videochiamata");
+  const stato = document.getElementById("stato-media-connessione");
+  const voceMenu = document.getElementById("btn-stato-media");
+  if (pannello) pannello.classList.toggle("nascosto", !mediaPartitaAttiva);
+  if (stato) { stato.textContent = testo || (mediaPartitaAttiva ? "Collegamento…" : "Non attiva"); stato.style.color = errore ? "#ff8a80" : ""; }
+  if (voceMenu) {
+    voceMenu.textContent = mediaPartitaAttiva ? (errore ? "⚠️ Webcam/microfono non disponibili" : "🎥 Webcam e microfono attivi") : "🔇 Videochiamata: non attiva";
+    voceMenu.classList.toggle("media-attiva", mediaPartitaAttiva && !errore);
+  }
+}
+
+function impostaMediaPartitaAttiva(attiva) {
+  if (attiva !== true) {
+    mediaPartitaAttiva = false;
+    mediaProntoSegnalato = false;
+    mediaRichiedeRiprovaManuale = false;
+    partecipantiMediaPronti.clear();
+    if (flussoMediaLocale) {
+      const streamDaChiudere = flussoMediaLocale;
+      flussoMediaLocale = null;
+      streamDaChiudere.getTracks().forEach(traccia => { traccia.onended = null; traccia.stop(); });
     }
-  }
-  if (!inviaSocket({ tipo: "rispostaAudio", partitaId, destinatarioUid: mittenteUid, accettato })) {
-    mostraNotificaGioco("Connessione assente: risposta audio non inviata.");
-    mostraProssimaRichiestaAudio();
+    Object.keys(connessioniPeer).forEach(chiudiConnessioneMedia);
+    Object.values(timerRiprovaPeer).forEach(clearTimeout);
+    Object.values(timerDisconnessionePeer).forEach(clearTimeout);
+    timerRiprovaPeer = {};
+    timerDisconnessionePeer = {};
+    const locale = document.getElementById("video-locale");
+    if (locale) locale.srcObject = null;
+    aggiornaInterfacciaMedia("Non attiva", false);
     return;
   }
-  if (accettato) { coppieAudioAttive.add(mittenteUid); disegnaGiocatori(); }
-  mostraProssimaRichiestaAudio();
+  mediaPartitaAttiva = true;
+  if (mediaRichiedeRiprovaManuale) {
+    aggiornaInterfacciaMedia("Webcam o microfono non disponibili", true);
+    return;
+  }
+  aggiornaInterfacciaMedia(flussoMediaLocale ? "Collegata" : "Avvio webcam e microfono…", false);
+  gestisciPromessaWebRtc(inizializzaMediaPartita());
 }
+
+function segnalaMediaPronto() {
+  if (!mediaPartitaAttiva || !flussoMediaLocale || mediaProntoSegnalato) return;
+  if (inviaSocket({ tipo: "mediaPronto", partitaId, attivo: true })) mediaProntoSegnalato = true;
+}
+
+function gestisciInterruzioneMediaLocale() {
+  if (puliziaMediaInCorso || !flussoMediaLocale) return;
+  const streamDaChiudere = flussoMediaLocale;
+  flussoMediaLocale = null;
+  streamDaChiudere.getTracks().forEach(traccia => { if (traccia.readyState === "live") traccia.stop(); });
+  mediaProntoSegnalato = false;
+  mediaRichiedeRiprovaManuale = true;
+  inviaSocket({ tipo: "mediaPronto", partitaId, attivo: false });
+  partecipantiMediaPronti.clear();
+  Object.keys(connessioniPeer).forEach(chiudiConnessioneMedia);
+  const locale = document.getElementById("video-locale");
+  if (locale) locale.srcObject = null;
+  aggiornaInterfacciaMedia("Webcam o microfono non disponibili", true);
+  const riprova = document.getElementById("btn-sblocca-media");
+  if (riprova) { riprova.textContent = "Riprova webcam e microfono"; riprova.classList.remove("nascosto"); }
+}
+
+async function inizializzaMediaPartita() {
+  if (!mediaPartitaAttiva || paginaInChiusura) return false;
+  if (flussoMediaLocale) { segnalaMediaPronto(); return true; }
+  if (avvioMediaInCorso) return avvioMediaInCorso;
+  avvioMediaInCorso = (async () => {
+    try {
+      if (!window.isSecureContext || !navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== "function") throw new Error("getUserMedia non disponibile");
+      const stream = await navigator.mediaDevices.getUserMedia(VINCOLI_MEDIA);
+      if (!mediaPartitaAttiva || paginaInChiusura) {
+        stream.getTracks().forEach(traccia => traccia.stop());
+        return false;
+      }
+      if (!stream.getAudioTracks().length || !stream.getVideoTracks().length) {
+        stream.getTracks().forEach(traccia => traccia.stop());
+        throw new Error("Sono necessarie entrambe le tracce audio e video");
+      }
+      flussoMediaLocale = stream;
+      mediaRichiedeRiprovaManuale = false;
+      stream.getTracks().forEach(traccia => { traccia.onended = gestisciInterruzioneMediaLocale; });
+      const videoLocale = document.getElementById("video-locale");
+      if (videoLocale) { videoLocale.srcObject = stream; videoLocale.muted = true; videoLocale.play().catch(() => {}); }
+      const riprova = document.getElementById("btn-sblocca-media");
+      if (riprova) riprova.classList.add("nascosto");
+      aggiornaInterfacciaMedia("In attesa degli altri giocatori…", false);
+      segnalaMediaPronto();
+      return true;
+    } catch (errore) {
+      console.warn("Avvio webcam/microfono non riuscito:", errore);
+      mediaRichiedeRiprovaManuale = true;
+      aggiornaInterfacciaMedia("Permesso o dispositivo non disponibile", true);
+      mostraNotificaGioco("Webcam e microfono non sono disponibili. La partita resta comunque utilizzabile.");
+      const riprova = document.getElementById("btn-sblocca-media");
+      if (riprova) { riprova.textContent = "Riprova webcam e microfono"; riprova.classList.remove("nascosto"); }
+      return false;
+    } finally {
+      avvioMediaInCorso = null;
+    }
+  })();
+  return avvioMediaInCorso;
+}
+
+function creaElementiVideoRemoto(altroUid) {
+  if (elementiVideoRemoti[altroUid]) return elementiVideoRemoti[altroUid];
+  const figura = document.createElement("figure");
+  figura.className = "video-tile";
+  figura.dataset.uid = altroUid;
+  const video = document.createElement("video");
+  video.autoplay = true;
+  video.playsInline = true;
+  video.muted = true;
+  const audio = document.createElement("audio");
+  audio.autoplay = true;
+  const didascalia = document.createElement("figcaption");
+  didascalia.textContent = nomiPartecipantiMedia.get(altroUid) || "Giocatore";
+  figura.append(video, audio, didascalia);
+  document.getElementById("griglia-video").appendChild(figura);
+  elementiVideoRemoti[altroUid] = { figura, video, audio, didascalia };
+  return elementiVideoRemoti[altroUid];
+}
+
+function tentaRiproduzioneElementoMedia(elemento) {
+  if (!elemento || typeof elemento.play !== "function") return;
+  elemento.play().then(() => {
+    const pulsante = document.getElementById("btn-sblocca-media");
+    if (pulsante && Object.values(elementiVideoRemoti).every(elementi => !elementi.video.paused && !elementi.audio.paused)) pulsante.classList.add("nascosto");
+  }).catch(() => {
+    const pulsante = document.getElementById("btn-sblocca-media");
+    if (pulsante) { pulsante.textContent = "🔊 Attiva l'audio"; pulsante.classList.remove("nascosto"); }
+  });
+}
+
 function creaConnessionePeer(altroUid) {
+  const esistente = connessioniPeer[altroUid];
+  if (esistente && esistente.connectionState !== "closed") return esistente;
+  if (!flussoMediaLocale) throw new Error("Stream locale non pronto");
   const pc = new RTCPeerConnection(CONFIGURAZIONE_ICE);
-  if (flussoAudioLocale) flussoAudioLocale.getTracks().forEach(t => pc.addTrack(t, flussoAudioLocale));
-  pc.onicecandidate = (ev) => {
-    if (ev.candidate) inviaSocket({ tipo: "webrtc-ice-candidate", partitaId, destinatarioUid: altroUid, candidate: ev.candidate });
-  };
-  pc.ontrack = (ev) => {
-    let elAudio = elementiAudioRemoti[altroUid];
-    if (!elAudio) {
-      elAudio = document.createElement("audio");
-      elAudio.autoplay = true;
-      elAudio.id = "audio-remoto-" + altroUid;
-      document.body.appendChild(elAudio);
-      elementiAudioRemoti[altroUid] = elAudio;
+  flussoMediaLocale.getTracks().forEach(traccia => {
+    const sender = pc.addTrack(traccia, flussoMediaLocale);
+    if (traccia.kind === "video" && sender && typeof sender.getParameters === "function") {
+      const parametri = sender.getParameters();
+      if (!parametri.encodings || !parametri.encodings.length) parametri.encodings = [{}];
+      parametri.encodings[0].maxBitrate = 180000;
+      sender.setParameters(parametri).catch(() => {});
     }
-    elAudio.srcObject = ev.streams[0];
+  });
+  pc.onicecandidate = evento => {
+    if (evento.candidate) inviaSocket({ tipo: "webrtc-ice-candidate", partitaId, destinatarioUid: altroUid, candidate: evento.candidate });
+  };
+  pc.ontrack = evento => {
+    const elementi = creaElementiVideoRemoto(altroUid);
+    let streamRemoto = evento.streams && evento.streams[0];
+    if (!streamRemoto) {
+      streamRemoto = elementi.video.srcObject instanceof MediaStream ? elementi.video.srcObject : new MediaStream();
+      if (!streamRemoto.getTracks().includes(evento.track)) streamRemoto.addTrack(evento.track);
+    }
+    elementi.video.srcObject = streamRemoto;
+    elementi.audio.srcObject = streamRemoto;
+    tentaRiproduzioneElementoMedia(elementi.video);
+    tentaRiproduzioneElementoMedia(elementi.audio);
   };
   pc.onconnectionstatechange = () => {
-    if (pc.connectionState === "failed" || pc.connectionState === "closed") {
-      chiudiConnessioneAudio(altroUid);
-      disegnaGiocatori();
+    if (pc.connectionState === "connected") {
+      if (timerDisconnessionePeer[altroUid]) clearTimeout(timerDisconnessionePeer[altroUid]);
+      delete timerDisconnessionePeer[altroUid];
+      aggiornaInterfacciaMedia(`${partecipantiMediaPronti.size} partecipanti collegati`, false);
+    } else if (pc.connectionState === "disconnected") {
+      if (!timerDisconnessionePeer[altroUid]) {
+        timerDisconnessionePeer[altroUid] = setTimeout(() => {
+          delete timerDisconnessionePeer[altroUid];
+          if (connessioniPeer[altroUid] === pc && pc.connectionState === "disconnected") {
+            chiudiConnessioneMedia(altroUid);
+            pianificaRiprovaConnessioneMedia(altroUid);
+          }
+        }, 5000);
+      }
+    } else if (pc.connectionState === "failed") {
+      chiudiConnessioneMedia(altroUid);
+      pianificaRiprovaConnessioneMedia(altroUid);
     }
   };
   connessioniPeer[altroUid] = pc;
   return pc;
 }
-async function avviaConnessioneAudio(altroUid, sonoIoAdIniziare) {
+
+async function avviaConnessioneMedia(altroUid) {
+  if (!flussoMediaLocale || !partecipantiMediaPronti.has(altroUid)) return;
   if (connessioniPeer[altroUid]) return;
   const pc = creaConnessionePeer(altroUid);
-  if (sonoIoAdIniziare) {
-    const offerta = await pc.createOffer();
-    await pc.setLocalDescription(offerta);
-    inviaSocket({ tipo: "webrtc-offer", partitaId, destinatarioUid: altroUid, sdp: offerta });
-  }
+  const offerta = await pc.createOffer();
+  await pc.setLocalDescription(offerta);
+  inviaSocket({ tipo: "webrtc-offer", partitaId, destinatarioUid: altroUid, sdp: pc.localDescription });
 }
+
 async function applicaCandidatiIceInAttesa(altroUid) {
   const pc = connessioniPeer[altroUid];
   if (!pc || !pc.remoteDescription) return;
@@ -760,24 +872,27 @@ async function applicaCandidatiIceInAttesa(altroUid) {
     try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch (errore) { console.warn("Candidato ICE ignorato:", errore); }
   }
 }
+
 async function gestisciOffertaRicevuta(mittenteUid, sdp) {
-  if (!microfonoAttivo) return;
+  if (!mediaPartitaAttiva || !flussoMediaLocale || !partecipantiMediaPronti.has(mittenteUid) || !sdp) return;
   const pc = connessioniPeer[mittenteUid] || creaConnessionePeer(mittenteUid);
   await pc.setRemoteDescription(new RTCSessionDescription(sdp));
   await applicaCandidatiIceInAttesa(mittenteUid);
   const risposta = await pc.createAnswer();
   await pc.setLocalDescription(risposta);
-  inviaSocket({ tipo: "webrtc-answer", partitaId, destinatarioUid: mittenteUid, sdp: risposta });
+  inviaSocket({ tipo: "webrtc-answer", partitaId, destinatarioUid: mittenteUid, sdp: pc.localDescription });
 }
+
 async function gestisciRispostaRicevuta(mittenteUid, sdp) {
   const pc = connessioniPeer[mittenteUid];
-  if (!pc) return;
+  if (!pc || !sdp) return;
   await pc.setRemoteDescription(new RTCSessionDescription(sdp));
   await applicaCandidatiIceInAttesa(mittenteUid);
 }
+
 async function gestisciCandidatoRicevuto(mittenteUid, candidate) {
-  const pc = connessioniPeer[mittenteUid];
   if (!candidate) return;
+  const pc = connessioniPeer[mittenteUid];
   if (!pc || !pc.remoteDescription) {
     if (!candidatiIceInAttesa[mittenteUid]) candidatiIceInAttesa[mittenteUid] = [];
     candidatiIceInAttesa[mittenteUid].push(candidate);
@@ -785,20 +900,78 @@ async function gestisciCandidatoRicevuto(mittenteUid, candidate) {
   }
   try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch (errore) { console.warn("Candidato ICE ignorato:", errore); }
 }
-function chiudiConnessioneAudio(altroUid) {
+
+function chiudiConnessioneMedia(altroUid) {
+  if (timerRiprovaPeer[altroUid]) { clearTimeout(timerRiprovaPeer[altroUid]); delete timerRiprovaPeer[altroUid]; }
+  if (timerDisconnessionePeer[altroUid]) { clearTimeout(timerDisconnessionePeer[altroUid]); delete timerDisconnessionePeer[altroUid]; }
   const pc = connessioniPeer[altroUid];
-  if (pc) { pc.close(); delete connessioniPeer[altroUid]; }
-  const elAudio = elementiAudioRemoti[altroUid];
-  if (elAudio) { elAudio.remove(); delete elementiAudioRemoti[altroUid]; }
-  coppieAudioAttive.delete(altroUid);
+  delete connessioniPeer[altroUid];
+  if (pc && pc.connectionState !== "closed") pc.close();
+  const elementi = elementiVideoRemoti[altroUid];
+  if (elementi) { elementi.video.srcObject = null; elementi.audio.srcObject = null; elementi.figura.remove(); delete elementiVideoRemoti[altroUid]; }
   delete candidatiIceInAttesa[altroUid];
 }
-window.addEventListener("beforeunload", () => {
+
+function pianificaRiprovaConnessioneMedia(altroUid) {
+  if (!altroUid || timerRiprovaPeer[altroUid] || !mioUid || String(mioUid) >= String(altroUid)) return;
+  if (!mediaPartitaAttiva || !flussoMediaLocale || !partecipantiMediaPronti.has(altroUid)) return;
+  timerRiprovaPeer[altroUid] = setTimeout(() => {
+    delete timerRiprovaPeer[altroUid];
+    if (!connessioniPeer[altroUid] && partecipantiMediaPronti.has(altroUid)) gestisciPromessaWebRtc(avviaConnessioneMedia(altroUid));
+  }, 3000);
+}
+
+function gestisciStatoMedia(dati) {
+  impostaMediaPartitaAttiva(dati.mediaAttiva === true);
+  if (!mediaPartitaAttiva) return;
+  partecipantiMediaPronti = new Set(Array.isArray(dati.partecipanti) ? dati.partecipanti.filter(uid => typeof uid === "string") : []);
+  Object.keys(connessioniPeer).forEach(uid => { if (!partecipantiMediaPronti.has(uid)) chiudiConnessioneMedia(uid); });
+  Object.keys(elementiVideoRemoti).forEach(uid => { if (!partecipantiMediaPronti.has(uid)) chiudiConnessioneMedia(uid); });
+  const quanti = partecipantiMediaPronti.size;
+  aggiornaInterfacciaMedia(quanti > 1 ? `${quanti} partecipanti collegati` : "In attesa degli altri giocatori…", false);
+  if (flussoMediaLocale && mioUid && !partecipantiMediaPronti.has(mioUid)) {
+    mediaProntoSegnalato = false;
+    segnalaMediaPronto();
+    return;
+  }
+  if (!flussoMediaLocale || !mioUid || !partecipantiMediaPronti.has(mioUid)) return;
+  partecipantiMediaPronti.forEach(altroUid => {
+    if (altroUid !== mioUid && String(mioUid) < String(altroUid)) gestisciPromessaWebRtc(avviaConnessioneMedia(altroUid));
+  });
+  disegnaGiocatori();
+}
+
+async function sbloccaRiproduzioneMedia() {
+  if (!flussoMediaLocale) {
+    mediaRichiedeRiprovaManuale = false;
+    if (!(await inizializzaMediaPartita())) return;
+  }
+  const elementiDaRiprodurre = Object.values(elementiVideoRemoti).flatMap(elementi => [elementi.video, elementi.audio]);
+  const risultati = await Promise.allSettled(elementiDaRiprodurre.map(elemento => elemento.play()));
+  const fallita = risultati.some(risultato => risultato.status === "rejected");
+  const pulsante = document.getElementById("btn-sblocca-media");
+  if (pulsante) pulsante.classList.toggle("nascosto", !fallita);
+}
+
+function pulisciMediaPagina() {
+  if (puliziaMediaInCorso) return;
+  puliziaMediaInCorso = true;
   paginaInChiusura = true;
   if (timerRiconnessione) clearTimeout(timerRiconnessione);
   if (timerRiprovaAvvio) clearTimeout(timerRiprovaAvvio);
-  if (flussoAudioLocale) flussoAudioLocale.getTracks().forEach(t => t.stop());
-  Object.keys(connessioniPeer).forEach(chiudiConnessioneAudio);
+  if (mediaProntoSegnalato) inviaSocket({ tipo: "mediaPronto", partitaId, attivo: false });
+  if (flussoMediaLocale) flussoMediaLocale.getTracks().forEach(traccia => traccia.stop());
+  flussoMediaLocale = null;
+  Object.keys(connessioniPeer).forEach(chiudiConnessioneMedia);
+  Object.values(timerRiprovaPeer).forEach(clearTimeout);
+  Object.values(timerDisconnessionePeer).forEach(clearTimeout);
+  timerRiprovaPeer = {};
+  timerDisconnessionePeer = {};
+}
+window.addEventListener("pagehide", pulisciMediaPagina);
+window.addEventListener("beforeunload", pulisciMediaPagina);
+window.addEventListener("pageshow", evento => {
+  if (evento.persisted) window.location.reload();
 });
 
 // ===== DADI 3D =====
@@ -820,21 +993,32 @@ function applicaRotazioneDado(idDado, valore) {
   const cubo = document.querySelector("#" + idDado + " .cubo");
   if (cubo) cubo.style.transform = `rotateX(${r.x}deg) rotateY(${r.y}deg)`;
 }
+function fissaFacciaDado(idDado, valore) {
+  const cubo = document.querySelector("#" + idDado + " .cubo");
+  const numero = Number(valore);
+  const valoreSicuro = Number.isInteger(numero) && numero >= 1 && numero <= 6 ? numero : 1;
+  const angoli = CORREZIONE_ANGOLI_DADO[valoreSicuro];
+  if (!cubo) return;
+  cubo.style.transition = "none";
+  cubo.style.transform = `rotateX(${angoli.x}deg) rotateY(${angoli.y}deg)`;
+  void cubo.offsetWidth;
+  cubo.style.transition = "";
+  rotazioneAttuale[idDado] = { ...angoli };
+}
 function mostraDadi(v1, v2) {
-  const c1 = document.querySelector("#dado1 .cubo"), c2 = document.querySelector("#dado2 .cubo");
-  if (c1) c1.style.transition = "none";
-  if (c2) c2.style.transition = "none";
-  applicaRotazioneDado("dado1", v1);
-  applicaRotazioneDado("dado2", v2);
-  if (c1) c1.offsetHeight;
-  if (c1) c1.style.transition = "";
-  if (c2) c2.style.transition = "";
+  fissaFacciaDado("dado1", v1);
+  fissaFacciaDado("dado2", v2);
 }
 function animaLancioDadi(vf1, vf2, callback) {
   suonaTiroDadi();
   applicaRotazioneDado("dado1", vf1);
   applicaRotazioneDado("dado2", vf2);
-  setTimeout(() => { suonaAtterraggioDadi(); if (callback) callback(); }, 1080);
+  setTimeout(() => {
+    fissaFacciaDado("dado1", vf1);
+    fissaFacciaDado("dado2", vf2);
+    suonaAtterraggioDadi();
+    if (callback) callback();
+  }, 1080);
 }
 
 function schiarisciColore(hex, p) { return mescolaColore(hex, 255, p); }
@@ -1007,7 +1191,7 @@ function gestisciAggiornamentoPartita(dati) {
 function gestisciPromessaWebRtc(promessa) {
   Promise.resolve(promessa).catch(errore => {
     console.error("Errore WebRTC:", errore);
-    mostraNotificaGioco("La connessione audio non è riuscita.");
+    mostraNotificaGioco("La connessione audio/video non è riuscita.");
   });
 }
 
@@ -1094,6 +1278,10 @@ function connetti() {
   socketCorrente.onclose = () => {
     if (socket !== socketCorrente) return;
     socket = null;
+    mediaProntoSegnalato = false;
+    partecipantiMediaPronti.clear();
+    Object.keys(connessioniPeer).forEach(chiudiConnessioneMedia);
+    if (mediaPartitaAttiva) aggiornaInterfacciaMedia("Riconnessione…", false);
     impostaStatoConnessione(true);
     impostaDadiAbilitati(false);
     fermaCountdown(false);
@@ -1115,6 +1303,8 @@ function connetti() {
       return;
     }
     if (!dati || typeof dati.tipo !== "string") return;
+    aggiornaNomiPartecipanti(dati);
+    if (typeof dati.mediaAttiva === "boolean") impostaMediaPartitaAttiva(dati.mediaAttiva);
 
     if (dati.tipo === "sessioneScaduta") {
       annullaVerificaDeterminazione();
@@ -1123,25 +1313,23 @@ function connetti() {
       return;
     }
 
+    if (dati.tipo === "sessioneSostituita") {
+      pulisciMediaPagina();
+      impostaDadiAbilitati(false);
+      fermaCountdown(false);
+      terminaCaricamento("Partita aperta altrove");
+      document.getElementById("messaggi-gioco").textContent = dati.messaggio || "La partita è stata aperta in un'altra scheda o dispositivo.";
+      mostraNotificaGioco(dati.messaggio || "Questa scheda non è più collegata alla partita.");
+      return;
+    }
+
     if (dati.tipo === "statoDeterminazione") { gestisciStatoDeterminazione(dati); return; }
     if (dati.tipo === "risultatoDeterminazione") { gestisciRisultatoDeterminazione(dati); return; }
     if (dati.tipo === "ordineFinaleCalcolato") { gestisciOrdineFinaleCalcolato(dati); return; }
     if (dati.tipo === "determinazioneCompletata") { gestisciDeterminazioneCompletata(dati); return; }
 
-    if (dati.tipo === "richiestaAudioRicevuta") { mostraRichiestaAudioRicevuta(dati.mittenteUid, dati.mittenteNome); return; }
-    if (dati.tipo === "rispostaAudioRicevuta") {
-      richiesteInviate.delete(dati.mittenteUid);
-      if (timerRichiesteAudio[dati.mittenteUid]) clearTimeout(timerRichiesteAudio[dati.mittenteUid]);
-      delete timerRichiesteAudio[dati.mittenteUid];
-      if (dati.accettato) {
-        coppieAudioAttive.add(dati.mittenteUid);
-        disegnaGiocatori();
-        gestisciPromessaWebRtc(avviaConnessioneAudio(dati.mittenteUid, true));
-      } else {
-        disegnaGiocatori();
-      }
-      return;
-    }
+    if (dati.tipo === "statoMedia") { gestisciStatoMedia(dati); return; }
+    if (dati.tipo === "configMedia") { aggiornaConfigurazioneIce(dati.configurazioneIce); return; }
     if (dati.tipo === "webrtc-offer") { gestisciPromessaWebRtc(gestisciOffertaRicevuta(dati.mittenteUid, dati.sdp)); return; }
     if (dati.tipo === "webrtc-answer") { gestisciPromessaWebRtc(gestisciRispostaRicevuta(dati.mittenteUid, dati.sdp)); return; }
     if (dati.tipo === "webrtc-ice-candidate") { gestisciPromessaWebRtc(gestisciCandidatoRicevuto(dati.mittenteUid, dati.candidate)); return; }
@@ -1188,7 +1376,6 @@ function aggiornaTurno(turnoDiId) {
 function disegnaGiocatori() {
   const contenitore = document.getElementById("contenitore-pedine");
   const giocatori = Array.isArray(ultimoStatoGiocatori) ? ultimoStatoGiocatori : [];
-  const idPresenti = new Set(giocatori.map(g => g.id));
   Array.from(contenitore.children).forEach(p => {
     const giocatore = giocatori.find(g => "pedina-" + g.id === p.id);
     if (!giocatore) {
@@ -1197,8 +1384,6 @@ function disegnaGiocatori() {
       p.remove();
     }
   });
-  Object.keys(connessioniPeer).forEach(uid => { if (!idPresenti.has(uid)) chiudiConnessioneAudio(uid); });
-
   const listaPannello = document.getElementById("lista-giocatori");
   listaPannello.replaceChildren();
   giocatori.forEach((giocatore, indice) => {
@@ -1221,29 +1406,13 @@ function disegnaGiocatori() {
     linkProfilo.textContent = giocatore.nome || "Giocatore";
     card.appendChild(linkProfilo);
 
-    if (giocatore.id !== mioUid) {
-      if (coppieAudioAttive.has(giocatore.id)) {
-        const stato = document.createElement("span");
-        stato.className = "stato-audio attivo";
-        stato.title = "Chiamata attiva";
-        stato.textContent = "🎤";
-        card.appendChild(stato);
-      } else if (richiesteInviate.has(giocatore.id)) {
-        const stato = document.createElement("span");
-        stato.className = "stato-audio in-attesa";
-        stato.title = "Richiesta inviata";
-        stato.textContent = "⏳";
-        card.appendChild(stato);
-      } else if (microfonoAttivo) {
-        const chiama = document.createElement("button");
-        chiama.type = "button";
-        chiama.className = "btn-chiama-audio";
-        chiama.title = "Chiedi di parlare";
-        chiama.setAttribute("aria-label", "Chiedi di parlare con " + (giocatore.nome || "questo giocatore"));
-        chiama.textContent = "📞";
-        chiama.addEventListener("click", () => richiediAudioCon(giocatore.id));
-        card.appendChild(chiama);
-      }
+    if (mediaPartitaAttiva) {
+      const stato = document.createElement("span");
+      const pronto = partecipantiMediaPronti.has(giocatore.id);
+      stato.className = "stato-media" + (pronto ? " attivo" : "");
+      stato.title = pronto ? "Webcam e microfono collegati" : "Collegamento audio/video in attesa";
+      stato.textContent = pronto ? "🎥" : "◌";
+      card.appendChild(stato);
     }
 
     if (eAttivo) {
@@ -1266,6 +1435,7 @@ function disegnaGiocatori() {
 function mostraVittoria(nomeVincitore) {
   fermaCountdown(false);
   impostaDadiAbilitati(false);
+  impostaMediaPartitaAttiva(false);
   suonaVittoria();
   document.getElementById("testo-vincitore").textContent = "🎉 Ha vinto " + nomeVincitore + "!";
   const overlay = document.getElementById("overlay-vittoria");
@@ -1430,7 +1600,7 @@ document.addEventListener("keydown", (e) => {
 });
 
 aggiornaTestoBottoneSuoni();
-aggiornaTestoBottoneMicrofono();
+aggiornaInterfacciaMedia(mediaRichiestaDaLobby ? "Verifica impostazioni del tavolo…" : "Non attiva", false);
 mostraDadi(1, 1);
 inizializzaGestioneLayout();
 avvia();
