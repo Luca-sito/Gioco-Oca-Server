@@ -1407,8 +1407,14 @@ body.tema-scuro .giocatore-online{
     <h2>🏆 Top giocatori</h2>
     <div id="top">Caricamento...</div>
     <hr>
-    <h2 id="nomeStanza">STANZA 👤 <span id="online">0</span>  &nbsp; 👥 <span id="amiciOnline">0</span></h2>
-    <h3 style="text-align:center;"></h3>
+    <h2 id="nomeStanza">
+    STANZA
+    <span class="conteggio-stanza">
+        👤 <span id="online">0</span>
+        &nbsp;
+        👥 <span id="amiciOnline">0</span>
+    </span>
+</h2>
     <div id="areaUtente"></div>
     <h2>Online in questa stanza</h2>
     <div id="listaOnline"></div>
@@ -1418,7 +1424,7 @@ body.tema-scuro .giocatore-online{
 let socket;
 const parametri = new URLSearchParams(window.location.search);
 const stanza = parametri.get("stanza") || "BAR";
-document.getElementById("nomeStanza").innerHTML = stanza;
+document.getElementById("nomeStanza").firstChild.textContent = stanza + " ";
 let mioUid = null;
 let mieiAmiciUid = new Set();
 let ultimaListaOnlineStanza = [];
