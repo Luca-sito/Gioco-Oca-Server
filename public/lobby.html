@@ -277,25 +277,11 @@ button:disabled{
     font-size:25px;
     font-weight:bold;
 }
-.utente-box{
-    padding:15px;
-    text-align:center;
-}
-.avatar-container{
-    display:flex;
-    justify-content:center;
-}
 .nickname{
     font-weight:bold;
     margin-top:10px;
 }
 .nickname-riga{
-    font-weight:bold;
-}
-.dispositivo{
-    margin-top:8px;
-    font-size:14px;
-    color:#555;
     font-weight:bold;
 }
 /* =========================================================
@@ -1713,16 +1699,6 @@ async function verificaSessione() {
     if (!risposta.ok) { window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href); return; }
     const dati = await risposta.json();
     mioUid = dati.uid;
-    const immagineAvatar = dati.avatar
-      ? `<img class="avatar" src="${dati.avatar}">`
-      : `<div class="avatar" style="background:${coloreDaNome(dati.nickname)};">${iniziale(dati.nickname)}</div>`;
-    document.getElementById("areaUtente").innerHTML = `
-      <div class="utente-box">
-        <div class="avatar-container">${immagineAvatar}</div>
-        <div class="nickname">${dati.nickname}</div>
-        <div class="dispositivo">${iconaDispositivo(rilevaTipoDispositivoClient())}</div>
-      </div>
-    `;
     connetti();
     caricaAmici();
     caricaNotifiche(false);
