@@ -1461,6 +1461,38 @@ wss.on("connection", (socket, request) => {
         return;
       }
 
+      if (dati.tipo === "lasciaLobby") {
+  if (!uid || !stanzaAttuale || !stanze[stanzaAttuale]) return;
+
+  const connessione =
+    stanze[stanzaAttuale].giocatoriOnline[socketId];
+
+  if (connessione) {
+    delete stanze[stanzaAttuale].giocatoriOnline[socketId];
+  }
+
+  const uidAncoraOnline = Object.values(
+    stanze[stanzaAttuale].giocatoriOnline
+  ).some(g => g && g.uid === uid);
+
+  inviaConteggioStanze();
+
+  if (!uidAncoraOnline) {
+    const numeroOnlineUnici = new Set(
+      Object.values(stanze[stanzaAttuale].giocatoriOnline)
+        .filter(g => g && g.uid)
+        .map(g => g.uid)
+    ).size;
+
+    inviaAllaStanza(stanzaAttuale, {
+      tipo: "online",
+      numero: numeroOnlineUnici
+    });
+  }
+
+  return;
+}
+
       if (dati.tipo === "entraLobby") {
         if (!db) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Servizio account non disponibile." })); return; }
         if (!uid) { socket.send(JSON.stringify({ tipo: "sessioneScaduta" })); return; }
@@ -1474,6 +1506,11 @@ wss.on("connection", (socket, request) => {
         }
         stanzaAttuale = dati.stanza; nickname = utenteDb.nickname; mioAvatar = utenteDb.avatar || null;
         if (!stanze[stanzaAttuale]) stanze[stanzaAttuale] = { giocatoriOnline: {}, partite: {} };
+        rimuoviVecchieConnessioniOnline(
+        stanzaAttuale,
+        uid,
+        socketId
+        );
         stanze[stanzaAttuale].giocatoriOnline[socketId] = { uid, nickname, avatar: mioAvatar, tipoDispositivo };
         inviaConteggioStanze();
         inviaAllaStanza(stanzaAttuale, { tipo: "online", numero: Object.keys(stanze[stanzaAttuale].giocatoriOnline).length });
