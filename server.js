@@ -854,6 +854,22 @@ function inviaListaPartite(nomeStanza) {
   inviaAllaStanza(nomeStanza, { tipo: "listaPartite", partite: lista });
 }
 
+function rimuoviVecchieConnessioniOnline(nomeStanza, uid, socketIdDaConservare) {
+  if (!stanze[nomeStanza] || !uid) return;
+
+  for (const [sid, giocatoreOnline] of Object.entries(
+    stanze[nomeStanza].giocatoriOnline
+  )) {
+    if (
+      giocatoreOnline &&
+      giocatoreOnline.uid === uid &&
+      sid !== socketIdDaConservare
+    ) {
+      delete stanze[nomeStanza].giocatoriOnline[sid];
+    }
+  }
+}
+
 function inviaConteggioStanze() {
   const conteggi = {};
   const giocatoriPerStanza = {};
