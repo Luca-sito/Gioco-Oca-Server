@@ -337,7 +337,7 @@ body.modalita-ruotata #area-tabellone > #area-dadi {
   padding: 7px;
   background: #fdfdfd;
   border: 2px solid #ccc;
-  border-radius: 9px;
+  border-radius: 1px;
   box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.08);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
