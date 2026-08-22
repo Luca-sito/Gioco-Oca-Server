@@ -1834,8 +1834,8 @@ inviaAllaStanza(stanzaAttuale, {
       console.error("Errore nella gestione di un messaggio:", erroreInterno);
     }
   });
-
-socket.on("close", async () => {
+  
+  socket.on("close", async () => {
   try {
     delete socketsPerId[socketId];
 
@@ -1843,11 +1843,8 @@ socket.on("close", async () => {
 
     const nomeStanza = stanzaAttuale;
 
-    // Rimuove esclusivamente questa connessione.
     delete stanze[nomeStanza].giocatoriOnline[socketId];
 
-    // Se il socket apparteneva a una partita ancora in attesa,
-    // rimuove il giocatore dalla partita.
     const partite = stanze[nomeStanza].partite;
 
     for (const pid in partite) {
@@ -1859,8 +1856,6 @@ socket.on("close", async () => {
 
       if (!giocatore) continue;
 
-      // Se la partita è già associata a un'altra connessione dello stesso UID,
-      // questa chiusura è relativa al vecchio socket e non deve rimuovere il giocatore.
       if (giocatore.socket && giocatore.socket !== socket) continue;
 
       await esciDaPartitaInAttesa(
@@ -1879,7 +1874,9 @@ socket.on("close", async () => {
       erroreInterno
     );
   }
-});
+}); // chiude socket.on("close")
+
+}); // <-- QUESTA MANCAVA: chiude wss.on("connection")
 
 server.listen(PORT, async () => {
   console.log("Server avviato sulla porta " + PORT);
