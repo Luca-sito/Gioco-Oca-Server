@@ -53,6 +53,7 @@ button:disabled{
 }
 .sinistra{
     width:25%;
+    overflow-y:auto;
 }
 .centro{
     width:50%;
@@ -1315,6 +1316,17 @@ body.tema-scuro .giocatore-online{
 </style>
 </head>
 <body>
+<div id="contenitoreNotifiche" aria-live="polite"></div>
+<div id="areaCampanella">
+  <button id="btnCampanella" type="button" onclick="toggleNotifiche()" aria-label="Apri notifiche">
+    🔔
+    <span id="badgeNotifiche" class="badge-notifiche" style="display:none;">0</span>
+  </button>
+  <div id="pannelloNotifiche" class="pannello-notifiche nascosto">
+    <div class="notifiche-titolo">Notifiche</div>
+    <div id="listaNotifiche"></div>
+  </div>
+</div>
 <div id="cardInvitoRicevuto" class="nascosto">
   <div id="testoInvitoRicevuto"></div>
   <div class="invito-bottoni">
@@ -1364,6 +1376,12 @@ body.tema-scuro .giocatore-online{
         <option value="pubblica">🔓 Pubblica</option>
         <option value="privata">🔒 Privata (solo su invito)</option>
       </select>
+      <p>Microfono e webcam</p>
+      <select id="mediaPartita">
+        <option value="off">🔇 Disattivi</option>
+        <option value="on">🎥 Attivi per tutti</option>
+      </select>
+      <p style="font-size:12px;line-height:1.35;color:#777;margin-top:8px;">Se attivi, ogni partecipante dovrà autorizzare webcam e microfono prima di entrare.</p>
       <button class="crea" onclick="creaPartita()">Crea partita</button>
     </div>
   </div>
@@ -1463,6 +1481,7 @@ let ultimaListaOnlineStanza = [];
 let aspettaPropriaPartitaPrivata = false;
 let partitaDaInvitareId = null;
 let invitoAttivoPartitaId = null;
+let invitoAttivoMedia = false;
 let richiestaProfiloCorrente = 0;
 // ===== NUOVO: notifiche interne al posto di alert() =====
 function mostraNotifica(testo) {
@@ -1486,6 +1505,50 @@ function inviaMessaggioSocket(dati) {
   }
   socket.send(JSON.stringify(dati));
   return true;
+}
+
+async function richiediConsensoMediaSeNecessario(mediaAttiva) {
+  if (!mediaAttiva) return true;
+  if (!socket || socket.readyState !== WebSocket.OPEN) {
+    mostraNotifica("Connessione al server non disponibile. Riprova tra qualche secondo.");
+    return false;
+  }
+  if (typeof RTCPeerConnection !== "function") {
+    mostraNotifica("Questo browser non supporta la videochiamata del tavolo.");
+    return false;
+  }
+  if (!window.isSecureContext || !navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== "function") {
+    mostraNotifica("Webcam e microfono richiedono una connessione HTTPS e un browser compatibile.");
+    return false;
+  }
+  mostraNotifica("Autorizza webcam e microfono nel messaggio del browser per entrare nel tavolo.");
+  let flusso = null;
+  try {
+    flusso = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      video: { width: { ideal: 320, max: 640 }, height: { ideal: 240, max: 480 }, frameRate: { ideal: 15, max: 20 }, facingMode: "user" }
+    });
+    if (!flusso.getAudioTracks().length || !flusso.getVideoTracks().length) throw new Error("Tracce audio/video mancanti");
+    return true;
+  } catch (errore) {
+    console.warn("Autorizzazione webcam/microfono non concessa:", errore);
+    mostraNotifica("Non sei entrato: per questo tavolo devi consentire sia webcam sia microfono.");
+    return false;
+  } finally {
+    if (flusso) flusso.getTracks().forEach(traccia => traccia.stop());
+  }
+}
+
+function apriPartita(id, mediaAttiva) {
+  const destinazione = new URL("gioco.html", window.location.href);
+  destinazione.searchParams.set("partita", id);
+  destinazione.searchParams.set("stanza", stanza);
+  if (mediaAttiva === true) destinazione.searchParams.set("media", "1");
+  window.location.href = destinazione.href;
+}
+async function riprendiPartita(id, mediaAttiva) {
+  if (!(await richiediConsensoMediaSeNecessario(mediaAttiva === true))) return;
+  apriPartita(id, mediaAttiva === true);
 }
 function iniziale(nome) { return (nome || "?").trim().charAt(0).toUpperCase(); }
 function coloreDaNome(nome) {
@@ -1556,6 +1619,12 @@ CREA TAVOLO
 🔒 Privata
 </option>
 </select>
+<p>Microfono e webcam</p>
+<select id="mediaPartitaMobile">
+<option value="off">🔇 Disattivi</option>
+<option value="on">🎥 Attivi per tutti</option>
+</select>
+<p style="font-size:12px;line-height:1.35;color:#777;">Se attivi, ogni partecipante dovrà autorizzarli prima di entrare.</p>
 <button onclick="creaPartitaMobile()" 
 style="
 margin-top:20px;
@@ -1567,14 +1636,18 @@ Crea partita
 `;
 apriMobile();
 }
-function creaPartitaMobile() {
+async function creaPartitaMobile() {
   const tipo = document.getElementById("tipoPartitaMobile").value;
+  const mediaAttiva = document.getElementById("mediaPartitaMobile").value === "on";
+  if (!(await richiediConsensoMediaSeNecessario(mediaAttiva))) return;
   const inviato = inviaMessaggioSocket({
     tipo: "creaPartita",
     tempo: document.getElementById("tempoMobile").value,
     punti: document.getElementById("puntiMobile").value,
     modalita: tipo,
-    maxGiocatori: document.getElementById("numeroGiocatoriMobile").value
+    maxGiocatori: document.getElementById("numeroGiocatoriMobile").value,
+    mediaAttiva,
+    mediaConsenso: mediaAttiva
   });
   if (!inviato) return;
   if (tipo === "privata") aspettaPropriaPartitaPrivata = true;
@@ -1680,7 +1753,7 @@ const input = document.getElementById("messaggioMobile");
 if(!input) return;
 const testo = input.value.trim();
 if(!testo) return;
-  if (testo.length > 1000) { mostraNotifica("Massimo 1000 caratteri."); return; }
+  if (testo.length > 300) { mostraNotifica("Massimo 300 caratteri."); return; }
   if (!inviaMessaggioSocket({
    tipo:"chat",
    testo:testo
@@ -1838,8 +1911,7 @@ function connetti() {
     }
 
     if (dati.tipo === "partitaAvviata") {
-      window.location.href =
-        `gioco.html?partita=${encodeURIComponent(dati.partitaId)}&stanza=${stanzaCodificata}`;
+      riprendiPartita(dati.partitaId, dati.mediaAttiva === true);
     }
 
     if (dati.tipo === "invitoRicevuto") {
@@ -1880,14 +1952,18 @@ window.addEventListener("pageshow", () => {
   if (sessioneVerificata) connetti();
 });
 // ===== CREAZIONE / LISTA PARTITE =====
-function creaPartita() {
+async function creaPartita() {
   const tipo = document.getElementById("tipoPartita").value;
+  const mediaAttiva = document.getElementById("mediaPartita").value === "on";
+  if (!(await richiediConsensoMediaSeNecessario(mediaAttiva))) return;
   const inviato = inviaMessaggioSocket({
     tipo: "creaPartita",
     tempo: document.getElementById("tempo").value,
     punti: document.getElementById("punti").value,
     modalita: tipo,
-    maxGiocatori: document.getElementById("numeroGiocatori").value
+    maxGiocatori: document.getElementById("numeroGiocatori").value,
+    mediaAttiva,
+    mediaConsenso: mediaAttiva
   });
   if (!inviato) return;
   if (tipo === "privata") aspettaPropriaPartitaPrivata = true;
@@ -1917,7 +1993,7 @@ function mostraPartite(lista) {
     if (partita.iniziata) {
       // Partita già avviata: chi ne fa parte può rientrare, gli altri la vedono solo "in corso"
       if (cePartecipo) {
-        azioniHtml = `<button class="btn-riprendi-scheda" onclick="window.location.href='gioco.html?partita=${encodeURIComponent(partita.id)}&stanza=${stanzaCodificata}'">Riprendi</button>`;
+        azioniHtml = `<button class="btn-riprendi-scheda" onclick="riprendiPartita('${partita.id}', ${partita.mediaAttiva === true})">Riprendi</button>`;
       } else {
         azioniHtml = `<button disabled>🎲 In corso</button>`;
       }
@@ -1938,7 +2014,7 @@ function mostraPartite(lista) {
     } else if (partita.modalita === "privata") {
       azioniHtml = `<button disabled>🔒 Solo su invito</button>`;
     } else {
-      azioniHtml = `<button onclick="entraPartita('${partita.id}')" ${piena ? 'disabled' : ''}>${piena ? 'Piena' : 'Entra'}</button>`;
+      azioniHtml = `<button onclick="entraPartita('${partita.id}', ${partita.mediaAttiva === true})" ${piena ? 'disabled' : ''}>${piena ? 'Piena' : 'Entra'}</button>`;
     }
 
     html += `
@@ -1946,6 +2022,7 @@ function mostraPartite(lista) {
       <div class="info-partita">
         🎲 ${creatorePulito}<br>
         ${partita.modalita === "privata" ? "🔒 Privata" : "🔓 Pubblica"}<br>
+        ${partita.mediaAttiva === true ? "🎥 Webcam e microfono attivi" : "🔇 Webcam e microfono disattivi"}<br>
         ⏱ ${tempoPulito} secondi<br>
         🏆 ${puntiPuliti} punti
         <div style="margin-top:8px;">👥 ${partita.numGiocatoriAttuali} su ${partita.maxGiocatori}</div>
@@ -1960,15 +2037,17 @@ function mostraPartite(lista) {
     if (mia) { aspettaPropriaPartitaPrivata = false; apriModalInvito(mia.id); }
   }
 }
-function entraPartita(id) {
-  inviaMessaggioSocket({ tipo: "entraPartita", id: id });
+async function entraPartita(id, mediaAttiva) {
+  const richiedeMedia = mediaAttiva === true;
+  if (!(await richiediConsensoMediaSeNecessario(richiedeMedia))) return;
+  inviaMessaggioSocket({ tipo: "entraPartita", id: id, mediaConsenso: richiedeMedia });
 }
 // ===== CHAT =====
 function inviaChat() {
   let testo = document.getElementById("messaggio").value.trim();
   if (testo === "") return;
-  if (testo.length > 1000) {
-    mostraNotifica("Massimo 1000 caratteri.");
+  if (testo.length > 300) {
+    mostraNotifica("Massimo 300 caratteri.");
     return;
   }
   if (!inviaMessaggioSocket({ tipo: "chat", testo: testo })) return;
@@ -2387,14 +2466,18 @@ function segnaInvitatoNelModal(destinatarioUid) {
 }
 function mostraInvitoRicevuto(dati) {
   invitoAttivoPartitaId = dati.partitaId;
-  document.getElementById("testoInvitoRicevuto").textContent = "🎲 " + dati.daNome + " ti ha invitato a giocare!";
+  invitoAttivoMedia = dati.mediaAttiva === true;
+  document.getElementById("testoInvitoRicevuto").textContent = "🎲 " + dati.daNome + " ti ha invitato a giocare! " +
+    (invitoAttivoMedia ? "🎥 In questo tavolo webcam e microfono sono attivi per tutti." : "🔇 Webcam e microfono sono disattivi.");
   document.getElementById("cardInvitoRicevuto").classList.remove("nascosto");
 }
-function rispondiInvito(accettato) {
+async function rispondiInvito(accettato) {
   if (!invitoAttivoPartitaId) return;
-  if (!inviaMessaggioSocket({ tipo: "rispostaInvito", partitaId: invitoAttivoPartitaId, accettato })) return;
+  if (accettato && !(await richiediConsensoMediaSeNecessario(invitoAttivoMedia))) return;
+  if (!inviaMessaggioSocket({ tipo: "rispostaInvito", partitaId: invitoAttivoPartitaId, accettato, mediaConsenso: accettato && invitoAttivoMedia })) return;
   document.getElementById("cardInvitoRicevuto").classList.add("nascosto");
   invitoAttivoPartitaId = null;
+  invitoAttivoMedia = false;
 }
 let temaSalvato=localStorage.getItem("tema");
 if(temaSalvato==="scuro"){
