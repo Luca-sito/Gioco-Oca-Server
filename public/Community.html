@@ -1586,7 +1586,11 @@ img{
 
 .classifica-riga{
 
-    min-height:51px;
+    width:100%;
+    min-height:56px;
+
+    padding:
+        5px 6px;
 
     display:flex;
     align-items:center;
@@ -1596,6 +1600,142 @@ img{
     border-bottom:
         1px solid
         #f0f0f1;
+
+    border-radius:8px;
+
+    color:inherit;
+    text-decoration:none;
+
+    cursor:pointer;
+
+    transition:
+        background .15s ease,
+        transform .15s ease,
+        box-shadow .15s ease;
+}
+
+
+.classifica-riga:hover{
+
+    background:
+        #fff8cf;
+
+    transform:
+        translateX(2px);
+
+}
+
+
+.classifica-riga:active{
+
+    background:
+        #ffed7a;
+
+    transform:
+        translateX(1px)
+        scale(.99);
+
+}
+
+
+.classifica-riga:focus-visible{
+
+    outline:
+        2px solid
+        #ffd400;
+
+    outline-offset:
+        -2px;
+
+}
+
+
+/* Freccia a destra */
+.classifica-freccia{
+
+    margin-left:auto;
+
+    padding-right:3px;
+
+    color:#b0b0b5;
+
+    font-size:22px;
+    font-weight:700;
+
+    line-height:1;
+
+    opacity:0;
+
+    transform:
+        translateX(-3px);
+
+    transition:
+        opacity .15s ease,
+        transform .15s ease,
+        color .15s ease;
+}
+
+
+.classifica-riga:hover
+.classifica-freccia{
+
+    opacity:1;
+
+    color:#111;
+
+    transform:
+        translateX(0);
+
+}
+
+
+/* Anche nickname e avatar fanno capire che sono cliccabili */
+.classifica-riga
+.classifica-nome{
+
+    transition:
+        color .15s ease;
+}
+
+
+.classifica-riga:hover
+.classifica-nome{
+
+    color:#000;
+
+    text-decoration:
+        underline;
+
+    text-decoration-color:
+        #ffd400;
+
+    text-decoration-thickness:
+        2px;
+
+    text-underline-offset:
+        2px;
+
+}
+
+
+.classifica-riga
+.avatar-piccolo{
+
+    transition:
+        transform .15s ease,
+        box-shadow .15s ease;
+}
+
+
+.classifica-riga:hover
+.avatar-piccolo{
+
+    transform:
+        scale(1.08);
+
+    box-shadow:
+        0 0 0 3px
+        rgba(255,212,0,.35);
 
 }
 
@@ -3469,7 +3609,7 @@ textarea.campo{
 
 
                 <a
-                    href="https://gioco-oca-server.onrender.com/regole-community.html"
+                    href="https://solfriniluca1.wixstudio.com/giochisocieta"
                     target="_top"
                     style="
                         display:block;
@@ -6331,12 +6471,34 @@ async function caricaClassifica(){
             "classificaCommunity"
         );
 
+
     try{
 
-        const dati =
-            await apiCommunity(
-                "/api/top-giocatori"
+        const risposta =
+            await fetch(
+                SERVER +
+                "/api/top-giocatori",
+                {
+                    cache:
+                        "no-store"
+                }
             );
+
+
+        if(
+            !risposta.ok
+        ){
+
+            throw new Error(
+                "Classifica non disponibile"
+            );
+
+        }
+
+
+        const dati =
+            await risposta.json();
+
 
         const giocatori =
             Array.isArray(
@@ -6345,11 +6507,13 @@ async function caricaClassifica(){
                 ? dati.giocatori
                 : [];
 
+
         if(
             !giocatori.length
         ){
 
-            contenitore.innerHTML = `
+            contenitore.innerHTML =
+                `
                 <div
                     style="
                         padding:18px;
@@ -6360,11 +6524,12 @@ async function caricaClassifica(){
                 >
                     Nessun giocatore disponibile.
                 </div>
-            `;
+                `;
 
             return;
 
         }
+
 
         contenitore.innerHTML =
             giocatori
@@ -6382,44 +6547,106 @@ async function caricaClassifica(){
                         giocatore.nickname ||
                         "Giocatore";
 
+
+                    const linkProfilo =
+                        SERVER +
+                        "/profilo-pubblico.html?nickname=" +
+                        encodeURIComponent(
+                            nome
+                        );
+
+
                     return `
 
-                        <div class="classifica-riga">
+                        <a
+                            class="classifica-riga"
+                            href="${linkProfilo}"
+                            target="_top"
+                            title="Apri il profilo di ${escapeHtml(nome)}"
+                            aria-label="Apri il profilo di ${escapeHtml(nome)}"
+                        >
 
                             <div
                                 class="
                                     classifica-posizione
-                                    ${indice < 3 ? "podio" : ""}
+                                    ${
+                                        indice < 3
+                                            ? "podio"
+                                            : ""
+                                    }
                                 "
                             >
-                                ${indice + 1}
+                                ${
+                                    indice + 1
+                                }
                             </div>
+
 
                             <div
                                 class="avatar-piccolo"
-                                style="background:${coloreDaNome(nome)}"
+                                style="
+                                    background:
+                                    ${
+                                        coloreDaNome(
+                                            nome
+                                        )
+                                    }
+                                "
                             >
-                                ${escapeHtml(iniziale(nome))}
+                                ${
+                                    escapeHtml(
+                                        iniziale(
+                                            nome
+                                        )
+                                    )
+                                }
                             </div>
+
 
                             <div class="classifica-info">
 
                                 <div class="classifica-nome">
-                                    ${escapeHtml(nome)}
+
+                                    ${
+                                        escapeHtml(
+                                            nome
+                                        )
+                                    }
+
                                 </div>
+
 
                                 <div class="classifica-stat">
 
-                                    ${Number(giocatore.vinte || 0)}
+                                    ${
+                                        Number(
+                                            giocatore.vinte ||
+                                            0
+                                        )
+                                    }
                                     vittorie ·
-                                    ${Number(giocatore.giocate || 0)}
+
+                                    ${
+                                        Number(
+                                            giocatore.giocate ||
+                                            0
+                                        )
+                                    }
                                     partite
 
                                 </div>
 
                             </div>
 
-                        </div>
+
+                            <div
+                                class="classifica-freccia"
+                                aria-hidden="true"
+                            >
+                                ›
+                            </div>
+
+                        </a>
 
                     `;
 
@@ -6427,11 +6654,19 @@ async function caricaClassifica(){
             )
             .join("");
 
+
     }catch(
         errore
     ){
 
-        contenitore.innerHTML = `
+        console.error(
+            "Errore classifica Community:",
+            errore
+        );
+
+
+        contenitore.innerHTML =
+            `
             <div
                 style="
                     padding:18px;
@@ -6442,12 +6677,11 @@ async function caricaClassifica(){
             >
                 Classifica temporaneamente non disponibile.
             </div>
-        `;
+            `;
 
     }
 
 }
-
 
 /* =========================================================
    LINK CONDIVISO
