@@ -1496,3 +1496,80 @@ body.modalita-desktop.media-partita #btn-giocatori {
   }
 
 }
+
+/* =========================================================
+   REGOLAZIONE FINALE TABELLONE MOBILE
+   ========================================================= */
+
+@media (max-width: 600px) {
+
+    /*
+     * Tabellone molto più grande.
+     *
+     * translateY(32px):
+     * essendo tutto ruotato di 90°, lo sposta visivamente
+     * verso SINISTRA sul telefono.
+     *
+     * scale(1.11):
+     * lo porta quasi fino ai bordi indicati in rosso.
+     */
+    body.modalita-ruotata #area-tabellone {
+        transform:
+            translateY(32px)
+            scale(1.11) !important;
+
+        transform-origin:
+            center center !important;
+
+        margin:0 !important;
+        padding:0 !important;
+    }
+
+
+    /* =====================================================
+       DADI NELLA ZONA GIALLA
+       ===================================================== */
+
+    body.modalita-ruotata
+    #area-tabellone
+    > #area-dadi:not(.dadi-in-popup) {
+
+        top:auto !important;
+        right:auto !important;
+
+        /*
+         * Nel tabellone non ruotato è il bordo inferiore.
+         * Dopo la rotazione di 90° appare sul LATO SINISTRO
+         * esattamente come nella zona gialla che hai segnato.
+         */
+        bottom:17% !important;
+        left:50% !important;
+
+        transform:
+            translateX(-50%)
+            rotate(-90deg) !important;
+
+        transform-origin:
+            center center !important;
+
+        gap:10px;
+        padding:7px 12px;
+    }
+
+
+    /*
+     * Nel popup CHI INIZIA? i dadi devono invece
+     * restare normali e dritti.
+     */
+    body.modalita-ruotata
+    #area-dadi.dadi-in-popup {
+
+        position:static !important;
+
+        margin:
+            16px auto 0 !important;
+
+        transform:none !important;
+    }
+
+}
