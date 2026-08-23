@@ -1206,9 +1206,83 @@ body.tema-scuro .giocatore-online{
         display:none !important;
     }
 }
+/* =========================================================
+   PULSANTE INDIETRO
+========================================================= */
+.pulsante-indietro{
+    position:fixed;
+    top:14px;
+    left:14px;
+    width:46px;
+    height:46px;
+    padding:0;
+    margin:0;
+    border:none;
+    border-radius:50%;
+    background:#111;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    z-index:10000;
+    box-shadow:0 4px 12px rgba(0,0,0,.25);
+    transition:
+        transform .15s ease,
+        background .15s ease,
+        box-shadow .15s ease;
+}
+
+.pulsante-indietro:hover{
+    background:#ff6600;
+    opacity:1;
+    transform:translateX(-2px);
+    box-shadow:0 6px 16px rgba(0,0,0,.30);
+}
+
+.pulsante-indietro:active{
+    transform:scale(.94);
+}
+
+/* ICONA DENTRO IL PULSANTE */
+.pulsante-indietro .icona-indietro{
+    width:26px;
+    height:26px;
+    object-fit:contain;
+    display:block;
+    pointer-events:none;
+}
+
+/* MOBILE */
+@media(max-width:600px){
+    .pulsante-indietro{
+        top:7px;
+        left:8px;
+        width:36px;
+        height:36px;
+        z-index:10001;
+    }
+
+    .pulsante-indietro .icona-indietro{
+        width:22px;
+        height:22px;
+    }
+}
 </style>
 </head>
 <body>
+   <button
+    type="button"
+    class="pulsante-indietro"
+    onclick="window.location.href='https://gioco-oca-server.onrender.com/stanze.html'"
+    aria-label="Torna alle stanze"
+    title="Torna alle stanze"
+>
+    <img
+        src="https://gioco-oca-server.onrender.com/Immagini/Tornaindietro.png"
+        alt=""
+        class="icona-indietro"
+    >
+</button>
 <div id="cardInvitoRicevuto" class="nascosto">
   <div id="testoInvitoRicevuto"></div>
   <div class="invito-bottoni">
