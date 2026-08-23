@@ -2511,6 +2511,299 @@ textarea.campo{
 
 }
 
+
+/* =========================================================
+   COMMUNITY REALE - STATO FEED
+========================================================= */
+
+#listaPostCommunity{
+    min-width:0;
+}
+
+.community-caricamento{
+    padding:42px 20px;
+    margin-bottom:15px;
+    text-align:center;
+    color:#8a8a90;
+    font-size:11px;
+}
+
+.community-caricamento-spinner{
+    width:28px;
+    height:28px;
+    margin:0 auto 12px;
+    border:3px solid #ececef;
+    border-top-color:var(--giallo);
+    border-radius:50%;
+    animation:community-spin .75s linear infinite;
+}
+
+@keyframes community-spin{
+    to{ transform:rotate(360deg); }
+}
+
+
+/* =========================================================
+   COMMENTI
+========================================================= */
+
+.sezione-commenti{
+    display:none;
+    border-top:1px solid #ededee;
+    background:#fafafa;
+}
+
+.sezione-commenti.aperta{
+    display:block;
+}
+
+.commenti-interno{
+    padding:14px 16px 16px;
+}
+
+.commenti-caricamento,
+.commenti-vuoti{
+    padding:18px 10px;
+    color:#96969c;
+    font-size:10px;
+    text-align:center;
+}
+
+.commento-riga{
+    display:flex;
+    align-items:flex-start;
+    gap:9px;
+    padding:10px 0;
+    border-bottom:1px solid #ececee;
+}
+
+.commento-riga:last-child{
+    border-bottom:0;
+}
+
+.commento-avatar{
+    width:30px;
+    height:30px;
+    flex:0 0 30px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+    border-radius:50%;
+    background:#222;
+    color:#fff;
+    font-size:10px;
+    font-weight:900;
+}
+
+.commento-avatar img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+}
+
+.commento-corpo{
+    min-width:0;
+    flex:1;
+}
+
+.commento-testata{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    min-width:0;
+}
+
+.commento-autore{
+    min-width:0;
+    overflow:hidden;
+    color:#202024;
+    font-size:10px;
+    font-weight:900;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+}
+
+.commento-data{
+    flex-shrink:0;
+    color:#9b9ba1;
+    font-size:8px;
+}
+
+.commento-testo{
+    margin-top:4px;
+    color:#55555c;
+    font-size:11px;
+    line-height:1.5;
+    overflow-wrap:anywhere;
+    white-space:pre-wrap;
+}
+
+.btn-elimina-commento{
+    margin-left:auto;
+    flex-shrink:0;
+    border:0;
+    background:transparent;
+    color:#b34a4a;
+    font-size:9px;
+    font-weight:800;
+}
+
+.btn-elimina-commento:hover{
+    text-decoration:underline;
+}
+
+.scrivi-commento{
+    display:flex;
+    align-items:flex-end;
+    gap:8px;
+    margin-top:12px;
+    padding-top:12px;
+    border-top:1px solid #e5e5e7;
+}
+
+.scrivi-commento .commento-avatar{
+    margin-bottom:3px;
+}
+
+.commento-input{
+    min-height:38px;
+    max-height:110px;
+    flex:1;
+    resize:none;
+    padding:10px 12px;
+    border:1px solid #dcdcdf;
+    border-radius:10px;
+    outline:none;
+    background:#fff;
+    color:#222;
+    font-size:11px;
+    line-height:1.4;
+}
+
+.commento-input:focus{
+    border-color:#d5b200;
+    box-shadow:0 0 0 3px rgba(255,212,0,.12);
+}
+
+.commento-input:disabled{
+    background:#f2f2f3;
+    color:#929298;
+    cursor:not-allowed;
+}
+
+.btn-invia-commento{
+    min-width:72px;
+    min-height:38px;
+    padding:0 12px;
+    border:0;
+    border-radius:9px;
+    background:var(--giallo);
+    color:#111;
+    font-size:10px;
+    font-weight:900;
+}
+
+.btn-invia-commento:disabled{
+    opacity:.55;
+    cursor:not-allowed;
+}
+
+
+/* =========================================================
+   POST MENU / STATO
+========================================================= */
+
+.post-header{
+    position:relative;
+}
+
+.post-menu{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+
+.post-stato-azione{
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    margin-left:4px;
+    color:#8f8f95;
+    font-size:9px;
+}
+
+.post-azione.caricamento{
+    opacity:.55;
+    pointer-events:none;
+}
+
+.post-azione.attiva .icona{
+    fill:currentColor;
+}
+
+.post-azione-salva.attiva{
+    background:#111;
+    color:var(--giallo);
+}
+
+.post-azione-condividi.attiva{
+    background:#eef5ff;
+    color:#245ca8;
+}
+
+
+/* =========================================================
+   AVVISO LOGIN COMMENTI
+========================================================= */
+
+.commenti-login{
+    padding:11px 12px;
+    margin-top:10px;
+    border:1px solid #eadb80;
+    border-radius:9px;
+    background:#fffcef;
+    color:#665600;
+    font-size:10px;
+    text-align:center;
+}
+
+
+/* =========================================================
+   MOBILE COMMENTI
+========================================================= */
+
+@media(max-width:760px){
+
+    .commenti-interno{
+        padding:12px;
+    }
+
+    .commento-riga{
+        gap:8px;
+    }
+
+    .commento-avatar{
+        width:28px;
+        height:28px;
+        flex-basis:28px;
+    }
+
+    .scrivi-commento{
+        gap:6px;
+    }
+
+    .btn-invia-commento{
+        min-width:62px;
+        padding:0 9px;
+    }
+
+    .commento-input{
+        font-size:16px;
+    }
+
+}
+
 </style>
 </head>
 
@@ -3049,593 +3342,17 @@ textarea.campo{
 
 
         <!-- ==================================================
-             POST 1
+             FEED REALE CARICATO DAL SERVER
         =================================================== -->
 
-        <article
-            class="post-community card"
-            data-categoria="discussioni"
-            data-testo="nuova community giochi società giocatori"
-        >
+        <div id="listaPostCommunity">
 
-            <div class="post-interno">
-
-                <div class="post-header">
-
-                    <div
-                        class="avatar"
-                        style="background:#6a2c70"
-                    >
-                        L
-                    </div>
-
-
-                    <div class="post-autore-info">
-
-                        <div class="post-autore-riga">
-
-                            <span class="post-autore">
-                                LucaPlayer
-                            </span>
-
-                            <span class="badge-autore">
-                                MEMBRO
-                            </span>
-
-                        </div>
-
-
-                        <div class="post-meta">
-
-                            5 minuti fa · Pubblico
-
-                        </div>
-
-                    </div>
-
-
-                    <button class="post-menu">
-                        ⋯
-                    </button>
-
-                </div>
-
-
-                <div class="post-categoria">
-                    Discussione
-                </div>
-
-
-                <h2 class="post-titolo">
-
-                    Che ne pensate della nuova area Community?
-
-                </h2>
-
-
-                <p class="post-testo">
-
-                    Finalmente possiamo avere un posto dedicato
-                    per parlare delle partite, organizzare tavoli
-                    e conoscere altri giocatori.
-
-                </p>
-
+            <div class="community-caricamento card">
+                <div class="community-caricamento-spinner"></div>
+                Caricamento discussioni...
             </div>
 
-
-            <div class="post-azioni">
-
-                <button
-                    class="post-azione"
-                    onclick="toggleReazione(this)"
-                >
-
-                    <svg class="icona">
-                        <use href="#i-heart"></use>
-                    </svg>
-
-                    <span class="numero-reazioni">
-                        18
-                    </span>
-
-                </button>
-
-
-                <button class="post-azione">
-
-                    <svg class="icona">
-                        <use href="#i-comment"></use>
-                    </svg>
-
-                    7 commenti
-
-                </button>
-
-
-                <button class="post-azione">
-
-                    <svg class="icona">
-                        <use href="#i-share"></use>
-                    </svg>
-
-                    Condividi
-
-                </button>
-
-
-                <button
-                    class="post-azione"
-                    style="margin-left:auto"
-                    onclick="this.classList.toggle('attiva')"
-                >
-
-                    <svg class="icona">
-                        <use href="#i-bookmark"></use>
-                    </svg>
-
-                </button>
-
-            </div>
-
-        </article>
-
-
-        <!-- ==================================================
-             POST 2 CERCO GIOCATORI
-        =================================================== -->
-
-        <article
-            class="post-community card"
-            data-categoria="giocatori"
-            data-testo="cerco giocatori partita tavolo gioco oca bar"
-        >
-
-            <div class="post-interno">
-
-                <div class="post-header">
-
-                    <div
-                        class="avatar"
-                        style="background:#1e40af"
-                    >
-                        M
-                    </div>
-
-
-                    <div class="post-autore-info">
-
-                        <div class="post-autore-riga">
-
-                            <span class="post-autore">
-                                Marco82
-                            </span>
-
-                        </div>
-
-
-                        <div class="post-meta">
-
-                            11 minuti fa · Cerco giocatori
-
-                        </div>
-
-                    </div>
-
-
-                    <button class="post-menu">
-                        ⋯
-                    </button>
-
-                </div>
-
-
-                <div class="post-categoria">
-                    Cerco giocatori
-                </div>
-
-
-                <h2 class="post-titolo">
-
-                    Qualcuno per una partita adesso?
-
-                </h2>
-
-
-                <p class="post-testo">
-
-                    Sto creando un tavolo da 4 giocatori.
-                    Se qualcuno vuole unirsi siamo già in due.
-
-                </p>
-
-
-                <div class="tavolo-community">
-
-                    <div class="tavolo-community-icona">
-                        🎲
-                    </div>
-
-
-                    <div class="tavolo-community-info">
-
-                        <strong>
-                            Gioco dell'Oca · BAR
-                        </strong>
-
-                        <span>
-                            2 / 4 giocatori · Tavolo pubblico
-                        </span>
-
-                    </div>
-
-
-                    <button
-                        class="btn-unisciti"
-                        onclick="mostraToast('Apertura del tavolo di gioco...')"
-                    >
-                        Unisciti
-                    </button>
-
-                </div>
-
-            </div>
-
-
-            <div class="post-azioni">
-
-                <button
-                    class="post-azione"
-                    onclick="toggleReazione(this)"
-                >
-
-                    <svg class="icona">
-                        <use href="#i-heart"></use>
-                    </svg>
-
-                    <span class="numero-reazioni">
-                        9
-                    </span>
-
-                </button>
-
-
-                <button class="post-azione">
-
-                    <svg class="icona">
-                        <use href="#i-comment"></use>
-                    </svg>
-
-                    3 commenti
-
-                </button>
-
-
-                <button class="post-azione">
-
-                    <svg class="icona">
-                        <use href="#i-share"></use>
-                    </svg>
-
-                    Condividi
-
-                </button>
-
-            </div>
-
-        </article>
-
-
-        <!-- ==================================================
-             POST 3 STRATEGIA
-        =================================================== -->
-
-        <article
-            class="post-community card"
-            data-categoria="strategie"
-            data-testo="strategia gioco oca caselle dadi"
-        >
-
-            <div class="post-interno">
-
-                <div class="post-header">
-
-                    <div
-                        class="avatar"
-                        style="background:#00838f"
-                    >
-                        A
-                    </div>
-
-
-                    <div class="post-autore-info">
-
-                        <div class="post-autore-riga">
-
-                            <span class="post-autore">
-                                AleBoard
-                            </span>
-
-                            <span class="badge-autore">
-                                VETERANO
-                            </span>
-
-                        </div>
-
-
-                        <div class="post-meta">
-
-                            38 minuti fa
-
-                        </div>
-
-                    </div>
-
-
-                    <button class="post-menu">
-                        ⋯
-                    </button>
-
-                </div>
-
-
-                <div class="post-categoria">
-                    Strategie
-                </div>
-
-
-                <h2 class="post-titolo">
-
-                    Qual è la casella che vi ha fatto perdere più partite?
-
-                </h2>
-
-
-                <p class="post-testo">
-
-                    Per me non c'è confronto. Ogni volta che
-                    penso di essere vicino alla vittoria succede
-                    qualcosa e torno indietro.
-
-                </p>
-
-
-                <div class="sondaggio">
-
-                    <strong style="font-size:11px">
-                        Vota la casella più temuta
-                    </strong>
-
-
-                    <div class="sondaggio-opzione">
-
-                        <div
-                            class="sondaggio-riempimento"
-                            style="width:58%"
-                        ></div>
-
-                        <div class="sondaggio-contenuto">
-
-                            Casella 58
-
-                            <span>
-                                58%
-                            </span>
-
-                        </div>
-
-                    </div>
-
-
-                    <div class="sondaggio-opzione">
-
-                        <div
-                            class="sondaggio-riempimento"
-                            style="width:27%"
-                        ></div>
-
-                        <div class="sondaggio-contenuto">
-
-                            Casella 50
-
-                            <span>
-                                27%
-                            </span>
-
-                        </div>
-
-                    </div>
-
-
-                    <div class="sondaggio-opzione">
-
-                        <div
-                            class="sondaggio-riempimento"
-                            style="width:15%"
-                        ></div>
-
-                        <div class="sondaggio-contenuto">
-
-                            Altre
-
-                            <span>
-                                15%
-                            </span>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-
-            <div class="post-azioni">
-
-                <button
-                    class="post-azione"
-                    onclick="toggleReazione(this)"
-                >
-
-                    <svg class="icona">
-                        <use href="#i-heart"></use>
-                    </svg>
-
-                    <span class="numero-reazioni">
-                        31
-                    </span>
-
-                </button>
-
-
-                <button class="post-azione">
-
-                    <svg class="icona">
-                        <use href="#i-comment"></use>
-                    </svg>
-
-                    21 commenti
-
-                </button>
-
-
-                <button class="post-azione">
-
-                    <svg class="icona">
-                        <use href="#i-share"></use>
-                    </svg>
-
-                    Condividi
-
-                </button>
-
-            </div>
-
-        </article>
-
-
-        <!-- ==================================================
-             POST EVENTO
-        =================================================== -->
-
-        <article
-            class="post-community card"
-            data-categoria="eventi"
-            data-testo="evento torneo community classifica"
-        >
-
-            <div class="post-interno">
-
-                <div class="post-header">
-
-                    <div
-                        class="avatar"
-                        style="
-                            background:#111;
-                            color:#ffd400;
-                        "
-                    >
-                        GS
-                    </div>
-
-
-                    <div class="post-autore-info">
-
-                        <div class="post-autore-riga">
-
-                            <span class="post-autore">
-                                Giochi Società
-                            </span>
-
-                            <span class="badge-autore">
-                                UFFICIALE
-                            </span>
-
-                        </div>
-
-
-                        <div class="post-meta">
-
-                            Oggi · Annuncio Community
-
-                        </div>
-
-                    </div>
-
-
-                    <button class="post-menu">
-                        ⋯
-                    </button>
-
-                </div>
-
-
-                <div class="post-categoria">
-                    Evento
-                </div>
-
-
-                <h2 class="post-titolo">
-
-                    🏆 Nuove sfide Community in arrivo
-
-                </h2>
-
-
-                <p class="post-testo">
-
-                    Stiamo preparando nuove attività dedicate
-                    ai giocatori più attivi. Segui la Community
-                    per non perdere aggiornamenti e classifiche.
-
-                </p>
-
-            </div>
-
-
-            <div class="post-azioni">
-
-                <button
-                    class="post-azione"
-                    onclick="toggleReazione(this)"
-                >
-
-                    <svg class="icona">
-                        <use href="#i-heart"></use>
-                    </svg>
-
-                    <span class="numero-reazioni">
-                        54
-                    </span>
-
-                </button>
-
-
-                <button class="post-azione">
-
-                    <svg class="icona">
-                        <use href="#i-comment"></use>
-                    </svg>
-
-                    14 commenti
-
-                </button>
-
-
-                <button class="post-azione">
-
-                    <svg class="icona">
-                        <use href="#i-share"></use>
-                    </svg>
-
-                    Condividi
-
-                </button>
-
-            </div>
-
-        </article>
+        </div>
 
 
         <div
@@ -3874,7 +3591,7 @@ textarea.campo{
 
             <button
                 class="btn-pubblica"
-                onclick="pubblicaPostLocale()"
+                onclick="pubblicaPost()"
             >
                 Pubblica
             </button>
@@ -3893,22 +3610,42 @@ textarea.campo{
 <div id="toastCommunity"></div>
 
 
+
 <script>
 
 /* =========================================================
-   CONFIGURAZIONE
+   CONFIGURAZIONE COMMUNITY REALE
 ========================================================= */
 
 const SERVER =
     "https://gioco-oca-server.onrender.com";
 
+const COMMUNITY_URL =
+    "https://solfriniluca1.wixstudio.com/giochisocieta";
+
+const INTERVALLO_AGGIORNAMENTO_POST =
+    8000;
 
 let utenteCorrente =
     null;
 
-
 let categoriaCorrente =
     "tutto";
+
+let ordinamentoCorrente =
+    "rilevanti";
+
+let postCommunity =
+    [];
+
+let postCommentiAperti =
+    new Set();
+
+let caricamentoPostInCorso =
+    false;
+
+let timerToast =
+    null;
 
 
 /* =========================================================
@@ -3947,13 +3684,277 @@ function escapeHtml(testo){
 }
 
 
+function escapeAttr(testo){
+
+    return escapeHtml(
+        testo
+    );
+
+}
+
+
+function avatarSicuro(url){
+
+    const valore =
+        String(
+            url || ""
+        ).trim();
+
+    if(
+        valore.startsWith("https://") ||
+        valore.startsWith("data:image/")
+    ){
+        return valore;
+    }
+
+    return "";
+
+}
+
+
+function coloreDaNome(nome){
+
+    const colori = [
+        "#6a2c70",
+        "#1e40af",
+        "#43a047",
+        "#f57c00",
+        "#c0ca33",
+        "#e53935",
+        "#00838f",
+        "#8d6e63"
+    ];
+
+    let somma =
+        0;
+
+    const testo =
+        String(
+            nome || ""
+        );
+
+    for(
+        let i = 0;
+        i < testo.length;
+        i++
+    ){
+        somma +=
+            testo.charCodeAt(i);
+    }
+
+    return colori[
+        somma %
+        colori.length
+    ];
+
+}
+
+
+function renderAvatar(
+    nickname,
+    avatar,
+    classe = "avatar"
+){
+
+    const avatarPulito =
+        avatarSicuro(
+            avatar
+        );
+
+    if(
+        avatarPulito
+    ){
+
+        return `
+            <div class="${classe}">
+                <img
+                    src="${escapeAttr(avatarPulito)}"
+                    alt=""
+                >
+            </div>
+        `;
+
+    }
+
+    return `
+        <div
+            class="${classe}"
+            style="background:${coloreDaNome(nickname)}"
+        >
+            ${escapeHtml(iniziale(nickname))}
+        </div>
+    `;
+
+}
+
+
+function tempoRelativo(timestamp){
+
+    const data =
+        Number(
+            timestamp || 0
+        );
+
+    if(
+        !data
+    ){
+        return "";
+    }
+
+    const diff =
+        Math.max(
+            0,
+            Date.now() - data
+        );
+
+    const secondi =
+        Math.floor(
+            diff / 1000
+        );
+
+    if(
+        secondi < 45
+    ){
+        return "Adesso";
+    }
+
+    const minuti =
+        Math.floor(
+            secondi / 60
+        );
+
+    if(
+        minuti < 60
+    ){
+        return `${minuti} min fa`;
+    }
+
+    const ore =
+        Math.floor(
+            minuti / 60
+        );
+
+    if(
+        ore < 24
+    ){
+        return `${ore} h fa`;
+    }
+
+    const giorni =
+        Math.floor(
+            ore / 24
+        );
+
+    if(
+        giorni < 7
+    ){
+        return `${giorni} g fa`;
+    }
+
+    return new Date(
+        data
+    ).toLocaleDateString(
+        "it-IT",
+        {
+            day:"2-digit",
+            month:"2-digit",
+            year:"numeric"
+        }
+    );
+
+}
+
+
+function etichettaCategoria(categoria){
+
+    const etichette = {
+        discussioni:"Discussione",
+        giocatori:"Cerco giocatori",
+        strategie:"Strategie",
+        eventi:"Eventi",
+        supporto:"Supporto"
+    };
+
+    return etichette[
+        categoria
+    ] || "Discussione";
+
+}
+
+
+/* =========================================================
+   API
+========================================================= */
+
+async function apiCommunity(
+    percorso,
+    opzioni = {}
+){
+
+    const configurazione = {
+        credentials:"include",
+        cache:"no-store",
+        ...opzioni
+    };
+
+    if(
+        configurazione.body &&
+        !(configurazione.body instanceof FormData)
+    ){
+
+        configurazione.headers = {
+            "Content-Type":"application/json",
+            ...(configurazione.headers || {})
+        };
+
+    }
+
+    const risposta =
+        await fetch(
+            SERVER + percorso,
+            configurazione
+        );
+
+    let dati = {};
+
+    try{
+
+        dati =
+            await risposta.json();
+
+    }catch(
+        errore
+    ){
+
+        dati = {};
+
+    }
+
+    if(
+        !risposta.ok
+    ){
+
+        const errore =
+            new Error(
+                dati.errore ||
+                `Errore HTTP ${risposta.status}`
+            );
+
+        errore.status =
+            risposta.status;
+
+        throw errore;
+
+    }
+
+    return dati;
+
+}
+
+
 /* =========================================================
    TOAST
 ========================================================= */
-
-let timerToast =
-    null;
-
 
 function mostraToast(testo){
 
@@ -3962,20 +3963,22 @@ function mostraToast(testo){
             "toastCommunity"
         );
 
+    if(
+        !toast
+    ){
+        return;
+    }
 
     toast.textContent =
         testo;
-
 
     toast.classList.add(
         "visibile"
     );
 
-
     clearTimeout(
         timerToast
     );
-
 
     timerToast =
         setTimeout(
@@ -3986,67 +3989,44 @@ function mostraToast(testo){
                 );
 
             },
-            3000
+            3500
         );
 
 }
 
 
 /* =========================================================
-   CONTROLLO LOGIN
+   UTENTE
 ========================================================= */
 
 async function controllaUtente(){
 
     try{
 
-        const risposta =
-            await fetch(
-                SERVER + "/api/me",
-                {
-                    credentials:"include",
-                    cache:"no-store"
-                }
+        utenteCorrente =
+            await apiCommunity(
+                "/api/me"
             );
 
-
-        if(
-            !risposta.ok
-        ){
-
-            return;
-
-        }
-
-
-        const dati =
-            await risposta.json();
-
-
-        utenteCorrente =
-            dati;
-
-
         aggiornaUtenteCommunity(
-            dati
+            utenteCorrente
         );
 
+    }catch(
+        errore
+    ){
 
-    }catch(errore){
+        utenteCorrente =
+            null;
 
-        console.warn(
-            "Impossibile recuperare l'utente:",
-            errore
+        aggiornaUtenteCommunity(
+            null
         );
 
     }
 
 }
 
-
-/* =========================================================
-   UTENTE NEL COMPOSER
-========================================================= */
 
 function aggiornaUtenteCommunity(
     dati
@@ -4057,21 +4037,53 @@ function aggiornaUtenteCommunity(
             "avatarComposer"
         );
 
+    if(
+        !avatar
+    ){
+        return;
+    }
 
     if(
-        dati.avatar
+        !dati
     ){
 
         avatar.innerHTML =
-            `<img
-                src="${escapeHtml(dati.avatar)}"
+            "?";
+
+        avatar.style.background =
+            "#202024";
+
+        return;
+
+    }
+
+    const avatarPulito =
+        avatarSicuro(
+            dati.avatar
+        );
+
+    if(
+        avatarPulito
+    ){
+
+        avatar.innerHTML = `
+            <img
+                src="${escapeAttr(avatarPulito)}"
                 alt=""
-            >`;
+            >
+        `;
 
     }else{
 
-        avatar.textContent =
-            iniziale(
+        avatar.innerHTML =
+            escapeHtml(
+                iniziale(
+                    dati.nickname
+                )
+            );
+
+        avatar.style.background =
+            coloreDaNome(
                 dati.nickname
             );
 
@@ -4081,7 +4093,759 @@ function aggiornaUtenteCommunity(
 
 
 /* =========================================================
-   MODALE POST
+   CARICAMENTO POST REALI
+========================================================= */
+
+async function caricaPost(
+    silenzioso = false
+){
+
+    if(
+        caricamentoPostInCorso
+    ){
+        return;
+    }
+
+    /*
+     * Se l'utente sta scrivendo un commento,
+     * non ricostruiamo il feed sotto le sue dita.
+     */
+    const elementoAttivo =
+        document.activeElement;
+
+    if(
+        silenzioso &&
+        elementoAttivo &&
+        elementoAttivo.classList &&
+        elementoAttivo.classList.contains(
+            "commento-input"
+        )
+    ){
+        return;
+    }
+
+    const modalAperto =
+        document
+        .getElementById(
+            "overlayNuovoPost"
+        )
+        ?.classList
+        .contains(
+            "aperto"
+        );
+
+    if(
+        silenzioso &&
+        modalAperto
+    ){
+        return;
+    }
+
+    caricamentoPostInCorso =
+        true;
+
+    const lista =
+        document.getElementById(
+            "listaPostCommunity"
+        );
+
+    if(
+        !silenzioso &&
+        lista
+    ){
+
+        lista.innerHTML = `
+            <div class="community-caricamento card">
+                <div class="community-caricamento-spinner"></div>
+                Caricamento discussioni...
+            </div>
+        `;
+
+    }
+
+    try{
+
+        const dati =
+            await apiCommunity(
+                "/api/community/posts"
+            );
+
+        postCommunity =
+            Array.isArray(
+                dati.posts
+            )
+                ? dati.posts
+                : [];
+
+        renderFeed();
+
+        aggiornaConteggiCategorie();
+
+        /*
+         * Riporta aperte le sezioni commenti
+         * che erano aperte prima del refresh.
+         */
+        for(
+            const postId
+            of postCommentiAperti
+        ){
+
+            const sezione =
+                document.getElementById(
+                    `commenti-${postId}`
+                );
+
+            if(
+                sezione
+            ){
+
+                sezione.classList.add(
+                    "aperta"
+                );
+
+                caricaCommenti(
+                    postId,
+                    true
+                );
+
+            }
+
+        }
+
+    }catch(
+        errore
+    ){
+
+        if(
+            lista
+        ){
+
+            lista.innerHTML = `
+                <div class="community-caricamento card">
+                    Impossibile caricare la Community.
+                    Riprova tra qualche secondo.
+                </div>
+            `;
+
+        }
+
+        console.error(
+            "Errore caricamento Community:",
+            errore
+        );
+
+    }finally{
+
+        caricamentoPostInCorso =
+            false;
+
+    }
+
+}
+
+
+/* =========================================================
+   ORDINAMENTO E FILTRO
+========================================================= */
+
+function ottieniPostVisibili(){
+
+    const ricerca =
+        document
+        .getElementById(
+            "ricercaCommunity"
+        )
+        .value
+        .trim()
+        .toLowerCase();
+
+    let lista =
+        postCommunity.filter(
+            post => {
+
+                const categoriaOk =
+                    categoriaCorrente ===
+                    "tutto"
+                    ||
+                    post.categoria ===
+                    categoriaCorrente;
+
+                const testoRicerca =
+                    [
+                        post.titolo,
+                        post.testo,
+                        post.nicknameAutore,
+                        etichettaCategoria(
+                            post.categoria
+                        )
+                    ]
+                    .join(" ")
+                    .toLowerCase();
+
+                const ricercaOk =
+                    !ricerca
+                    ||
+                    testoRicerca.includes(
+                        ricerca
+                    );
+
+                return (
+                    categoriaOk &&
+                    ricercaOk
+                );
+
+            }
+        );
+
+    lista =
+        [...lista];
+
+    if(
+        ordinamentoCorrente ===
+        "recenti"
+    ){
+
+        lista.sort(
+            (a,b) =>
+                Number(b.creatoIl || 0) -
+                Number(a.creatoIl || 0)
+        );
+
+    }else if(
+        ordinamentoCorrente ===
+        "discussi"
+    ){
+
+        lista.sort(
+            (a,b) =>
+                (
+                    Number(
+                        b.conteggioCommenti || 0
+                    ) -
+                    Number(
+                        a.conteggioCommenti || 0
+                    )
+                )
+                ||
+                (
+                    Number(
+                        b.creatoIl || 0
+                    ) -
+                    Number(
+                        a.creatoIl || 0
+                    )
+                )
+        );
+
+    }else{
+
+        /*
+         * Rilevanza:
+         * commenti e reazioni pesano di più,
+         * ma i post recenti ricevono comunque priorità.
+         */
+        lista.sort(
+            (a,b) => {
+
+                const etaAOre =
+                    Math.max(
+                        0,
+                        (
+                            Date.now() -
+                            Number(
+                                a.creatoIl || 0
+                            )
+                        ) /
+                        3600000
+                    );
+
+                const etaBOre =
+                    Math.max(
+                        0,
+                        (
+                            Date.now() -
+                            Number(
+                                b.creatoIl || 0
+                            )
+                        ) /
+                        3600000
+                    );
+
+                const punteggioA =
+                    Number(
+                        a.conteggioReazioni || 0
+                    ) * 2
+                    +
+                    Number(
+                        a.conteggioCommenti || 0
+                    ) * 3
+                    +
+                    Number(
+                        a.conteggioCondivisioni || 0
+                    )
+                    -
+                    Math.min(
+                        etaAOre / 12,
+                        20
+                    );
+
+                const punteggioB =
+                    Number(
+                        b.conteggioReazioni || 0
+                    ) * 2
+                    +
+                    Number(
+                        b.conteggioCommenti || 0
+                    ) * 3
+                    +
+                    Number(
+                        b.conteggioCondivisioni || 0
+                    )
+                    -
+                    Math.min(
+                        etaBOre / 12,
+                        20
+                    );
+
+                return (
+                    punteggioB -
+                    punteggioA
+                )
+                ||
+                (
+                    Number(
+                        b.creatoIl || 0
+                    ) -
+                    Number(
+                        a.creatoIl || 0
+                    )
+                );
+
+            }
+        );
+
+    }
+
+    return lista;
+
+}
+
+
+function renderFeed(){
+
+    const contenitore =
+        document.getElementById(
+            "listaPostCommunity"
+        );
+
+    const vuoto =
+        document.getElementById(
+            "feedVuoto"
+        );
+
+    if(
+        !contenitore
+    ){
+        return;
+    }
+
+    const lista =
+        ottieniPostVisibili();
+
+    if(
+        !lista.length
+    ){
+
+        contenitore.innerHTML =
+            "";
+
+        if(
+            vuoto
+        ){
+            vuoto.style.display =
+                "block";
+        }
+
+        return;
+
+    }
+
+    if(
+        vuoto
+    ){
+        vuoto.style.display =
+            "none";
+    }
+
+    contenitore.innerHTML =
+        lista
+        .map(
+            creaHtmlPost
+        )
+        .join("");
+
+}
+
+
+function aggiornaConteggiCategorie(){
+
+    const conteggi = {
+        tutto:
+            postCommunity.length,
+        discussioni:0,
+        giocatori:0,
+        strategie:0,
+        eventi:0,
+        supporto:0
+    };
+
+    postCommunity.forEach(
+        post => {
+
+            if(
+                Object.prototype
+                .hasOwnProperty.call(
+                    conteggi,
+                    post.categoria
+                )
+            ){
+
+                conteggi[
+                    post.categoria
+                ]++;
+
+            }
+
+        }
+    );
+
+    document
+    .querySelectorAll(
+        ".btn-categoria[data-categoria]"
+    )
+    .forEach(
+        bottone => {
+
+            const numero =
+                bottone.querySelector(
+                    ".categoria-numero"
+                );
+
+            if(
+                numero
+            ){
+
+                numero.textContent =
+                    String(
+                        conteggi[
+                            bottone.dataset.categoria
+                        ] || 0
+                    );
+
+            }
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   HTML POST
+========================================================= */
+
+function creaHtmlPost(
+    post
+){
+
+    const postId =
+        escapeAttr(
+            post.id
+        );
+
+    const nickname =
+        post.nicknameAutore ||
+        "Giocatore";
+
+    const ruolo =
+        post.ruoloAutore ||
+        "utente";
+
+    const badge =
+        ruolo === "admin"
+            ? `<span class="badge-autore">UFFICIALE</span>`
+            : "";
+
+    const categoria =
+        etichettaCategoria(
+            post.categoria
+        );
+
+    const testo =
+        escapeHtml(
+            post.testo
+        )
+        .replace(
+            /\n/g,
+            "<br>"
+        );
+
+    const titolo =
+        escapeHtml(
+            post.titolo
+        );
+
+    const liked =
+        post.mioLike === true;
+
+    const salvato =
+        post.salvato === true;
+
+    const puoEliminare =
+        post.puoEliminare === true;
+
+    const menuTitolo =
+        puoEliminare
+            ? "Elimina post"
+            : "Segnala post";
+
+    const azioneMenu =
+        puoEliminare
+            ? `eliminaPost('${postId}')`
+            : `segnalaPost('${postId}')`;
+
+    const tavolo =
+        post.categoria === "giocatori"
+            ? `
+                <div class="tavolo-community">
+
+                    <div class="tavolo-community-icona">
+                        🎲
+                    </div>
+
+                    <div class="tavolo-community-info">
+
+                        <strong>
+                            Cerchi qualcuno con cui giocare?
+                        </strong>
+
+                        <span>
+                            Apri le stanze e trova un tavolo disponibile.
+                        </span>
+
+                    </div>
+
+                    <button
+                        class="btn-unisciti"
+                        onclick="vaiAlleStanze()"
+                    >
+                        Vai alle stanze
+                    </button>
+
+                </div>
+            `
+            : "";
+
+    return `
+
+        <article
+            class="post-community card"
+            data-post-id="${postId}"
+            data-categoria="${escapeAttr(post.categoria)}"
+        >
+
+            <div class="post-interno">
+
+                <div class="post-header">
+
+                    ${renderAvatar(
+                        nickname,
+                        post.avatarAutore,
+                        "avatar"
+                    )}
+
+                    <div class="post-autore-info">
+
+                        <div class="post-autore-riga">
+
+                            <span class="post-autore">
+                                ${escapeHtml(nickname)}
+                            </span>
+
+                            ${badge}
+
+                        </div>
+
+                        <div class="post-meta">
+
+                            ${escapeHtml(
+                                tempoRelativo(
+                                    post.creatoIl
+                                )
+                            )}
+                            · Pubblico
+
+                        </div>
+
+                    </div>
+
+                    <button
+                        class="post-menu"
+                        title="${menuTitolo}"
+                        aria-label="${menuTitolo}"
+                        onclick="${azioneMenu}"
+                    >
+                        ⋯
+                    </button>
+
+                </div>
+
+                <div class="post-categoria">
+                    ${escapeHtml(categoria)}
+                </div>
+
+                <h2 class="post-titolo">
+                    ${titolo}
+                </h2>
+
+                <p class="post-testo">
+                    ${testo}
+                </p>
+
+                ${tavolo}
+
+            </div>
+
+
+            <div class="post-azioni">
+
+                <button
+                    class="post-azione ${liked ? "attiva" : ""}"
+                    onclick="toggleReazione('${postId}', this)"
+                    title="Mi piace"
+                >
+
+                    <svg class="icona">
+                        <use href="#i-heart"></use>
+                    </svg>
+
+                    <span
+                        class="numero-reazioni"
+                        data-reazioni-post="${postId}"
+                    >
+                        ${Number(
+                            post.conteggioReazioni || 0
+                        )}
+                    </span>
+
+                </button>
+
+
+                <button
+                    class="post-azione"
+                    onclick="toggleCommenti('${postId}')"
+                    title="Commenta"
+                >
+
+                    <svg class="icona">
+                        <use href="#i-comment"></use>
+                    </svg>
+
+                    <span
+                        data-commenti-post="${postId}"
+                    >
+                        ${formattaNumeroCommenti(
+                            post.conteggioCommenti || 0
+                        )}
+                    </span>
+
+                </button>
+
+
+                <button
+                    class="post-azione post-azione-condividi"
+                    onclick="condividiPost('${postId}')"
+                    title="Condividi"
+                >
+
+                    <svg class="icona">
+                        <use href="#i-share"></use>
+                    </svg>
+
+                    <span>
+                        Condividi
+                        ${
+                            Number(
+                                post.conteggioCondivisioni || 0
+                            ) > 0
+                                ? `· ${Number(post.conteggioCondivisioni)}`
+                                : ""
+                        }
+                    </span>
+
+                </button>
+
+
+                <button
+                    class="post-azione post-azione-salva ${salvato ? "attiva" : ""}"
+                    style="margin-left:auto"
+                    onclick="toggleSalvato('${postId}', this)"
+                    title="${salvato ? "Rimuovi dai salvati" : "Salva post"}"
+                >
+
+                    <svg class="icona">
+                        <use href="#i-bookmark"></use>
+                    </svg>
+
+                </button>
+
+            </div>
+
+
+            <div
+                id="commenti-${postId}"
+                class="sezione-commenti"
+            >
+
+                <div class="commenti-interno">
+
+                    <div class="commenti-caricamento">
+                        Apri i commenti per caricarli.
+                    </div>
+
+                </div>
+
+            </div>
+
+        </article>
+
+    `;
+
+}
+
+
+function formattaNumeroCommenti(
+    numero
+){
+
+    const valore =
+        Number(
+            numero || 0
+        );
+
+    if(
+        valore === 1
+    ){
+        return "1 commento";
+    }
+
+    return `${valore} commenti`;
+
+}
+
+
+/* =========================================================
+   CREA POST REALE
 ========================================================= */
 
 function apriModalPost(){
@@ -4098,7 +4862,6 @@ function apriModalPost(){
 
     }
 
-
     document
     .getElementById(
         "overlayNuovoPost"
@@ -4106,6 +4869,19 @@ function apriModalPost(){
     .classList
     .add(
         "aperto"
+    );
+
+    setTimeout(
+        () => {
+
+            document
+            .getElementById(
+                "nuovoPostTitolo"
+            )
+            ?.focus();
+
+        },
+        50
     );
 
 }
@@ -4141,11 +4917,19 @@ function chiudiModalDaOverlay(
 }
 
 
-/* =========================================================
-   PUBBLICAZIONE LOCALE
-========================================================= */
+async function pubblicaPost(){
 
-function pubblicaPostLocale(){
+    if(
+        !utenteCorrente
+    ){
+
+        mostraToast(
+            "Devi effettuare il login."
+        );
+
+        return;
+
+    }
 
     const titolo =
         document
@@ -4155,7 +4939,6 @@ function pubblicaPostLocale(){
         .value
         .trim();
 
-
     const testo =
         document
         .getElementById(
@@ -4164,7 +4947,6 @@ function pubblicaPostLocale(){
         .value
         .trim();
 
-
     const categoria =
         document
         .getElementById(
@@ -4172,236 +4954,362 @@ function pubblicaPostLocale(){
         )
         .value;
 
-
     if(
-        !titolo ||
-        !testo
+        titolo.length < 3
     ){
 
         mostraToast(
-            "Inserisci un titolo e un messaggio."
+            "Il titolo deve contenere almeno 3 caratteri."
         );
 
         return;
 
     }
 
+    if(
+        !testo
+    ){
 
-    const post =
-        document.createElement(
-            "article"
+        mostraToast(
+            "Scrivi un messaggio."
         );
 
+        return;
 
-    post.className =
-        "post-community card";
+    }
 
+    const bottone =
+        document.querySelector(
+            ".btn-pubblica"
+        );
 
-    post.dataset.categoria =
-        categoria;
+    if(
+        bottone
+    ){
 
+        bottone.disabled =
+            true;
 
-    post.dataset.testo =
-        (
-            titolo +
-            " " +
-            testo
-        )
-        .toLowerCase();
+        bottone.textContent =
+            "Pubblicazione...";
 
+    }
 
-    const nickname =
-        utenteCorrente?.nickname ||
-        "Utente";
+    try{
 
-
-    post.innerHTML = `
-
-        <div class="post-interno">
-
-            <div class="post-header">
-
-                <div class="avatar">
-                    ${escapeHtml(
-                        iniziale(
-                            nickname
-                        )
-                    )}
-                </div>
-
-                <div class="post-autore-info">
-
-                    <div class="post-autore-riga">
-
-                        <span class="post-autore">
-                            ${escapeHtml(
-                                nickname
-                            )}
-                        </span>
-
-                        <span class="badge-autore">
-                            TU
-                        </span>
-
-                    </div>
-
-                    <div class="post-meta">
-                        Adesso · Pubblico
-                    </div>
-
-                </div>
-
-                <button class="post-menu">
-                    ⋯
-                </button>
-
-            </div>
-
-
-            <div class="post-categoria">
-                ${escapeHtml(
-                    categoria
-                )}
-            </div>
-
-
-            <h2 class="post-titolo">
-                ${escapeHtml(
-                    titolo
-                )}
-            </h2>
-
-
-            <p class="post-testo">
-                ${escapeHtml(
+        await apiCommunity(
+            "/api/community/posts",
+            {
+                method:"POST",
+                body:JSON.stringify({
+                    categoria,
+                    titolo,
                     testo
-                )}
-            </p>
-
-        </div>
-
-
-        <div class="post-azioni">
-
-            <button
-                class="post-azione"
-                onclick="toggleReazione(this)"
-            >
-
-                ♡
-
-                <span class="numero-reazioni">
-                    0
-                </span>
-
-            </button>
-
-
-            <button class="post-azione">
-                💬 0 commenti
-            </button>
-
-
-            <button class="post-azione">
-                ↗ Condividi
-            </button>
-
-        </div>
-    `;
-
-
-    const feed =
-        document.querySelector(
-            ".feed-community"
+                })
+            }
         );
 
+        document
+        .getElementById(
+            "nuovoPostTitolo"
+        )
+        .value = "";
 
-    const filtri =
-        document.querySelector(
-            ".feed-filtri"
+        document
+        .getElementById(
+            "nuovoPostTesto"
+        )
+        .value = "";
+
+        chiudiModalPost();
+
+        categoriaCorrente =
+            "tutto";
+
+        impostaCategoriaAttiva(
+            "tutto"
         );
 
+        ordinamentoCorrente =
+            "recenti";
 
-    filtri.insertAdjacentElement(
-        "afterend",
-        post
-    );
+        impostaFiltroFeedAttivo(
+            "recenti"
+        );
 
+        await caricaPost();
 
-    document
-    .getElementById(
-        "nuovoPostTitolo"
-    )
-    .value = "";
+        mostraToast(
+            "Post pubblicato nella Community."
+        );
 
+    }catch(
+        errore
+    ){
 
-    document
-    .getElementById(
-        "nuovoPostTesto"
-    )
-    .value = "";
+        mostraToast(
+            errore.message ||
+            "Impossibile pubblicare il post."
+        );
 
+    }finally{
 
-    chiudiModalPost();
+        if(
+            bottone
+        ){
 
+            bottone.disabled =
+                false;
 
-    mostraToast(
-        "Post pubblicato."
-    );
+            bottone.textContent =
+                "Pubblica";
 
+        }
 
-    filtraPost();
+    }
 
 }
 
 
 /* =========================================================
-   LIKE
+   ELIMINA / SEGNALA POST
 ========================================================= */
 
-function toggleReazione(
+async function eliminaPost(
+    postId
+){
+
+    if(
+        !utenteCorrente
+    ){
+
+        mostraToast(
+            "Devi effettuare il login."
+        );
+
+        return;
+
+    }
+
+    const conferma =
+        window.confirm(
+            "Vuoi davvero eliminare questo post? L'operazione non può essere annullata."
+        );
+
+    if(
+        !conferma
+    ){
+        return;
+    }
+
+    try{
+
+        await apiCommunity(
+            `/api/community/posts/${encodeURIComponent(postId)}`,
+            {
+                method:"DELETE"
+            }
+        );
+
+        postCommentiAperti.delete(
+            postId
+        );
+
+        await caricaPost();
+
+        mostraToast(
+            "Post eliminato."
+        );
+
+    }catch(
+        errore
+    ){
+
+        mostraToast(
+            errore.message ||
+            "Impossibile eliminare il post."
+        );
+
+    }
+
+}
+
+
+async function segnalaPost(
+    postId
+){
+
+    if(
+        !utenteCorrente
+    ){
+
+        mostraToast(
+            "Accedi per segnalare un contenuto."
+        );
+
+        return;
+
+    }
+
+    const motivo =
+        window.prompt(
+            "Perché vuoi segnalare questo post?",
+            "Contenuto inappropriato"
+        );
+
+    if(
+        motivo === null
+    ){
+        return;
+    }
+
+    const motivoPulito =
+        motivo.trim();
+
+    if(
+        !motivoPulito
+    ){
+
+        mostraToast(
+            "Inserisci il motivo della segnalazione."
+        );
+
+        return;
+
+    }
+
+    try{
+
+        await apiCommunity(
+            `/api/community/posts/${encodeURIComponent(postId)}/segnala`,
+            {
+                method:"POST",
+                body:JSON.stringify({
+                    motivo:
+                        motivoPulito
+                })
+            }
+        );
+
+        mostraToast(
+            "Segnalazione inviata. Grazie."
+        );
+
+    }catch(
+        errore
+    ){
+
+        mostraToast(
+            errore.message ||
+            "Impossibile inviare la segnalazione."
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   REAZIONI REALI
+========================================================= */
+
+async function toggleReazione(
+    postId,
     bottone
 ){
 
-    const numero =
-        bottone.querySelector(
-            ".numero-reazioni"
-        );
-
-
-    let valore =
-        Number(
-            numero?.textContent || 0
-        );
-
-
-    const attivo =
-        bottone
-        .classList
-        .toggle(
-            "attiva"
-        );
-
-
-    valore +=
-        attivo
-            ? 1
-            : -1;
-
-
     if(
-        valore < 0
+        !utenteCorrente
     ){
-        valore = 0;
+
+        mostraToast(
+            "Accedi per mettere Mi piace."
+        );
+
+        return;
+
     }
 
-
     if(
-        numero
+        bottone.classList.contains(
+            "caricamento"
+        )
+    ){
+        return;
+    }
+
+    bottone.classList.add(
+        "caricamento"
+    );
+
+    try{
+
+        const dati =
+            await apiCommunity(
+                `/api/community/posts/${encodeURIComponent(postId)}/reazione`,
+                {
+                    method:"POST"
+                }
+            );
+
+        bottone.classList.toggle(
+            "attiva",
+            dati.attiva === true
+        );
+
+        const numero =
+            bottone.querySelector(
+                ".numero-reazioni"
+            );
+
+        if(
+            numero
+        ){
+
+            numero.textContent =
+                String(
+                    Number(
+                        dati.conteggio || 0
+                    )
+                );
+
+        }
+
+        const post =
+            postCommunity.find(
+                elemento =>
+                    elemento.id ===
+                    postId
+            );
+
+        if(
+            post
+        ){
+
+            post.mioLike =
+                dati.attiva === true;
+
+            post.conteggioReazioni =
+                Number(
+                    dati.conteggio || 0
+                );
+
+        }
+
+    }catch(
+        errore
     ){
 
-        numero.textContent =
-            valore;
+        mostraToast(
+            errore.message ||
+            "Impossibile aggiornare la reazione."
+        );
+
+    }finally{
+
+        bottone.classList.remove(
+            "caricamento"
+        );
 
     }
 
@@ -4409,11 +5317,886 @@ function toggleReazione(
 
 
 /* =========================================================
-   CATEGORIE
+   SALVATI REALI
+========================================================= */
+
+async function toggleSalvato(
+    postId,
+    bottone
+){
+
+    if(
+        !utenteCorrente
+    ){
+
+        mostraToast(
+            "Accedi per salvare i post."
+        );
+
+        return;
+
+    }
+
+    if(
+        bottone.classList.contains(
+            "caricamento"
+        )
+    ){
+        return;
+    }
+
+    bottone.classList.add(
+        "caricamento"
+    );
+
+    try{
+
+        const dati =
+            await apiCommunity(
+                `/api/community/posts/${encodeURIComponent(postId)}/salva`,
+                {
+                    method:"POST"
+                }
+            );
+
+        bottone.classList.toggle(
+            "attiva",
+            dati.salvato === true
+        );
+
+        bottone.title =
+            dati.salvato
+                ? "Rimuovi dai salvati"
+                : "Salva post";
+
+        const post =
+            postCommunity.find(
+                elemento =>
+                    elemento.id ===
+                    postId
+            );
+
+        if(
+            post
+        ){
+
+            post.salvato =
+                dati.salvato === true;
+
+        }
+
+        mostraToast(
+            dati.salvato
+                ? "Post salvato."
+                : "Post rimosso dai salvati."
+        );
+
+    }catch(
+        errore
+    ){
+
+        mostraToast(
+            errore.message ||
+            "Impossibile salvare il post."
+        );
+
+    }finally{
+
+        bottone.classList.remove(
+            "caricamento"
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   COMMENTI REALI
+========================================================= */
+
+async function toggleCommenti(
+    postId
+){
+
+    const sezione =
+        document.getElementById(
+            `commenti-${postId}`
+        );
+
+    if(
+        !sezione
+    ){
+        return;
+    }
+
+    const staAprendo =
+        !sezione.classList.contains(
+            "aperta"
+        );
+
+    if(
+        staAprendo
+    ){
+
+        sezione.classList.add(
+            "aperta"
+        );
+
+        postCommentiAperti.add(
+            postId
+        );
+
+        await caricaCommenti(
+            postId
+        );
+
+    }else{
+
+        sezione.classList.remove(
+            "aperta"
+        );
+
+        postCommentiAperti.delete(
+            postId
+        );
+
+    }
+
+}
+
+
+async function caricaCommenti(
+    postId,
+    silenzioso = false
+){
+
+    const sezione =
+        document.getElementById(
+            `commenti-${postId}`
+        );
+
+    if(
+        !sezione
+    ){
+        return;
+    }
+
+    const contenitore =
+        sezione.querySelector(
+            ".commenti-interno"
+        );
+
+    if(
+        !contenitore
+    ){
+        return;
+    }
+
+    if(
+        !silenzioso
+    ){
+
+        contenitore.innerHTML = `
+            <div class="commenti-caricamento">
+                Caricamento commenti...
+            </div>
+        `;
+
+    }
+
+    try{
+
+        const dati =
+            await apiCommunity(
+                `/api/community/posts/${encodeURIComponent(postId)}/commenti`
+            );
+
+        const commenti =
+            Array.isArray(
+                dati.commenti
+            )
+                ? dati.commenti
+                : [];
+
+        renderCommenti(
+            postId,
+            commenti
+        );
+
+    }catch(
+        errore
+    ){
+
+        contenitore.innerHTML = `
+            <div class="commenti-vuoti">
+                Impossibile caricare i commenti.
+            </div>
+        `;
+
+    }
+
+}
+
+
+function renderCommenti(
+    postId,
+    commenti
+){
+
+    const sezione =
+        document.getElementById(
+            `commenti-${postId}`
+        );
+
+    if(
+        !sezione
+    ){
+        return;
+    }
+
+    const contenitore =
+        sezione.querySelector(
+            ".commenti-interno"
+        );
+
+    const htmlCommenti =
+        commenti.length
+            ? commenti
+                .map(
+                    commento =>
+                        creaHtmlCommento(
+                            postId,
+                            commento
+                        )
+                )
+                .join("")
+            : `
+                <div class="commenti-vuoti">
+                    Ancora nessun commento. Sii il primo a rispondere.
+                </div>
+            `;
+
+    const areaScrittura =
+        utenteCorrente
+            ? `
+                <div class="scrivi-commento">
+
+                    ${renderAvatar(
+                        utenteCorrente.nickname,
+                        utenteCorrente.avatar,
+                        "commento-avatar"
+                    )}
+
+                    <textarea
+                        id="input-commento-${escapeAttr(postId)}"
+                        class="commento-input"
+                        maxlength="600"
+                        rows="1"
+                        placeholder="Scrivi un commento..."
+                        onkeydown="gestisciTastoCommento(event, '${escapeAttr(postId)}')"
+                    ></textarea>
+
+                    <button
+                        id="btn-commento-${escapeAttr(postId)}"
+                        class="btn-invia-commento"
+                        onclick="inviaCommento('${escapeAttr(postId)}')"
+                    >
+                        Invia
+                    </button>
+
+                </div>
+            `
+            : `
+                <div class="commenti-login">
+                    Accedi al tuo account per partecipare alla discussione.
+                </div>
+            `;
+
+    contenitore.innerHTML =
+        htmlCommenti +
+        areaScrittura;
+
+}
+
+
+function creaHtmlCommento(
+    postId,
+    commento
+){
+
+    const nickname =
+        commento.nicknameAutore ||
+        "Giocatore";
+
+    const elimina =
+        commento.puoEliminare
+            ? `
+                <button
+                    class="btn-elimina-commento"
+                    onclick="eliminaCommento(
+                        '${escapeAttr(postId)}',
+                        '${escapeAttr(commento.id)}'
+                    )"
+                >
+                    Elimina
+                </button>
+            `
+            : "";
+
+    return `
+
+        <div class="commento-riga">
+
+            ${renderAvatar(
+                nickname,
+                commento.avatarAutore,
+                "commento-avatar"
+            )}
+
+            <div class="commento-corpo">
+
+                <div class="commento-testata">
+
+                    <span class="commento-autore">
+                        ${escapeHtml(nickname)}
+                    </span>
+
+                    <span class="commento-data">
+                        ${escapeHtml(
+                            tempoRelativo(
+                                commento.creatoIl
+                            )
+                        )}
+                    </span>
+
+                    ${elimina}
+
+                </div>
+
+                <div class="commento-testo">
+                    ${escapeHtml(
+                        commento.testo
+                    )}
+                </div>
+
+            </div>
+
+        </div>
+
+    `;
+
+}
+
+
+function gestisciTastoCommento(
+    evento,
+    postId
+){
+
+    if(
+        evento.key ===
+        "Enter"
+        &&
+        !evento.shiftKey
+    ){
+
+        evento.preventDefault();
+
+        inviaCommento(
+            postId
+        );
+
+    }
+
+}
+
+
+async function inviaCommento(
+    postId
+){
+
+    if(
+        !utenteCorrente
+    ){
+
+        mostraToast(
+            "Accedi per commentare."
+        );
+
+        return;
+
+    }
+
+    const input =
+        document.getElementById(
+            `input-commento-${postId}`
+        );
+
+    const bottone =
+        document.getElementById(
+            `btn-commento-${postId}`
+        );
+
+    if(
+        !input
+    ){
+        return;
+    }
+
+    const testo =
+        input.value
+        .trim();
+
+    if(
+        !testo
+    ){
+        return;
+    }
+
+    if(
+        bottone
+    ){
+
+        bottone.disabled =
+            true;
+
+        bottone.textContent =
+            "...";
+
+    }
+
+    input.disabled =
+        true;
+
+    try{
+
+        const dati =
+            await apiCommunity(
+                `/api/community/posts/${encodeURIComponent(postId)}/commenti`,
+                {
+                    method:"POST",
+                    body:JSON.stringify({
+                        testo
+                    })
+                }
+            );
+
+        input.value =
+            "";
+
+        aggiornaConteggioCommentiDom(
+            postId,
+            dati.conteggio
+        );
+
+        const post =
+            postCommunity.find(
+                elemento =>
+                    elemento.id ===
+                    postId
+            );
+
+        if(
+            post
+        ){
+
+            post.conteggioCommenti =
+                Number(
+                    dati.conteggio || 0
+                );
+
+        }
+
+        await caricaCommenti(
+            postId
+        );
+
+        const nuovoInput =
+            document.getElementById(
+                `input-commento-${postId}`
+            );
+
+        nuovoInput?.focus();
+
+    }catch(
+        errore
+    ){
+
+        mostraToast(
+            errore.message ||
+            "Impossibile pubblicare il commento."
+        );
+
+        input.disabled =
+            false;
+
+    }finally{
+
+        const nuovoBottone =
+            document.getElementById(
+                `btn-commento-${postId}`
+            );
+
+        if(
+            nuovoBottone
+        ){
+
+            nuovoBottone.disabled =
+                false;
+
+            nuovoBottone.textContent =
+                "Invia";
+
+        }
+
+        const nuovoInput =
+            document.getElementById(
+                `input-commento-${postId}`
+            );
+
+        if(
+            nuovoInput
+        ){
+
+            nuovoInput.disabled =
+                false;
+
+        }
+
+    }
+
+}
+
+
+async function eliminaCommento(
+    postId,
+    commentoId
+){
+
+    const conferma =
+        window.confirm(
+            "Eliminare questo commento?"
+        );
+
+    if(
+        !conferma
+    ){
+        return;
+    }
+
+    try{
+
+        const dati =
+            await apiCommunity(
+                `/api/community/posts/${encodeURIComponent(postId)}/commenti/${encodeURIComponent(commentoId)}`,
+                {
+                    method:"DELETE"
+                }
+            );
+
+        aggiornaConteggioCommentiDom(
+            postId,
+            dati.conteggio
+        );
+
+        const post =
+            postCommunity.find(
+                elemento =>
+                    elemento.id ===
+                    postId
+            );
+
+        if(
+            post
+        ){
+
+            post.conteggioCommenti =
+                Number(
+                    dati.conteggio || 0
+                );
+
+        }
+
+        await caricaCommenti(
+            postId
+        );
+
+        mostraToast(
+            "Commento eliminato."
+        );
+
+    }catch(
+        errore
+    ){
+
+        mostraToast(
+            errore.message ||
+            "Impossibile eliminare il commento."
+        );
+
+    }
+
+}
+
+
+function aggiornaConteggioCommentiDom(
+    postId,
+    conteggio
+){
+
+    const elemento =
+        document.querySelector(
+            `[data-commenti-post="${CSS.escape(postId)}"]`
+        );
+
+    if(
+        elemento
+    ){
+
+        elemento.textContent =
+            formattaNumeroCommenti(
+                conteggio
+            );
+
+    }
+
+}
+
+
+/* =========================================================
+   CONDIVISIONE REALE
+========================================================= */
+
+async function condividiPost(
+    postId
+){
+
+    const post =
+        postCommunity.find(
+            elemento =>
+                elemento.id ===
+                postId
+        );
+
+    if(
+        !post
+    ){
+        return;
+    }
+
+    const url =
+        `${COMMUNITY_URL}?post=${encodeURIComponent(postId)}`;
+
+    const testo =
+        `${post.titolo} — ${post.nicknameAutore || "Giochi Società"}`;
+
+    let condiviso =
+        false;
+
+    try{
+
+        if(
+            navigator.share
+        ){
+
+            await navigator.share({
+                title:
+                    post.titolo,
+                text:
+                    testo,
+                url
+            });
+
+            condiviso =
+                true;
+
+        }else{
+
+            await copiaNegliAppunti(
+                url
+            );
+
+            condiviso =
+                true;
+
+            mostraToast(
+                "Link del post copiato negli appunti."
+            );
+
+        }
+
+    }catch(
+        errore
+    ){
+
+        if(
+            errore &&
+            errore.name ===
+            "AbortError"
+        ){
+            return;
+        }
+
+        try{
+
+            await copiaNegliAppunti(
+                url
+            );
+
+            condiviso =
+                true;
+
+            mostraToast(
+                "Link del post copiato negli appunti."
+            );
+
+        }catch(
+            erroreCopia
+        ){
+
+            mostraToast(
+                "Impossibile aprire la condivisione."
+            );
+
+        }
+
+    }
+
+    if(
+        condiviso &&
+        utenteCorrente
+    ){
+
+        try{
+
+            const dati =
+                await apiCommunity(
+                    `/api/community/posts/${encodeURIComponent(postId)}/condivisione`,
+                    {
+                        method:"POST"
+                    }
+                );
+
+            const postLocale =
+                postCommunity.find(
+                    elemento =>
+                        elemento.id ===
+                        postId
+                );
+
+            if(
+                postLocale
+            ){
+
+                postLocale.conteggioCondivisioni =
+                    Number(
+                        dati.conteggio || 0
+                    );
+
+            }
+
+        }catch(
+            errore
+        ){
+
+            /*
+             * La condivisione è già avvenuta:
+             * se il contatore non si aggiorna non blocchiamo l'utente.
+             */
+
+        }
+
+    }
+
+}
+
+
+async function copiaNegliAppunti(
+    testo
+){
+
+    if(
+        navigator.clipboard &&
+        window.isSecureContext
+    ){
+
+        await navigator.clipboard.writeText(
+            testo
+        );
+
+        return;
+
+    }
+
+    const textarea =
+        document.createElement(
+            "textarea"
+        );
+
+    textarea.value =
+        testo;
+
+    textarea.setAttribute(
+        "readonly",
+        ""
+    );
+
+    textarea.style.position =
+        "fixed";
+
+    textarea.style.opacity =
+        "0";
+
+    document.body.appendChild(
+        textarea
+    );
+
+    textarea.select();
+
+    const riuscito =
+        document.execCommand(
+            "copy"
+        );
+
+    textarea.remove();
+
+    if(
+        !riuscito
+    ){
+
+        throw new Error(
+            "Copia non disponibile"
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   CATEGORIE E FILTRI
 ========================================================= */
 
 function selezionaCategoria(
     bottone
+){
+
+    categoriaCorrente =
+        bottone.dataset.categoria ||
+        "tutto";
+
+    impostaCategoriaAttiva(
+        categoriaCorrente
+    );
+
+    renderFeed();
+
+}
+
+
+function impostaCategoriaAttiva(
+    categoria
 ){
 
     document
@@ -4423,38 +6206,64 @@ function selezionaCategoria(
     .forEach(
         elemento => {
 
-            elemento
-            .classList
-            .remove(
-                "attiva"
+            elemento.classList.toggle(
+                "attiva",
+                elemento.dataset.categoria ===
+                categoria
             );
 
         }
     );
 
+}
 
+
+function selezionaFiltroFeed(
     bottone
-    .classList
-    .add(
-        "attiva"
+){
+
+    const testo =
+        bottone
+        .textContent
+        .trim()
+        .toLowerCase();
+
+    if(
+        testo.includes(
+            "recent"
+        )
+    ){
+
+        ordinamentoCorrente =
+            "recenti";
+
+    }else if(
+        testo.includes(
+            "discuss"
+        )
+    ){
+
+        ordinamentoCorrente =
+            "discussi";
+
+    }else{
+
+        ordinamentoCorrente =
+            "rilevanti";
+
+    }
+
+    impostaFiltroFeedAttivo(
+        ordinamentoCorrente
     );
 
-
-    categoriaCorrente =
-        bottone.dataset.categoria;
-
-
-    filtraPost();
+    renderFeed();
 
 }
 
 
-/* =========================================================
-   FILTRI FEED
-========================================================= */
-
-function selezionaFiltroFeed(
-    bottone
+function impostaFiltroFeedAttivo(
+    filtro
 ){
 
     document
@@ -4462,25 +6271,31 @@ function selezionaFiltroFeed(
         ".feed-filtro"
     )
     .forEach(
-        elemento =>
-            elemento.classList.remove(
-                "attivo"
-            )
-    );
+        elemento => {
 
+            const testo =
+                elemento
+                .textContent
+                .trim()
+                .toLowerCase();
 
-    bottone
-    .classList
-    .add(
-        "attivo"
+            const tipo =
+                testo.includes("recent")
+                    ? "recenti"
+                    : testo.includes("discuss")
+                        ? "discussi"
+                        : "rilevanti";
+
+            elemento.classList.toggle(
+                "attivo",
+                tipo === filtro
+            );
+
+        }
     );
 
 }
 
-
-/* =========================================================
-   RICERCA
-========================================================= */
 
 document
 .getElementById(
@@ -4488,96 +6303,19 @@ document
 )
 .addEventListener(
     "input",
-    filtraPost
+    renderFeed
 );
 
 
-function filtraPost(){
+/* =========================================================
+   VAI ALLE STANZE
+========================================================= */
 
-    const ricerca =
-        document
-        .getElementById(
-            "ricercaCommunity"
-        )
-        .value
-        .trim()
-        .toLowerCase();
+function vaiAlleStanze(){
 
-
-    const post =
-        document.querySelectorAll(
-            ".post-community"
-        );
-
-
-    let visibili =
-        0;
-
-
-    post.forEach(
-        elemento => {
-
-            const categoria =
-                elemento.dataset.categoria ||
-                "";
-
-
-            const testo =
-                (
-                    elemento.dataset.testo ||
-                    elemento.textContent
-                )
-                .toLowerCase();
-
-
-            const categoriaOk =
-                categoriaCorrente ===
-                "tutto"
-                ||
-                categoria ===
-                categoriaCorrente;
-
-
-            const ricercaOk =
-                !ricerca
-                ||
-                testo.includes(
-                    ricerca
-                );
-
-
-            const mostra =
-                categoriaOk &&
-                ricercaOk;
-
-
-            elemento.style.display =
-                mostra
-                    ? ""
-                    : "none";
-
-
-            if(
-                mostra
-            ){
-
-                visibili++;
-
-            }
-
-        }
-    );
-
-
-    document
-    .getElementById(
-        "feedVuoto"
-    )
-    .style
-    .display =
-        visibili === 0
-            ? "block"
-            : "none";
+    window.top.location.href =
+        SERVER +
+        "/stanze.html";
 
 }
 
@@ -4593,34 +6331,12 @@ async function caricaClassifica(){
             "classificaCommunity"
         );
 
-
     try{
 
-        const risposta =
-            await fetch(
-                SERVER +
-                "/api/top-giocatori",
-                {
-                    cache:
-                        "no-store"
-                }
-            );
-
-
-        if(
-            !risposta.ok
-        ){
-
-            throw new Error(
-                "Classifica non disponibile"
-            );
-
-        }
-
-
         const dati =
-            await risposta.json();
-
+            await apiCommunity(
+                "/api/top-giocatori"
+            );
 
         const giocatori =
             Array.isArray(
@@ -4629,13 +6345,11 @@ async function caricaClassifica(){
                 ? dati.giocatori
                 : [];
 
-
         if(
             !giocatori.length
         ){
 
-            contenitore.innerHTML =
-                `
+            contenitore.innerHTML = `
                 <div
                     style="
                         padding:18px;
@@ -4646,12 +6360,11 @@ async function caricaClassifica(){
                 >
                     Nessun giocatore disponibile.
                 </div>
-                `;
+            `;
 
             return;
 
         }
-
 
         contenitore.innerHTML =
             giocatori
@@ -4669,7 +6382,6 @@ async function caricaClassifica(){
                         giocatore.nickname ||
                         "Giocatore";
 
-
                     return `
 
                         <div class="classifica-riga">
@@ -4677,66 +6389,30 @@ async function caricaClassifica(){
                             <div
                                 class="
                                     classifica-posizione
-                                    ${
-                                        indice < 3
-                                            ? "podio"
-                                            : ""
-                                    }
+                                    ${indice < 3 ? "podio" : ""}
                                 "
                             >
-                                ${
-                                    indice + 1
-                                }
+                                ${indice + 1}
                             </div>
-
 
                             <div
                                 class="avatar-piccolo"
-                                style="
-                                    background:
-                                    ${
-                                        coloreDaNome(
-                                            nome
-                                        )
-                                    }
-                                "
+                                style="background:${coloreDaNome(nome)}"
                             >
-                                ${
-                                    escapeHtml(
-                                        iniziale(
-                                            nome
-                                        )
-                                    )
-                                }
+                                ${escapeHtml(iniziale(nome))}
                             </div>
-
 
                             <div class="classifica-info">
 
                                 <div class="classifica-nome">
-                                    ${
-                                        escapeHtml(
-                                            nome
-                                        )
-                                    }
+                                    ${escapeHtml(nome)}
                                 </div>
 
                                 <div class="classifica-stat">
 
-                                    ${
-                                        Number(
-                                            giocatore.vinte ||
-                                            0
-                                        )
-                                    }
+                                    ${Number(giocatore.vinte || 0)}
                                     vittorie ·
-
-                                    ${
-                                        Number(
-                                            giocatore.giocate ||
-                                            0
-                                        )
-                                    }
+                                    ${Number(giocatore.giocate || 0)}
                                     partite
 
                                 </div>
@@ -4751,13 +6427,11 @@ async function caricaClassifica(){
             )
             .join("");
 
-
     }catch(
         errore
     ){
 
-        contenitore.innerHTML =
-            `
+        contenitore.innerHTML = `
             <div
                 style="
                     padding:18px;
@@ -4768,7 +6442,7 @@ async function caricaClassifica(){
             >
                 Classifica temporaneamente non disponibile.
             </div>
-            `;
+        `;
 
     }
 
@@ -4776,53 +6450,62 @@ async function caricaClassifica(){
 
 
 /* =========================================================
-   COLORE AVATAR
+   LINK CONDIVISO
 ========================================================= */
 
-function coloreDaNome(
-    nome
-){
+function provaApriPostCondiviso(){
 
-    const colori = [
+    /*
+     * In un HTML Embed il query string della pagina Wix
+     * non sempre viene inoltrato all'iframe.
+     * Se la pagina viene invece servita direttamente,
+     * questo porta al post condiviso.
+     */
 
-        "#6a2c70",
-        "#1e40af",
-        "#43a047",
-        "#f57c00",
-        "#c0ca33",
-        "#e53935",
-        "#00838f",
-        "#8d6e63"
-
-    ];
-
-
-    let somma =
-        0;
-
-
-    const testo =
-        String(
-            nome || ""
+    const params =
+        new URLSearchParams(
+            window.location.search
         );
 
+    const postId =
+        params.get(
+            "post"
+        );
 
-    for(
-        let i = 0;
-        i < testo.length;
-        i++
+    if(
+        !postId
     ){
-
-        somma +=
-            testo.charCodeAt(i);
-
+        return;
     }
 
+    const elemento =
+        document.querySelector(
+            `[data-post-id="${CSS.escape(postId)}"]`
+        );
 
-    return colori[
-        somma %
-        colori.length
-    ];
+    if(
+        elemento
+    ){
+
+        elemento.scrollIntoView({
+            behavior:"smooth",
+            block:"center"
+        });
+
+        elemento.style.boxShadow =
+            "0 0 0 3px rgba(255,212,0,.65), 0 8px 28px rgba(0,0,0,.12)";
+
+        setTimeout(
+            () => {
+
+                elemento.style.boxShadow =
+                    "";
+
+            },
+            3500
+        );
+
+    }
 
 }
 
@@ -4831,8 +6514,7 @@ function coloreDaNome(
    ESC CHIUDE MODALE
 ========================================================= */
 
-document
-.addEventListener(
+document.addEventListener(
     "keydown",
     evento => {
 
@@ -4853,11 +6535,35 @@ document
    AVVIO
 ========================================================= */
 
-controllaUtente();
+async function avviaCommunity(){
 
-caricaClassifica();
+    await controllaUtente();
+
+    await Promise.all([
+        caricaPost(),
+        caricaClassifica()
+    ]);
+
+    provaApriPostCondiviso();
+
+    setInterval(
+        () => {
+
+            caricaPost(
+                true
+            );
+
+        },
+        INTERVALLO_AGGIORNAMENTO_POST
+    );
+
+}
+
+
+avviaCommunity();
 
 </script>
+
 
 </body>
 </html>
