@@ -46,7 +46,7 @@ app.use(express.static(path.join(__dirname, "public")));
 app.use(passport.initialize());
 
 const server = http.createServer(app);
-const wss = new WebSocket.Server({ server });
+const wss = new WebSocket.Server({ server, maxPayload: 256 * 1024 });
 const PORT = process.env.PORT || 3000;
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -98,10 +98,17 @@ async function salvaPartita(partita) {
     modalita: partita.modalita,
     maxGiocatori: partita.maxGiocatori,
     chatAttiva: partita.chatAttiva !== false,
+    mediaAttiva: partita.mediaAttiva === true,
     fase: partita.fase || "in_corso",
     giocatori: preparaGiocatoriPerFirebase(partita.giocatori),
     ordineGiocatori: partita.ordineGiocatori || [],
     turnoAttuale: partita.turnoAttuale || 0,
+    punteggiOrdineIniziale: partita.punteggiOrdineIniziale || null,
+    ordineDeterminazione: partita.ordineDeterminazione || [],
+    risultatiDeterminazione: partita.risultatiDeterminazione || {},
+    codaDeterminazione: partita.codaDeterminazione || [],
+    turnoInCorsoDeterminazione: partita.turnoInCorsoDeterminazione || null,
+    gruppoSpareggioAttuale: partita.gruppoSpareggioAttuale || null,
     iniziata: partita.iniziata === true,
     iniziataIl: partita.iniziataIl || null,
     tiriEffettuatiNelTurno: Number(partita.tiriEffettuatiNelTurno || 0),
@@ -729,6 +736,7 @@ async function ripristinaPartiteDaFirebase() {
       ...p,
       maxGiocatori: p.maxGiocatori || (Object.keys(p.giocatori || {}).length || 2),
       chatAttiva: p.chatAttiva !== false,
+      mediaAttiva: p.mediaAttiva === true,
       giocatori: p.giocatori || {},
       ordineGiocatori: p.ordineGiocatori || [],
       turnoAttuale: p.turnoAttuale || 0,
@@ -743,7 +751,13 @@ async function ripristinaPartiteDaFirebase() {
       invitati: {},
       timerTurno: null,
       punteggiOrdineIniziale: p.punteggiOrdineIniziale || null,
+      ordineDeterminazione: Array.isArray(p.ordineDeterminazione) ? p.ordineDeterminazione : [],
+      risultatiDeterminazione: p.risultatiDeterminazione && typeof p.risultatiDeterminazione === "object" ? p.risultatiDeterminazione : {},
+      codaDeterminazione: Array.isArray(p.codaDeterminazione) ? p.codaDeterminazione : [],
+      turnoInCorsoDeterminazione: p.turnoInCorsoDeterminazione || null,
+      gruppoSpareggioAttuale: Array.isArray(p.gruppoSpareggioAttuale) ? p.gruppoSpareggioAttuale : null,
       coppieAudioApprovate: new Set(),
+      partecipantiMediaPronti: new Set(),
       fase: p.fase || (p.iniziata === true ? "in_corso" : "attesa_giocatori")
     };
 
@@ -753,9 +767,9 @@ async function ripristinaPartiteDaFirebase() {
       partitaRipristinata.fase = "in_corso";
       ripristinaTimerTurno(partitaRipristinata, p.stanza);
     } else if (partitaRipristinata.fase === "determinazione_ordine") {
-      iniziaFaseDeterminazione(partitaRipristinata, p.stanza);
+      await riprendiFaseDeterminazioneRipristinata(partitaRipristinata, p.stanza);
     } else if (Object.keys(partitaRipristinata.giocatori).length === partitaRipristinata.maxGiocatori) {
-      iniziaFaseDeterminazione(partitaRipristinata, p.stanza);
+      await iniziaFaseDeterminazione(partitaRipristinata, p.stanza);
     }
   }
   console.log("Partite ripristinate da Firebase:", Object.keys(partiteFirebase).length);
@@ -818,7 +832,7 @@ function trovaPartitaAttivaPerUid(uid) {
   for (const nomeStanza in stanze) {
     for (const pid in stanze[nomeStanza].partite) {
       const p = stanze[nomeStanza].partite[pid];
-      if (p.giocatori[uid]) return { partitaId: pid, stanza: nomeStanza };
+      if (p.giocatori[uid]) return { partitaId: pid, stanza: nomeStanza, mediaAttiva: p.mediaAttiva === true };
     }
   }
   return null;
@@ -835,6 +849,40 @@ function costruisciStatoGiocatori(partita) {
   return partita.ordineGiocatori.map(id => ({ id, nome: partita.giocatori[id].nome, avatar: partita.giocatori[id].avatar || null, posizione: partita.giocatori[id].posizione }));
 }
 
+function elencoPartecipantiMediaPronti(partita) {
+  if (!partita || !(partita.partecipantiMediaPronti instanceof Set)) return [];
+  return Array.from(partita.partecipantiMediaPronti).filter(uid => {
+    const giocatore = partita.giocatori[uid];
+    return giocatore && giocatore.socket && giocatore.socket.readyState === WebSocket.OPEN;
+  });
+}
+
+function inviaStatoMedia(partita) {
+  if (!partita || partita.mediaAttiva !== true) return;
+  const partecipanti = elencoPartecipantiMediaPronti(partita);
+  const messaggio = JSON.stringify({ tipo: "statoMedia", mediaAttiva: true, partecipanti });
+  Object.values(partita.giocatori).forEach(giocatore => {
+    if (giocatore.socket && giocatore.socket.readyState === WebSocket.OPEN) giocatore.socket.send(messaggio);
+  });
+}
+
+function configurazioneIcePerClient() {
+  const iceServers = [{ urls: process.env.STUN_URL || "stun:stun.l.google.com:19302" }];
+  const turnUrls = String(process.env.TURN_URL || "").split(",").map(url => url.trim()).filter(Boolean);
+  const turnUsername = String(process.env.TURN_USERNAME || "").trim();
+  const turnCredential = String(process.env.TURN_CREDENTIAL || "").trim();
+  if (turnUrls.length && turnUsername && turnCredential) {
+    iceServers.push({ urls: turnUrls.length === 1 ? turnUrls[0] : turnUrls, username: turnUsername, credential: turnCredential });
+  }
+  return { iceServers };
+}
+
+function rimuoviPartecipanteMedia(partita, uid, notifica = true) {
+  if (!partita || !(partita.partecipantiMediaPronti instanceof Set)) return;
+  const rimosso = partita.partecipantiMediaPronti.delete(uid);
+  if (rimosso && notifica) inviaStatoMedia(partita);
+}
+
 function inviaAllaStanza(nomeStanza, messaggio) {
   if (!stanze[nomeStanza]) return;
   Object.keys(stanze[nomeStanza].giocatoriOnline).forEach(id => {
@@ -848,6 +896,7 @@ function inviaListaPartite(nomeStanza) {
   const lista = Object.values(stanze[nomeStanza].partite).map(p => ({
     id: p.id, creatore: p.creatore, creatoDa: p.creatoDa, tempo: p.tempo, punti: p.punti, modalita: p.modalita,
     maxGiocatori: p.maxGiocatori, numGiocatoriAttuali: Object.keys(p.giocatori).length, chatAttiva: p.chatAttiva !== false,
+    mediaAttiva: p.mediaAttiva === true,
     iniziata: p.iniziata !== false,
     giocatori: Object.entries(p.giocatori).map(([uid, g]) => ({ uid, nome: g.nome, avatar: g.avatar || null }))
   }));
@@ -1074,7 +1123,8 @@ async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, auto
             punteggiOrdineIniziale: partita.punteggiOrdineIniziale || null,
             tempoInizioTurno: partita.tempoInizioTurno,
             durataMossaMs: millisecondiMossa(partita),
-            chatAttiva: partita.chatAttiva !== false
+            chatAttiva: partita.chatAttiva !== false,
+            mediaAttiva: partita.mediaAttiva === true
           }));
         }
       });
@@ -1105,7 +1155,8 @@ async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, auto
           tipo: "statoPartita", giocatori: statoGiocatori, turnoDiId: idAttuale,
           messaggi: ["Errore nel tiro dei dadi, riprova."],
           tempoInizioTurno: partita.tempoInizioTurno, durataMossaMs: millisecondiMossa(partita),
-          chatAttiva: partita.chatAttiva !== false
+          chatAttiva: partita.chatAttiva !== false,
+          mediaAttiva: partita.mediaAttiva === true
         }));
       }
     });
@@ -1118,6 +1169,7 @@ async function forzaAbbandonoPerInattivita(partita, nomeStanza, idGiocatore) {
   fermaTimerTurno(partita);
   if (!partita.giocatori[idGiocatore]) return;
   const nomeUscente = partita.giocatori[idGiocatore].nome;
+  rimuoviPartecipanteMedia(partita, idGiocatore);
 
   if (db) {
     try {
@@ -1197,7 +1249,9 @@ function inviaStatoDeterminazione(partita, nomeStanza) {
     turnoInCorsoUid: partita.turnoInCorsoDeterminazione || null,
     gruppoSpareggioAttuale: partita.gruppoSpareggioAttuale || null,
     tempoInizioTurno: partita.tempoInizioTurno || null,
-    durataMossaMs: millisecondiMossa(partita)
+    durataMossaMs: millisecondiMossa(partita),
+    chatAttiva: partita.chatAttiva !== false,
+    mediaAttiva: partita.mediaAttiva === true
   });
   Object.values(partita.giocatori).forEach(g => { if (g.socket && g.socket.readyState === WebSocket.OPEN) g.socket.send(messaggio); });
 }
@@ -1234,20 +1288,59 @@ async function eseguiTiroDeterminazionePerGiocatore(partita, nomeStanza, uid, au
     const messaggio = JSON.stringify({ tipo: "risultatoDeterminazione", uid, nome: giocatore ? giocatore.nome : "?", dado1, dado2, valoreDado, automatico: !!automatico });
     Object.values(partita.giocatori).forEach(g => { if (g.socket && g.socket.readyState === WebSocket.OPEN) g.socket.send(messaggio); });
 
+    try { await salvaPartita({ ...partita, stanza: nomeStanza }); }
+    catch (erroreSalvataggio) { console.error("Errore salvataggio determinazione:", erroreSalvataggio.message); }
+
     setTimeout(() => { avanzaDeterminazione(partita, nomeStanza); }, 1600);
   } finally {
     partita.elaborandoTiro = false;
   }
 }
 
-function iniziaFaseDeterminazione(partita, nomeStanza) {
+async function iniziaFaseDeterminazione(partita, nomeStanza) {
   partita.fase = "determinazione_ordine";
   partita.ordineDeterminazione = Object.keys(partita.giocatori);
   partita.risultatiDeterminazione = {};
   partita.codaDeterminazione = [...partita.ordineDeterminazione];
   partita.turnoInCorsoDeterminazione = null;
   partita.gruppoSpareggioAttuale = null;
-  avanzaDeterminazione(partita, nomeStanza);
+  await avanzaDeterminazione(partita, nomeStanza);
+}
+
+async function riprendiFaseDeterminazioneRipristinata(partita, nomeStanza) {
+  const uidGiocatori = Object.keys(partita.giocatori);
+  const uidValidi = new Set(uidGiocatori);
+  const ordineSalvato = Array.isArray(partita.ordineDeterminazione)
+    ? [...new Set(partita.ordineDeterminazione.filter(uid => uidValidi.has(uid)))]
+    : [];
+
+  if (ordineSalvato.length !== uidGiocatori.length || uidGiocatori.length < 2) {
+    await iniziaFaseDeterminazione(partita, nomeStanza);
+    return;
+  }
+
+  partita.ordineDeterminazione = ordineSalvato;
+  partita.risultatiDeterminazione = Object.fromEntries(
+    Object.entries(partita.risultatiDeterminazione || {}).filter(([uid, valore]) => uidValidi.has(uid) && Number.isFinite(Number(valore)))
+  );
+  partita.codaDeterminazione = [...new Set((partita.codaDeterminazione || []).filter(uid => uidValidi.has(uid)))];
+  partita.gruppoSpareggioAttuale = Array.isArray(partita.gruppoSpareggioAttuale)
+    ? partita.gruppoSpareggioAttuale.filter(uid => uidValidi.has(uid))
+    : null;
+
+  if (uidValidi.has(partita.turnoInCorsoDeterminazione)) {
+    avviaTimerDeterminazione(partita, nomeStanza);
+    inviaStatoDeterminazione(partita, nomeStanza);
+    return;
+  }
+
+  partita.turnoInCorsoDeterminazione = null;
+  if (partita.codaDeterminazione.length || Object.keys(partita.risultatiDeterminazione).length) {
+    await avanzaDeterminazione(partita, nomeStanza);
+    return;
+  }
+
+  await iniziaFaseDeterminazione(partita, nomeStanza);
 }
 
 async function avanzaDeterminazione(partita, nomeStanza) {
@@ -1273,6 +1366,8 @@ async function avanzaDeterminazione(partita, nomeStanza) {
   partita.turnoInCorsoDeterminazione = partita.codaDeterminazione.shift();
   avviaTimerDeterminazione(partita, nomeStanza);
   inviaStatoDeterminazione(partita, nomeStanza);
+  try { await salvaPartita({ ...partita, stanza: nomeStanza }); }
+  catch (erroreSalvataggio) { console.error("Errore salvataggio turno di determinazione:", erroreSalvataggio.message); }
 }
 
 async function espelliPerInattivitaDuranteDeterminazione(partita, nomeStanza, uid) {
@@ -1286,6 +1381,7 @@ async function espelliPerInattivitaDuranteDeterminazione(partita, nomeStanza, ui
     } catch (e) { console.error("Errore penalità inattività in determinazione:", e.message); }
   }
 
+  rimuoviPartecipanteMedia(partita, uid);
   rimuoviGiocatoreDaDeterminazione(partita, uid);
   const restanti = Object.keys(partita.giocatori);
 
@@ -1336,7 +1432,9 @@ async function completaDeterminazione(partita, nomeStanza, ordineFinale) {
         },
         giocatori: statoGiocatori, turnoDiId: idPrimoTurno,
         tempoInizioTurno: partita.tempoInizioTurno, durataMossaMs: millisecondiMossa(partita),
-        vittoria: false, vincitore: null
+        vittoria: false, vincitore: null,
+        chatAttiva: partita.chatAttiva !== false,
+        mediaAttiva: partita.mediaAttiva === true
       }));
     }
   });
@@ -1349,12 +1447,12 @@ async function avviaPartitaAutomaticamente(partita) {
   const trovato = trovaPartita(partita.id);
   const nomeStanza = trovato ? trovato.nomeStanza : partita.stanza;
 
-  iniziaFaseDeterminazione(partita, nomeStanza);
+  await iniziaFaseDeterminazione(partita, nomeStanza);
 
   await salvaPartita({ ...partita, stanza: nomeStanza, fase: partita.fase, iniziata: partita.iniziata });
 
   Object.values(partita.giocatori).forEach(g => {
-    if (g.socket && g.socket.readyState === WebSocket.OPEN) g.socket.send(JSON.stringify({ tipo: "partitaAvviata", partitaId: partita.id }));
+    if (g.socket && g.socket.readyState === WebSocket.OPEN) g.socket.send(JSON.stringify({ tipo: "partitaAvviata", partitaId: partita.id, mediaAttiva: partita.mediaAttiva === true }));
   });
 
   inviaConteggioStanze();
@@ -1413,6 +1511,13 @@ async function esciDaPartitaInAttesa(partita, nomeStanza, uid) {
 
 // ===== CONNESSIONI WEBSOCKET =====
 wss.on("connection", (socket, request) => {
+  const origineWebSocket = request.headers.origin || "";
+  const origineLocaleDiSviluppo = process.env.NODE_ENV !== "production" &&
+    (!origineWebSocket || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origineWebSocket));
+  if (!ORIGINI_CONSENTITE.includes(origineWebSocket) && !origineLocaleDiSviluppo) {
+    socket.close(1008, "Origine non consentita");
+    return;
+  }
   socket.isAlive = true;
   socket.on("pong", () => { socket.isAlive = true; });
 
@@ -1432,22 +1537,40 @@ wss.on("connection", (socket, request) => {
 
       if (dati.tipo === "richiediConteggio") { inviaConteggioStanze(); return; }
 
+      if (dati.tipo === "mediaPronto") {
+        if (!uid) return;
+        if (typeof dati.attivo !== "boolean") return;
+        const trovato = trovaPartita(dati.partitaId);
+        if (!trovato) return;
+        const { partita } = trovato;
+        const giocatore = partita.giocatori[uid];
+        if (partita.mediaAttiva !== true || !giocatore || giocatore.socket !== socket) return;
+        if (!(partita.partecipantiMediaPronti instanceof Set)) partita.partecipantiMediaPronti = new Set();
+        if (dati.attivo === false) partita.partecipantiMediaPronti.delete(uid);
+        else partita.partecipantiMediaPronti.add(uid);
+        inviaStatoMedia(partita);
+        return;
+      }
+
       if (dati.tipo === "richiestaAudio" || dati.tipo === "rispostaAudio" || dati.tipo === "webrtc-offer" || dati.tipo === "webrtc-answer" || dati.tipo === "webrtc-ice-candidate") {
         if (!uid) return;
         const trovato = trovaPartita(dati.partitaId);
         if (!trovato) return;
         const { partita } = trovato;
-        if (!partita.giocatori[uid]) return;
+        const mittente = partita.giocatori[uid];
+        if (!mittente || mittente.socket !== socket) return;
         const destinatarioUid = dati.destinatarioUid;
-        if (!destinatarioUid) return;
+        if (!destinatarioUid || destinatarioUid === uid) return;
         const destinatario = partita.giocatori[destinatarioUid];
         if (!destinatario || !destinatario.socket || destinatario.socket.readyState !== WebSocket.OPEN) return;
 
         if (dati.tipo === "richiestaAudio") {
+          if (partita.mediaAttiva === true) return;
           destinatario.socket.send(JSON.stringify({ tipo: "richiestaAudioRicevuta", mittenteUid: uid, mittenteNome: nickname }));
           return;
         }
         if (dati.tipo === "rispostaAudio") {
+          if (partita.mediaAttiva === true) return;
           if (dati.accettato) {
             if (!partita.coppieAudioApprovate) partita.coppieAudioApprovate = new Set();
             partita.coppieAudioApprovate.add(idConversazione(uid, destinatarioUid));
@@ -1455,8 +1578,21 @@ wss.on("connection", (socket, request) => {
           destinatario.socket.send(JSON.stringify({ tipo: "rispostaAudioRicevuta", mittenteUid: uid, mittenteNome: nickname, accettato: !!dati.accettato }));
           return;
         }
-        const coppiaApprovata = partita.coppieAudioApprovate && partita.coppieAudioApprovate.has(idConversazione(uid, destinatarioUid));
-        if (!coppiaApprovata) return;
+        if (dati.tipo === "webrtc-offer" || dati.tipo === "webrtc-answer") {
+          const sdpTesto = dati.sdp && typeof dati.sdp.sdp === "string" ? dati.sdp.sdp : "";
+          if (!sdpTesto || sdpTesto.length > 128 * 1024) return;
+        }
+        if (dati.tipo === "webrtc-ice-candidate") {
+          let candidateSerializzato = "";
+          try { candidateSerializzato = JSON.stringify(dati.candidate || null); } catch (e) { return; }
+          if (!candidateSerializzato || candidateSerializzato.length > 16 * 1024) return;
+        }
+        const coppiaAudioApprovata = partita.coppieAudioApprovate && partita.coppieAudioApprovate.has(idConversazione(uid, destinatarioUid));
+        const coppiaMediaPronta = partita.mediaAttiva === true &&
+          partita.partecipantiMediaPronti instanceof Set &&
+          partita.partecipantiMediaPronti.has(uid) &&
+          partita.partecipantiMediaPronti.has(destinatarioUid);
+        if (!coppiaAudioApprovata && !coppiaMediaPronta) return;
         destinatario.socket.send(JSON.stringify({ tipo: dati.tipo, mittenteUid: uid, sdp: dati.sdp || null, candidate: dati.candidate || null }));
         return;
       }
@@ -1504,7 +1640,14 @@ wss.on("connection", (socket, request) => {
       if (dati.tipo === "entraLobby") {
         if (!db) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Servizio account non disponibile." })); return; }
         if (!uid) { socket.send(JSON.stringify({ tipo: "sessioneScaduta" })); return; }
-        if (!dati.stanza) return;
+        if (typeof dati.stanza !== "string" || !Object.prototype.hasOwnProperty.call(stanze, dati.stanza)) {
+          socket.send(JSON.stringify({ tipo: "errore", messaggio: "Stanza non valida." }));
+          return;
+        }
+        if (stanzaAttuale && stanzaAttuale !== dati.stanza) {
+          socket.send(JSON.stringify({ tipo: "errore", messaggio: "Sei già collegato a un'altra stanza." }));
+          return;
+        }
         const utenteDb = (await db.ref("utenti/" + uid).once("value")).val();
         if (!utenteDb) { socket.send(JSON.stringify({ tipo: "sessioneScaduta" })); return; }
         if (utenteDb.stato === "bannato") { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Il tuo account è stato bannato." })); return; }
@@ -1545,6 +1688,14 @@ inviaAllaStanza(stanzaAttuale, {
         const mioGiocatore = partita.giocatori[uid];
         if (!mioGiocatore) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Non fai parte di questa partita." })); return; }
         if (db) { try { const u = (await db.ref("utenti/" + uid).once("value")).val(); if (u) mioGiocatore.avatar = u.avatar || null; } catch (e) {} }
+        const socketPrecedente = mioGiocatore.socket;
+        if (socketPrecedente && socketPrecedente !== socket) {
+          rimuoviPartecipanteMedia(partita, uid);
+          if (socketPrecedente.readyState === WebSocket.OPEN) {
+            socketPrecedente.send(JSON.stringify({ tipo: "sessioneSostituita", messaggio: "La partita è stata aperta in un'altra scheda o dispositivo." }));
+            socketPrecedente.close(4001, "Sessione sostituita");
+          }
+        }
         mioGiocatore.socket = socket;
         nickname = mioGiocatore.nome; mioAvatar = mioGiocatore.avatar || null;
 
@@ -1557,6 +1708,8 @@ inviaAllaStanza(stanzaAttuale, {
 };
         inviaConteggioStanze();
 
+        if (partita.mediaAttiva === true) socket.send(JSON.stringify({ tipo: "configMedia", configurazioneIce: configurazioneIcePerClient() }));
+
         if (partita.fase === "determinazione_ordine") {
           socket.send(JSON.stringify({
             tipo: "statoDeterminazione",
@@ -1565,7 +1718,8 @@ inviaAllaStanza(stanzaAttuale, {
             gruppoSpareggioAttuale: partita.gruppoSpareggioAttuale || null,
             tempoInizioTurno: partita.tempoInizioTurno || Date.now(),
             durataMossaMs: millisecondiMossa(partita),
-            chatAttiva: partita.chatAttiva !== false
+            chatAttiva: partita.chatAttiva !== false,
+            mediaAttiva: partita.mediaAttiva === true
           }));
         } else {
           socket.send(JSON.stringify({
@@ -1578,7 +1732,8 @@ inviaAllaStanza(stanzaAttuale, {
             scadenzaTurno: partita.scadenzaTurno || null,
             tiriEffettuatiNelTurno: Number(partita.tiriEffettuatiNelTurno || 0),
             tiriConsentitiNelTurno: Number(partita.tiriConsentitiNelTurno || 1),
-            chatAttiva: partita.chatAttiva !== false
+            chatAttiva: partita.chatAttiva !== false,
+            mediaAttiva: partita.mediaAttiva === true
           }));
         }
         return;
@@ -1586,21 +1741,33 @@ inviaAllaStanza(stanzaAttuale, {
 
       if (dati.tipo === "creaPartita") {
         if (!stanzaAttuale || !uid) return;
-        if (Object.values(stanze[stanzaAttuale].partite).some(p => p.creatoDa === uid)) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Hai già una partita attiva." })); return; }
+        if (trovaPartitaAttivaPerUid(uid)) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Fai già parte di una partita attiva." })); return; }
+        const mediaAttiva = dati.mediaAttiva === true;
+        if (mediaAttiva && dati.mediaConsenso !== true) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Per creare un tavolo con webcam e microfono devi prima autorizzarli." })); return; }
         const partitaId = "p" + Date.now() + Math.floor(Math.random() * 1000);
         const max = parseInt(dati.maxGiocatori);
-        stanze[stanzaAttuale].partite[partitaId] = {
+        const nuovaPartita = {
           id: partitaId, creatore: nickname, creatoDa: uid, tempo: dati.tempo, punti: dati.punti, modalita: dati.modalita,
           maxGiocatori: (!max || max < 2 || max > 8 ? 2 : max),
           chatAttiva: dati.chatAttiva !== false,
+          mediaAttiva,
           fase: "attesa_giocatori",
           giocatori: { [uid]: { nome: nickname, avatar: mioAvatar, posizione: 0, socket, turniSaltati: 0, tentativiAutomaticiConsecutivi: 0 } },
           ordineGiocatori: [uid], turnoAttuale: 0, iniziata: false, elaborandoTiro: false, animazioneTiroInCorso: false,
           tiriEffettuatiNelTurno: 0, tiriConsentitiNelTurno: 1,
           invitati: dati.modalita === "privata" ? { [uid]: true } : null, timerTurno: null, tempoInizioTurno: null,
-          coppieAudioApprovate: new Set()
+          coppieAudioApprovate: new Set(),
+          partecipantiMediaPronti: new Set()
         };
-        await salvaPartita({ ...stanze[stanzaAttuale].partite[partitaId], stanza: stanzaAttuale });
+        stanze[stanzaAttuale].partite[partitaId] = nuovaPartita;
+        try {
+          await salvaPartita({ ...nuovaPartita, stanza: stanzaAttuale });
+        } catch (erroreSalvataggio) {
+          delete stanze[stanzaAttuale].partite[partitaId];
+          console.error("Errore creazione partita:", erroreSalvataggio.message);
+          socket.send(JSON.stringify({ tipo: "errore", messaggio: "Non è stato possibile creare la partita. Riprova." }));
+          return;
+        }
         inviaListaPartite(stanzaAttuale);
         return;
       }
@@ -1609,12 +1776,23 @@ inviaAllaStanza(stanzaAttuale, {
         if (!stanzaAttuale || !uid) return;
         const partita = stanze[stanzaAttuale].partite[dati.id];
         if (!partita) return;
+        if (partita.fase !== "attesa_giocatori" || partita.iniziata === true) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Questa partita è già iniziata." })); return; }
         if (partita.giocatori[uid]) return;
+        if (trovaPartitaAttivaPerUid(uid)) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Fai già parte di un'altra partita." })); return; }
         if (Object.keys(partita.giocatori).length >= partita.maxGiocatori) return;
         if (partita.modalita === "privata") { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Questa è una partita privata: puoi entrare solo se il creatore ti invita direttamente." })); return; }
+        if (partita.mediaAttiva === true && dati.mediaConsenso !== true) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Per entrare in questo tavolo devi autorizzare webcam e microfono." })); return; }
         partita.giocatori[uid] = { nome: nickname, avatar: mioAvatar, posizione: 0, socket, turniSaltati: 0, tentativiAutomaticiConsecutivi: 0 };
         partita.ordineGiocatori.push(uid);
-        await aggiornaStatoPartita(partita.id, { giocatori: preparaGiocatoriPerFirebase(partita.giocatori), ordineGiocatori: partita.ordineGiocatori });
+        try {
+          await aggiornaStatoPartita(partita.id, { giocatori: preparaGiocatoriPerFirebase(partita.giocatori), ordineGiocatori: partita.ordineGiocatori });
+        } catch (erroreSalvataggio) {
+          delete partita.giocatori[uid];
+          partita.ordineGiocatori = partita.ordineGiocatori.filter(id => id !== uid);
+          console.error("Errore ingresso partita:", erroreSalvataggio.message);
+          socket.send(JSON.stringify({ tipo: "errore", messaggio: "Non è stato possibile entrare nella partita. Riprova." }));
+          return;
+        }
         inviaListaPartite(stanzaAttuale);
         if (Object.keys(partita.giocatori).length === partita.maxGiocatori) await avviaPartitaAutomaticamente(partita);
         return;
@@ -1625,6 +1803,7 @@ inviaAllaStanza(stanzaAttuale, {
         const trovato = trovaPartita(dati.partitaId);
         if (!trovato) return;
         const { partita, nomeStanza } = trovato;
+        if (partita.fase !== "attesa_giocatori" || partita.iniziata === true) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Questa partita è già iniziata." })); return; }
         if (partita.creatoDa !== uid) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Solo il creatore della partita può invitare altri giocatori." })); return; }
         if (partita.modalita !== "privata") return;
         if (Object.keys(partita.giocatori).length >= partita.maxGiocatori) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "La partita è già al completo." })); return; }
@@ -1638,7 +1817,7 @@ inviaAllaStanza(stanzaAttuale, {
         partita.invitati[destinatarioUid] = true;
         const socketDestinatario = socketsPerId[socketIdDestinatario];
         const nomeDestinatario = stanzaOggetto.giocatoriOnline[socketIdDestinatario].nickname;
-        if (socketDestinatario && socketDestinatario.readyState === WebSocket.OPEN) socketDestinatario.send(JSON.stringify({ tipo: "invitoRicevuto", partitaId: partita.id, stanza: nomeStanza, daUid: uid, daNome: nickname }));
+        if (socketDestinatario && socketDestinatario.readyState === WebSocket.OPEN) socketDestinatario.send(JSON.stringify({ tipo: "invitoRicevuto", partitaId: partita.id, stanza: nomeStanza, daUid: uid, daNome: nickname, mediaAttiva: partita.mediaAttiva === true }));
         if (db) db.ref("utenti/" + destinatarioUid + "/notifiche").push({ tipo: "invitoPartita", testo: `${nickname} ti ha invitato a giocare nella stanza ${nomeStanza}`, data: Date.now(), letta: false, daUid: uid, daNome: nickname, stanza: nomeStanza, partitaId: partita.id }).catch(() => {});
         socket.send(JSON.stringify({ tipo: "invitoInviato", destinatarioUid, destinatarioNome: nomeDestinatario }));
         return;
@@ -1656,12 +1835,24 @@ inviaAllaStanza(stanzaAttuale, {
           if (hostGiocatore && hostGiocatore.socket && hostGiocatore.socket.readyState === WebSocket.OPEN) hostGiocatore.socket.send(JSON.stringify({ tipo: "invitoRifiutato", destinatarioNome: nickname }));
           return;
         }
+        if (partita.fase !== "attesa_giocatori" || partita.iniziata === true) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Questa partita è già iniziata." })); return; }
+        if (partita.mediaAttiva === true && dati.mediaConsenso !== true) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Per accettare questo invito devi autorizzare webcam e microfono." })); return; }
         if (partita.giocatori[uid]) return;
+        if (trovaPartitaAttivaPerUid(uid)) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Fai già parte di un'altra partita." })); return; }
         if (Object.keys(partita.giocatori).length >= partita.maxGiocatori) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "La partita si è già riempita." })); return; }
         stanzaAttuale = nomeStanza;
         partita.giocatori[uid] = { nome: nickname, avatar: mioAvatar, posizione: 0, socket, turniSaltati: 0, tentativiAutomaticiConsecutivi: 0 };
         partita.ordineGiocatori.push(uid);
-        await aggiornaStatoPartita(partita.id, { giocatori: preparaGiocatoriPerFirebase(partita.giocatori), ordineGiocatori: partita.ordineGiocatori });
+        try {
+          await aggiornaStatoPartita(partita.id, { giocatori: preparaGiocatoriPerFirebase(partita.giocatori), ordineGiocatori: partita.ordineGiocatori });
+        } catch (erroreSalvataggio) {
+          delete partita.giocatori[uid];
+          partita.ordineGiocatori = partita.ordineGiocatori.filter(id => id !== uid);
+          console.error("Errore accettazione invito:", erroreSalvataggio.message);
+          socket.send(JSON.stringify({ tipo: "errore", messaggio: "Non è stato possibile entrare nella partita. Riprova." }));
+          return;
+        }
+        delete partita.invitati[uid];
         inviaListaPartite(nomeStanza);
         if (Object.keys(partita.giocatori).length === partita.maxGiocatori) await avviaPartitaAutomaticamente(partita);
         return;
@@ -1695,7 +1886,7 @@ inviaAllaStanza(stanzaAttuale, {
         const partita = trovato.partita;
         if (partita.chatAttiva === false) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "La chat è disattivata in questa partita." })); return; }
         const mittente = partita.giocatori[uid];
-        if (!mittente) return;
+        if (!mittente || mittente.socket !== socket) return;
         Object.values(partita.giocatori).forEach(g => {
           if (g.socket && g.socket.readyState === WebSocket.OPEN) g.socket.send(JSON.stringify({ tipo: "chatPartita", nome: mittente.nome, testo }));
         });
@@ -1708,6 +1899,7 @@ inviaAllaStanza(stanzaAttuale, {
         if (!trovato) return;
         const { partita, nomeStanza } = trovato;
         if (partita.fase !== "determinazione_ordine") return;
+        if (!partita.giocatori[uid] || partita.giocatori[uid].socket !== socket) return;
         if (partita.turnoInCorsoDeterminazione !== uid) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Non è il tuo turno per tirare." })); return; }
         if (partita.giocatori[uid]) partita.giocatori[uid].tentativiAutomaticiConsecutivi = 0;
         await eseguiTiroDeterminazionePerGiocatore(partita, nomeStanza, uid, false);
@@ -1720,6 +1912,7 @@ inviaAllaStanza(stanzaAttuale, {
         if (!trovato) return;
         const { partita, nomeStanza } = trovato;
         if (partita.fase !== "in_corso") return;
+        if (!partita.giocatori[uid] || partita.giocatori[uid].socket !== socket) return;
         if (partita.ordineGiocatori[partita.turnoAttuale] !== uid) {
           socket.send(JSON.stringify({ tipo: "errore", messaggio: "Non è il tuo turno!" }));
           return;
@@ -1735,7 +1928,8 @@ inviaAllaStanza(stanzaAttuale, {
         const trovato = trovaPartita(dati.partitaId);
         if (!trovato) return;
         const { partita, nomeStanza } = trovato;
-        if (!partita.giocatori[uid]) return;
+        if (!partita.giocatori[uid] || partita.giocatori[uid].socket !== socket) return;
+        rimuoviPartecipanteMedia(partita, uid);
 
         if (partita.fase === "attesa_giocatori") {
           await esciDaPartitaInAttesa(partita, nomeStanza, uid);
@@ -1846,28 +2040,22 @@ socket.on("close", async () => {
     // Rimuove esclusivamente questa connessione.
     delete stanze[nomeStanza].giocatoriOnline[socketId];
 
-    // Se il socket apparteneva a una partita ancora in attesa,
-    // rimuove il giocatore dalla partita.
+    // Rimuove il socket dal roster media. Nelle partite in corso il giocatore
+    // resta al tavolo e potrà riconnettersi; in attesa viene invece alzato.
     const partite = stanze[nomeStanza].partite;
 
     for (const pid in partite) {
       const partita = partite[pid];
-
-      if (partita.fase !== "attesa_giocatori") continue;
-
       const giocatore = partita.giocatori[uid];
-
       if (!giocatore) continue;
-
-      // Se la partita è già associata a un'altra connessione dello stesso UID,
-      // questa chiusura è relativa al vecchio socket e non deve rimuovere il giocatore.
       if (giocatore.socket && giocatore.socket !== socket) continue;
+      rimuoviPartecipanteMedia(partita, uid);
 
-      await esciDaPartitaInAttesa(
-        partita,
-        nomeStanza,
-        uid
-      );
+      if (partita.fase === "attesa_giocatori") {
+        await esciDaPartitaInAttesa(partita, nomeStanza, uid);
+      } else {
+        giocatore.socket = null;
+      }
     }
 
     inviaListaPartite(nomeStanza);
