@@ -261,7 +261,7 @@ body.modalita-ruotata #mondo-ruotato {
 
 .pedina-interno { transition: transform 0.3s ease; }
 body.modalita-ruotata .pedina-interno { transform: rotate(-90deg); }
-.pedina-salta { animation: salto-pedina 0.26s ease; }
+.pedina-salta { animation: salto-pedina 0.32s ease; }
 
 @keyframes salto-pedina {
   0% { transform: translate(-50%, -100%) scale(1); }
@@ -1108,77 +1108,200 @@ body.modalita-desktop.media-partita #btn-giocatori {
 }
 
 /* =========================================================
-   SMARTPHONE — LAYOUT DEFINITIVO
-   =========================================================
-   OBIETTIVI:
-   - SOLO tabellone + pedine restano ruotati di 90° in portrait.
-   - Menu, chat, pulsante giocatori e "CHI INIZIA?" restano dritti.
-   - Il popup di vittoria resta ruotato di 90° insieme al gioco.
-   - I dadi sono DENTRO il tabellone, nella parte bassa visibile.
-   - Pedine piccole e centrate esattamente sulla casella.
+   CORREZIONE TABELLONE + PEDINE SOLO CELLULARE
 ========================================================= */
 
+/*
+ * Salto specifico per mobile.
+ * Mantiene la pedina centrata sulla casella anche
+ * durante l'animazione.
+ */
+@keyframes salto-pedina-mobile {
 
-/* =========================================================
-   SALTO PEDINA MOBILE
-   0.26s: leggermente più lento del precedente 0.20s.
-========================================================= */
-@keyframes salto-pedina-mobile-definitivo {
-  0% {
-    transform: translate(-50%, -50%) scale(0.56);
-  }
+    0% {
+        transform:
+            translate(-50%, -50%)
+            scale(0.58);
+    }
 
-  45% {
-    transform: translate(-50%, -68%) scale(0.61);
-  }
+    40% {
+        transform:
+            translate(-50%, -75%)
+            scale(0.64);
+    }
 
-  100% {
-    transform: translate(-50%, -50%) scale(0.56);
-  }
+    100% {
+        transform:
+            translate(-50%, -50%)
+            scale(0.58);
+    }
 }
 
 
 /* =========================================================
-   TELEFONO VERTICALE
-   =========================================================
-   La classe .modalita-ruotata viene impostata da gioco.js
-   quando il dispositivo touch è in portrait.
-
-   IMPORTANTE:
-   #scena NON viene ruotata.
-   Viene ruotato soltanto #mondo-ruotato, cioè il gioco.
-   Così i controlli e "CHI INIZIA?" restano verticali.
+   SOLO SMARTPHONE
 ========================================================= */
 @media (max-width: 600px) {
 
-  /* -------------------------------------------------------
-     SCENA NORMALE: UI DRITTA
-  ------------------------------------------------------- */
+    /* =====================================================
+       TABELLONE PIÙ GRANDE
+       ===================================================== */
+
+    body.modalita-ruotata #area-tabellone {
+
+        /*
+         * Ingrandisce tutto il tabellone mantenendo
+         * esattamente le sue proporzioni.
+         *
+         * 1.10 = +10%
+         */
+        transform: scale(1.10);
+
+        transform-origin:
+            center center;
+
+        /*
+         * Nessun margine aggiuntivo.
+         */
+        margin: 0;
+
+        padding: 0;
+    }
+
+
+    /* =====================================================
+       IMMAGINE TABELLONE
+       ===================================================== */
+
+    body.modalita-ruotata #immagine-tabellone {
+
+        width: 100%;
+        height: 100%;
+
+        /*
+         * Angoli molto meno arrotondati:
+         * visivamente il tabellone sfrutta più spazio.
+         */
+        border-radius: 4px;
+
+        /*
+         * Ombra ridotta, così non dà l'impressione
+         * di avere grossi margini.
+         */
+        box-shadow:
+            0 4px 14px
+            rgba(0, 0, 0, 0.45);
+    }
+
+
+    /* =====================================================
+       CONTENITORE PEDINE
+       ===================================================== */
+
+    body.modalita-ruotata #contenitore-pedine {
+
+        position: absolute;
+
+        top: 0;
+        left: 0;
+
+        width: 100%;
+        height: 100%;
+
+        /*
+         * Garantisce che una pedina non possa essere
+         * disegnata visivamente fuori dal tabellone.
+         */
+        overflow: hidden;
+
+        border-radius: 4px;
+
+        pointer-events: none;
+    }
+
+
+    /* =====================================================
+       PEDINE PIÙ PICCOLE E CENTRATE
+       ===================================================== */
+
+    body.modalita-ruotata .pedina {
+
+        /*
+         * PRIMA:
+         *
+         * translate(-50%, -100%)
+         *
+         * significava che la coordinata della casella
+         * corrispondeva alla parte bassa della pedina.
+         *
+         * ORA:
+         *
+         * translate(-50%, -50%)
+         *
+         * il CENTRO della pedina coincide con il CENTRO
+         * della casella.
+         */
+
+        transform:
+            translate(-50%, -50%)
+            scale(0.58);
+
+        transform-origin:
+            center center;
+
+        /*
+         * Manteniamo fluido lo spostamento.
+         */
+        transition:
+            left 0.5s ease,
+            top 0.5s ease;
+
+        /*
+         * Pedine sempre sopra all'immagine.
+         */
+        z-index: 5;
+    }
+
+
+    /* =====================================================
+       ANIMAZIONE SALTO MOBILE
+       ===================================================== */
+
+    body.modalita-ruotata .pedina-salta {
+
+        animation:
+            salto-pedina-mobile
+            0.32s
+            ease;
+    }
+
+}
+
+/* =========================================================
+   FIX DEFINITIVO SMARTPHONE — INTERA SCENA IN LANDSCAPE
+   =========================================================
+   In portrait ruota l'intera interfaccia di gioco, non soltanto il tabellone.
+   In questo modo pedine, dadi, menu, giocatori, chat, messaggi e popup hanno
+   tutti lo stesso orientamento. In landscape reale la classe viene rimossa.
+========================================================= */
+@media (max-width: 600px) {
   body.modalita-ruotata #scena {
     position: fixed;
-    inset: 0;
-    width: auto;
-    height: auto;
-    transform: none !important;
+    inset: auto;
+    top: 50%;
+    left: 50%;
+    width: var(--altezza-reale, 100vh);
+    height: 100vw;
+    transform: translate(-50%, -50%) rotate(90deg);
     transform-origin: center center;
     overflow: hidden;
   }
 
-
-  /* -------------------------------------------------------
-     SOLO IL MONDO DEL TABELLONE RUOTA DI 90°
-  ------------------------------------------------------- */
+  /* Il mondo non va ruotato una seconda volta: ora ruota già #scena. */
   body.modalita-ruotata #mondo-ruotato {
-    transform: translate(-50%, -50%) rotate(90deg);
-    transform-origin: center center;
+    transform: translate(-50%, -50%);
   }
 
-
-  /* -------------------------------------------------------
-     TABELLONE
-     Mantiene dimensione e posizione molto simili al fix
-     precedente, con margini ridotti.
-  ------------------------------------------------------- */
   body.modalita-ruotata #area-tabellone {
     margin: 0;
     padding: 0;
@@ -1187,194 +1310,106 @@ body.modalita-desktop.media-partita #btn-giocatori {
   }
 
   body.modalita-ruotata #immagine-tabellone {
-    width: 100%;
-    height: 100%;
     border-radius: 4px;
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
   }
 
-
-  /* -------------------------------------------------------
-     PEDINE
-     Il centro geometrico della pedina coincide col centro
-     esatto della casella.
-  ------------------------------------------------------- */
   body.modalita-ruotata #contenitore-pedine {
-    position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
     overflow: hidden;
     border-radius: 4px;
-    pointer-events: none;
   }
 
+  /* Centro geometrico della pedina = centro geometrico della casella. */
   body.modalita-ruotata .pedina {
     transform: translate(-50%, -50%) scale(0.56);
     transform-origin: center center;
-    transition:
-      left 0.30s ease,
-      top 0.30s ease;
+    transition: left 0.30s ease, top 0.30s ease;
     z-index: 5;
   }
 
-  /*
-   * Nessuna contro-rotazione della pedina:
-   * deve ruotare insieme al tabellone.
-   */
+  /* Niente contro-rotazione: la pedina deve girare insieme al tabellone. */
   body.modalita-ruotata .pedina-interno {
     transform: none !important;
   }
 
-  body.modalita-ruotata .pedina-salta {
-    animation:
-      salto-pedina-mobile-definitivo
-      0.26s
-      ease;
-  }
-
-
-  /* -------------------------------------------------------
-     DADI DENTRO IL TABELLONE, VISIVAMENTE IN BASSO
-     -------------------------------------------------------
-     Poiché il tabellone viene ruotato di 90° in senso
-     orario, il bordo DESTRO del tabellone non ruotato
-     diventa il bordo BASSO sullo schermo.
-
-     I dadi vengono contro-ruotati di -90° così restano
-     dritti e facili da leggere.
-  ------------------------------------------------------- */
-  body.modalita-ruotata
-  #area-tabellone
-  > #area-dadi:not(.dadi-in-popup) {
-    top: 50%;
-    right: 3%;
-    bottom: auto;
-    left: auto;
-
-    gap: 10px;
+  /* I dadi stanno SOTTO al tabellone nel layout landscape. Quando il telefono
+     è ancora fisicamente verticale, questa zona corrisponde al lato sinistro. */
+  body.modalita-ruotata #area-tabellone > #area-dadi:not(.dadi-in-popup) {
+    top: auto;
+    right: auto;
+    bottom: -48px;
+    left: 50%;
     padding: 7px 12px;
-
-    transform:
-      translateY(-50%)
-      rotate(-90deg) !important;
-
-    transform-origin: center center;
-
+    gap: 10px;
+    transform: translateX(-50%);
     border-radius: 12px;
-    background: rgba(10, 16, 22, 0.68);
   }
 
-
-  /*
-   * Quando i dadi vengono spostati nel popup "CHI INIZIA?"
-   * devono tornare normali e dritti.
-   */
   body.modalita-ruotata #area-dadi.dadi-in-popup {
-    position: static !important;
-    margin: 16px auto 0;
     transform: none !important;
   }
 
-
-  /* Dadi compatti sul telefono. */
-  body.modalita-ruotata
-  #area-dadi:not(.dadi-in-popup)
-  .dado-3d,
-
-  body.modalita-ruotata
-  #area-dadi:not(.dadi-in-popup)
-  .faccia {
+  /* Dadi leggermente più compatti sul telefono per non coprire il tabellone. */
+  body.modalita-ruotata #area-dadi:not(.dadi-in-popup) .dado-3d,
+  body.modalita-ruotata #area-dadi:not(.dadi-in-popup) .faccia {
     width: 42px;
     height: 42px;
   }
 
-  body.modalita-ruotata
-  #area-dadi:not(.dadi-in-popup)
-  .faccia {
+  body.modalita-ruotata #area-dadi:not(.dadi-in-popup) .faccia {
     padding: 5px;
   }
 
-  body.modalita-ruotata
-  #area-dadi:not(.dadi-in-popup)
-  .pip {
+  body.modalita-ruotata #area-dadi:not(.dadi-in-popup) .pip {
     width: 7px;
     height: 7px;
   }
 
-  body.modalita-ruotata #area-dadi:not(.dadi-in-popup) .faccia-1 {
-    transform: rotateY(0deg) translateZ(21px);
+  body.modalita-ruotata #area-dadi:not(.dadi-in-popup) .faccia-1 { transform: rotateY(0deg) translateZ(21px); }
+  body.modalita-ruotata #area-dadi:not(.dadi-in-popup) .faccia-6 { transform: rotateY(180deg) translateZ(21px); }
+  body.modalita-ruotata #area-dadi:not(.dadi-in-popup) .faccia-3 { transform: rotateX(90deg) translateZ(21px); }
+  body.modalita-ruotata #area-dadi:not(.dadi-in-popup) .faccia-4 { transform: rotateX(-90deg) translateZ(21px); }
+  body.modalita-ruotata #area-dadi:not(.dadi-in-popup) .faccia-2 { transform: rotateY(90deg) translateZ(21px); }
+  body.modalita-ruotata #area-dadi:not(.dadi-in-popup) .faccia-5 { transform: rotateY(-90deg) translateZ(21px); }
+
+  body.modalita-ruotata #pannello-giocatori {
+    max-height: calc(var(--altezza-gioco, 100vw) - 20px);
+    max-width: min(280px, calc(var(--larghezza-gioco, 100vh) - 80px));
   }
 
-  body.modalita-ruotata #area-dadi:not(.dadi-in-popup) .faccia-6 {
-    transform: rotateY(180deg) translateZ(21px);
+  body.modalita-ruotata #pannello-menu {
+    max-height: calc(var(--altezza-gioco, 100vw) - 72px);
   }
 
-  body.modalita-ruotata #area-dadi:not(.dadi-in-popup) .faccia-3 {
-    transform: rotateX(90deg) translateZ(21px);
+  body.modalita-ruotata #pannello-chat {
+    max-height: calc(var(--altezza-gioco, 100vw) - 76px);
   }
+}
 
-  body.modalita-ruotata #area-dadi:not(.dadi-in-popup) .faccia-4 {
-    transform: rotateX(-90deg) translateZ(21px);
+@keyframes salto-pedina-mobile-fix {
+  0%   { transform: translate(-50%, -50%) scale(0.56); }
+  45%  { transform: translate(-50%, -68%) scale(0.61); }
+  100% { transform: translate(-50%, -50%) scale(0.56); }
+}
+
+@media (max-width: 600px) {
+  body.modalita-ruotata .pedina-salta {
+    animation: salto-pedina-mobile-fix 0.32s ease;
   }
-
-  body.modalita-ruotata #area-dadi:not(.dadi-in-popup) .faccia-2 {
-    transform: rotateY(90deg) translateZ(21px);
-  }
-
-  body.modalita-ruotata #area-dadi:not(.dadi-in-popup) .faccia-5 {
-    transform: rotateY(-90deg) translateZ(21px);
-  }
-
-
-  /* -------------------------------------------------------
-     MENU / CHAT / PERSONE: DRITTI COME PRIMA
-  ------------------------------------------------------- */
-  body.modalita-ruotata #menu-wrapper,
-  body.modalita-ruotata #giocatori-wrapper,
-  body.modalita-ruotata #chat-wrapper,
-  body.modalita-ruotata #pannello-menu,
-  body.modalita-ruotata #pannello-giocatori,
-  body.modalita-ruotata #pannello-chat,
-  body.modalita-ruotata #btn-menu,
-  body.modalita-ruotata #btn-giocatori,
-  body.modalita-ruotata #btn-chat {
-    transform: none !important;
-  }
-
-
-  /* -------------------------------------------------------
-     "CHI INIZIA?" DRITTO/VERTICALE
-  ------------------------------------------------------- */
-  body.modalita-ruotata .popup-determinazione {
-    transform: none !important;
-    transform-origin: center center;
-  }
-
-
-  /* -------------------------------------------------------
-     MESSAGGIO DI VITTORIA A 90°
-  ------------------------------------------------------- */
-  body.modalita-ruotata #overlay-vittoria .popup-vittoria {
-    width: min(
-      420px,
-      calc(var(--altezza-reale, 100vh) - 36px)
-    );
-
-    max-height: calc(100vw - 32px);
-
-    transform: rotate(90deg);
-    transform-origin: center center;
-  }
-
 }
 
 
 /* =========================================================
-   SMARTPHONE GIÀ GIRATO FISICAMENTE IN ORIZZONTALE
+   SMARTPHONE GIÀ IN LANDSCAPE
+   =========================================================
+   Quando il telefono viene fisicamente ruotato in orizzontale non serve
+   ruotare #scena, ma devono restare identiche le regole di gioco mobile:
+   pedine piccole/centrate e dadi realmente sotto al tabellone.
 ========================================================= */
 @media (orientation: landscape) and (max-height: 600px) {
-
   body:not(.modalita-desktop) #area-tabellone {
     margin: 0;
     padding: 0;
@@ -1387,189 +1422,68 @@ body.modalita-desktop.media-partita #btn-giocatori {
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
   }
 
-
-  /* Pedine sempre esattamente al centro della casella. */
   body:not(.modalita-desktop) #contenitore-pedine {
     overflow: hidden;
     border-radius: 4px;
   }
 
+  /* Centro esatto della pedina sulla coordinata della casella. */
   body:not(.modalita-desktop) .pedina {
     transform: translate(-50%, -50%) scale(0.56);
     transform-origin: center center;
-
-    transition:
-      left 0.30s ease,
-      top 0.30s ease;
-
+    transition: left 0.30s ease, top 0.30s ease;
     z-index: 5;
   }
 
+  /* In landscape reale non occorre alcuna contro-rotazione. */
   body:not(.modalita-desktop) .pedina-interno {
     transform: none !important;
   }
 
-  body:not(.modalita-desktop) .pedina-salta {
-    animation:
-      salto-pedina-mobile-definitivo
-      0.26s
-      ease;
-  }
-
-
-  /*
-   * In landscape vero il bordo basso è già il bordo basso,
-   * quindi i dadi si posizionano direttamente con bottom.
-   */
-  body:not(.modalita-desktop)
-  #area-tabellone
-  > #area-dadi:not(.dadi-in-popup) {
+  body:not(.modalita-desktop) #area-tabellone > #area-dadi:not(.dadi-in-popup) {
     top: auto;
     right: auto;
-    bottom: 3%;
+    bottom: -48px;
     left: 50%;
-
-    gap: 10px;
     padding: 7px 12px;
-
-    transform: translateX(-50%) !important;
-    transform-origin: center center;
-
+    gap: 10px;
+    transform: translateX(-50%);
     border-radius: 12px;
-    background: rgba(10, 16, 22, 0.68);
   }
 
-
   body:not(.modalita-desktop) #area-dadi.dadi-in-popup {
-    position: static !important;
-    margin: 16px auto 0;
     transform: none !important;
   }
 
-
-  body:not(.modalita-desktop)
-  #area-dadi:not(.dadi-in-popup)
-  .dado-3d,
-
-  body:not(.modalita-desktop)
-  #area-dadi:not(.dadi-in-popup)
-  .faccia {
+  body:not(.modalita-desktop) #area-dadi:not(.dadi-in-popup) .dado-3d,
+  body:not(.modalita-desktop) #area-dadi:not(.dadi-in-popup) .faccia {
     width: 42px;
     height: 42px;
   }
 
-  body:not(.modalita-desktop)
-  #area-dadi:not(.dadi-in-popup)
-  .faccia {
+  body:not(.modalita-desktop) #area-dadi:not(.dadi-in-popup) .faccia {
     padding: 5px;
   }
 
-  body:not(.modalita-desktop)
-  #area-dadi:not(.dadi-in-popup)
-  .pip {
+  body:not(.modalita-desktop) #area-dadi:not(.dadi-in-popup) .pip {
     width: 7px;
     height: 7px;
   }
 
-  body:not(.modalita-desktop) #area-dadi:not(.dadi-in-popup) .faccia-1 {
-    transform: rotateY(0deg) translateZ(21px);
-  }
+  body:not(.modalita-desktop) #area-dadi:not(.dadi-in-popup) .faccia-1 { transform: rotateY(0deg) translateZ(21px); }
+  body:not(.modalita-desktop) #area-dadi:not(.dadi-in-popup) .faccia-6 { transform: rotateY(180deg) translateZ(21px); }
+  body:not(.modalita-desktop) #area-dadi:not(.dadi-in-popup) .faccia-3 { transform: rotateX(90deg) translateZ(21px); }
+  body:not(.modalita-desktop) #area-dadi:not(.dadi-in-popup) .faccia-4 { transform: rotateX(-90deg) translateZ(21px); }
+  body:not(.modalita-desktop) #area-dadi:not(.dadi-in-popup) .faccia-2 { transform: rotateY(90deg) translateZ(21px); }
+  body:not(.modalita-desktop) #area-dadi:not(.dadi-in-popup) .faccia-5 { transform: rotateY(-90deg) translateZ(21px); }
 
-  body:not(.modalita-desktop) #area-dadi:not(.dadi-in-popup) .faccia-6 {
-    transform: rotateY(180deg) translateZ(21px);
+  body:not(.modalita-desktop) .pedina-salta {
+    animation: salto-pedina-mobile-landscape 0.32s ease;
   }
-
-  body:not(.modalita-desktop) #area-dadi:not(.dadi-in-popup) .faccia-3 {
-    transform: rotateX(90deg) translateZ(21px);
-  }
-
-  body:not(.modalita-desktop) #area-dadi:not(.dadi-in-popup) .faccia-4 {
-    transform: rotateX(-90deg) translateZ(21px);
-  }
-
-  body:not(.modalita-desktop) #area-dadi:not(.dadi-in-popup) .faccia-2 {
-    transform: rotateY(90deg) translateZ(21px);
-  }
-
-  body:not(.modalita-desktop) #area-dadi:not(.dadi-in-popup) .faccia-5 {
-    transform: rotateY(-90deg) translateZ(21px);
-  }
-
 }
 
-/* =========================================================
-   REGOLAZIONE FINALE TABELLONE MOBILE
-   ========================================================= */
-
-@media (max-width: 600px) {
-
-    /*
-     * Tabellone molto più grande.
-     *
-     * translateY(32px):
-     * essendo tutto ruotato di 90°, lo sposta visivamente
-     * verso SINISTRA sul telefono.
-     *
-     * scale(1.11):
-     * lo porta quasi fino ai bordi indicati in rosso.
-     */
-    body.modalita-ruotata #area-tabellone {
-        transform:
-            translateY(32px)
-            scale(1.11) !important;
-
-        transform-origin:
-            center center !important;
-
-        margin:0 !important;
-        padding:0 !important;
-    }
-
-
-    /* =====================================================
-       DADI NELLA ZONA GIALLA
-       ===================================================== */
-
-    body.modalita-ruotata
-    #area-tabellone
-    > #area-dadi:not(.dadi-in-popup) {
-
-        top:auto !important;
-        right:auto !important;
-
-        /*
-         * Nel tabellone non ruotato è il bordo inferiore.
-         * Dopo la rotazione di 90° appare sul LATO SINISTRO
-         * esattamente come nella zona gialla che hai segnato.
-         */
-        bottom:17% !important;
-        left:50% !important;
-
-        transform:
-            translateX(-50%)
-            rotate(-90deg) !important;
-
-        transform-origin:
-            center center !important;
-
-        gap:10px;
-        padding:7px 12px;
-    }
-
-
-    /*
-     * Nel popup CHI INIZIA? i dadi devono invece
-     * restare normali e dritti.
-     */
-    body.modalita-ruotata
-    #area-dadi.dadi-in-popup {
-
-        position:static !important;
-
-        margin:
-            16px auto 0 !important;
-
-        transform:none !important;
-    }
-
+@keyframes salto-pedina-mobile-landscape {
+  0%   { transform: translate(-50%, -50%) scale(0.56); }
+  45%  { transform: translate(-50%, -68%) scale(0.61); }
+  100% { transform: translate(-50%, -50%) scale(0.56); }
 }
