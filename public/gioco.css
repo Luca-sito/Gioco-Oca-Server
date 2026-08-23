@@ -261,7 +261,7 @@ body.modalita-ruotata #mondo-ruotato {
 
 .pedina-interno { transition: transform 0.3s ease; }
 body.modalita-ruotata .pedina-interno { transform: rotate(-90deg); }
-.pedina-salta { animation: salto-pedina 0.32s ease; }
+.pedina-salta { animation: salto-pedina 0.20s ease; }
 
 @keyframes salto-pedina {
   0% { transform: translate(-50%, -100%) scale(1); }
@@ -1271,7 +1271,7 @@ body.modalita-desktop.media-partita #btn-giocatori {
 
         animation:
             salto-pedina-mobile
-            0.32s
+            0.20s
             ease;
     }
 
@@ -1397,7 +1397,7 @@ body.modalita-desktop.media-partita #btn-giocatori {
 
 @media (max-width: 600px) {
   body.modalita-ruotata .pedina-salta {
-    animation: salto-pedina-mobile-fix 0.32s ease;
+    animation: salto-pedina-mobile-fix 0.20s ease;
   }
 }
 
@@ -1478,7 +1478,7 @@ body.modalita-desktop.media-partita #btn-giocatori {
   body:not(.modalita-desktop) #area-dadi:not(.dadi-in-popup) .faccia-5 { transform: rotateY(-90deg) translateZ(21px); }
 
   body:not(.modalita-desktop) .pedina-salta {
-    animation: salto-pedina-mobile-landscape 0.32s ease;
+    animation: salto-pedina-mobile-landscape 0.20s ease;
   }
 }
 
