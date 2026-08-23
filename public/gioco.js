@@ -23,7 +23,8 @@ const posizioniCaselle = {
 };
 
 const coloriGiocatori = ["#6a2c70", "#dddddd", "#1e40af", "#43a047", "#f57c00", "#c0ca33", "#e53935", "#2b2b2b"];
-const DURATA_SALTO_MS = 380;
+const DURATA_SALTO_MS = 420;
+const RITARDO_EVENTO_CASELLA_MS = 300;
 
 const origineConfigurata = typeof window.GIOCO_SERVER_URL === "string" ? window.GIOCO_SERVER_URL.trim() : "";
 const hostLocale = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" || window.location.hostname === "[::1]";
@@ -48,6 +49,8 @@ let timerVerificaDeterminazione = null;
 let paginaInChiusura = false;
 let versioneAnimazioneStato = 0;
 const animazioniPedineAttive = new Map();
+let mossaVisualeInCorso = false;
+let statoPartitaAccodato = null;
 let chatPartitaAttiva = true;
 
 let faseAttuale = "normale";
@@ -274,7 +277,9 @@ function aggiornaTestoBottoneFullscreen() {
 document.addEventListener("fullscreenchange", aggiornaTestoBottoneFullscreen);
 document.addEventListener("webkitfullscreenchange", aggiornaTestoBottoneFullscreen);
 
-// ===== LAYOUT: il solo tabellone ruota sui dispositivi touch in verticale. =====
+// ===== LAYOUT: su smartphone in verticale ruota l'INTERA scena di gioco. =====
+// In questo modo tabellone, pedine, dadi, pannelli, chat e menu hanno tutti
+// lo stesso orientamento orizzontale e non restano “dritti” sopra un tabellone ruotato.
 function rilevaEImpostaModalitaDesktop() {
   const puntatorePreciso = !!(window.matchMedia && window.matchMedia("(pointer: fine)").matches);
   const eDesktop = puntatorePreciso && window.innerWidth >= 1000;
@@ -304,11 +309,21 @@ function aggiornaLayoutTabellone() {
   const altezzaCanvas = eRuotato ? larghezzaFinestra : altezzaReale;
   mondo.style.width = larghezzaCanvas + "px";
   mondo.style.height = altezzaCanvas + "px";
+  document.documentElement.style.setProperty("--larghezza-gioco", larghezzaCanvas + "px");
+  document.documentElement.style.setProperty("--altezza-gioco", altezzaCanvas + "px");
 
-  const margineOrizzontale = Math.max(16, larghezzaCanvas * 0.03);
-  const margineVerticale = Math.max(16, altezzaCanvas * 0.06);
+  // Un telefono può essere fisicamente in portrait (e quindi scena ruotata) oppure
+  // già in landscape. In entrambi i casi trattiamo il layout come “smartphone gioco”:
+  // margini minimi, pedine centrate e una fascia vera sotto al tabellone per i dadi.
+  const smartphoneGioco = !document.body.classList.contains("modalita-desktop") &&
+    Math.min(larghezzaFinestra, altezzaReale) <= 600;
+  const margineOrizzontale = smartphoneGioco ? 4 : Math.max(16, larghezzaCanvas * 0.03);
+  const margineVerticale = smartphoneGioco ? 4 : Math.max(16, altezzaCanvas * 0.06);
+  // In portrait ruotato questa fascia corrisponde fisicamente al lato sinistro;
+  // in landscape reale corrisponde normalmente alla parte bassa dello schermo.
+  const spazioDadiMobile = smartphoneGioco ? 48 : 0;
   let larghezzaDisponibile = larghezzaCanvas - margineOrizzontale * 2;
-  const altezzaDisponibile = altezzaCanvas - margineVerticale * 2;
+  const altezzaDisponibile = altezzaCanvas - margineVerticale * 2 - spazioDadiMobile;
 
   if (videoDesktopAttivo) {
     const larghezzaColonnaDesiderata = Math.min(380, Math.max(180, larghezzaCanvas * 0.2));
@@ -505,7 +520,7 @@ function gestisciStatoDeterminazione(dati) {
     sottotitolo.textContent = inAttesaDi ? ("In attesa che " + inAttesaDi.nome + " tiri...") : "I giocatori tirano i dadi uno alla volta.";
   }
 
-  if (dati.tempoInizioTurno != null && dati.durataMossaMs != null) avviaCountdownTurno(dati.tempoInizioTurno, dati.durataMossaMs);
+  if (dati.tempoInizioTurno != null && dati.durataMossaMs != null) avviaCountdownTurno(dati.tempoInizioTurno, dati.durataMossaMs, dati.tempoRimanenteMs);
   pianificaVerificaDeterminazione(dati.tempoInizioTurno, dati.durataMossaMs);
 }
 
@@ -566,7 +581,7 @@ function gestisciDeterminazioneCompletata(dati) {
 
   animaSaltoPedina(primoMovimento.idGiocatore, primoMovimento.percorso, () => {
     if (primoMovimento.messaggi && primoMovimento.messaggi.length) mostraMessaggioGiocoGrande(primoMovimento.messaggi.join(" "));
-    if (dati.tempoInizioTurno != null && dati.durataMossaMs != null) avviaCountdownTurno(dati.tempoInizioTurno, dati.durataMossaMs);
+    if (dati.tempoInizioTurno != null && dati.durataMossaMs != null) avviaCountdownTurno(dati.tempoInizioTurno, dati.durataMossaMs, dati.tempoRimanenteMs);
 
     if (dati.vittoria) {
       turnoAttualeId = null;
@@ -582,19 +597,32 @@ function gestisciDeterminazioneCompletata(dati) {
 
 // ===== COUNTDOWN DI TURNO =====
 let tempoInizioTurnoAttuale = null, durataMossaMsAttuale = null, intervalCountdown = null, ultimoSecondoAvviso = null;
+let scadenzaCountdownLocale = null;
 let turnoLocalmenteCompletato = false;
 
-function avviaCountdownTurno(tempoInizio, durataMs) {
-  if (!Number.isFinite(Number(tempoInizio)) || !Number.isFinite(Number(durataMs)) || Number(durataMs) <= 0) {
+function avviaCountdownTurno(tempoInizio, durataMs, tempoRimanenteMs) {
+  const durata = Number(durataMs);
+  if (!Number.isFinite(durata) || durata <= 0) {
     fermaCountdown(false);
     return;
   }
-  tempoInizioTurnoAttuale = tempoInizio;
-  durataMossaMsAttuale = durataMs;
+
+  // Il server può inviare il tempo residuo già calcolato: così l'orologio del
+  // telefono/PC non può far comparire 16 secondi per un turno da 15.
+  let residuo = Number(tempoRimanenteMs);
+  if (!Number.isFinite(residuo)) {
+    const inizio = Number(tempoInizio);
+    residuo = Number.isFinite(inizio) ? durata - (Date.now() - inizio) : durata;
+  }
+  residuo = Math.max(0, Math.min(durata, residuo));
+
+  tempoInizioTurnoAttuale = Date.now() - (durata - residuo);
+  durataMossaMsAttuale = durata;
+  scadenzaCountdownLocale = Date.now() + residuo;
   ultimoSecondoAvviso = null;
   turnoLocalmenteCompletato = false;
   if (intervalCountdown) clearInterval(intervalCountdown);
-  intervalCountdown = setInterval(aggiornaCountdownTurno, 250);
+  intervalCountdown = setInterval(aggiornaCountdownTurno, 100);
   aggiornaCountdownTurno();
 }
 function elementiCountdown() {
@@ -607,6 +635,7 @@ function fermaCountdown(mostraCompletato) {
   }
   tempoInizioTurnoAttuale = null;
   durataMossaMsAttuale = null;
+  scadenzaCountdownLocale = null;
   ultimoSecondoAvviso = null;
   elementiCountdown().forEach(el => {
     el.classList.remove("countdown-scaduto", "countdown-fermo");
@@ -625,15 +654,27 @@ function fermaCountdownPerAzioneLocale() {
 }
 function aggiornaCountdownTurno() {
   const elementi = elementiCountdown();
-  if (!elementi.length || tempoInizioTurnoAttuale == null || durataMossaMsAttuale == null) return;
+  if (!elementi.length || durataMossaMsAttuale == null || scadenzaCountdownLocale == null) return;
   if (turnoLocalmenteCompletato) return;
-  const sec = Math.max(0, Math.ceil((durataMossaMsAttuale - (Date.now() - tempoInizioTurnoAttuale)) / 1000));
+
+  const massimoSecondi = Math.max(1, Math.ceil(durataMossaMsAttuale / 1000));
+  const sec = Math.min(
+    massimoSecondi,
+    Math.max(0, Math.ceil((scadenzaCountdownLocale - Date.now()) / 1000))
+  );
+
   elementi.forEach(el => {
-    el.textContent = "⏱ " + sec + "s";
+    // A scadenza non mostriamo “0s” come se fosse un sedicesimo secondo:
+    // a 15 secondi esatti il timer è finito e passa subito allo stato scaduto.
+    el.textContent = sec <= 0 ? "⏱ Tempo scaduto" : ("⏱ " + sec + "s");
     el.classList.toggle("countdown-scaduto", sec <= 0);
     el.classList.remove("countdown-fermo");
   });
   if (sec <= 3 && sec >= 1 && sec !== ultimoSecondoAvviso) { ultimoSecondoAvviso = sec; suonaAvvisoTempo(); }
+  if (sec <= 0 && intervalCountdown) {
+    clearInterval(intervalCountdown);
+    intervalCountdown = null;
+  }
 }
 
 // ===== VIDEOCHIAMATA DI TAVOLO: consenso in lobby, collegamento automatico =====
@@ -1091,42 +1132,72 @@ function ottieniOCreaPedina(idGiocatore, colore, indice) {
   }
   return pedina;
 }
-function animaSaltoPedina(idGiocatore, percorso, callback, tokenAnimazione) {
-  if (!percorso || percorso.length === 0) { if (callback) callback(); return; }
+function mostraEventiCasella(eventiPercorso, indicePercorso, casella) {
+  if (!Array.isArray(eventiPercorso) || !eventiPercorso.length) return;
+  eventiPercorso.forEach(evento => {
+    if (!evento || typeof evento.messaggio !== "string" || !evento.messaggio.trim()) return;
+    const stessoIndice = Number(evento.indicePercorso) === indicePercorso;
+    const stessaCasella = evento.indicePercorso == null && Number(evento.casella) === Number(casella);
+    if (stessoIndice || stessaCasella) mostraMessaggioGiocoGrande(evento.messaggio);
+  });
+}
+
+function animaSaltoPedina(idGiocatore, percorso, callback, tokenAnimazione, eventiPercorso) {
+  if (!percorso || percorso.length === 0) {
+    if (Array.isArray(eventiPercorso)) {
+      eventiPercorso.forEach(evento => {
+        if (evento && evento.messaggio) mostraMessaggioGiocoGrande(evento.messaggio);
+      });
+    }
+    if (callback) callback();
+    return;
+  }
+
   const indice = ultimoStatoGiocatori.findIndex(g => g.id === idGiocatore);
   const colore = coloriGiocatori[(indice >= 0 ? indice : 0) % coloriGiocatori.length];
   const pedina = ottieniOCreaPedina(idGiocatore, colore, indice >= 0 ? indice : 0);
-  if (animazioniPedineAttive.has(idGiocatore)) {
-    const statoCorrente = ultimoStatoGiocatori.find(g => g.id === idGiocatore);
-    if (statoCorrente) posizionaPedina(pedina, statoCorrente.posizione);
-  }
   const tokenPedina = Symbol("animazione-pedina");
   animazioniPedineAttive.set(idGiocatore, tokenPedina);
   let passo = 0;
+
   function saltaProssimo() {
     if (animazioniPedineAttive.get(idGiocatore) !== tokenPedina) return;
+
     if (passo >= percorso.length) {
+      // Non riportare la pedina allo stato vecchio: resta esattamente sull'ultima
+      // casella del percorso; subito dopo il callback applicherà lo stato server.
       animazioniPedineAttive.delete(idGiocatore);
-      const statoFinale = ultimoStatoGiocatori.find(g => g.id === idGiocatore);
-      if (statoFinale) posizionaPedina(pedina, statoFinale.posizione);
       if (callback) callback();
       return;
     }
-    const casella = percorso[passo];
+
+    const indicePercorso = passo;
+    const casella = percorso[indicePercorso];
     pedina.classList.add("pedina-salta");
     posizionaPedina(pedina, casella);
     suonaPassoPedina();
+
     const et = document.getElementById("casella-" + idGiocatore);
     if (et && (tokenAnimazione == null || tokenAnimazione === versioneAnimazioneStato)) et.textContent = casella;
+
     const pulisciSalto = () => pedina.classList.remove("pedina-salta");
     pedina.addEventListener("animationend", pulisciSalto, { once: true });
+
+    // La scritta speciale compare quando la pedina è arrivata sulla casella,
+    // non appena il dado viene tirato.
+    setTimeout(() => {
+      if (animazioniPedineAttive.get(idGiocatore) !== tokenPedina) return;
+      mostraEventiCasella(eventiPercorso, indicePercorso, casella);
+    }, RITARDO_EVENTO_CASELLA_MS);
+
     passo++;
     setTimeout(saltaProssimo, DURATA_SALTO_MS);
   }
+
   saltaProssimo();
 }
 
-function gestisciStatoPartita(dati) {
+function applicaStatoPartitaOra(dati) {
   annullaVerificaDeterminazione();
   ++versioneAnimazioneStato;
   faseAttuale = "normale";
@@ -1146,14 +1217,14 @@ function gestisciStatoPartita(dati) {
     disegnaGiocatori();
     mostraVittoria(dati.vincitore || "un giocatore");
   } else {
-    const turnoPronto = dati.turnoDiId != null && dati.tempoInizioTurno != null && Number(dati.durataMossaMs) > 0;
+    const turnoPronto = dati.turnoDiId != null && Number(dati.durataMossaMs) > 0;
     aggiornaTurno(turnoPronto ? dati.turnoDiId : null);
     if (!turnoPronto && dati.turnoDiId != null) {
       document.getElementById("riga-turno").textContent = "⏳ Preparazione del prossimo turno…";
     }
     disegnaGiocatori();
     if (turnoPronto) {
-      avviaCountdownTurno(dati.tempoInizioTurno, dati.durataMossaMs);
+      avviaCountdownTurno(dati.tempoInizioTurno, dati.durataMossaMs, dati.tempoRimanenteMs);
     }
   }
 
@@ -1161,8 +1232,23 @@ function gestisciStatoPartita(dati) {
   segnalaStatoInizialeRicevuto();
 }
 
+function gestisciStatoPartita(dati) {
+  // Se il server comunica il turno seguente mentre la pedina precedente sta
+  // ancora terminando l'animazione, lo accodiamo. Il turno visivo non cambia
+  // mai prima della conclusione reale della mossa.
+  if (mossaVisualeInCorso) {
+    statoPartitaAccodato = dati;
+    return;
+  }
+  applicaStatoPartitaOra(dati);
+}
+
+
+
 function gestisciAggiornamentoPartita(dati) {
   const tokenAnimazione = ++versioneAnimazioneStato;
+  mossaVisualeInCorso = true;
+  statoPartitaAccodato = null;
   mioTurno = false;
   turnoAttualeId = null;
   document.getElementById("riga-turno").textContent = "🎲 Mossa in corso…";
@@ -1172,7 +1258,13 @@ function gestisciAggiornamentoPartita(dati) {
 
   animaLancioDadi(dati.dado1, dati.dado2, () => {
     if (tokenAnimazione !== versioneAnimazioneStato) return;
-    if (Array.isArray(dati.messaggi) && dati.messaggi.length) mostraMessaggioGiocoGrande(dati.messaggi.join(" "));
+
+    // Solo i messaggi non legati a una casella (es. mossa automatica) possono
+    // apparire subito dopo i dadi. Le regole delle caselle vengono mostrate
+    // dalla funzione animaSaltoPedina nel momento esatto dell'arrivo.
+    if (Array.isArray(dati.messaggiImmediati) && dati.messaggiImmediati.length) {
+      mostraMessaggioGiocoGrande(dati.messaggiImmediati.join(" "));
+    }
 
     const completa = () => {
       if (tokenAnimazione !== versioneAnimazioneStato) return;
@@ -1188,19 +1280,31 @@ function gestisciAggiornamentoPartita(dati) {
       } else if (dati.turnoDiId != null) {
         aggiornaTurno(dati.turnoDiId);
         disegnaGiocatori();
-        if (dati.tempoInizioTurno != null && dati.durataMossaMs != null) {
-          avviaCountdownTurno(dati.tempoInizioTurno, dati.durataMossaMs);
+        if (Number(dati.durataMossaMs) > 0) {
+          avviaCountdownTurno(dati.tempoInizioTurno, dati.durataMossaMs, dati.tempoRimanenteMs);
         }
       } else {
         document.getElementById("riga-turno").textContent = "⏳ Preparazione del prossimo turno…";
         impostaDadiAbilitati(false);
         disegnaGiocatori();
       }
+
+      mossaVisualeInCorso = false;
+      if (statoPartitaAccodato) {
+        const stato = statoPartitaAccodato;
+        statoPartitaAccodato = null;
+        setTimeout(() => gestisciStatoPartita(stato), 0);
+      }
     };
 
+    const eventiPercorso = Array.isArray(dati.eventiPercorso) ? dati.eventiPercorso : [];
     if (Array.isArray(dati.percorso) && dati.percorso.length && dati.idGiocatoreCheHaTirato) {
-      animaSaltoPedina(dati.idGiocatoreCheHaTirato, dati.percorso, completa, tokenAnimazione);
+      animaSaltoPedina(dati.idGiocatoreCheHaTirato, dati.percorso, completa, tokenAnimazione, eventiPercorso);
     } else {
+      // Compatibilità con messaggi di vecchi server privi di eventiPercorso.
+      if (!eventiPercorso.length && Array.isArray(dati.messaggi) && dati.messaggi.length) {
+        mostraMessaggioGiocoGrande(dati.messaggi.join(" "));
+      }
       completa();
     }
   });
@@ -1338,6 +1442,12 @@ function connetti() {
       terminaCaricamento("Partita aperta altrove");
       document.getElementById("messaggi-gioco").textContent = dati.messaggio || "La partita è stata aperta in un'altra scheda o dispositivo.";
       mostraNotificaGioco(dati.messaggio || "Questa scheda non è più collegata alla partita.");
+      return;
+    }
+
+    if (dati.tipo === "preparazionePartita") {
+      aggiornaCaricamento("Attesa degli altri giocatori…", 88);
+      document.getElementById("messaggi-gioco").textContent = "⏳ Preparazione della partita…";
       return;
     }
 
