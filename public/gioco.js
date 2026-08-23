@@ -23,7 +23,7 @@ const posizioniCaselle = {
 };
 
 const coloriGiocatori = ["#6a2c70", "#dddddd", "#1e40af", "#43a047", "#f57c00", "#c0ca33", "#e53935", "#2b2b2b"];
-const DURATA_SALTO_MS = 420;
+const DURATA_SALTO_MS = 240;
 const RITARDO_EVENTO_CASELLA_MS = 300;
 
 const origineConfigurata = typeof window.GIOCO_SERVER_URL === "string" ? window.GIOCO_SERVER_URL.trim() : "";
