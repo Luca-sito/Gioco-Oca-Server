@@ -295,6 +295,7 @@ function aggiornaLayoutTabellone() {
 
   const rapportoNaturale = (immagine.naturalWidth && immagine.naturalHeight) ? immagine.naturalWidth / immagine.naturalHeight : 4 / 3;
   const eRuotato = document.body.classList.contains("modalita-ruotata");
+  const videoDesktopAttivo = document.body.classList.contains("modalita-desktop") && document.body.classList.contains("media-partita");
   const larghezzaFinestra = window.visualViewport ? window.visualViewport.width : window.innerWidth;
   const altezzaReale = window.visualViewport ? window.visualViewport.height : window.innerHeight;
   document.documentElement.style.setProperty("--altezza-reale", altezzaReale + "px");
@@ -306,11 +307,26 @@ function aggiornaLayoutTabellone() {
 
   const margineOrizzontale = Math.max(16, larghezzaCanvas * 0.03);
   const margineVerticale = Math.max(16, altezzaCanvas * 0.06);
-  const larghezzaDisponibile = larghezzaCanvas - margineOrizzontale * 2;
+  let larghezzaDisponibile = larghezzaCanvas - margineOrizzontale * 2;
   const altezzaDisponibile = altezzaCanvas - margineVerticale * 2;
+
+  if (videoDesktopAttivo) {
+    const larghezzaColonnaDesiderata = Math.min(380, Math.max(180, larghezzaCanvas * 0.2));
+    const distanzaDalTabellone = Math.max(12, larghezzaCanvas * 0.012);
+    larghezzaDisponibile = Math.max(360, larghezzaCanvas - (larghezzaColonnaDesiderata + distanzaDalTabellone) * 2);
+  }
 
   const Wc = Math.max(100, Math.min(larghezzaDisponibile, altezzaDisponibile * rapportoNaturale));
   const Hc = Wc / rapportoNaturale;
+
+  if (videoDesktopAttivo) {
+    const spazioLaterale = (larghezzaCanvas - Wc) / 2;
+    const margineEsterno = Math.max(14, larghezzaCanvas * 0.012);
+    const larghezzaColonnaVideo = Math.max(120, Math.min(380, spazioLaterale - margineEsterno - 10));
+    document.documentElement.style.setProperty("--larghezza-colonna-video", larghezzaColonnaVideo + "px");
+  } else {
+    document.documentElement.style.removeProperty("--larghezza-colonna-video");
+  }
 
   areaTabellone.style.width = Wc + "px";
   areaTabellone.style.height = Hc + "px";
@@ -666,7 +682,9 @@ function aggiornaConfigurazioneIce(configurazione) {
 }
 
 function aggiornaInterfacciaMedia(testo, errore) {
+  const layoutMediaEraAttivo = document.body.classList.contains("media-partita");
   document.body.classList.toggle("media-partita", mediaPartitaAttiva);
+  if (layoutMediaEraAttivo !== mediaPartitaAttiva) requestAnimationFrame(aggiornaLayoutTabellone);
   const pannello = document.getElementById("videochiamata");
   const stato = document.getElementById("stato-media-connessione");
   const voceMenu = document.getElementById("btn-stato-media");
