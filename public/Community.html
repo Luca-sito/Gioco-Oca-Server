@@ -1,0 +1,4863 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+>
+
+<title>Community - Giochi Società</title>
+
+<style>
+
+/* =========================================================
+   VARIABILI
+========================================================= */
+
+:root{
+
+    --giallo:#ffd400;
+    --giallo-hover:#e9c100;
+    --giallo-chiaro:#fff8cf;
+
+    --nero:#0b0b0d;
+    --nero-2:#141416;
+    --nero-3:#1d1d20;
+
+    --bianco:#ffffff;
+
+    --sfondo:#f3f3f5;
+    --bordo:#e4e4e7;
+
+    --testo:#151515;
+    --testo-secondario:#71717a;
+
+    --verde:#22a559;
+    --rosso:#e5484d;
+    --blu:#3478f6;
+
+    --ombra:
+        0 8px 28px
+        rgba(0,0,0,.08);
+
+}
+
+
+/* =========================================================
+   RESET
+========================================================= */
+
+*{
+    box-sizing:border-box;
+}
+
+html,
+body{
+    margin:0;
+    padding:0;
+    width:100%;
+    min-height:100%;
+}
+
+body{
+    background:
+        var(--sfondo);
+
+    color:
+        var(--testo);
+
+    font-family:
+        Arial,
+        Helvetica,
+        sans-serif;
+
+    line-height:1.45;
+}
+
+button,
+input,
+textarea,
+select{
+    font:inherit;
+}
+
+button,
+a{
+    -webkit-tap-highlight-color:
+        transparent;
+}
+
+button{
+    cursor:pointer;
+}
+
+a{
+    color:inherit;
+    text-decoration:none;
+}
+
+img{
+    max-width:100%;
+}
+
+
+/* =========================================================
+   ICONE SVG
+========================================================= */
+
+.icona{
+    width:20px;
+    height:20px;
+
+    display:block;
+
+    fill:none;
+    stroke:currentColor;
+
+    stroke-width:2;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+
+    flex-shrink:0;
+}
+
+
+/* =========================================================
+   BARRA SUPERIORE
+========================================================= */
+
+.community-header{
+
+    position:sticky;
+    top:0;
+
+    z-index:500;
+
+    width:100%;
+
+    background:
+        rgba(11,11,13,.97);
+
+    border-bottom:
+        1px solid
+        rgba(255,255,255,.09);
+
+    box-shadow:
+        0 4px 18px
+        rgba(0,0,0,.18);
+
+    backdrop-filter:
+        blur(16px);
+
+}
+
+
+.community-header-interno{
+
+    width:min(
+        1460px,
+        calc(100% - 40px)
+    );
+
+    min-height:72px;
+
+    margin:0 auto;
+
+    display:flex;
+    align-items:center;
+
+    gap:18px;
+
+}
+
+
+/* =========================================================
+   LOGO COMMUNITY
+========================================================= */
+
+.community-brand{
+
+    display:flex;
+    align-items:center;
+
+    gap:11px;
+
+    flex-shrink:0;
+
+}
+
+
+.community-logo{
+
+    width:42px;
+    height:42px;
+
+    border-radius:11px;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    background:
+        var(--giallo);
+
+    color:#111;
+
+    font-size:17px;
+    font-weight:1000;
+
+    box-shadow:
+        inset 0 -3px 0
+        rgba(0,0,0,.16);
+
+}
+
+
+.community-brand-testo{
+    min-width:0;
+}
+
+
+.community-brand-titolo{
+
+    color:#fff;
+
+    font-size:15px;
+    font-weight:900;
+
+    letter-spacing:.08em;
+
+    line-height:1.1;
+
+}
+
+
+.community-brand-sottotitolo{
+
+    margin-top:3px;
+
+    color:#97979f;
+
+    font-size:10px;
+
+    text-transform:uppercase;
+
+    letter-spacing:.08em;
+
+}
+
+
+/* =========================================================
+   RICERCA HEADER
+========================================================= */
+
+.ricerca-community{
+
+    position:relative;
+
+    width:min(
+        520px,
+        100%
+    );
+
+    margin-left:auto;
+
+}
+
+
+.ricerca-community .icona{
+
+    position:absolute;
+
+    left:15px;
+    top:50%;
+
+    width:18px;
+    height:18px;
+
+    transform:
+        translateY(-50%);
+
+    color:#8e8e96;
+
+    pointer-events:none;
+
+}
+
+
+#ricercaCommunity{
+
+    width:100%;
+    height:44px;
+
+    padding:
+        0 16px
+        0 44px;
+
+    color:#fff;
+
+    background:
+        #1d1d20;
+
+    border:
+        1px solid
+        #303035;
+
+    border-radius:
+        12px;
+
+    outline:none;
+
+    transition:
+        .18s ease;
+
+}
+
+
+#ricercaCommunity::placeholder{
+    color:#818188;
+}
+
+
+#ricercaCommunity:focus{
+
+    border-color:
+        var(--giallo);
+
+    box-shadow:
+        0 0 0 3px
+        rgba(255,212,0,.12);
+
+}
+
+
+/* =========================================================
+   BOTTONE CREA
+========================================================= */
+
+.btn-crea-post{
+
+    height:44px;
+
+    padding:
+        0 18px;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    gap:8px;
+
+    flex-shrink:0;
+
+    border:0;
+
+    border-radius:11px;
+
+    background:
+        var(--giallo);
+
+    color:#111;
+
+    font-size:13px;
+    font-weight:900;
+
+    box-shadow:
+        inset 0 -3px 0
+        rgba(0,0,0,.14);
+
+    transition:
+        .15s ease;
+
+}
+
+
+.btn-crea-post:hover{
+
+    background:
+        #ffe03b;
+
+    transform:
+        translateY(-1px);
+
+}
+
+
+.btn-crea-post:active{
+
+    transform:
+        translateY(2px);
+
+    box-shadow:none;
+
+}
+
+
+/* =========================================================
+   HERO COMMUNITY
+========================================================= */
+
+.community-hero{
+
+    background:
+        linear-gradient(
+            135deg,
+            #09090b 0%,
+            #151518 60%,
+            #1a180a 100%
+        );
+
+    border-bottom:
+        1px solid
+        rgba(0,0,0,.12);
+
+}
+
+
+.community-hero-interno{
+
+    width:min(
+        1460px,
+        calc(100% - 40px)
+    );
+
+    margin:0 auto;
+
+    min-height:245px;
+
+    padding:
+        42px 0;
+
+    display:grid;
+
+    grid-template-columns:
+        minmax(0,1.5fr)
+        minmax(300px,.7fr);
+
+    gap:45px;
+
+    align-items:center;
+
+}
+
+
+.hero-eyebrow{
+
+    display:inline-flex;
+
+    align-items:center;
+
+    gap:8px;
+
+    margin-bottom:13px;
+
+    color:
+        var(--giallo);
+
+    font-size:12px;
+    font-weight:900;
+
+    text-transform:uppercase;
+
+    letter-spacing:.13em;
+
+}
+
+
+.pallino-live{
+
+    width:8px;
+    height:8px;
+
+    border-radius:50%;
+
+    background:#3fda77;
+
+    box-shadow:
+        0 0 0 5px
+        rgba(63,218,119,.12);
+
+}
+
+
+.community-hero h1{
+
+    max-width:760px;
+
+    margin:
+        0 0 14px;
+
+    color:#fff;
+
+    font-size:
+        clamp(
+            32px,
+            4vw,
+            52px
+        );
+
+    line-height:1.02;
+
+    letter-spacing:
+        -.035em;
+
+}
+
+
+.community-hero h1 span{
+    color:var(--giallo);
+}
+
+
+.community-hero p{
+
+    max-width:710px;
+
+    margin:0;
+
+    color:#bcbcc3;
+
+    font-size:
+        clamp(
+            14px,
+            1.5vw,
+            17px
+        );
+
+}
+
+
+.hero-statistiche{
+
+    margin-top:25px;
+
+    display:flex;
+    flex-wrap:wrap;
+
+    gap:9px;
+
+}
+
+
+.hero-stat{
+
+    padding:
+        8px 12px;
+
+    border:
+        1px solid
+        rgba(255,255,255,.11);
+
+    border-radius:
+        999px;
+
+    background:
+        rgba(255,255,255,.055);
+
+    color:#d7d7dc;
+
+    font-size:12px;
+
+}
+
+
+.hero-stat strong{
+    color:#fff;
+}
+
+
+/* =========================================================
+   CARD PULSE
+========================================================= */
+
+.community-pulse{
+
+    padding:20px;
+
+    background:
+        rgba(255,255,255,.055);
+
+    border:
+        1px solid
+        rgba(255,255,255,.1);
+
+    border-radius:
+        16px;
+
+    box-shadow:
+        0 18px 50px
+        rgba(0,0,0,.18);
+
+}
+
+
+.pulse-header{
+
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+
+    gap:15px;
+
+    margin-bottom:18px;
+
+}
+
+
+.pulse-header strong{
+    color:#fff;
+}
+
+
+.pulse-live{
+
+    padding:
+        4px 8px;
+
+    border-radius:
+        999px;
+
+    color:#60dc87;
+
+    background:
+        rgba(50,204,103,.11);
+
+    font-size:10px;
+    font-weight:900;
+
+    text-transform:uppercase;
+
+    letter-spacing:.08em;
+
+}
+
+
+.pulse-riga{
+
+    display:flex;
+    align-items:center;
+
+    gap:11px;
+
+    padding:
+        10px 0;
+
+    border-top:
+        1px solid
+        rgba(255,255,255,.07);
+
+}
+
+
+.pulse-riga:first-of-type{
+    border-top:0;
+}
+
+
+.pulse-icona{
+
+    width:34px;
+    height:34px;
+
+    flex-shrink:0;
+
+    border-radius:9px;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    background:
+        var(--giallo);
+
+    color:#111;
+
+    font-weight:900;
+
+}
+
+
+.pulse-testo{
+
+    min-width:0;
+
+    flex:1;
+
+}
+
+
+.pulse-testo strong{
+
+    display:block;
+
+    color:#fff;
+
+    font-size:12px;
+
+}
+
+
+.pulse-testo span{
+
+    display:block;
+
+    margin-top:2px;
+
+    color:#888891;
+
+    font-size:10px;
+
+}
+
+
+/* =========================================================
+   LAYOUT PRINCIPALE
+========================================================= */
+
+.community-layout{
+
+    width:min(
+        1460px,
+        calc(100% - 40px)
+    );
+
+    margin:
+        26px auto
+        70px;
+
+    display:grid;
+
+    grid-template-columns:
+        230px
+        minmax(420px,1fr)
+        300px;
+
+    gap:22px;
+
+    align-items:start;
+
+}
+
+
+/* =========================================================
+   CARD GENERICA
+========================================================= */
+
+.card{
+
+    background:#fff;
+
+    border:
+        1px solid
+        var(--bordo);
+
+    border-radius:
+        14px;
+
+    box-shadow:
+        0 2px 10px
+        rgba(0,0,0,.025);
+
+}
+
+
+/* =========================================================
+   SIDEBAR SINISTRA
+========================================================= */
+
+.sidebar{
+
+    position:sticky;
+
+    top:94px;
+
+}
+
+
+.sidebar-titolo{
+
+    padding:
+        18px 17px 10px;
+
+    color:#929298;
+
+    font-size:10px;
+    font-weight:900;
+
+    text-transform:uppercase;
+
+    letter-spacing:.1em;
+
+}
+
+
+.categorie-community{
+
+    padding:
+        0 8px 10px;
+
+}
+
+
+.btn-categoria{
+
+    width:100%;
+
+    min-height:44px;
+
+    padding:
+        8px 10px;
+
+    margin:
+        2px 0;
+
+    display:flex;
+    align-items:center;
+
+    gap:10px;
+
+    border:0;
+
+    border-radius:
+        9px;
+
+    background:
+        transparent;
+
+    color:#44444a;
+
+    text-align:left;
+
+    font-size:12px;
+    font-weight:700;
+
+    transition:.14s;
+
+}
+
+
+.btn-categoria:hover{
+    background:#f5f5f6;
+}
+
+
+.btn-categoria.attiva{
+
+    color:#111;
+
+    background:
+        var(--giallo-chiaro);
+
+}
+
+
+.categoria-icona{
+
+    width:30px;
+    height:30px;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    flex-shrink:0;
+
+    border-radius:8px;
+
+    background:#f1f1f2;
+
+    font-size:15px;
+
+}
+
+
+.btn-categoria.attiva
+.categoria-icona{
+
+    background:
+        var(--giallo);
+
+}
+
+
+.categoria-numero{
+
+    margin-left:auto;
+
+    color:#9a9aa0;
+
+    font-size:10px;
+
+}
+
+
+.sidebar-separatore{
+
+    height:1px;
+
+    margin:
+        8px 14px;
+
+    background:
+        #ededee;
+
+}
+
+
+/* =========================================================
+   FEED CENTRALE
+========================================================= */
+
+.feed-community{
+
+    min-width:0;
+
+}
+
+
+/* =========================================================
+   COMPOSER
+========================================================= */
+
+.composer{
+
+    padding:15px;
+
+    margin-bottom:15px;
+
+    display:flex;
+    align-items:center;
+
+    gap:12px;
+
+}
+
+
+.avatar{
+
+    width:42px;
+    height:42px;
+
+    flex-shrink:0;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    overflow:hidden;
+
+    border-radius:50%;
+
+    background:
+        #202024;
+
+    color:#fff;
+
+    border:
+        2px solid
+        #eee;
+
+    font-size:15px;
+    font-weight:900;
+
+}
+
+
+.avatar img{
+
+    width:100%;
+    height:100%;
+
+    object-fit:cover;
+
+}
+
+
+.composer-input{
+
+    flex:1;
+
+    height:43px;
+
+    padding:
+        0 15px;
+
+    display:flex;
+    align-items:center;
+
+    border:
+        1px solid
+        #dedee1;
+
+    border-radius:
+        999px;
+
+    background:
+        #f7f7f8;
+
+    color:#808087;
+
+    font-size:12px;
+
+    cursor:pointer;
+
+    transition:.15s;
+
+}
+
+
+.composer-input:hover{
+
+    border-color:#c9c9cc;
+
+    background:#f4f4f5;
+
+}
+
+
+/* =========================================================
+   FILTRI FEED
+========================================================= */
+
+.feed-filtri{
+
+    padding:
+        8px;
+
+    margin-bottom:15px;
+
+    display:flex;
+
+    gap:4px;
+
+}
+
+
+.feed-filtro{
+
+    min-height:36px;
+
+    padding:
+        0 13px;
+
+    border:0;
+
+    border-radius:8px;
+
+    background:transparent;
+
+    color:#77777e;
+
+    font-size:11px;
+    font-weight:800;
+
+}
+
+
+.feed-filtro:hover{
+    background:#f5f5f6;
+}
+
+
+.feed-filtro.attivo{
+
+    color:#111;
+
+    background:
+        var(--giallo);
+
+}
+
+
+/* =========================================================
+   POST
+========================================================= */
+
+.post-community{
+
+    margin-bottom:15px;
+
+    overflow:hidden;
+
+    transition:
+        border-color .15s,
+        box-shadow .15s;
+
+}
+
+
+.post-community:hover{
+
+    border-color:
+        #d3d3d6;
+
+    box-shadow:
+        var(--ombra);
+
+}
+
+
+.post-interno{
+
+    padding:
+        18px;
+
+}
+
+
+.post-header{
+
+    display:flex;
+    align-items:center;
+
+    gap:11px;
+
+}
+
+
+.post-autore-info{
+
+    min-width:0;
+
+    flex:1;
+
+}
+
+
+.post-autore-riga{
+
+    display:flex;
+    align-items:center;
+
+    flex-wrap:wrap;
+
+    gap:6px;
+
+}
+
+
+.post-autore{
+
+    color:#161618;
+
+    font-size:13px;
+    font-weight:900;
+
+}
+
+
+.badge-autore{
+
+    padding:
+        3px 6px;
+
+    border-radius:
+        5px;
+
+    background:
+        #111;
+
+    color:
+        var(--giallo);
+
+    font-size:8px;
+    font-weight:900;
+
+    text-transform:uppercase;
+
+    letter-spacing:.06em;
+
+}
+
+
+.post-meta{
+
+    margin-top:3px;
+
+    color:#8d8d93;
+
+    font-size:10px;
+
+}
+
+
+.post-menu{
+
+    width:34px;
+    height:34px;
+
+    border:0;
+
+    border-radius:8px;
+
+    background:transparent;
+
+    color:#898990;
+
+    font-size:20px;
+
+}
+
+
+.post-menu:hover{
+    background:#f4f4f5;
+}
+
+
+.post-categoria{
+
+    display:inline-flex;
+
+    margin-top:15px;
+
+    padding:
+        4px 8px;
+
+    border-radius:
+        6px;
+
+    background:
+        #fff7c4;
+
+    color:#625200;
+
+    font-size:9px;
+    font-weight:900;
+
+    text-transform:uppercase;
+
+    letter-spacing:.05em;
+
+}
+
+
+.post-titolo{
+
+    margin:
+        9px 0 6px;
+
+    color:#151517;
+
+    font-size:
+        clamp(
+            17px,
+            2vw,
+            20px
+        );
+
+    line-height:1.25;
+
+}
+
+
+.post-testo{
+
+    margin:0;
+
+    color:#55555c;
+
+    font-size:13px;
+
+    line-height:1.6;
+
+}
+
+
+.post-testo + .post-testo{
+    margin-top:8px;
+}
+
+
+/* =========================================================
+   CARD CERCO GIOCATORI
+========================================================= */
+
+.tavolo-community{
+
+    margin-top:15px;
+
+    padding:13px;
+
+    display:flex;
+    align-items:center;
+
+    gap:12px;
+
+    border:
+        1px solid
+        #e2d98e;
+
+    border-radius:
+        10px;
+
+    background:
+        #fffcef;
+
+}
+
+
+.tavolo-community-icona{
+
+    width:42px;
+    height:42px;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    flex-shrink:0;
+
+    border-radius:10px;
+
+    background:
+        var(--giallo);
+
+    font-size:20px;
+
+}
+
+
+.tavolo-community-info{
+    flex:1;
+}
+
+
+.tavolo-community-info strong{
+
+    display:block;
+
+    font-size:12px;
+
+}
+
+
+.tavolo-community-info span{
+
+    display:block;
+
+    margin-top:3px;
+
+    color:#747474;
+
+    font-size:10px;
+
+}
+
+
+.btn-unisciti{
+
+    min-height:34px;
+
+    padding:
+        0 11px;
+
+    border:0;
+
+    border-radius:7px;
+
+    background:#111;
+
+    color:#fff;
+
+    font-size:10px;
+    font-weight:900;
+
+}
+
+
+/* =========================================================
+   SONDAGGIO
+========================================================= */
+
+.sondaggio{
+
+    margin-top:15px;
+
+    padding:13px;
+
+    border:
+        1px solid
+        var(--bordo);
+
+    border-radius:
+        10px;
+
+    background:
+        #fafafa;
+
+}
+
+
+.sondaggio-opzione{
+
+    position:relative;
+
+    min-height:39px;
+
+    margin-top:8px;
+
+    overflow:hidden;
+
+    border:
+        1px solid
+        #e0e0e2;
+
+    border-radius:7px;
+
+    cursor:pointer;
+
+}
+
+
+.sondaggio-riempimento{
+
+    position:absolute;
+
+    top:0;
+    bottom:0;
+    left:0;
+
+    background:
+        #fff1a1;
+
+}
+
+
+.sondaggio-contenuto{
+
+    position:relative;
+
+    z-index:2;
+
+    min-height:39px;
+
+    padding:
+        0 11px;
+
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+
+    gap:10px;
+
+    font-size:11px;
+    font-weight:700;
+
+}
+
+
+/* =========================================================
+   AZIONI POST
+========================================================= */
+
+.post-azioni{
+
+    min-height:49px;
+
+    padding:
+        7px 12px;
+
+    display:flex;
+    align-items:center;
+
+    gap:5px;
+
+    border-top:
+        1px solid
+        #ededee;
+
+}
+
+
+.post-azione{
+
+    min-height:34px;
+
+    padding:
+        0 10px;
+
+    display:flex;
+    align-items:center;
+
+    gap:6px;
+
+    border:0;
+
+    border-radius:7px;
+
+    background:transparent;
+
+    color:#68686f;
+
+    font-size:10px;
+    font-weight:800;
+
+}
+
+
+.post-azione:hover{
+    background:#f5f5f6;
+}
+
+
+.post-azione.attiva{
+
+    background:
+        var(--giallo-chiaro);
+
+    color:#2c2600;
+
+}
+
+
+.post-azione .icona{
+
+    width:17px;
+    height:17px;
+
+}
+
+
+/* =========================================================
+   SIDEBAR DESTRA
+========================================================= */
+
+.sidebar-destra{
+
+    position:sticky;
+
+    top:94px;
+
+    display:flex;
+    flex-direction:column;
+
+    gap:15px;
+
+}
+
+
+.card-titolo{
+
+    padding:
+        16px 16px 11px;
+
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+
+    gap:10px;
+
+    border-bottom:
+        1px solid
+        #ededee;
+
+}
+
+
+.card-titolo strong{
+
+    font-size:12px;
+
+}
+
+
+.card-titolo span{
+
+    color:#99999e;
+
+    font-size:9px;
+
+}
+
+
+/* =========================================================
+   CLASSIFICA
+========================================================= */
+
+#classificaCommunity{
+
+    padding:
+        6px 13px 12px;
+
+}
+
+
+.classifica-riga{
+
+    min-height:51px;
+
+    display:flex;
+    align-items:center;
+
+    gap:9px;
+
+    border-bottom:
+        1px solid
+        #f0f0f1;
+
+}
+
+
+.classifica-riga:last-child{
+    border-bottom:0;
+}
+
+
+.classifica-posizione{
+
+    width:22px;
+
+    color:#929298;
+
+    font-size:10px;
+    font-weight:900;
+
+    text-align:center;
+
+}
+
+
+.classifica-posizione.podio{
+    color:#9b8000;
+}
+
+
+.avatar-piccolo{
+
+    width:31px;
+    height:31px;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    flex-shrink:0;
+
+    border-radius:50%;
+
+    background:#222;
+
+    color:#fff;
+
+    font-size:11px;
+    font-weight:900;
+
+}
+
+
+.classifica-info{
+
+    min-width:0;
+
+    flex:1;
+
+}
+
+
+.classifica-nome{
+
+    overflow:hidden;
+
+    color:#2b2b2e;
+
+    font-size:10px;
+    font-weight:900;
+
+    text-overflow:ellipsis;
+
+    white-space:nowrap;
+
+}
+
+
+.classifica-stat{
+
+    margin-top:2px;
+
+    color:#929298;
+
+    font-size:8px;
+
+}
+
+
+/* =========================================================
+   REGOLE
+========================================================= */
+
+.regole-card{
+
+    overflow:hidden;
+
+}
+
+
+.regole-header{
+
+    padding:17px;
+
+    background:#111;
+
+    color:#fff;
+
+}
+
+
+.regole-header strong{
+
+    display:block;
+
+    font-size:13px;
+
+}
+
+
+.regole-header span{
+
+    display:block;
+
+    margin-top:4px;
+
+    color:#96969c;
+
+    font-size:9px;
+
+}
+
+
+.regole-contenuto{
+
+    padding:14px;
+
+}
+
+
+.regola{
+
+    display:flex;
+
+    gap:8px;
+
+    margin:
+        8px 0;
+
+    color:#626268;
+
+    font-size:10px;
+
+}
+
+
+.regola-numero{
+
+    width:20px;
+    height:20px;
+
+    flex-shrink:0;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    border-radius:6px;
+
+    background:
+        var(--giallo);
+
+    color:#111;
+
+    font-size:8px;
+    font-weight:900;
+
+}
+
+
+/* =========================================================
+   MODALE CREA POST
+========================================================= */
+
+.overlay-modal{
+
+    position:fixed;
+
+    inset:0;
+
+    z-index:10000;
+
+    display:none;
+    align-items:center;
+    justify-content:center;
+
+    padding:20px;
+
+    background:
+        rgba(0,0,0,.68);
+
+    backdrop-filter:
+        blur(5px);
+
+}
+
+
+.overlay-modal.aperto{
+    display:flex;
+}
+
+
+.modal-post{
+
+    width:
+        min(
+            590px,
+            100%
+        );
+
+    max-height:
+        min(
+            760px,
+            calc(100vh - 30px)
+        );
+
+    overflow-y:auto;
+
+    background:#fff;
+
+    border-radius:
+        16px;
+
+    box-shadow:
+        0 30px 90px
+        rgba(0,0,0,.35);
+
+}
+
+
+.modal-header{
+
+    min-height:64px;
+
+    padding:
+        0 18px;
+
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+
+    gap:15px;
+
+    border-bottom:
+        1px solid
+        var(--bordo);
+
+}
+
+
+.modal-header strong{
+    font-size:15px;
+}
+
+
+.modal-chiudi{
+
+    width:35px;
+    height:35px;
+
+    border:0;
+
+    border-radius:8px;
+
+    background:#f2f2f3;
+
+    font-size:18px;
+
+}
+
+
+.modal-body{
+
+    padding:18px;
+
+}
+
+
+.form-label{
+
+    display:block;
+
+    margin:
+        16px 0 6px;
+
+    color:#55555b;
+
+    font-size:10px;
+    font-weight:900;
+
+    text-transform:uppercase;
+
+    letter-spacing:.05em;
+
+}
+
+
+.form-label:first-child{
+    margin-top:0;
+}
+
+
+.campo{
+
+    width:100%;
+
+    border:
+        1px solid
+        #dcdcdf;
+
+    border-radius:
+        9px;
+
+    outline:none;
+
+    background:#fff;
+
+    transition:.15s;
+
+}
+
+
+input.campo,
+select.campo{
+
+    height:43px;
+
+    padding:
+        0 12px;
+
+}
+
+
+textarea.campo{
+
+    min-height:135px;
+
+    resize:vertical;
+
+    padding:12px;
+
+    line-height:1.5;
+
+}
+
+
+.campo:focus{
+
+    border-color:
+        #d6b400;
+
+    box-shadow:
+        0 0 0 3px
+        rgba(255,212,0,.15);
+
+}
+
+
+.modal-footer{
+
+    padding:
+        13px 18px;
+
+    display:flex;
+    justify-content:flex-end;
+
+    gap:8px;
+
+    border-top:
+        1px solid
+        var(--bordo);
+
+}
+
+
+.btn-secondario{
+
+    min-height:40px;
+
+    padding:
+        0 15px;
+
+    border:
+        1px solid
+        #dadadd;
+
+    border-radius:8px;
+
+    background:#fff;
+
+    color:#444;
+
+    font-size:11px;
+    font-weight:800;
+
+}
+
+
+.btn-pubblica{
+
+    min-height:40px;
+
+    padding:
+        0 17px;
+
+    border:0;
+
+    border-radius:8px;
+
+    background:
+        var(--giallo);
+
+    color:#111;
+
+    font-size:11px;
+    font-weight:900;
+
+}
+
+
+/* =========================================================
+   TOAST
+========================================================= */
+
+#toastCommunity{
+
+    position:fixed;
+
+    right:18px;
+    bottom:18px;
+
+    z-index:20000;
+
+    max-width:
+        min(
+            340px,
+            calc(100vw - 36px)
+        );
+
+    padding:
+        12px 15px;
+
+    display:none;
+
+    border-radius:
+        10px;
+
+    background:#111;
+
+    color:#fff;
+
+    font-size:11px;
+
+    box-shadow:
+        0 12px 38px
+        rgba(0,0,0,.28);
+
+}
+
+
+#toastCommunity.visibile{
+    display:block;
+}
+
+
+/* =========================================================
+   EMPTY STATE
+========================================================= */
+
+.feed-vuoto{
+
+    padding:55px 20px;
+
+    display:none;
+
+    text-align:center;
+
+}
+
+
+.feed-vuoto strong{
+
+    display:block;
+
+    font-size:15px;
+
+}
+
+
+.feed-vuoto span{
+
+    display:block;
+
+    margin-top:6px;
+
+    color:#8a8a90;
+
+    font-size:11px;
+
+}
+
+
+/* =========================================================
+   TABLET
+========================================================= */
+
+@media(max-width:1100px){
+
+    .community-layout{
+
+        grid-template-columns:
+            205px
+            minmax(0,1fr);
+
+    }
+
+    .sidebar-destra{
+
+        position:static;
+
+        grid-column:
+            1 / -1;
+
+        display:grid;
+
+        grid-template-columns:
+            1fr 1fr;
+
+    }
+
+}
+
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media(max-width:760px){
+
+    .community-header-interno{
+
+        width:
+            calc(100% - 22px);
+
+        min-height:62px;
+
+        gap:9px;
+
+    }
+
+    .community-logo{
+
+        width:36px;
+        height:36px;
+
+        border-radius:9px;
+
+        font-size:14px;
+
+    }
+
+    .community-brand-titolo{
+
+        font-size:12px;
+
+    }
+
+    .community-brand-sottotitolo{
+        display:none;
+    }
+
+    .ricerca-community{
+
+        margin-left:auto;
+
+    }
+
+    #ricercaCommunity{
+
+        height:39px;
+
+        padding-left:36px;
+
+        font-size:11px;
+
+    }
+
+    .ricerca-community .icona{
+
+        left:11px;
+
+        width:16px;
+        height:16px;
+
+    }
+
+    .btn-crea-post{
+
+        width:39px;
+        height:39px;
+
+        padding:0;
+
+        border-radius:9px;
+
+    }
+
+    .btn-crea-post span{
+        display:none;
+    }
+
+
+    /* HERO */
+
+    .community-hero-interno{
+
+        width:
+            calc(100% - 26px);
+
+        min-height:auto;
+
+        padding:
+            29px 0;
+
+        grid-template-columns:
+            1fr;
+
+        gap:20px;
+
+    }
+
+    .community-hero h1{
+
+        font-size:
+            34px;
+
+    }
+
+    .community-hero p{
+
+        font-size:
+            13px;
+
+    }
+
+    .community-pulse{
+        display:none;
+    }
+
+
+    /* LAYOUT */
+
+    .community-layout{
+
+        width:
+            calc(100% - 20px);
+
+        margin-top:13px;
+
+        grid-template-columns:
+            1fr;
+
+        gap:12px;
+
+    }
+
+
+    /* CATEGORIE ORIZZONTALI */
+
+    .sidebar{
+
+        position:static;
+
+        overflow-x:auto;
+
+        border:0;
+
+        background:transparent;
+
+        box-shadow:none;
+
+        scrollbar-width:none;
+
+    }
+
+    .sidebar::-webkit-scrollbar{
+        display:none;
+    }
+
+    .sidebar-titolo,
+    .sidebar-separatore{
+        display:none;
+    }
+
+    .categorie-community{
+
+        display:flex;
+
+        width:max-content;
+
+        padding:0;
+
+        gap:6px;
+
+    }
+
+    .btn-categoria{
+
+        width:auto;
+
+        min-height:38px;
+
+        padding:
+            0 11px;
+
+        margin:0;
+
+        border:
+            1px solid
+            var(--bordo);
+
+        border-radius:
+            999px;
+
+        background:#fff;
+
+        white-space:nowrap;
+
+        font-size:10px;
+
+    }
+
+    .categoria-icona,
+    .categoria-numero{
+        display:none;
+    }
+
+
+    /* COMPOSER */
+
+    .composer{
+
+        padding:11px;
+
+        margin-bottom:10px;
+
+    }
+
+    .avatar{
+
+        width:36px;
+        height:36px;
+
+    }
+
+    .composer-input{
+
+        height:39px;
+
+        font-size:10px;
+
+    }
+
+
+    /* FILTRI */
+
+    .feed-filtri{
+
+        margin-bottom:10px;
+
+    }
+
+
+    /* POST */
+
+    .post-community{
+
+        margin-bottom:10px;
+
+        border-radius:
+            12px;
+
+    }
+
+    .post-interno{
+
+        padding:14px;
+
+    }
+
+    .post-titolo{
+
+        font-size:
+            17px;
+
+    }
+
+    .post-testo{
+
+        font-size:
+            12px;
+
+    }
+
+    .post-azioni{
+
+        overflow-x:auto;
+
+        padding:
+            6px 8px;
+
+    }
+
+    .post-azione{
+
+        flex-shrink:0;
+
+        padding:
+            0 8px;
+
+    }
+
+
+    /* TAVOLO */
+
+    .tavolo-community{
+
+        align-items:flex-start;
+
+    }
+
+    .btn-unisciti{
+
+        align-self:center;
+
+    }
+
+
+    /* SIDEBAR DESTRA */
+
+    .sidebar-destra{
+
+        display:flex;
+
+        flex-direction:column;
+
+    }
+
+
+    /* MODAL */
+
+    .overlay-modal{
+
+        padding:0;
+
+        align-items:flex-end;
+
+    }
+
+    .modal-post{
+
+        width:100%;
+
+        max-height:
+            90dvh;
+
+        border-radius:
+            18px 18px 0 0;
+
+    }
+
+}
+
+
+/* =========================================================
+   TELEFONI PICCOLI
+========================================================= */
+
+@media(max-width:430px){
+
+    .community-brand-testo{
+        display:none;
+    }
+
+    .hero-statistiche{
+
+        gap:6px;
+
+    }
+
+    .hero-stat{
+
+        padding:
+            6px 9px;
+
+        font-size:10px;
+
+    }
+
+    .post-azione{
+
+        font-size:9px;
+
+    }
+
+}
+
+</style>
+</head>
+
+<body>
+
+
+<!-- ======================================================
+     SPRITE SVG
+====================================================== -->
+
+<svg
+    width="0"
+    height="0"
+    style="position:absolute"
+    aria-hidden="true"
+>
+
+    <symbol
+        id="i-search"
+        viewBox="0 0 24 24"
+    >
+        <circle
+            cx="11"
+            cy="11"
+            r="7"
+        ></circle>
+
+        <path
+            d="m20 20-3.5-3.5"
+        ></path>
+    </symbol>
+
+
+    <symbol
+        id="i-plus"
+        viewBox="0 0 24 24"
+    >
+        <path d="M12 5v14"></path>
+        <path d="M5 12h14"></path>
+    </symbol>
+
+
+    <symbol
+        id="i-heart"
+        viewBox="0 0 24 24"
+    >
+        <path
+            d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"
+        ></path>
+    </symbol>
+
+
+    <symbol
+        id="i-comment"
+        viewBox="0 0 24 24"
+    >
+        <path
+            d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"
+        ></path>
+    </symbol>
+
+
+    <symbol
+        id="i-share"
+        viewBox="0 0 24 24"
+    >
+        <circle cx="18" cy="5" r="3"></circle>
+        <circle cx="6" cy="12" r="3"></circle>
+        <circle cx="18" cy="19" r="3"></circle>
+
+        <path d="m8.6 10.5 6.8-4"></path>
+        <path d="m8.6 13.5 6.8 4"></path>
+    </symbol>
+
+
+    <symbol
+        id="i-bookmark"
+        viewBox="0 0 24 24"
+    >
+        <path
+            d="M6 3h12v18l-6-4-6 4z"
+        ></path>
+    </symbol>
+
+</svg>
+
+
+<!-- ======================================================
+     HEADER
+====================================================== -->
+
+<header class="community-header">
+
+    <div class="community-header-interno">
+
+        <div class="community-brand">
+
+            <div class="community-logo">
+                GS
+            </div>
+
+            <div class="community-brand-testo">
+
+                <div class="community-brand-titolo">
+                    COMMUNITY
+                </div>
+
+                <div class="community-brand-sottotitolo">
+                    Giochi Società
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="ricerca-community">
+
+            <svg class="icona">
+                <use href="#i-search"></use>
+            </svg>
+
+            <input
+                id="ricercaCommunity"
+                type="search"
+                placeholder="Cerca discussioni, giocatori, argomenti..."
+                autocomplete="off"
+            >
+
+        </div>
+
+
+        <button
+            class="btn-crea-post"
+            onclick="apriModalPost()"
+        >
+
+            <svg class="icona">
+                <use href="#i-plus"></use>
+            </svg>
+
+            <span>
+                Crea post
+            </span>
+
+        </button>
+
+    </div>
+
+</header>
+
+
+<!-- ======================================================
+     HERO
+====================================================== -->
+
+<section class="community-hero">
+
+    <div class="community-hero-interno">
+
+        <div>
+
+            <div class="hero-eyebrow">
+
+                <span class="pallino-live"></span>
+
+                LA COMMUNITY DI GIOCHI SOCIETÀ
+
+            </div>
+
+
+            <h1>
+
+                Gioca.
+                Condividi.
+                <span>Conosci giocatori.</span>
+
+            </h1>
+
+
+            <p>
+
+                Il punto d'incontro per chi gioca davvero.
+                Trova persone con cui entrare al tavolo,
+                parla di strategie, condividi le tue partite
+                e resta aggiornato su tutto ciò che succede
+                nella community.
+
+            </p>
+
+
+            <div class="hero-statistiche">
+
+                <div class="hero-stat">
+                    🎲 Partite e strategie
+                </div>
+
+                <div class="hero-stat">
+                    👥 Giocatori reali
+                </div>
+
+                <div class="hero-stat">
+                    💬 Discussioni
+                </div>
+
+                <div class="hero-stat">
+                    🏆 Competizione
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="community-pulse">
+
+            <div class="pulse-header">
+
+                <strong>
+                    Community Pulse
+                </strong>
+
+                <span class="pulse-live">
+                    ● LIVE
+                </span>
+
+            </div>
+
+
+            <div class="pulse-riga">
+
+                <div class="pulse-icona">
+                    🎲
+                </div>
+
+                <div class="pulse-testo">
+
+                    <strong>
+                        Tavoli attivi
+                    </strong>
+
+                    <span>
+                        Trova una partita e unisciti
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <div class="pulse-riga">
+
+                <div class="pulse-icona">
+                    💬
+                </div>
+
+                <div class="pulse-testo">
+
+                    <strong>
+                        Discussioni recenti
+                    </strong>
+
+                    <span>
+                        Strategie, partite e community
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <div class="pulse-riga">
+
+                <div class="pulse-icona">
+                    🏆
+                </div>
+
+                <div class="pulse-testo">
+
+                    <strong>
+                        Classifica giocatori
+                    </strong>
+
+                    <span>
+                        Guarda chi domina i tavoli
+                    </span>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- ======================================================
+     LAYOUT
+====================================================== -->
+
+<main class="community-layout">
+
+
+    <!-- ==================================================
+         SIDEBAR CATEGORIE
+    =================================================== -->
+
+    <aside class="sidebar card">
+
+        <div class="sidebar-titolo">
+            Esplora
+        </div>
+
+
+        <div class="categorie-community">
+
+            <button
+                class="btn-categoria attiva"
+                data-categoria="tutto"
+                onclick="selezionaCategoria(this)"
+            >
+
+                <span class="categoria-icona">
+                    ◼
+                </span>
+
+                Per te
+
+                <span class="categoria-numero">
+                    24
+                </span>
+
+            </button>
+
+
+            <button
+                class="btn-categoria"
+                data-categoria="discussioni"
+                onclick="selezionaCategoria(this)"
+            >
+
+                <span class="categoria-icona">
+                    💬
+                </span>
+
+                Discussioni
+
+                <span class="categoria-numero">
+                    12
+                </span>
+
+            </button>
+
+
+            <button
+                class="btn-categoria"
+                data-categoria="giocatori"
+                onclick="selezionaCategoria(this)"
+            >
+
+                <span class="categoria-icona">
+                    👥
+                </span>
+
+                Cerco giocatori
+
+                <span class="categoria-numero">
+                    8
+                </span>
+
+            </button>
+
+
+            <button
+                class="btn-categoria"
+                data-categoria="strategie"
+                onclick="selezionaCategoria(this)"
+            >
+
+                <span class="categoria-icona">
+                    ♟
+                </span>
+
+                Strategie
+
+                <span class="categoria-numero">
+                    18
+                </span>
+
+            </button>
+
+
+            <button
+                class="btn-categoria"
+                data-categoria="eventi"
+                onclick="selezionaCategoria(this)"
+            >
+
+                <span class="categoria-icona">
+                    🏆
+                </span>
+
+                Eventi
+
+                <span class="categoria-numero">
+                    5
+                </span>
+
+            </button>
+
+
+            <button
+                class="btn-categoria"
+                data-categoria="supporto"
+                onclick="selezionaCategoria(this)"
+            >
+
+                <span class="categoria-icona">
+                    ⚙
+                </span>
+
+                Supporto
+
+                <span class="categoria-numero">
+                    4
+                </span>
+
+            </button>
+
+        </div>
+
+
+        <div class="sidebar-separatore"></div>
+
+
+        <div class="sidebar-titolo">
+            Il tuo account
+        </div>
+
+
+        <div class="categorie-community">
+
+            <a
+                class="btn-categoria"
+                href="https://gioco-oca-server.onrender.com/profilo.html"
+                target="_top"
+            >
+
+                <span class="categoria-icona">
+                    👤
+                </span>
+
+                Profilo
+
+            </a>
+
+
+            <a
+                class="btn-categoria"
+                href="https://gioco-oca-server.onrender.com/messaggi-privati.html"
+                target="_top"
+            >
+
+                <span class="categoria-icona">
+                    ✉
+                </span>
+
+                Messaggi
+
+            </a>
+
+        </div>
+
+    </aside>
+
+
+    <!-- ==================================================
+         FEED
+    =================================================== -->
+
+    <section class="feed-community">
+
+
+        <!-- COMPOSER -->
+
+        <div class="composer card">
+
+            <div
+                id="avatarComposer"
+                class="avatar"
+            >
+                ?
+            </div>
+
+
+            <div
+                class="composer-input"
+                onclick="apriModalPost()"
+            >
+
+                Condividi qualcosa con la community...
+
+            </div>
+
+        </div>
+
+
+        <!-- FILTRI -->
+
+        <div class="feed-filtri card">
+
+            <button
+                class="feed-filtro attivo"
+                onclick="selezionaFiltroFeed(this)"
+            >
+                Più rilevanti
+            </button>
+
+            <button
+                class="feed-filtro"
+                onclick="selezionaFiltroFeed(this)"
+            >
+                Recenti
+            </button>
+
+            <button
+                class="feed-filtro"
+                onclick="selezionaFiltroFeed(this)"
+            >
+                Più discussi
+            </button>
+
+        </div>
+
+
+        <!-- ==================================================
+             POST 1
+        =================================================== -->
+
+        <article
+            class="post-community card"
+            data-categoria="discussioni"
+            data-testo="nuova community giochi società giocatori"
+        >
+
+            <div class="post-interno">
+
+                <div class="post-header">
+
+                    <div
+                        class="avatar"
+                        style="background:#6a2c70"
+                    >
+                        L
+                    </div>
+
+
+                    <div class="post-autore-info">
+
+                        <div class="post-autore-riga">
+
+                            <span class="post-autore">
+                                LucaPlayer
+                            </span>
+
+                            <span class="badge-autore">
+                                MEMBRO
+                            </span>
+
+                        </div>
+
+
+                        <div class="post-meta">
+
+                            5 minuti fa · Pubblico
+
+                        </div>
+
+                    </div>
+
+
+                    <button class="post-menu">
+                        ⋯
+                    </button>
+
+                </div>
+
+
+                <div class="post-categoria">
+                    Discussione
+                </div>
+
+
+                <h2 class="post-titolo">
+
+                    Che ne pensate della nuova area Community?
+
+                </h2>
+
+
+                <p class="post-testo">
+
+                    Finalmente possiamo avere un posto dedicato
+                    per parlare delle partite, organizzare tavoli
+                    e conoscere altri giocatori.
+
+                </p>
+
+            </div>
+
+
+            <div class="post-azioni">
+
+                <button
+                    class="post-azione"
+                    onclick="toggleReazione(this)"
+                >
+
+                    <svg class="icona">
+                        <use href="#i-heart"></use>
+                    </svg>
+
+                    <span class="numero-reazioni">
+                        18
+                    </span>
+
+                </button>
+
+
+                <button class="post-azione">
+
+                    <svg class="icona">
+                        <use href="#i-comment"></use>
+                    </svg>
+
+                    7 commenti
+
+                </button>
+
+
+                <button class="post-azione">
+
+                    <svg class="icona">
+                        <use href="#i-share"></use>
+                    </svg>
+
+                    Condividi
+
+                </button>
+
+
+                <button
+                    class="post-azione"
+                    style="margin-left:auto"
+                    onclick="this.classList.toggle('attiva')"
+                >
+
+                    <svg class="icona">
+                        <use href="#i-bookmark"></use>
+                    </svg>
+
+                </button>
+
+            </div>
+
+        </article>
+
+
+        <!-- ==================================================
+             POST 2 CERCO GIOCATORI
+        =================================================== -->
+
+        <article
+            class="post-community card"
+            data-categoria="giocatori"
+            data-testo="cerco giocatori partita tavolo gioco oca bar"
+        >
+
+            <div class="post-interno">
+
+                <div class="post-header">
+
+                    <div
+                        class="avatar"
+                        style="background:#1e40af"
+                    >
+                        M
+                    </div>
+
+
+                    <div class="post-autore-info">
+
+                        <div class="post-autore-riga">
+
+                            <span class="post-autore">
+                                Marco82
+                            </span>
+
+                        </div>
+
+
+                        <div class="post-meta">
+
+                            11 minuti fa · Cerco giocatori
+
+                        </div>
+
+                    </div>
+
+
+                    <button class="post-menu">
+                        ⋯
+                    </button>
+
+                </div>
+
+
+                <div class="post-categoria">
+                    Cerco giocatori
+                </div>
+
+
+                <h2 class="post-titolo">
+
+                    Qualcuno per una partita adesso?
+
+                </h2>
+
+
+                <p class="post-testo">
+
+                    Sto creando un tavolo da 4 giocatori.
+                    Se qualcuno vuole unirsi siamo già in due.
+
+                </p>
+
+
+                <div class="tavolo-community">
+
+                    <div class="tavolo-community-icona">
+                        🎲
+                    </div>
+
+
+                    <div class="tavolo-community-info">
+
+                        <strong>
+                            Gioco dell'Oca · BAR
+                        </strong>
+
+                        <span>
+                            2 / 4 giocatori · Tavolo pubblico
+                        </span>
+
+                    </div>
+
+
+                    <button
+                        class="btn-unisciti"
+                        onclick="mostraToast('Apertura del tavolo di gioco...')"
+                    >
+                        Unisciti
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <div class="post-azioni">
+
+                <button
+                    class="post-azione"
+                    onclick="toggleReazione(this)"
+                >
+
+                    <svg class="icona">
+                        <use href="#i-heart"></use>
+                    </svg>
+
+                    <span class="numero-reazioni">
+                        9
+                    </span>
+
+                </button>
+
+
+                <button class="post-azione">
+
+                    <svg class="icona">
+                        <use href="#i-comment"></use>
+                    </svg>
+
+                    3 commenti
+
+                </button>
+
+
+                <button class="post-azione">
+
+                    <svg class="icona">
+                        <use href="#i-share"></use>
+                    </svg>
+
+                    Condividi
+
+                </button>
+
+            </div>
+
+        </article>
+
+
+        <!-- ==================================================
+             POST 3 STRATEGIA
+        =================================================== -->
+
+        <article
+            class="post-community card"
+            data-categoria="strategie"
+            data-testo="strategia gioco oca caselle dadi"
+        >
+
+            <div class="post-interno">
+
+                <div class="post-header">
+
+                    <div
+                        class="avatar"
+                        style="background:#00838f"
+                    >
+                        A
+                    </div>
+
+
+                    <div class="post-autore-info">
+
+                        <div class="post-autore-riga">
+
+                            <span class="post-autore">
+                                AleBoard
+                            </span>
+
+                            <span class="badge-autore">
+                                VETERANO
+                            </span>
+
+                        </div>
+
+
+                        <div class="post-meta">
+
+                            38 minuti fa
+
+                        </div>
+
+                    </div>
+
+
+                    <button class="post-menu">
+                        ⋯
+                    </button>
+
+                </div>
+
+
+                <div class="post-categoria">
+                    Strategie
+                </div>
+
+
+                <h2 class="post-titolo">
+
+                    Qual è la casella che vi ha fatto perdere più partite?
+
+                </h2>
+
+
+                <p class="post-testo">
+
+                    Per me non c'è confronto. Ogni volta che
+                    penso di essere vicino alla vittoria succede
+                    qualcosa e torno indietro.
+
+                </p>
+
+
+                <div class="sondaggio">
+
+                    <strong style="font-size:11px">
+                        Vota la casella più temuta
+                    </strong>
+
+
+                    <div class="sondaggio-opzione">
+
+                        <div
+                            class="sondaggio-riempimento"
+                            style="width:58%"
+                        ></div>
+
+                        <div class="sondaggio-contenuto">
+
+                            Casella 58
+
+                            <span>
+                                58%
+                            </span>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="sondaggio-opzione">
+
+                        <div
+                            class="sondaggio-riempimento"
+                            style="width:27%"
+                        ></div>
+
+                        <div class="sondaggio-contenuto">
+
+                            Casella 50
+
+                            <span>
+                                27%
+                            </span>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="sondaggio-opzione">
+
+                        <div
+                            class="sondaggio-riempimento"
+                            style="width:15%"
+                        ></div>
+
+                        <div class="sondaggio-contenuto">
+
+                            Altre
+
+                            <span>
+                                15%
+                            </span>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="post-azioni">
+
+                <button
+                    class="post-azione"
+                    onclick="toggleReazione(this)"
+                >
+
+                    <svg class="icona">
+                        <use href="#i-heart"></use>
+                    </svg>
+
+                    <span class="numero-reazioni">
+                        31
+                    </span>
+
+                </button>
+
+
+                <button class="post-azione">
+
+                    <svg class="icona">
+                        <use href="#i-comment"></use>
+                    </svg>
+
+                    21 commenti
+
+                </button>
+
+
+                <button class="post-azione">
+
+                    <svg class="icona">
+                        <use href="#i-share"></use>
+                    </svg>
+
+                    Condividi
+
+                </button>
+
+            </div>
+
+        </article>
+
+
+        <!-- ==================================================
+             POST EVENTO
+        =================================================== -->
+
+        <article
+            class="post-community card"
+            data-categoria="eventi"
+            data-testo="evento torneo community classifica"
+        >
+
+            <div class="post-interno">
+
+                <div class="post-header">
+
+                    <div
+                        class="avatar"
+                        style="
+                            background:#111;
+                            color:#ffd400;
+                        "
+                    >
+                        GS
+                    </div>
+
+
+                    <div class="post-autore-info">
+
+                        <div class="post-autore-riga">
+
+                            <span class="post-autore">
+                                Giochi Società
+                            </span>
+
+                            <span class="badge-autore">
+                                UFFICIALE
+                            </span>
+
+                        </div>
+
+
+                        <div class="post-meta">
+
+                            Oggi · Annuncio Community
+
+                        </div>
+
+                    </div>
+
+
+                    <button class="post-menu">
+                        ⋯
+                    </button>
+
+                </div>
+
+
+                <div class="post-categoria">
+                    Evento
+                </div>
+
+
+                <h2 class="post-titolo">
+
+                    🏆 Nuove sfide Community in arrivo
+
+                </h2>
+
+
+                <p class="post-testo">
+
+                    Stiamo preparando nuove attività dedicate
+                    ai giocatori più attivi. Segui la Community
+                    per non perdere aggiornamenti e classifiche.
+
+                </p>
+
+            </div>
+
+
+            <div class="post-azioni">
+
+                <button
+                    class="post-azione"
+                    onclick="toggleReazione(this)"
+                >
+
+                    <svg class="icona">
+                        <use href="#i-heart"></use>
+                    </svg>
+
+                    <span class="numero-reazioni">
+                        54
+                    </span>
+
+                </button>
+
+
+                <button class="post-azione">
+
+                    <svg class="icona">
+                        <use href="#i-comment"></use>
+                    </svg>
+
+                    14 commenti
+
+                </button>
+
+
+                <button class="post-azione">
+
+                    <svg class="icona">
+                        <use href="#i-share"></use>
+                    </svg>
+
+                    Condividi
+
+                </button>
+
+            </div>
+
+        </article>
+
+
+        <div
+            id="feedVuoto"
+            class="feed-vuoto card"
+        >
+
+            <strong>
+                Nessun risultato trovato
+            </strong>
+
+            <span>
+                Prova a cercare un altro giocatore
+                o un altro argomento.
+            </span>
+
+        </div>
+
+    </section>
+
+
+    <!-- ==================================================
+         DESTRA
+    =================================================== -->
+
+    <aside class="sidebar-destra">
+
+
+        <!-- CLASSIFICA -->
+
+        <div class="card">
+
+            <div class="card-titolo">
+
+                <strong>
+                    🏆 Top giocatori
+                </strong>
+
+                <span>
+                    CLASSIFICA
+                </span>
+
+            </div>
+
+
+            <div id="classificaCommunity">
+
+                <div
+                    style="
+                        padding:18px;
+                        text-align:center;
+                        color:#999;
+                        font-size:10px;
+                    "
+                >
+                    Caricamento...
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- REGOLE -->
+
+        <div class="regole-card card">
+
+            <div class="regole-header">
+
+                <strong>
+                    Community sana, partite migliori.
+                </strong>
+
+                <span>
+                    Poche regole, molto rispetto.
+                </span>
+
+            </div>
+
+
+            <div class="regole-contenuto">
+
+                <div class="regola">
+
+                    <span class="regola-numero">
+                        1
+                    </span>
+
+                    Rispetta gli altri giocatori.
+
+                </div>
+
+
+                <div class="regola">
+
+                    <span class="regola-numero">
+                        2
+                    </span>
+
+                    Niente spam o contenuti offensivi.
+
+                </div>
+
+
+                <div class="regola">
+
+                    <span class="regola-numero">
+                        3
+                    </span>
+
+                    Mantieni le discussioni utili e pertinenti.
+
+                </div>
+
+
+                <a
+                    href="https://solfriniluca1.wixstudio.com/giochisocieta"
+                    target="_top"
+                    style="
+                        display:block;
+                        margin-top:14px;
+                        color:#8d7600;
+                        font-size:10px;
+                        font-weight:900;
+                    "
+                >
+                    Leggi le regole Community →
+                </a>
+
+            </div>
+
+        </div>
+
+    </aside>
+
+</main>
+
+
+<!-- ======================================================
+     MODAL NUOVO POST
+====================================================== -->
+
+<div
+    id="overlayNuovoPost"
+    class="overlay-modal"
+    onclick="chiudiModalDaOverlay(event)"
+>
+
+    <div class="modal-post">
+
+        <div class="modal-header">
+
+            <strong>
+                Crea un nuovo post
+            </strong>
+
+            <button
+                class="modal-chiudi"
+                onclick="chiudiModalPost()"
+            >
+                ×
+            </button>
+
+        </div>
+
+
+        <div class="modal-body">
+
+            <label class="form-label">
+                Categoria
+            </label>
+
+            <select
+                id="nuovoPostCategoria"
+                class="campo"
+            >
+
+                <option value="discussioni">
+                    Discussione
+                </option>
+
+                <option value="giocatori">
+                    Cerco giocatori
+                </option>
+
+                <option value="strategie">
+                    Strategie
+                </option>
+
+                <option value="eventi">
+                    Eventi
+                </option>
+
+                <option value="supporto">
+                    Supporto
+                </option>
+
+            </select>
+
+
+            <label class="form-label">
+                Titolo
+            </label>
+
+            <input
+                id="nuovoPostTitolo"
+                class="campo"
+                maxlength="100"
+                placeholder="Di cosa vuoi parlare?"
+            >
+
+
+            <label class="form-label">
+                Messaggio
+            </label>
+
+            <textarea
+                id="nuovoPostTesto"
+                class="campo"
+                maxlength="1200"
+                placeholder="Scrivi qualcosa alla community..."
+            ></textarea>
+
+        </div>
+
+
+        <div class="modal-footer">
+
+            <button
+                class="btn-secondario"
+                onclick="chiudiModalPost()"
+            >
+                Annulla
+            </button>
+
+
+            <button
+                class="btn-pubblica"
+                onclick="pubblicaPostLocale()"
+            >
+                Pubblica
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- ======================================================
+     TOAST
+====================================================== -->
+
+<div id="toastCommunity"></div>
+
+
+<script>
+
+/* =========================================================
+   CONFIGURAZIONE
+========================================================= */
+
+const SERVER =
+    "https://gioco-oca-server.onrender.com";
+
+
+let utenteCorrente =
+    null;
+
+
+let categoriaCorrente =
+    "tutto";
+
+
+/* =========================================================
+   UTILITY
+========================================================= */
+
+function iniziale(nome){
+
+    return String(
+        nome || "?"
+    )
+    .trim()
+    .charAt(0)
+    .toUpperCase();
+
+}
+
+
+function escapeHtml(testo){
+
+    return String(
+        testo ?? ""
+    ).replace(
+        /[&<>"']/g,
+        carattere => ({
+
+            "&":"&amp;",
+            "<":"&lt;",
+            ">":"&gt;",
+            '"':"&quot;",
+            "'":"&#39;"
+
+        })[carattere]
+    );
+
+}
+
+
+/* =========================================================
+   TOAST
+========================================================= */
+
+let timerToast =
+    null;
+
+
+function mostraToast(testo){
+
+    const toast =
+        document.getElementById(
+            "toastCommunity"
+        );
+
+
+    toast.textContent =
+        testo;
+
+
+    toast.classList.add(
+        "visibile"
+    );
+
+
+    clearTimeout(
+        timerToast
+    );
+
+
+    timerToast =
+        setTimeout(
+            () => {
+
+                toast.classList.remove(
+                    "visibile"
+                );
+
+            },
+            3000
+        );
+
+}
+
+
+/* =========================================================
+   CONTROLLO LOGIN
+========================================================= */
+
+async function controllaUtente(){
+
+    try{
+
+        const risposta =
+            await fetch(
+                SERVER + "/api/me",
+                {
+                    credentials:"include",
+                    cache:"no-store"
+                }
+            );
+
+
+        if(
+            !risposta.ok
+        ){
+
+            return;
+
+        }
+
+
+        const dati =
+            await risposta.json();
+
+
+        utenteCorrente =
+            dati;
+
+
+        aggiornaUtenteCommunity(
+            dati
+        );
+
+
+    }catch(errore){
+
+        console.warn(
+            "Impossibile recuperare l'utente:",
+            errore
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   UTENTE NEL COMPOSER
+========================================================= */
+
+function aggiornaUtenteCommunity(
+    dati
+){
+
+    const avatar =
+        document.getElementById(
+            "avatarComposer"
+        );
+
+
+    if(
+        dati.avatar
+    ){
+
+        avatar.innerHTML =
+            `<img
+                src="${escapeHtml(dati.avatar)}"
+                alt=""
+            >`;
+
+    }else{
+
+        avatar.textContent =
+            iniziale(
+                dati.nickname
+            );
+
+    }
+
+}
+
+
+/* =========================================================
+   MODALE POST
+========================================================= */
+
+function apriModalPost(){
+
+    if(
+        !utenteCorrente
+    ){
+
+        mostraToast(
+            "Accedi al tuo account per pubblicare nella Community."
+        );
+
+        return;
+
+    }
+
+
+    document
+    .getElementById(
+        "overlayNuovoPost"
+    )
+    .classList
+    .add(
+        "aperto"
+    );
+
+}
+
+
+function chiudiModalPost(){
+
+    document
+    .getElementById(
+        "overlayNuovoPost"
+    )
+    .classList
+    .remove(
+        "aperto"
+    );
+
+}
+
+
+function chiudiModalDaOverlay(
+    evento
+){
+
+    if(
+        evento.target.id ===
+        "overlayNuovoPost"
+    ){
+
+        chiudiModalPost();
+
+    }
+
+}
+
+
+/* =========================================================
+   PUBBLICAZIONE LOCALE
+========================================================= */
+
+function pubblicaPostLocale(){
+
+    const titolo =
+        document
+        .getElementById(
+            "nuovoPostTitolo"
+        )
+        .value
+        .trim();
+
+
+    const testo =
+        document
+        .getElementById(
+            "nuovoPostTesto"
+        )
+        .value
+        .trim();
+
+
+    const categoria =
+        document
+        .getElementById(
+            "nuovoPostCategoria"
+        )
+        .value;
+
+
+    if(
+        !titolo ||
+        !testo
+    ){
+
+        mostraToast(
+            "Inserisci un titolo e un messaggio."
+        );
+
+        return;
+
+    }
+
+
+    const post =
+        document.createElement(
+            "article"
+        );
+
+
+    post.className =
+        "post-community card";
+
+
+    post.dataset.categoria =
+        categoria;
+
+
+    post.dataset.testo =
+        (
+            titolo +
+            " " +
+            testo
+        )
+        .toLowerCase();
+
+
+    const nickname =
+        utenteCorrente?.nickname ||
+        "Utente";
+
+
+    post.innerHTML = `
+
+        <div class="post-interno">
+
+            <div class="post-header">
+
+                <div class="avatar">
+                    ${escapeHtml(
+                        iniziale(
+                            nickname
+                        )
+                    )}
+                </div>
+
+                <div class="post-autore-info">
+
+                    <div class="post-autore-riga">
+
+                        <span class="post-autore">
+                            ${escapeHtml(
+                                nickname
+                            )}
+                        </span>
+
+                        <span class="badge-autore">
+                            TU
+                        </span>
+
+                    </div>
+
+                    <div class="post-meta">
+                        Adesso · Pubblico
+                    </div>
+
+                </div>
+
+                <button class="post-menu">
+                    ⋯
+                </button>
+
+            </div>
+
+
+            <div class="post-categoria">
+                ${escapeHtml(
+                    categoria
+                )}
+            </div>
+
+
+            <h2 class="post-titolo">
+                ${escapeHtml(
+                    titolo
+                )}
+            </h2>
+
+
+            <p class="post-testo">
+                ${escapeHtml(
+                    testo
+                )}
+            </p>
+
+        </div>
+
+
+        <div class="post-azioni">
+
+            <button
+                class="post-azione"
+                onclick="toggleReazione(this)"
+            >
+
+                ♡
+
+                <span class="numero-reazioni">
+                    0
+                </span>
+
+            </button>
+
+
+            <button class="post-azione">
+                💬 0 commenti
+            </button>
+
+
+            <button class="post-azione">
+                ↗ Condividi
+            </button>
+
+        </div>
+    `;
+
+
+    const feed =
+        document.querySelector(
+            ".feed-community"
+        );
+
+
+    const filtri =
+        document.querySelector(
+            ".feed-filtri"
+        );
+
+
+    filtri.insertAdjacentElement(
+        "afterend",
+        post
+    );
+
+
+    document
+    .getElementById(
+        "nuovoPostTitolo"
+    )
+    .value = "";
+
+
+    document
+    .getElementById(
+        "nuovoPostTesto"
+    )
+    .value = "";
+
+
+    chiudiModalPost();
+
+
+    mostraToast(
+        "Post pubblicato."
+    );
+
+
+    filtraPost();
+
+}
+
+
+/* =========================================================
+   LIKE
+========================================================= */
+
+function toggleReazione(
+    bottone
+){
+
+    const numero =
+        bottone.querySelector(
+            ".numero-reazioni"
+        );
+
+
+    let valore =
+        Number(
+            numero?.textContent || 0
+        );
+
+
+    const attivo =
+        bottone
+        .classList
+        .toggle(
+            "attiva"
+        );
+
+
+    valore +=
+        attivo
+            ? 1
+            : -1;
+
+
+    if(
+        valore < 0
+    ){
+        valore = 0;
+    }
+
+
+    if(
+        numero
+    ){
+
+        numero.textContent =
+            valore;
+
+    }
+
+}
+
+
+/* =========================================================
+   CATEGORIE
+========================================================= */
+
+function selezionaCategoria(
+    bottone
+){
+
+    document
+    .querySelectorAll(
+        ".btn-categoria[data-categoria]"
+    )
+    .forEach(
+        elemento => {
+
+            elemento
+            .classList
+            .remove(
+                "attiva"
+            );
+
+        }
+    );
+
+
+    bottone
+    .classList
+    .add(
+        "attiva"
+    );
+
+
+    categoriaCorrente =
+        bottone.dataset.categoria;
+
+
+    filtraPost();
+
+}
+
+
+/* =========================================================
+   FILTRI FEED
+========================================================= */
+
+function selezionaFiltroFeed(
+    bottone
+){
+
+    document
+    .querySelectorAll(
+        ".feed-filtro"
+    )
+    .forEach(
+        elemento =>
+            elemento.classList.remove(
+                "attivo"
+            )
+    );
+
+
+    bottone
+    .classList
+    .add(
+        "attivo"
+    );
+
+}
+
+
+/* =========================================================
+   RICERCA
+========================================================= */
+
+document
+.getElementById(
+    "ricercaCommunity"
+)
+.addEventListener(
+    "input",
+    filtraPost
+);
+
+
+function filtraPost(){
+
+    const ricerca =
+        document
+        .getElementById(
+            "ricercaCommunity"
+        )
+        .value
+        .trim()
+        .toLowerCase();
+
+
+    const post =
+        document.querySelectorAll(
+            ".post-community"
+        );
+
+
+    let visibili =
+        0;
+
+
+    post.forEach(
+        elemento => {
+
+            const categoria =
+                elemento.dataset.categoria ||
+                "";
+
+
+            const testo =
+                (
+                    elemento.dataset.testo ||
+                    elemento.textContent
+                )
+                .toLowerCase();
+
+
+            const categoriaOk =
+                categoriaCorrente ===
+                "tutto"
+                ||
+                categoria ===
+                categoriaCorrente;
+
+
+            const ricercaOk =
+                !ricerca
+                ||
+                testo.includes(
+                    ricerca
+                );
+
+
+            const mostra =
+                categoriaOk &&
+                ricercaOk;
+
+
+            elemento.style.display =
+                mostra
+                    ? ""
+                    : "none";
+
+
+            if(
+                mostra
+            ){
+
+                visibili++;
+
+            }
+
+        }
+    );
+
+
+    document
+    .getElementById(
+        "feedVuoto"
+    )
+    .style
+    .display =
+        visibili === 0
+            ? "block"
+            : "none";
+
+}
+
+
+/* =========================================================
+   TOP GIOCATORI REALI
+========================================================= */
+
+async function caricaClassifica(){
+
+    const contenitore =
+        document.getElementById(
+            "classificaCommunity"
+        );
+
+
+    try{
+
+        const risposta =
+            await fetch(
+                SERVER +
+                "/api/top-giocatori",
+                {
+                    cache:
+                        "no-store"
+                }
+            );
+
+
+        if(
+            !risposta.ok
+        ){
+
+            throw new Error(
+                "Classifica non disponibile"
+            );
+
+        }
+
+
+        const dati =
+            await risposta.json();
+
+
+        const giocatori =
+            Array.isArray(
+                dati.giocatori
+            )
+                ? dati.giocatori
+                : [];
+
+
+        if(
+            !giocatori.length
+        ){
+
+            contenitore.innerHTML =
+                `
+                <div
+                    style="
+                        padding:18px;
+                        text-align:center;
+                        color:#999;
+                        font-size:10px;
+                    "
+                >
+                    Nessun giocatore disponibile.
+                </div>
+                `;
+
+            return;
+
+        }
+
+
+        contenitore.innerHTML =
+            giocatori
+            .slice(
+                0,
+                7
+            )
+            .map(
+                (
+                    giocatore,
+                    indice
+                ) => {
+
+                    const nome =
+                        giocatore.nickname ||
+                        "Giocatore";
+
+
+                    return `
+
+                        <div class="classifica-riga">
+
+                            <div
+                                class="
+                                    classifica-posizione
+                                    ${
+                                        indice < 3
+                                            ? "podio"
+                                            : ""
+                                    }
+                                "
+                            >
+                                ${
+                                    indice + 1
+                                }
+                            </div>
+
+
+                            <div
+                                class="avatar-piccolo"
+                                style="
+                                    background:
+                                    ${
+                                        coloreDaNome(
+                                            nome
+                                        )
+                                    }
+                                "
+                            >
+                                ${
+                                    escapeHtml(
+                                        iniziale(
+                                            nome
+                                        )
+                                    )
+                                }
+                            </div>
+
+
+                            <div class="classifica-info">
+
+                                <div class="classifica-nome">
+                                    ${
+                                        escapeHtml(
+                                            nome
+                                        )
+                                    }
+                                </div>
+
+                                <div class="classifica-stat">
+
+                                    ${
+                                        Number(
+                                            giocatore.vinte ||
+                                            0
+                                        )
+                                    }
+                                    vittorie ·
+
+                                    ${
+                                        Number(
+                                            giocatore.giocate ||
+                                            0
+                                        )
+                                    }
+                                    partite
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    `;
+
+                }
+            )
+            .join("");
+
+
+    }catch(
+        errore
+    ){
+
+        contenitore.innerHTML =
+            `
+            <div
+                style="
+                    padding:18px;
+                    text-align:center;
+                    color:#999;
+                    font-size:10px;
+                "
+            >
+                Classifica temporaneamente non disponibile.
+            </div>
+            `;
+
+    }
+
+}
+
+
+/* =========================================================
+   COLORE AVATAR
+========================================================= */
+
+function coloreDaNome(
+    nome
+){
+
+    const colori = [
+
+        "#6a2c70",
+        "#1e40af",
+        "#43a047",
+        "#f57c00",
+        "#c0ca33",
+        "#e53935",
+        "#00838f",
+        "#8d6e63"
+
+    ];
+
+
+    let somma =
+        0;
+
+
+    const testo =
+        String(
+            nome || ""
+        );
+
+
+    for(
+        let i = 0;
+        i < testo.length;
+        i++
+    ){
+
+        somma +=
+            testo.charCodeAt(i);
+
+    }
+
+
+    return colori[
+        somma %
+        colori.length
+    ];
+
+}
+
+
+/* =========================================================
+   ESC CHIUDE MODALE
+========================================================= */
+
+document
+.addEventListener(
+    "keydown",
+    evento => {
+
+        if(
+            evento.key ===
+            "Escape"
+        ){
+
+            chiudiModalPost();
+
+        }
+
+    }
+);
+
+
+/* =========================================================
+   AVVIO
+========================================================= */
+
+controllaUtente();
+
+caricaClassifica();
+
+</script>
+
+</body>
+</html>
