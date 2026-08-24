@@ -53,8 +53,10 @@ const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) throw new Error("JWT_SECRET mancante: impostala nelle variabili d'ambiente su Render prima di avviare il server.");
 
 const OPZIONI_COOKIE = {
-  httpOnly: true, secure: true,
-  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+  httpOnly: true,
+  secure: true,
+  sameSite: "none",
+  path: "/",
   maxAge: 30 * 24 * 60 * 60 * 1000
 };
 
@@ -363,6 +365,53 @@ async function generaNicknameGoogleUnico(nome, email) {
   return "Google" + Date.now().toString().slice(-8);
 }
 
+// ===== REDIRECT AUTENTICAZIONE / OAUTH =====
+const URL_HOME_WIX = "https://solfriniluca1.wixstudio.com/giochisocieta";
+
+function normalizzaRedirectAutenticazione(valore) {
+  if (typeof valore !== "string" || !valore.trim()) return null;
+  try {
+    const url = new URL(valore);
+    if (url.protocol !== "https:" && url.protocol !== "http:") return null;
+    if (!ORIGINI_CONSENTITE.includes(url.origin)) return null;
+    return url.href;
+  } catch (e) {
+    return null;
+  }
+}
+
+function creaStatoOAuth(redirectRichiesto) {
+  return jwt.sign(
+    {
+      tipo: "oauth_redirect",
+      redirect: normalizzaRedirectAutenticazione(redirectRichiesto)
+    },
+    JWT_SECRET,
+    { expiresIn: "10m" }
+  );
+}
+
+function leggiStatoOAuth(state) {
+  if (!state || typeof state !== "string") return null;
+  try {
+    const dati = jwt.verify(state, JWT_SECRET);
+    if (!dati || dati.tipo !== "oauth_redirect") return null;
+    return normalizzaRedirectAutenticazione(dati.redirect);
+  } catch (e) {
+    return null;
+  }
+}
+
+function aggiungiTokenAlFrammento(urlDestinazione, token) {
+  const destinazione = normalizzaRedirectAutenticazione(urlDestinazione);
+  if (!destinazione || !token) return destinazione || URL_HOME_WIX;
+  const url = new URL(destinazione);
+  const parametriHash = new URLSearchParams(url.hash.replace(/^#/, ""));
+  parametriHash.set("auth_token", token);
+  url.hash = parametriHash.toString();
+  return url.href;
+}
+
 // ===== LOGIN CON GOOGLE =====
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
@@ -425,20 +474,33 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET && GOOGLE_CALLBACK_URL) {
   }));
 }
 
-app.get("/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
+app.get("/auth/google", (req, res, next) => {
+  const state = creaStatoOAuth(req.query.redirect);
+  passport.authenticate("google", {
+    scope: ["profile", "email"],
+    state
+  })(req, res, next);
+});
 
 app.get("/auth/google/callback",
-  passport.authenticate("google", { session: false, failureRedirect: "/accedi.html?errore=google" }),
+  passport.authenticate("google", { session: false, failureRedirect: "/login.html?errore=google" }),
   async (req, res) => {
     try {
       const utente = req.user;
-      if (!utente || !utente.uid) return res.redirect("/accedi.html?errore=google");
+      if (!utente || !utente.uid) return res.redirect("/login.html?errore=google");
+
       const token = creaToken(utente.uid, utente.nickname, utente.ruolo || "utente");
       res.cookie("token", token, OPZIONI_COOKIE);
-      res.redirect("https://solfriniluca1.wixstudio.com/giochisocieta");
+
+      const redirectRichiesto = leggiStatoOAuth(req.query.state);
+      if (redirectRichiesto) {
+        return res.redirect(aggiungiTokenAlFrammento(redirectRichiesto, token));
+      }
+
+      return res.redirect(URL_HOME_WIX);
     } catch (errore) {
       console.error("Errore callback Google:", errore);
-      res.redirect("/accedi.html?errore=google");
+      return res.redirect("/login.html?errore=google");
     }
   }
 );
@@ -468,7 +530,7 @@ app.post("/api/registrati", limiteLogin, async (req, res) => {
     });
     const token = creaToken(uid, nicknamePulito, "utente");
     res.cookie("token", token, OPZIONI_COOKIE);
-    res.json({ nickname: nicknamePulito, ruolo: "utente" });
+    res.json({ nickname: nicknamePulito, ruolo: "utente", token });
   } catch (err) { console.error(err); res.status(500).json({ errore: "Errore del server, riprova." }); }
 });
 
@@ -489,7 +551,7 @@ app.post("/api/login", limiteLogin, async (req, res) => {
     await db.ref("utenti/" + utente.uid).update({ ultimoAccesso: Date.now(), elo: ottieniElo(utente) });
     const token = creaToken(utente.uid, utente.nickname, utente.ruolo || "utente");
     res.cookie("token", token, OPZIONI_COOKIE);
-    res.json({ nickname: utente.nickname, ruolo: utente.ruolo || "utente" });
+    res.json({ nickname: utente.nickname, ruolo: utente.ruolo || "utente", token });
   } catch (err) { console.error(err); res.status(500).json({ errore: "Errore del server, riprova." }); }
 });
 
@@ -3910,6 +3972,21 @@ wss.on("connection", (socket, request) => {
     try {
       let dati;
       try { dati = JSON.parse(message); } catch (e) { return; }
+
+      // Fallback per browser/iframe che bloccano il cookie di terze parti.
+      // Il cookie HTTP-only resta il metodo principale; il token nel messaggio
+      // viene usato solo quando la WebSocket non ha ricevuto il cookie.
+      if (
+        !uid &&
+        typeof dati.token === "string" &&
+        dati.token.length > 0 &&
+        dati.token.length <= 4096
+      ) {
+        const datiTokenMessaggio = verificaToken(dati.token);
+        if (datiTokenMessaggio && datiTokenMessaggio.uid) {
+          uid = datiTokenMessaggio.uid;
+        }
+      }
 
       if (dati.tipo === "richiediConteggio") { inviaConteggioStanze(); return; }
 
