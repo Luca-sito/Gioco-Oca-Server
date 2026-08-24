@@ -1599,7 +1599,6 @@ async function richiediConsensoMediaSeNecessario(mediaAttiva) {
     mostraNotifica(
       "Connessione al server non disponibile. Riprova tra qualche secondo."
     );
-
     return false;
   }
 
@@ -1609,7 +1608,6 @@ async function richiediConsensoMediaSeNecessario(mediaAttiva) {
     mostraNotifica(
       "Questo browser non supporta la videochiamata del tavolo."
     );
-
     return false;
   }
 
@@ -1619,51 +1617,98 @@ async function richiediConsensoMediaSeNecessario(mediaAttiva) {
     typeof navigator.mediaDevices.getUserMedia !== "function"
   ) {
     mostraNotifica(
-      "La webcam richiede HTTPS e un browser compatibile."
+      "Webcam e microfono richiedono HTTPS e un browser compatibile."
     );
-
     return false;
   }
 
   let streamVideo = null;
+  let streamAudio = null;
 
   try {
 
     /* =====================================================
-       WEBCAM OBBLIGATORIA
+       1. WEBCAM OBBLIGATORIA
     ===================================================== */
 
     mostraNotifica(
       "Verifica webcam in corso…"
     );
 
-    streamVideo =
-      await navigator.mediaDevices.getUserMedia({
+    try {
 
-        audio: false,
+      streamVideo =
+        await navigator.mediaDevices.getUserMedia({
 
-        video: {
-          width: {
-            ideal: 320,
-            max: 640
-          },
+          audio: false,
 
-          height: {
-            ideal: 240,
-            max: 480
-          },
+          video: {
+            width: {
+              ideal: 320,
+              max: 640
+            },
 
-          frameRate: {
-            ideal: 15,
-            max: 20
-          },
+            height: {
+              ideal: 240,
+              max: 480
+            },
 
-          facingMode: {
-            ideal: "user"
+            frameRate: {
+              ideal: 15,
+              max: 20
+            },
+
+            facingMode: {
+              ideal: "user"
+            }
           }
-        }
 
-      });
+        });
+
+    } catch (erroreWebcam) {
+
+      console.error(
+        "Errore apertura webcam:",
+        erroreWebcam
+      );
+
+      if (
+        erroreWebcam.name === "NotAllowedError" ||
+        erroreWebcam.name === "SecurityError"
+      ) {
+        mostraNotifica(
+          "Devi consentire l'accesso alla webcam per partecipare a questo tavolo."
+        );
+      }
+
+      else if (
+        erroreWebcam.name === "NotFoundError" ||
+        erroreWebcam.name === "DevicesNotFoundError"
+      ) {
+        mostraNotifica(
+          "Nessuna webcam disponibile. La webcam è obbligatoria per questo tavolo."
+        );
+      }
+
+      else if (
+        erroreWebcam.name === "NotReadableError" ||
+        erroreWebcam.name === "TrackStartError" ||
+        erroreWebcam.name === "AbortError"
+      ) {
+        mostraNotifica(
+          "La webcam non può essere avviata. Controlla che sia collegata e non utilizzata da altre applicazioni."
+        );
+      }
+
+      else {
+        mostraNotifica(
+          "Impossibile utilizzare la webcam. La webcam è obbligatoria per questo tavolo."
+        );
+      }
+
+      return false;
+    }
+
 
     const tracciaVideo =
       streamVideo
@@ -1673,47 +1718,154 @@ async function richiediConsensoMediaSeNecessario(mediaAttiva) {
             traccia.readyState === "live"
         );
 
+
     if (!tracciaVideo) {
 
-      throw new Error(
-        "Webcam non disponibile"
+      mostraNotifica(
+        "La webcam non ha prodotto una traccia video valida."
       );
 
+      return false;
     }
 
-    /*
-     * WEBCAM OK.
-     *
-     * Il microfono NON viene controllato qui,
-     * perché è facoltativo.
-     *
-     * Verrà tentato successivamente nel gioco.
-     */
+
+    /* =====================================================
+       2. MICROFONO OBBLIGATORIO
+    ===================================================== */
 
     mostraNotifica(
-      "Webcam disponibile. Puoi entrare nel tavolo."
+      "Webcam verificata. Verifica microfono in corso…"
     );
+
+
+    try {
+
+      streamAudio =
+        await navigator.mediaDevices.getUserMedia({
+
+          video: false,
+
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          }
+
+        });
+
+    } catch (erroreMicrofono) {
+
+      console.error(
+        "Errore apertura microfono:",
+        erroreMicrofono
+      );
+
+
+      if (
+        erroreMicrofono.name === "NotAllowedError" ||
+        erroreMicrofono.name === "SecurityError"
+      ) {
+        mostraNotifica(
+          "Devi consentire l'accesso al microfono per partecipare a questo tavolo."
+        );
+      }
+
+      else if (
+        erroreMicrofono.name === "NotFoundError" ||
+        erroreMicrofono.name === "DevicesNotFoundError"
+      ) {
+        mostraNotifica(
+          "Nessun microfono disponibile. Il microfono è obbligatorio per questo tavolo."
+        );
+      }
+
+      else if (
+        erroreMicrofono.name === "NotReadableError" ||
+        erroreMicrofono.name === "TrackStartError" ||
+        erroreMicrofono.name === "AbortError"
+      ) {
+        mostraNotifica(
+          "Il microfono non può essere avviato. Controlla che non sia utilizzato da altre applicazioni."
+        );
+      }
+
+      else {
+        mostraNotifica(
+          "Impossibile utilizzare il microfono. Il microfono è obbligatorio per questo tavolo."
+        );
+      }
+
+      return false;
+    }
+
+
+    const tracciaAudio =
+      streamAudio
+        .getAudioTracks()
+        .find(
+          traccia =>
+            traccia.readyState === "live"
+        );
+
+
+    if (!tracciaAudio) {
+
+      mostraNotifica(
+        "Il microfono non ha prodotto una traccia audio valida."
+      );
+
+      return false;
+    }
+
+
+    /* =====================================================
+       ENTRAMBI FUNZIONANO
+    ===================================================== */
+
+    console.log(
+      "[MEDIA] Webcam verificata:",
+      tracciaVideo.label
+    );
+
+    console.log(
+      "[MEDIA] Microfono verificato:",
+      tracciaAudio.label
+    );
+
+
+    mostraNotifica(
+      "Webcam e microfono verificati correttamente."
+    );
+
 
     return true;
 
-  } catch (erroreWebcam) {
-
-    console.error(
-      "Webcam non disponibile:",
-      erroreWebcam
-    );
-
-    mostraNotifica(
-      "Impossibile creare il tavolo: la webcam è obbligatoria."
-    );
-
-    return false;
 
   } finally {
+
+    /*
+     * In Lobby servono soltanto per la verifica.
+     * gioco.js li riaprirà quando inizierà la partita.
+     */
 
     if (streamVideo) {
 
       streamVideo
+        .getTracks()
+        .forEach(
+          traccia => {
+            try {
+              traccia.stop();
+            } catch (e) {}
+          }
+        );
+
+    }
+
+
+    if (streamAudio) {
+
+      streamAudio
         .getTracks()
         .forEach(
           traccia => {
@@ -2143,100 +2295,20 @@ window.addEventListener("pageshow", () => {
 });
 // ===== CREAZIONE / LISTA PARTITE =====
 async function creaPartita() {
-
-  const tipo =
-    document.getElementById("tipoPartita").value;
-
-  const mediaAttiva =
-    document.getElementById("mediaPartita").value === "on";
-
-
-  console.log(
-    "[CREA PARTITA] Inizio",
-    {
-      tipo,
-      mediaAttiva
-    }
-  );
-
-
-  const mediaOk =
-    await richiediConsensoMediaSeNecessario(
-      mediaAttiva
-    );
-
-
-  console.log(
-    "[CREA PARTITA] Risultato webcam:",
-    mediaOk
-  );
-
-
-  if (!mediaOk) {
-
-    console.error(
-      "[CREA PARTITA] Bloccata dalla verifica webcam"
-    );
-
-    return;
-  }
-
-
-  console.log(
-    "[CREA PARTITA] Webcam OK, invio richiesta al server..."
-  );
-
-
-  const inviato =
-    inviaMessaggioSocket({
-
-      tipo: "creaPartita",
-
-      tempo:
-        document.getElementById("tempo").value,
-
-      punti:
-        document.getElementById("punti").value,
-
-      modalita:
-        tipo,
-
-      maxGiocatori:
-        document.getElementById("numeroGiocatori").value,
-
-      mediaAttiva,
-
-      mediaConsenso:
-        mediaAttiva
-
-    });
-
-
-  console.log(
-    "[CREA PARTITA] Messaggio WebSocket inviato:",
-    inviato
-  );
-
-
-  if (!inviato) {
-
-    mostraNotifica(
-      "La webcam funziona, ma la richiesta di creazione non è stata inviata al server."
-    );
-
-    return;
-  }
-
-
-  if (
-    tipo === "privata"
-  ) {
-
-    aspettaPropriaPartitaPrivata =
-      true;
-
-  }
-
+  const tipo = document.getElementById("tipoPartita").value;
+  const mediaAttiva = document.getElementById("mediaPartita").value === "on";
+  if (!(await richiediConsensoMediaSeNecessario(mediaAttiva))) return;
+  const inviato = inviaMessaggioSocket({
+    tipo: "creaPartita",
+    tempo: document.getElementById("tempo").value,
+    punti: document.getElementById("punti").value,
+    modalita: tipo,
+    maxGiocatori: document.getElementById("numeroGiocatori").value,
+    mediaAttiva,
+    mediaConsenso: mediaAttiva
+  });
+  if (!inviato) return;
+  if (tipo === "privata") aspettaPropriaPartitaPrivata = true;
 }
 function eliminaPartita() {
   if (!confirm("Vuoi eliminare la partita creata?")) return;
