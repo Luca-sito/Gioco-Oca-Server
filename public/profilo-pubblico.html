@@ -3,198 +3,427 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Profilo - Giochi Società</title>
+<title>Profilo pubblico - Giochi Società</title>
 <style>
-* { box-sizing: border-box; }
-body { margin: 0; background: #101820; color: #e8e8e8; font-family: Arial, sans-serif; line-height: 1.6; }
-.contenitore { max-width: 640px; margin: 0 auto; padding: 40px 24px 80px; }
-.scatola { background: #1e2a38; border: 1px solid #333; border-radius: 14px; padding: 30px; text-align: center; }
-#avatarGrande { width: 90px; height: 90px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 36px; font-weight: bold; margin: 0 auto 16px; overflow: hidden; }
-#avatarGrande img { width: 100%; height: 100%; object-fit: cover; }
-h1 { color: #ffd700; font-size: 24px; margin: 0 0 4px; }
-.sottinfo { color: #999; font-size: 13px; margin-bottom: 6px; }
-.livello-badge { display: inline-block; background: #ffd700; color: #111; font-weight: bold; padding: 4px 14px; border-radius: 20px; font-size: 13px; margin: 10px 0; }
-.barra-xp { background: #101820; border-radius: 20px; height: 10px; overflow: hidden; margin: 6px 0 4px; }
-.barra-xp-riempimento { background: #ffd700; height: 100%; transition: width 0.3s; }
-.testo-xp { font-size: 12px; color: #999; }
-.statistiche { display: flex; justify-content: center; gap: 26px; margin: 22px 0; flex-wrap: wrap; }
-.stat { text-align: center; }
-.stat .numero { font-size: 24px; font-weight: bold; color: #ffd700; }
-.stat .etichetta { font-size: 11px; color: #999; }
-.badge-lista { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 20px 0; }
-.badge-item { background: #263746; border-radius: 10px; padding: 10px 14px; font-size: 13px; text-align: center; min-width: 90px; }
-.badge-item .icona { font-size: 26px; display: block; margin-bottom: 4px; }
-.nessun-badge { color: #777; font-style: italic; font-size: 13px; }
-.azioni { display: flex; gap: 10px; margin-top: 24px; flex-wrap: wrap; justify-content: center; }
-.azioni a { flex: 1; min-width: 160px; padding: 11px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; text-decoration: none; text-align: center; font-size: 14px; }
-.btn-messaggio { background: #ffd700; color: #111; }
-.btn-messaggio:hover { background: #ffaa00; }
-.btn-storico { background: #34495e; color: white; }
-.btn-storico:hover { background: #3d5872; }
-.link-home { display: inline-block; margin-top: 24px; padding: 10px 20px; background: #263746; color: #ffd700; text-decoration: none; border-radius: 8px; font-weight: bold; }
-.azioni button.btn-amicizia { background: #263746; color: #ffd700; border: none; cursor: pointer; }
-.azioni button.btn-amicizia:hover { background: #34495e; }
-.azioni button.btn-amicizia:disabled { opacity: 0.6; cursor: not-allowed; }
-.azioni button.btn-rimuovi-amico-profilo { background: #7a1b1b; color: #ffab91; }
+*{box-sizing:border-box}
+:root{
+  --oro:#ffd700;
+  --oro-scuro:#8a7210;
+  --testo:#17212a;
+  --testo-2:#66727c;
+  --testo-3:#929ca4;
+  --sfondo:#f4f6f8;
+  --superficie:#fff;
+  --bordo:#e3e8ec;
+  --verde:#178861;
+  --rosso:#d94a4a;
+  --ombra:0 12px 34px rgba(22,32,42,.08);
+}
+html,body{margin:0;min-height:100%;font-family:Arial,Helvetica,sans-serif;background:var(--sfondo);color:var(--testo)}
+body{min-height:100vh}
+button,a{font:inherit}
+button{cursor:pointer}
+.topbar{height:72px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;background:#fff;border-bottom:1px solid #e5e9ed;position:sticky;top:0;z-index:20}
+.brand{display:flex;align-items:center;gap:12px}
+.brand-logo{width:38px;height:38px;border-radius:10px;background:var(--oro);display:grid;place-items:center;font-weight:900;color:#171717;box-shadow:0 4px 14px rgba(255,215,0,.2)}
+.brand-title{font-size:15px;font-weight:800}
+.brand-subtitle{font-size:11px;color:#8a939c;margin-top:2px}
+.back-btn{border:1px solid #dfe4e8;background:#fff;color:#42505b;border-radius:9px;min-height:38px;padding:0 14px;font-size:12px;font-weight:700}
+.back-btn:hover{background:#f7f9fa}
+.page{width:min(1080px,calc(100% - 32px));margin:0 auto;padding:28px 0 56px}
+.loading,.error-box{padding:24px;border:1px solid var(--bordo);border-radius:16px;background:#fff;box-shadow:var(--ombra);text-align:center;color:var(--testo-2)}
+.error-box{color:#a33333;background:#fffafa;border-color:#f0d3d3}
+.hidden{display:none!important}
+.hero{position:relative;overflow:hidden;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:24px;align-items:center;padding:28px;background:linear-gradient(135deg,#fff 0%,#fffdf2 100%);border:1px solid var(--bordo);border-radius:20px;box-shadow:var(--ombra)}
+.hero:before{content:"";position:absolute;inset:0 auto 0 0;width:5px;background:var(--oro)}
+.avatar{width:116px;height:116px;border-radius:50%;overflow:hidden;display:grid;place-items:center;background:#263746;color:#fff;font-size:42px;font-weight:900;border:5px solid #fff;box-shadow:0 8px 24px rgba(18,28,36,.15)}
+.avatar img{width:100%;height:100%;object-fit:cover}
+.eyebrow{font-size:11px;font-weight:900;letter-spacing:.1em;color:var(--oro-scuro);text-transform:uppercase;margin-bottom:6px}
+.nickname{font-size:32px;font-weight:900;line-height:1.1;overflow-wrap:anywhere}
+.meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;color:var(--testo-2);font-size:12px}
+.meta-chip{display:inline-flex;align-items:center;min-height:28px;padding:0 10px;border:1px solid #e6e9eb;border-radius:999px;background:#fafbfc}
+.actions{display:flex;flex-direction:column;gap:9px;min-width:190px}
+.btn{min-height:42px;padding:0 15px;border-radius:10px;border:1px solid #dfe4e8;background:#fff;color:#35414b;font-weight:800;font-size:12px}
+.btn:hover{background:#f7f9fa}
+.btn-primary{background:var(--oro);border-color:var(--oro);color:#171717}
+.btn-primary:hover{background:#f2cc00}
+.btn-danger{color:#a63434;border-color:#efd0d0;background:#fffafa}
+.btn:disabled{opacity:.55;cursor:not-allowed}
+.elo-section{margin-top:18px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px;align-items:center;padding:22px 24px;background:#fff;border:1px solid var(--bordo);border-radius:16px;box-shadow:0 5px 18px rgba(22,32,42,.05)}
+.elo-title{font-size:18px;font-weight:900}
+.elo-copy{margin-top:5px;color:var(--testo-2);font-size:12px;line-height:1.55}
+.elo-box{min-width:180px;text-align:center;padding:17px 20px;border:1px solid #eadb8a;border-radius:14px;background:#fff9d9}
+.elo-number{font-size:34px;font-weight:950;line-height:1;color:#171717}
+.elo-label{margin-top:6px;color:#796600;font-size:11px;font-weight:900;letter-spacing:.13em}
+.grid{display:grid;grid-template-columns:1.2fr .8fr;gap:18px;margin-top:18px}
+.card{background:#fff;border:1px solid var(--bordo);border-radius:16px;box-shadow:0 5px 18px rgba(22,32,42,.05);padding:22px}
+.card-title{margin:0;font-size:17px;font-weight:900}
+.card-subtitle{margin:6px 0 0;color:var(--testo-2);font-size:12px;line-height:1.55}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:18px}
+.stat{padding:16px 8px;text-align:center;border:1px solid #e6eaed;border-radius:12px;background:#fafbfc}
+.stat-value{font-size:24px;font-weight:900}
+.stat-label{margin-top:4px;color:var(--testo-3);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
+.record-list{margin-top:14px;border-top:1px solid #edf0f2}
+.record{display:flex;justify-content:space-between;gap:18px;padding:13px 0;border-bottom:1px solid #edf0f2;font-size:12px}
+.record span:first-child{color:var(--testo-2)}
+.record strong{text-align:right}
+.badges{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:16px}
+.badge{display:flex;align-items:center;gap:10px;padding:12px;border:1px solid #e6eaed;border-radius:12px;background:#fafbfc}
+.badge-icon{font-size:24px}
+.badge-name{font-size:11px;font-weight:800}
+.empty{margin-top:15px;padding:16px;border:1px dashed #d9dfe3;border-radius:12px;color:var(--testo-3);font-size:12px;text-align:center}
+.history{margin-top:18px}
+.match-list{display:grid;gap:10px;margin-top:16px}
+.match{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:center;padding:14px 15px;border:1px solid #e5e9ec;border-radius:12px;background:#fafbfc}
+.match-title{font-size:12px;font-weight:900}
+.match-meta{margin-top:4px;color:var(--testo-3);font-size:10px}
+.match-result{text-align:right}
+.result{font-size:11px;font-weight:900}
+.result.win{color:var(--verde)}
+.result.loss{color:var(--rosso)}
+.elo-delta{margin-top:4px;font-size:11px;font-weight:900}
+.elo-delta.plus{color:var(--verde)}
+.elo-delta.minus{color:var(--rosso)}
+.status{margin-top:10px;min-height:18px;color:var(--testo-2);font-size:11px;text-align:right}
+@media(max-width:820px){
+  .hero{grid-template-columns:auto minmax(0,1fr)}
+  .actions{grid-column:1/-1;flex-direction:row;min-width:0}
+  .actions .btn{flex:1}
+  .grid{grid-template-columns:1fr}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:580px){
+  .topbar{padding:0 14px}
+  .page{width:calc(100% - 18px);padding-top:12px}
+  .hero{grid-template-columns:1fr;text-align:center;padding:22px 17px;justify-items:center}
+  .avatar{width:102px;height:102px}
+  .meta{justify-content:center}
+  .actions{width:100%;flex-direction:column}
+  .elo-section{grid-template-columns:1fr;text-align:center}
+  .elo-box{width:100%}
+  .badges{grid-template-columns:1fr}
+  .match{grid-template-columns:1fr}
+  .match-result{text-align:left}
+}
 </style>
 </head>
 <body>
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-logo">G</div>
+    <div>
+      <div class="brand-title">Giochi Società</div>
+      <div class="brand-subtitle">Profilo giocatore</div>
+    </div>
+  </div>
+  <button class="back-btn" type="button" onclick="history.back()">← Torna indietro</button>
+</header>
 
-<div class="contenitore">
-  <div class="scatola">
-    <div id="avatarGrande">?</div>
-    <h1 id="nomeProfilo">Caricamento...</h1>
-    <div class="sottinfo" id="iscrittoDal"></div>
-    <div class="sottinfo" id="ultimoAccessoTesto"></div>
+<main class="page">
+  <div id="loading" class="loading">Caricamento profilo...</div>
+  <div id="errorBox" class="error-box hidden"></div>
 
-    <div class="livello-badge" id="etichettaLivello">Livello -</div>
-    <div class="barra-xp"><div class="barra-xp-riempimento" id="barraXp" style="width:0%;"></div></div>
-    <div class="testo-xp" id="testoXp"></div>
+  <div id="content" class="hidden">
+    <section class="hero">
+      <div class="avatar" id="avatar"></div>
+      <div>
+        <div class="eyebrow">Profilo pubblico</div>
+        <div class="nickname" id="nickname">-</div>
+        <div class="meta">
+          <span class="meta-chip" id="memberSince">Membro</span>
+          <span class="meta-chip" id="lastSeen">Ultimo accesso non disponibile</span>
+        </div>
+      </div>
+      <div class="actions" id="actions"></div>
+    </section>
 
-    <div class="statistiche">
-      <div class="stat"><div class="numero" id="numVinte">-</div><div class="etichetta">Vittorie</div></div>
-      <div class="stat"><div class="numero" id="numGiocate">-</div><div class="etichetta">Partite</div></div>
-      <div class="stat"><div class="numero" id="numWinrate">-</div><div class="etichetta">Win rate</div></div>
-      <div class="stat"><div class="numero" id="numStreak">-</div><div class="etichetta">Miglior striscia</div></div>
+    <section class="elo-section">
+      <div>
+        <div class="elo-title">Rating competitivo</div>
+        <div class="elo-copy">Il punteggio parte da 1500. Una vittoria contro un avversario con rating più alto vale più punti; una vittoria da favorito ne vale meno.</div>
+      </div>
+      <div class="elo-box">
+        <div class="elo-number" id="elo">1500</div>
+        <div class="elo-label">ELO</div>
+      </div>
+    </section>
+
+    <div class="grid">
+      <section class="card">
+        <h2 class="card-title">Statistiche</h2>
+        <p class="card-subtitle">Risultati principali del giocatore sulla piattaforma.</p>
+        <div class="stats">
+          <div class="stat"><div class="stat-value" id="wins">0</div><div class="stat-label">Vittorie</div></div>
+          <div class="stat"><div class="stat-value" id="games">0</div><div class="stat-label">Partite</div></div>
+          <div class="stat"><div class="stat-value" id="winRate">0%</div><div class="stat-label">Win rate</div></div>
+          <div class="stat"><div class="stat-value" id="streak">0</div><div class="stat-label">Serie migliore</div></div>
+        </div>
+        <div class="record-list">
+          <div class="record"><span>Vittoria più veloce</span><strong id="fastest">—</strong></div>
+          <div class="record"><span>Rating iniziale</span><strong>1500 ELO</strong></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2 class="card-title">Obiettivi</h2>
+        <p class="card-subtitle">Traguardi ottenuti nelle partite.</p>
+        <div class="badges" id="badges"></div>
+      </section>
     </div>
 
-    <h3 style="color:#ffd700; font-size:15px; margin-bottom:10px;">🎖️ Obiettivi ottenuti</h3>
-    <div class="badge-lista" id="listaBadge"></div>
+    <section class="card history">
+      <h2 class="card-title">Partite recenti</h2>
+      <p class="card-subtitle">Ultimi risultati disponibili e variazione ELO registrata.</p>
+      <div class="match-list" id="matches"></div>
+    </section>
 
-    <div class="azioni" id="areaAzioni"></div>
-
-    <a href="javascript:history.back()" class="link-home">← Indietro</a>
+    <div class="status" id="status"></div>
   </div>
-</div>
+</main>
 
 <script>
-const parametri = new URLSearchParams(window.location.search);
-const nicknameRichiesto = parametri.get("nickname");
+const SERVER = "https://gioco-oca-server.onrender.com";
+const params = new URLSearchParams(location.search);
+const nicknameRichiesto = (params.get("nickname") || "").trim();
+let profiloCorrente = null;
+let mioProfilo = null;
 
-const PALETTE = ["#6a2c70", "#1e40af", "#43a047", "#f57c00", "#c0ca33", "#e53935", "#00838f", "#8d6e63"];
-function coloreDaNome(nome) {
-  let somma = 0;
-  for (let i = 0; i < nome.length; i++) somma += nome.charCodeAt(i);
-  return PALETTE[somma % PALETTE.length];
+function formatoData(timestamp) {
+  if (!timestamp) return null;
+  const data = new Date(Number(timestamp));
+  if (Number.isNaN(data.getTime())) return null;
+  return data.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
-async function carica() {
-  if (!nicknameRichiesto) {
-    document.getElementById("nomeProfilo").textContent = "Nessun utente specificato";
+function formatoDataOra(timestamp) {
+  if (!timestamp) return null;
+  const data = new Date(Number(timestamp));
+  if (Number.isNaN(data.getTime())) return null;
+  return data.toLocaleString("it-IT", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+function coloreDaNome(nome) {
+  const palette = ["#6a2c70", "#1e40af", "#43a047", "#f57c00", "#00838f", "#8d6e63"];
+  let somma = 0;
+  for (const c of String(nome || "G")) somma += c.charCodeAt(0);
+  return palette[somma % palette.length];
+}
+
+function mostraErrore(messaggio) {
+  document.getElementById("loading").classList.add("hidden");
+  document.getElementById("content").classList.add("hidden");
+  const box = document.getElementById("errorBox");
+  box.textContent = messaggio;
+  box.classList.remove("hidden");
+}
+
+function mostraAvatar(dati) {
+  const box = document.getElementById("avatar");
+  box.replaceChildren();
+  if (dati.avatar) {
+    const img = document.createElement("img");
+    img.src = dati.avatar;
+    img.alt = "Avatar di " + dati.nickname;
+    box.appendChild(img);
+  } else {
+    box.style.background = coloreDaNome(dati.nickname);
+    box.textContent = String(dati.nickname || "?").charAt(0).toUpperCase();
+  }
+}
+
+function creaBottone(testo, classe, handler, disabilitato = false) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "btn " + (classe || "");
+  btn.textContent = testo;
+  btn.disabled = disabilitato;
+  if (handler) btn.addEventListener("click", handler);
+  return btn;
+}
+
+function renderAzioni() {
+  const box = document.getElementById("actions");
+  box.replaceChildren();
+  if (!profiloCorrente) return;
+
+  if (mioProfilo && mioProfilo.uid === profiloCorrente.uid) {
+    box.appendChild(creaBottone("Apri il mio profilo", "btn-primary", () => location.href = "profilo.html"));
     return;
   }
+
+  const stato = profiloCorrente.statoAmicizia;
+  if (stato === "amici") {
+    box.appendChild(creaBottone("Rimuovi amico", "btn-danger", () => azioneAmicizia("rimuovi", { altroUid: profiloCorrente.uid })));
+  } else if (stato === "richiesta_inviata") {
+    box.appendChild(creaBottone("Richiesta inviata", "", null, true));
+  } else if (stato === "richiesta_ricevuta") {
+    box.appendChild(creaBottone("Accetta amicizia", "btn-primary", () => azioneAmicizia("accetta", { daUid: profiloCorrente.uid })));
+    box.appendChild(creaBottone("Rifiuta", "", () => azioneAmicizia("rifiuta", { daUid: profiloCorrente.uid })));
+  } else {
+    box.appendChild(creaBottone("Invia richiesta di amicizia", "btn-primary", () => azioneAmicizia("richiedi", { destinatarioUid: profiloCorrente.uid })));
+  }
+}
+
+async function azioneAmicizia(tipo, body) {
+  const endpoint = {
+    richiedi: "/api/amici/richiedi",
+    accetta: "/api/amici/accetta",
+    rifiuta: "/api/amici/rifiuta",
+    rimuovi: "/api/amici/rimuovi"
+  }[tipo];
+  if (!endpoint) return;
+
+  const status = document.getElementById("status");
+  status.textContent = "Aggiornamento...";
+  try {
+    const risposta = await fetch(SERVER + endpoint, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+    const dati = await risposta.json().catch(() => ({}));
+    if (!risposta.ok) throw new Error(dati.errore || "Operazione non riuscita.");
+    status.textContent = "Operazione completata.";
+    await caricaProfilo(false);
+  } catch (errore) {
+    status.textContent = errore.message || "Errore di connessione.";
+  }
+}
+
+function renderBadge(lista) {
+  const box = document.getElementById("badges");
+  box.replaceChildren();
+  if (!Array.isArray(lista) || lista.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "empty";
+    empty.style.gridColumn = "1 / -1";
+    empty.textContent = "Nessun obiettivo ottenuto.";
+    box.appendChild(empty);
+    return;
+  }
+  for (const badge of lista) {
+    const card = document.createElement("div");
+    card.className = "badge";
+    const icon = document.createElement("div");
+    icon.className = "badge-icon";
+    icon.textContent = badge.icona || "🏅";
+    const name = document.createElement("div");
+    name.className = "badge-name";
+    name.textContent = badge.nome || "Obiettivo";
+    card.append(icon, name);
+    box.appendChild(card);
+  }
+}
+
+function renderProfilo(dati) {
+  profiloCorrente = dati;
+  document.title = (dati.nickname || "Giocatore") + " - Profilo | Giochi Società";
+  document.getElementById("nickname").textContent = dati.nickname || "Giocatore";
+  document.getElementById("elo").textContent = Number.isFinite(Number(dati.elo)) ? Math.round(Number(dati.elo)) : 1500;
+  document.getElementById("wins").textContent = dati.partiteVinte || 0;
+  document.getElementById("games").textContent = dati.partiteGiocate || 0;
+  document.getElementById("winRate").textContent = (dati.winRate || 0) + "%";
+  document.getElementById("streak").textContent = dati.streakVittorieMassima || 0;
+  document.getElementById("fastest").textContent = dati.vittoriaPiuVeloceSecondi != null ? dati.vittoriaPiuVeloceSecondi + " s" : "—";
+
+  const creato = formatoData(dati.creatoIl);
+  document.getElementById("memberSince").textContent = creato ? "Membro dal " + creato : "Membro Giochi Società";
+  const ultimo = formatoDataOra(dati.ultimoAccesso);
+  document.getElementById("lastSeen").textContent = ultimo ? "Ultimo accesso: " + ultimo : "Ultimo accesso non disponibile";
+
+  mostraAvatar(dati);
+  renderBadge(dati.badge || []);
+  renderAzioni();
+}
+
+function renderStorico(partite) {
+  const box = document.getElementById("matches");
+  box.replaceChildren();
+  if (!Array.isArray(partite) || partite.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "empty";
+    empty.textContent = "Nessuna partita recente disponibile.";
+    box.appendChild(empty);
+    return;
+  }
+
+  for (const partita of partite.slice(0, 12)) {
+    const row = document.createElement("div");
+    row.className = "match";
+    const left = document.createElement("div");
+    const title = document.createElement("div");
+    title.className = "match-title";
+    title.textContent = partita.stanza ? "Stanza " + partita.stanza : "Partita";
+    const meta = document.createElement("div");
+    meta.className = "match-meta";
+    meta.textContent = formatoDataOra(partita.data) || "Data non disponibile";
+    left.append(title, meta);
+
+    const right = document.createElement("div");
+    right.className = "match-result";
+    const vittoria = partita.vincitoreUid === profiloCorrente.uid;
+    const result = document.createElement("div");
+    result.className = "result " + (vittoria ? "win" : "loss");
+    result.textContent = vittoria ? "VITTORIA" : "SCONFITTA";
+    right.appendChild(result);
+
+    const datoElo = partita.risultatiElo && partita.risultatiElo[profiloCorrente.uid];
+    if (datoElo && Number.isFinite(Number(datoElo.variazione))) {
+      const delta = Number(datoElo.variazione);
+      const el = document.createElement("div");
+      el.className = "elo-delta " + (delta >= 0 ? "plus" : "minus");
+      el.textContent = (delta > 0 ? "+" : "") + delta + " ELO";
+      right.appendChild(el);
+    }
+    row.append(left, right);
+    box.appendChild(row);
+  }
+}
+
+async function caricaStorico() {
+  try {
+    const risposta = await fetch(SERVER + "/api/storico?nickname=" + encodeURIComponent(profiloCorrente.nickname), { credentials: "include" });
+    if (!risposta.ok) return renderStorico([]);
+    const dati = await risposta.json();
+    renderStorico(dati.partite || []);
+  } catch (errore) {
+    renderStorico([]);
+  }
+}
+
+async function caricaProfilo(mostraCaricamento = true) {
+  if (!nicknameRichiesto) {
+    mostraErrore("Nickname mancante nell'indirizzo del profilo.");
+    return;
+  }
+  if (mostraCaricamento) document.getElementById("loading").classList.remove("hidden");
+
   try {
     const [rispostaProfilo, rispostaMe] = await Promise.all([
-      fetch("https://gioco-oca-server.onrender.com/api/profilo-pubblico/" + encodeURIComponent(nicknameRichiesto), { credentials: "include" }),
-      fetch("https://gioco-oca-server.onrender.com/api/me", { credentials: "include" })
+      fetch(SERVER + "/api/profilo-pubblico/" + encodeURIComponent(nicknameRichiesto), { credentials: "include" }),
+      fetch(SERVER + "/api/me", { credentials: "include" })
     ]);
 
-    if (rispostaProfilo.status === 401) { window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href); return; }
-    if (!rispostaProfilo.ok) { document.getElementById("nomeProfilo").textContent = "Utente non trovato"; return; }
-
-    const dati = await rispostaProfilo.json();
-    const me = rispostaMe.ok ? await rispostaMe.json() : null;
-
-    document.getElementById("nomeProfilo").textContent = dati.nickname;
-
-    const avatarEl = document.getElementById("avatarGrande");
-    if (dati.avatar) {
-      avatarEl.innerHTML = `<img src="${dati.avatar}">`;
-    } else {
-      avatarEl.textContent = dati.nickname.charAt(0).toUpperCase();
-      avatarEl.style.background = coloreDaNome(dati.nickname);
+    if (rispostaProfilo.status === 401) {
+      location.href = "login.html?redirect=" + encodeURIComponent(location.href);
+      return;
     }
+    const datiProfilo = await rispostaProfilo.json().catch(() => ({}));
+    if (!rispostaProfilo.ok) throw new Error(datiProfilo.errore || "Profilo non trovato.");
 
-    document.getElementById("iscrittoDal").textContent = dati.creatoIl
-      ? "Iscritto dal " + new Date(dati.creatoIl).toLocaleDateString("it-IT")
-      : "";
-    document.getElementById("ultimoAccessoTesto").textContent = dati.ultimoAccesso
-      ? "Ultimo accesso: " + new Date(dati.ultimoAccesso).toLocaleString("it-IT")
-      : "Ultimo accesso non disponibile";
-
-    document.getElementById("etichettaLivello").textContent = "⭐ Livello " + dati.livello;
-    if (dati.sogliaProssima != null) {
-      const intervallo = dati.sogliaProssima - dati.sogliaAttuale;
-      const progresso = intervallo > 0 ? Math.round(((dati.xp - dati.sogliaAttuale) / intervallo) * 100) : 100;
-      document.getElementById("barraXp").style.width = Math.max(0, Math.min(100, progresso)) + "%";
-      document.getElementById("testoXp").textContent = dati.xp + " XP — " + (dati.sogliaProssima - dati.xp) + " XP al livello successivo";
-    } else {
-      document.getElementById("barraXp").style.width = "100%";
-      document.getElementById("testoXp").textContent = dati.xp + " XP — livello massimo raggiunto!";
-    }
-
-    document.getElementById("numVinte").textContent = dati.partiteVinte;
-    document.getElementById("numGiocate").textContent = dati.partiteGiocate;
-    document.getElementById("numWinrate").textContent = dati.winRate + "%";
-    document.getElementById("numStreak").textContent = dati.streakVittorieMassima;
-
-    const listaBadge = document.getElementById("listaBadge");
-    if (!dati.badge || dati.badge.length === 0) {
-      listaBadge.innerHTML = '<div class="nessun-badge">Nessun obiettivo ancora sbloccato</div>';
-    } else {
-      listaBadge.innerHTML = dati.badge.map(b => `
-        <div class="badge-item"><span class="icona">${b.icona}</span>${b.nome}</div>
-      `).join("");
-    }
-
-    const areaAzioni = document.getElementById("areaAzioni");
-const eIlMioProfilo = me && me.uid === dati.uid;
-let html = `<a href="storico.html?nickname=${encodeURIComponent(dati.nickname)}" class="btn-storico">📜 Storico partite</a>`;
-if (!eIlMioProfilo) {
-  html += `<a href="messaggi-privati.html?con=${encodeURIComponent(dati.uid)}&nome=${encodeURIComponent(dati.nickname)}" class="btn-messaggio">💬 Scrivi un messaggio</a>`;
-
-  if (dati.statoAmicizia === "amici") {
-    html += `<button class="btn-amicizia btn-rimuovi-amico-profilo" onclick="rimuoviAmicoProfilo('${dati.uid}')">🗑️ Rimuovi amico</button>`;
-  } else if (dati.statoAmicizia === "richiesta_inviata") {
-    html += `<button class="btn-amicizia" disabled>⏳ Richiesta inviata</button>`;
-  } else if (dati.statoAmicizia === "richiesta_ricevuta") {
-    html += `<button class="btn-amicizia btn-accetta-profilo" onclick="accettaAmiciziaProfilo('${dati.uid}')">✅ Accetta richiesta</button>`;
-  } else {
-    html += `<button class="btn-amicizia btn-invia-profilo" onclick="inviaRichiestaProfilo('${dati.uid}')">➕ Aggiungi amico</button>`;
-  }
-}
-areaAzioni.innerHTML = html;
-
-  } catch (e) {
-    document.getElementById("nomeProfilo").textContent = "Errore nel caricamento";
+    mioProfilo = rispostaMe.ok ? await rispostaMe.json() : null;
+    renderProfilo(datiProfilo);
+    document.getElementById("loading").classList.add("hidden");
+    document.getElementById("errorBox").classList.add("hidden");
+    document.getElementById("content").classList.remove("hidden");
+    await caricaStorico();
+  } catch (errore) {
+    mostraErrore(errore.message || "Errore durante il caricamento del profilo.");
   }
 }
 
-async function inviaRichiestaProfilo(destinatarioUid) {
-  try {
-    const r = await fetch("https://gioco-oca-server.onrender.com/api/amici/richiedi", {
-      method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ destinatarioUid })
-    });
-    const d = await r.json();
-    if (!r.ok) { alert(d.errore || "Errore."); return; }
-    carica();
-  } catch (e) { alert("Errore di connessione."); }
-}
-async function accettaAmiciziaProfilo(daUid) {
-  try {
-    const r = await fetch("https://gioco-oca-server.onrender.com/api/amici/accetta", {
-      method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ daUid })
-    });
-    if (!r.ok) { const d = await r.json(); alert(d.errore || "Errore."); return; }
-    carica();
-  } catch (e) { alert("Errore di connessione."); }
-}
-async function rimuoviAmicoProfilo(altroUid) {
-  if (!confirm("Vuoi rimuovere questa persona dai tuoi amici?")) return;
-  try {
-    const r = await fetch("https://gioco-oca-server.onrender.com/api/amici/rimuovi", {
-      method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ altroUid })
-    });
-    if (!r.ok) { const d = await r.json(); alert(d.errore || "Errore."); return; }
-    carica();
-  } catch (e) { alert("Errore di connessione."); }
-}
-
-carica();
+caricaProfilo();
 </script>
-
 </body>
 </html>
