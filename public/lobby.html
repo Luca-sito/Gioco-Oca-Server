@@ -370,6 +370,113 @@ button:disabled{
     }
 }
 /* =========================================================
+   CAMPANELLA NOTIFICHE
+========================================================= */
+#areaCampanella{
+    position:fixed;
+    top:14px;
+    right:14px;
+    z-index:520;
+}
+#btnCampanella{
+    position:relative;
+    width:44px;
+    height:44px;
+    border-radius:50%;
+    background:#111;
+    color:#ffd700;
+    font-size:19px;
+    border:2px solid #ffd700;
+    cursor:pointer;
+    padding:0;
+    margin:0;
+}
+.badge-notifiche{
+    position:absolute;
+    top:-4px;
+    right:-4px;
+    background:#e53935;
+    color:white;
+    font-size:10px;
+    font-weight:bold;
+    min-width:16px;
+    height:16px;
+    border-radius:8px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:0 3px;
+}
+.pannello-notifiche{
+    position:absolute;
+    top:52px;
+    right:0;
+    width:300px;
+    max-width:calc(100vw - 20px);
+    background:white;
+    border:1px solid #ccc;
+    border-radius:10px;
+    box-shadow:0 8px 24px rgba(0,0,0,.25);
+    max-height:400px;
+    overflow-y:auto;
+}
+.pannello-notifiche.nascosto{
+    display:none;
+}
+.notifiche-titolo{
+    padding:12px 14px;
+    font-weight:bold;
+    background:#111;
+    color:#ffd700;
+    border-radius:10px 10px 0 0;
+}
+.notifica-riga{
+    padding:10px 14px;
+    border-bottom:1px solid #eee;
+    font-size:13px;
+}
+.notifica-testo{
+    margin-bottom:4px;
+}
+.notifica-data{
+    font-size:11px;
+    color:#999;
+    margin-bottom:6px;
+}
+.notifica-azioni{
+    display:flex;
+    gap:6px;
+}
+.notifica-vuota{
+    padding:20px;
+    text-align:center;
+    color:#999;
+    font-style:italic;
+    font-size:13px;
+}
+.btn-mini{
+    padding:6px 10px;
+    border:none;
+    border-radius:6px;
+    font-size:12px;
+    font-weight:bold;
+    cursor:pointer;
+    text-decoration:none;
+    display:inline-block;
+}
+.btn-mini.btn-accetta{
+    background:#43a047;
+    color:white;
+}
+.btn-mini.btn-rifiuta{
+    background:#e53935;
+    color:white;
+}
+.btn-mini.btn-vai{
+    background:#ff6600;
+    color:white;
+}
+/* =========================================================
    INVITO RICEVUTO
 ========================================================= */
 #cardInvitoRicevuto{
@@ -1206,83 +1313,20 @@ body.tema-scuro .giocatore-online{
         display:none !important;
     }
 }
-/* =========================================================
-   PULSANTE INDIETRO
-========================================================= */
-.pulsante-indietro{
-    position:fixed;
-    top:14px;
-    left:14px;
-    width:46px;
-    height:46px;
-    padding:0;
-    margin:0;
-    border:none;
-    border-radius:50%;
-    background:#111;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    cursor:pointer;
-    z-index:10000;
-    box-shadow:0 4px 12px rgba(0,0,0,.25);
-    transition:
-        transform .15s ease,
-        background .15s ease,
-        box-shadow .15s ease;
-}
-
-.pulsante-indietro:hover{
-    background:#ff6600;
-    opacity:1;
-    transform:translateX(-2px);
-    box-shadow:0 6px 16px rgba(0,0,0,.30);
-}
-
-.pulsante-indietro:active{
-    transform:scale(.94);
-}
-
-/* ICONA DENTRO IL PULSANTE */
-.pulsante-indietro .icona-indietro{
-    width:26px;
-    height:26px;
-    object-fit:contain;
-    display:block;
-    pointer-events:none;
-}
-
-/* MOBILE */
-@media(max-width:600px){
-    .pulsante-indietro{
-        top:7px;
-        left:8px;
-        width:36px;
-        height:36px;
-        z-index:10001;
-    }
-
-    .pulsante-indietro .icona-indietro{
-        width:22px;
-        height:22px;
-    }
-}
 </style>
 </head>
 <body>
-   <button
-    type="button"
-    class="pulsante-indietro"
-    onclick="window.location.href='https://gioco-oca-server.onrender.com/stanze.html'"
-    aria-label="Torna alle stanze"
-    title="Torna alle stanze"
->
-    <img
-        src="https://gioco-oca-server.onrender.com/Immagini/Tornaindietro.png"
-        alt=""
-        class="icona-indietro"
-    >
-</button>
+<div id="contenitoreNotifiche" aria-live="polite"></div>
+<div id="areaCampanella">
+  <button id="btnCampanella" type="button" onclick="toggleNotifiche()" aria-label="Apri notifiche">
+    🔔
+    <span id="badgeNotifiche" class="badge-notifiche" style="display:none;">0</span>
+  </button>
+  <div id="pannelloNotifiche" class="pannello-notifiche nascosto">
+    <div class="notifiche-titolo">Notifiche</div>
+    <div id="listaNotifiche"></div>
+  </div>
+</div>
 <div id="cardInvitoRicevuto" class="nascosto">
   <div id="testoInvitoRicevuto"></div>
   <div class="invito-bottoni">
@@ -1337,7 +1381,7 @@ body.tema-scuro .giocatore-online{
         <option value="off">🔇 Disattivi</option>
         <option value="on">🎥 Attivi per tutti</option>
       </select>
-      <p style="font-size:12px;line-height:1.35;color:#777;margin-top:8px;">Se attivi, ogni partecipante autorizza webcam e microfono prima di entrare; nella partita potrà mettere microfono in muto o spegnere la propria videocamera.</p>
+      <p style="font-size:12px;line-height:1.35;color:#777;margin-top:8px;">Se attivi, ogni partecipante dovrà autorizzare webcam e microfono prima di entrare.</p>
       <button class="crea" onclick="creaPartita()">Crea partita</button>
     </div>
   </div>
@@ -1463,73 +1507,8 @@ function inviaMessaggioSocket(dati) {
   return true;
 }
 
-const CHIAVE_MEDIA_LOBBY = "giochiSocieta.mediaVerificatiFino";
-const DURATA_CACHE_MEDIA_LOBBY_MS = 10 * 60 * 1000;
-let verificaMediaLobbyInCorso = null;
-let mediaLobbyVerificatiFino = 0;
-try {
-  mediaLobbyVerificatiFino = Number(sessionStorage.getItem(CHIAVE_MEDIA_LOBBY) || 0);
-} catch (e) {}
-
-function aspettaMedia(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-function chiudiFlussoTestMedia(flusso) {
-  if (!flusso) return;
-  flusso.getTracks().forEach(traccia => {
-    try { traccia.onended = null; } catch (e) {}
-    try { if (traccia.readyState === "live") traccia.stop(); } catch (e) {}
-  });
-}
-
-function nomeErroreMedia(errore) {
-  return String(errore && errore.name ? errore.name : "");
-}
-
-function messaggioErroreMediaLobby(errore) {
-  const nome = nomeErroreMedia(errore);
-  if (nome === "NotAllowedError" || nome === "SecurityError" || nome === "PermissionDeniedError") {
-    return "Permesso negato. Consenti fotocamera e microfono dalle impostazioni del browser e riprova.";
-  }
-  if (nome === "NotFoundError" || nome === "DevicesNotFoundError") {
-    return "Non trovo una webcam e un microfono disponibili su questo dispositivo.";
-  }
-  if (nome === "NotReadableError" || nome === "TrackStartError") {
-    return "Webcam o microfono sono già usati da un'altra app o scheda. Chiudila e riprova.";
-  }
-  if (nome === "OverconstrainedError" || nome === "ConstraintNotSatisfiedError") {
-    return "La webcam non supporta le impostazioni richieste. Riprova: userò automaticamente una modalità più compatibile.";
-  }
-  if (nome === "AbortError") {
-    return "Il browser ha interrotto l'apertura di webcam o microfono. Riprova.";
-  }
-  return "Non riesco ad attivare webcam e microfono. Controlla i permessi del browser e che nessun'altra app li stia usando.";
-}
-
-async function apriFlussoTestMediaLobby() {
-  const vincoliPreferiti = {
-    audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-    video: {
-      width: { ideal: 320, max: 640 },
-      height: { ideal: 240, max: 480 },
-      frameRate: { ideal: 15, max: 20 },
-      facingMode: { ideal: "user" }
-    }
-  };
-
-  try {
-    return await navigator.mediaDevices.getUserMedia(vincoliPreferiti);
-  } catch (errore) {
-    const nome = nomeErroreMedia(errore);
-    if (nome !== "OverconstrainedError" && nome !== "ConstraintNotSatisfiedError") throw errore;
-    return navigator.mediaDevices.getUserMedia({ audio: true, video: true });
-  }
-}
-
-async function richiediConsensoMediaSeNecessario(mediaAttiva, forzaVerifica = false) {
+async function richiediConsensoMediaSeNecessario(mediaAttiva) {
   if (!mediaAttiva) return true;
-
   if (!socket || socket.readyState !== WebSocket.OPEN) {
     mostraNotifica("Connessione al server non disponibile. Riprova tra qualche secondo.");
     return false;
@@ -1539,48 +1518,24 @@ async function richiediConsensoMediaSeNecessario(mediaAttiva, forzaVerifica = fa
     return false;
   }
   if (!window.isSecureContext || !navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== "function") {
-    mostraNotifica("Webcam e microfono richiedono HTTPS e un browser compatibile.");
+    mostraNotifica("Webcam e microfono richiedono una connessione HTTPS e un browser compatibile.");
     return false;
   }
-
-  const policy = document.permissionsPolicy || document.featurePolicy;
-  if (policy && typeof policy.allowsFeature === "function" && (!policy.allowsFeature("camera") || !policy.allowsFeature("microphone"))) {
-    mostraNotifica("Il contenitore della pagina blocca webcam o microfono. Se il gioco è in un iframe, aggiungi allow=\"camera; microphone\" all'iframe.");
-    return false;
-  }
-
-  if (!forzaVerifica && Date.now() < mediaLobbyVerificatiFino) return true;
-  if (verificaMediaLobbyInCorso) return verificaMediaLobbyInCorso;
-
-  verificaMediaLobbyInCorso = (async () => {
-    let flusso = null;
-    try {
-      mostraNotifica("Autorizza webcam e microfono nel messaggio del browser.");
-      flusso = await apriFlussoTestMediaLobby();
-
-      const audio = flusso.getAudioTracks().find(t => t.readyState === "live");
-      const video = flusso.getVideoTracks().find(t => t.readyState === "live");
-      if (!audio || !video) throw new DOMException("Sono necessarie webcam e microfono", "NotFoundError");
-
-      mediaLobbyVerificatiFino = Date.now() + DURATA_CACHE_MEDIA_LOBBY_MS;
-      try { sessionStorage.setItem(CHIAVE_MEDIA_LOBBY, String(mediaLobbyVerificatiFino)); } catch (e) {}
-      mostraNotifica("Webcam e microfono autorizzati. Verranno attivati nella partita.");
-      return true;
-    } catch (errore) {
-      console.warn("Verifica webcam/microfono non riuscita:", errore);
-      mostraNotifica(messaggioErroreMediaLobby(errore));
-      return false;
-    } finally {
-      chiudiFlussoTestMedia(flusso);
-      // Alcuni telefoni impiegano qualche istante a liberare fisicamente la camera.
-      await aspettaMedia(160);
-    }
-  })();
-
+  mostraNotifica("Autorizza webcam e microfono nel messaggio del browser per entrare nel tavolo.");
+  let flusso = null;
   try {
-    return await verificaMediaLobbyInCorso;
+    flusso = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      video: { width: { ideal: 320, max: 640 }, height: { ideal: 240, max: 480 }, frameRate: { ideal: 15, max: 20 }, facingMode: "user" }
+    });
+    if (!flusso.getAudioTracks().length || !flusso.getVideoTracks().length) throw new Error("Tracce audio/video mancanti");
+    return true;
+  } catch (errore) {
+    console.warn("Autorizzazione webcam/microfono non concessa:", errore);
+    mostraNotifica("Non sei entrato: per questo tavolo devi consentire sia webcam sia microfono.");
+    return false;
   } finally {
-    verificaMediaLobbyInCorso = null;
+    if (flusso) flusso.getTracks().forEach(traccia => traccia.stop());
   }
 }
 
@@ -1669,7 +1624,7 @@ CREA TAVOLO
 <option value="off">🔇 Disattivi</option>
 <option value="on">🎥 Attivi per tutti</option>
 </select>
-<p style="font-size:12px;line-height:1.35;color:#777;">Se attivi, ogni partecipante li autorizza prima di entrare; nella partita potrà mettere il microfono in muto o spegnere la propria videocamera.</p>
+<p style="font-size:12px;line-height:1.35;color:#777;">Se attivi, ogni partecipante dovrà autorizzarli prima di entrare.</p>
 <button onclick="creaPartitaMobile()" 
 style="
 margin-top:20px;
@@ -1798,7 +1753,7 @@ const input = document.getElementById("messaggioMobile");
 if(!input) return;
 const testo = input.value.trim();
 if(!testo) return;
-  if (testo.length > 1000) { mostraNotifica("Massimo 1000 caratteri."); return; }
+  if (testo.length > 300) { mostraNotifica("Massimo 300 caratteri."); return; }
   if (!inviaMessaggioSocket({
    tipo:"chat",
    testo:testo
@@ -1956,9 +1911,7 @@ function connetti() {
     }
 
     if (dati.tipo === "partitaAvviata") {
-      // Il consenso è già stato verificato quando il giocatore ha creato/accettato/entrato.
-      // Evitiamo un secondo getUserMedia in lobby: su alcuni telefoni blocca la camera per alcuni secondi.
-      apriPartita(dati.partitaId, dati.mediaAttiva === true);
+      riprendiPartita(dati.partitaId, dati.mediaAttiva === true);
     }
 
     if (dati.tipo === "invitoRicevuto") {
@@ -2346,7 +2299,7 @@ function disegnaPopupGiocatore(dati) {
   } else if (dati.statoAmicizia === "richiesta_inviata") {
     azioneHtml = `<button class="btn-popup" disabled>⏳ Richiesta inviata</button>`;
   } else if (dati.statoAmicizia === "richiesta_ricevuta") {
-    azioneHtml = `<button class="btn-popup btn-accetta" onclick="accettaAmicizia('${dati.uid}')">Accetta amicizia</button><button class="btn-popup btn-rifiuta" onclick="rifiutaAmicizia('${dati.uid}')">Rifiuta amicizia</button>`;
+    azioneHtml = `<button class="btn-popup btn-accetta" onclick="accettaAmicizia('${dati.uid}')">Accetta</button><button class="btn-popup btn-rifiuta" onclick="rifiutaAmicizia('${dati.uid}')">Rifiuta</button>`;
   } else {
     azioneHtml = `<button class="btn-popup btn-invia-richiesta" onclick="inviaRichiestaAmicizia('${dati.uid}')">➕ Invia richiesta</button>`;
   }
