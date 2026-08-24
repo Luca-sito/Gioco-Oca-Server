@@ -53,6 +53,14 @@ let chatPartitaAttiva = true;
 let faseAttuale = "normale";
 let possoTirareIoInDeterminazione = false;
 
+// ===== PRESENTAZIONE SFIDA PRE-PARTITA =====
+let mioProfilo = null;
+let presentazioneSfidaInAttesa = null;
+let presentazioneSfidaAperta = false;
+let eventiDeterminazioneInAttesa = [];
+let timerChiusuraPresentazioneSfida = null;
+let tokenCaricamentoPresentazioneSfida = 0;
+
 function iniziale(nome) { return (nome || "?").trim().charAt(0).toUpperCase(); }
 function coloreDaNome(nome) {
   const colori = ["#6a2c70", "#1e40af", "#43a047", "#f57c00", "#c0ca33", "#e53935", "#00838f", "#8d6e63"];
@@ -479,7 +487,322 @@ function disegnaListaDeterminazione(giocatori, turnoInCorsoUid, gruppoSpareggio)
   });
 }
 
+
+function chiavePresentazioneSfida() {
+  return "giochi-societa:presentazione-sfida:" + (partitaId || "sconosciuta");
+}
+
+function presentazioneSfidaGiaVista() {
+  try { return sessionStorage.getItem(chiavePresentazioneSfida()) === "1"; }
+  catch (errore) { return false; }
+}
+
+function marcaPresentazioneSfidaVista() {
+  try { sessionStorage.setItem(chiavePresentazioneSfida(), "1"); }
+  catch (errore) {}
+}
+
+function probabilitaVittoriaEloPresentazione(eloA, eloB) {
+  return 1 / (1 + Math.pow(10, (Number(eloB) - Number(eloA)) / 400));
+}
+
+function calcolaVariazioniEloPresentazione(eloGiocatore, eloAvversari) {
+  const elo = Number.isFinite(Number(eloGiocatore)) ? Math.round(Number(eloGiocatore)) : 1500;
+  const avversari = (Array.isArray(eloAvversari) ? eloAvversari : [])
+    .map(Number)
+    .filter(Number.isFinite);
+
+  if (!avversari.length) return { vittoria: 0, sconfitta: 0 };
+
+  const aspettativaMedia = avversari.reduce(
+    (somma, eloAvversario) => somma + probabilitaVittoriaEloPresentazione(elo, eloAvversario),
+    0
+  ) / avversari.length;
+
+  const eloVittoria = Math.max(100, Math.round(elo + 32 * (1 - aspettativaMedia)));
+  const eloSconfitta = Math.max(100, Math.round(elo + 32 * (0 - aspettativaMedia)));
+
+  return {
+    vittoria: eloVittoria - elo,
+    sconfitta: eloSconfitta - elo
+  };
+}
+
+function escapeHtmlPresentazione(valore) {
+  return String(valore == null ? "" : valore)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function stelleDaEloPresentazione(elo) {
+  const valore = Number.isFinite(Number(elo)) ? Number(elo) : 1500;
+  if (valore < 1300) return 1;
+  if (valore < 1500) return 2;
+  if (valore < 1700) return 3;
+  if (valore < 1900) return 4;
+  return 5;
+}
+
+function htmlStellePresentazione(elo) {
+  const piene = stelleDaEloPresentazione(elo);
+  let html = "";
+  for (let i = 1; i <= 5; i++) html += i <= piene ? "★" : '<span class="vuota">★</span>';
+  return html;
+}
+
+function normalizzaProfiloPresentazione(giocatore, profilo) {
+  const giocate = Math.max(0, Number(profilo?.partiteGiocate || 0));
+  const vinte = Math.max(0, Number(profilo?.partiteVinte || 0));
+  return {
+    uid: giocatore.uid || giocatore.id || profilo?.uid || null,
+    nome: profilo?.nickname || giocatore.nome || "Giocatore",
+    avatar: profilo?.avatar || giocatore.avatar || null,
+    elo: Number.isFinite(Number(profilo?.elo)) ? Math.round(Number(profilo.elo)) : 1500,
+    giocate,
+    vinte,
+    winRate: Number.isFinite(Number(profilo?.winRate))
+      ? Math.max(0, Math.min(100, Math.round(Number(profilo.winRate))))
+      : (giocate > 0 ? Math.round((vinte / giocate) * 100) : 0),
+    streak: Math.max(0, Number(profilo?.streakVittorieMassima || 0))
+  };
+}
+
+async function caricaProfiloPresentazioneSfida(giocatore) {
+  const uid = giocatore.uid || giocatore.id || null;
+  if (uid && uid === mioUid && mioProfilo) {
+    return normalizzaProfiloPresentazione(giocatore, mioProfilo);
+  }
+
+  const nome = typeof giocatore.nome === "string" ? giocatore.nome.trim() : "";
+  if (!nome) return normalizzaProfiloPresentazione(giocatore, null);
+
+  try {
+    const risposta = await fetch(
+      ORIGINE_SERVER + "/api/profilo-pubblico/" + encodeURIComponent(nome),
+      { credentials: "include", cache: "no-store" }
+    );
+    if (!risposta.ok) throw new Error("Profilo HTTP " + risposta.status);
+    return normalizzaProfiloPresentazione(giocatore, await risposta.json());
+  } catch (errore) {
+    console.warn("Profilo sfida non disponibile per " + nome + ":", errore);
+    return normalizzaProfiloPresentazione(giocatore, null);
+  }
+}
+
+function percentualeBarraPresentazione(valore, massimo) {
+  const v = Math.max(0, Number(valore) || 0);
+  const m = Math.max(1, Number(massimo) || 1);
+  if (v <= 0) return 0;
+  return Math.max(8, Math.min(100, Math.round((v / m) * 100)));
+}
+
+function htmlAvatarPresentazione(profilo) {
+  const nome = escapeHtmlPresentazione(profilo.nome);
+  if (typeof profilo.avatar === "string" && profilo.avatar.trim()) {
+    return `<div class="sfida-avatar"><img src="${escapeHtmlPresentazione(profilo.avatar)}" alt="Avatar di ${nome}" referrerpolicy="no-referrer"></div>`;
+  }
+  return `<div class="sfida-avatar" style="background:${coloreDaNome(profilo.nome)}">${escapeHtmlPresentazione(iniziale(profilo.nome))}</div>`;
+}
+
+function htmlGiocatoreDuelloPresentazione(profilo, lato, massimi) {
+  const classeDestra = lato === "destra" ? " sfida-giocatore-destra" : "";
+  const dati = [
+    [profilo.elo, massimi.elo],
+    [profilo.giocate, massimi.giocate],
+    [profilo.vinte, massimi.vinte]
+  ];
+  const righe = dati.map(([valore, massimo]) => `
+    <div class="sfida-stat-riga">
+      <div class="sfida-stat-barra"><div class="sfida-stat-riempimento" style="width:${percentualeBarraPresentazione(valore, massimo)}%"></div></div>
+      <span class="sfida-stat-valore">${Math.round(Number(valore) || 0)}</span>
+    </div>`).join("");
+
+  return `<article class="sfida-giocatore${classeDestra}">
+    <div class="sfida-identita">
+      ${htmlAvatarPresentazione(profilo)}
+      <div class="sfida-nome-wrap">
+        <div class="sfida-nome" title="${escapeHtmlPresentazione(profilo.nome)}">${escapeHtmlPresentazione(profilo.nome)}</div>
+        <div class="sfida-stelle" aria-label="Indicatore grafico ELO">${htmlStellePresentazione(profilo.elo)}</div>
+      </div>
+    </div>
+    ${righe}
+  </article>`;
+}
+
+function htmlGiocatoreMultiPresentazione(profilo, massimi) {
+  const statistiche = [
+    ["ELO", profilo.elo, massimi.elo],
+    ["Giocate", profilo.giocate, massimi.giocate],
+    ["Vinte", profilo.vinte, massimi.vinte]
+  ];
+
+  return `<article class="sfida-multi-card">
+    <div class="sfida-identita">
+      ${htmlAvatarPresentazione(profilo)}
+      <div class="sfida-nome-wrap">
+        <div class="sfida-nome" title="${escapeHtmlPresentazione(profilo.nome)}">${escapeHtmlPresentazione(profilo.nome)}</div>
+        <div class="sfida-stelle" aria-label="Indicatore grafico ELO">${htmlStellePresentazione(profilo.elo)}</div>
+      </div>
+    </div>
+    ${statistiche.map(([etichetta, valore, massimo]) => `
+      <div class="sfida-multi-stat">
+        <span>${etichetta}</span>
+        <div class="sfida-stat-barra"><div class="sfida-stat-riempimento" style="width:${percentualeBarraPresentazione(valore, massimo)}%"></div></div>
+        <strong>${Math.round(Number(valore) || 0)}</strong>
+      </div>`).join("")}
+  </article>`;
+}
+
+function disegnaPresentazioneSfida(profili) {
+  const contenitore = document.getElementById("sfida-giocatori");
+  if (!contenitore) return;
+
+  const elenco = Array.isArray(profili) ? profili : [];
+  if (!elenco.length) {
+    contenitore.innerHTML = '<div class="sfida-caricamento">Giocatori non disponibili.</div>';
+    return;
+  }
+
+  const massimi = {
+    elo: Math.max(...elenco.map(p => p.elo), 1),
+    giocate: Math.max(...elenco.map(p => p.giocate), 1),
+    vinte: Math.max(...elenco.map(p => p.vinte), 1)
+  };
+
+  if (elenco.length === 2) {
+    contenitore.innerHTML = `<div class="sfida-duello">
+      ${htmlGiocatoreDuelloPresentazione(elenco[0], "sinistra", massimi)}
+      <div class="sfida-vs-colonna" aria-hidden="true">
+        <div class="sfida-vs">VS</div>
+        <div class="sfida-vs-etichetta">ELO</div>
+        <div class="sfida-vs-etichetta">Giocate</div>
+        <div class="sfida-vs-etichetta">Vinte</div>
+      </div>
+      ${htmlGiocatoreDuelloPresentazione(elenco[1], "destra", massimi)}
+    </div>`;
+  } else {
+    contenitore.innerHTML = `<div class="sfida-multi">${elenco.map(p => htmlGiocatoreMultiPresentazione(p, massimi)).join("")}</div>`;
+  }
+
+  const mio = elenco.find(p => p.uid === mioUid) || elenco[0];
+  const avversari = elenco.filter(p => p.uid !== mio.uid).map(p => p.elo);
+  const variazioni = calcolaVariazioniEloPresentazione(mio.elo, avversari);
+
+  const elVittoria = document.getElementById("sfida-elo-vittoria");
+  const elSconfitta = document.getElementById("sfida-elo-sconfitta");
+  const elStreak = document.getElementById("sfida-streak");
+  const elWinRate = document.getElementById("sfida-winrate");
+  if (elVittoria) elVittoria.textContent = (variazioni.vittoria >= 0 ? "+" : "") + variazioni.vittoria;
+  if (elSconfitta) elSconfitta.textContent = String(variazioni.sconfitta);
+  if (elStreak) elStreak.textContent = String(Math.round(mio.streak || 0));
+  if (elWinRate) elWinRate.textContent = Math.round(mio.winRate || 0) + "%";
+}
+
+function calcolaRitardoChiusuraAutomaticaPresentazione(dati) {
+  const durata = Number(dati?.durataMossaMs);
+  if (!Number.isFinite(durata) || durata <= 0) return 6000;
+  return Math.max(2200, Math.min(6000, Math.round(durata * 0.45)));
+}
+
+async function mostraPresentazioneSfida(giocatori, datiDeterminazione) {
+  const overlay = document.getElementById("overlay-presentazione-sfida");
+  if (!overlay || presentazioneSfidaAperta) return;
+
+  presentazioneSfidaAperta = true;
+  faseAttuale = "presentazione";
+  possoTirareIoInDeterminazione = false;
+  mioTurno = false;
+  impostaDadiAbilitati(false);
+  fermaCountdown(false);
+  annullaVerificaDeterminazione();
+  document.getElementById("overlay-determinazione")?.classList.remove("aperto");
+  riportaDadiAllaPartita();
+
+  overlay.classList.add("aperto");
+  overlay.setAttribute("aria-hidden", "false");
+  document.getElementById("sfida-giocatori").innerHTML = '<div class="sfida-caricamento">Caricamento confronto…</div>';
+  const stato = document.getElementById("sfida-stato");
+  if (stato) stato.textContent = "Recupero ELO e statistiche reali…";
+
+  if (timerChiusuraPresentazioneSfida) clearTimeout(timerChiusuraPresentazioneSfida);
+  timerChiusuraPresentazioneSfida = setTimeout(
+    () => chiudiPresentazioneSfida(true),
+    calcolaRitardoChiusuraAutomaticaPresentazione(datiDeterminazione)
+  );
+
+  const token = ++tokenCaricamentoPresentazioneSfida;
+  const profili = await Promise.all((Array.isArray(giocatori) ? giocatori : []).map(caricaProfiloPresentazioneSfida));
+  if (!presentazioneSfidaAperta || token !== tokenCaricamentoPresentazioneSfida) return;
+
+  disegnaPresentazioneSfida(profili);
+  if (stato) stato.textContent = "Il confronto ELO è calcolato con K = 32.";
+
+  setTimeout(() => document.getElementById("btn-entra-partita")?.focus(), 0);
+}
+
+function deveMostrarePresentazioneSfida(dati) {
+  const giocatori = Array.isArray(dati?.giocatori) ? dati.giocatori : [];
+  return !presentazioneSfidaGiaVista() && giocatori.length >= 2;
+}
+
+function accodaEventoDeterminazioneDurantePresentazione(tipo, dati) {
+  if (!presentazioneSfidaAperta) return false;
+  eventiDeterminazioneInAttesa.push({ tipo, dati });
+  return true;
+}
+
+function riproduciEventiDeterminazioneInAttesa() {
+  const eventi = eventiDeterminazioneInAttesa.splice(0);
+  eventi.forEach(evento => {
+    if (evento.tipo === "risultatoDeterminazione") gestisciRisultatoDeterminazione(evento.dati);
+    else if (evento.tipo === "ordineFinaleCalcolato") gestisciOrdineFinaleCalcolato(evento.dati);
+    else if (evento.tipo === "determinazioneCompletata") gestisciDeterminazioneCompletata(evento.dati);
+  });
+}
+
+function chiudiPresentazioneSfida(automatica = false) {
+  if (!presentazioneSfidaAperta) return;
+
+  if (timerChiusuraPresentazioneSfida) {
+    clearTimeout(timerChiusuraPresentazioneSfida);
+    timerChiusuraPresentazioneSfida = null;
+  }
+
+  ++tokenCaricamentoPresentazioneSfida;
+  presentazioneSfidaAperta = false;
+  marcaPresentazioneSfidaVista();
+
+  const overlay = document.getElementById("overlay-presentazione-sfida");
+  if (overlay) {
+    overlay.classList.remove("aperto");
+    overlay.setAttribute("aria-hidden", "true");
+  }
+
+  const statoDeterminazione = presentazioneSfidaInAttesa;
+  presentazioneSfidaInAttesa = null;
+
+  if (statoDeterminazione) gestisciStatoDeterminazione(statoDeterminazione);
+  riproduciEventiDeterminazioneInAttesa();
+
+  if (automatica) mostraNotificaGioco("Presentazione completata: si passa alla determinazione dell'ordine.");
+}
+
+document.getElementById("btn-entra-partita")?.addEventListener("click", () => chiudiPresentazioneSfida(false));
+
 function gestisciStatoDeterminazione(dati) {
+  if (deveMostrarePresentazioneSfida(dati)) {
+    presentazioneSfidaInAttesa = dati;
+    segnalaStatoInizialeRicevuto();
+    mostraPresentazioneSfida(dati.giocatori, dati).catch(errore => {
+      console.error("Errore presentazione sfida:", errore);
+      chiudiPresentazioneSfida(false);
+    });
+    return;
+  }
+
   ++versioneAnimazioneStato;
   faseAttuale = "determinazione";
   impostaVisibilitaChat(dati.chatAttiva);
@@ -510,6 +833,7 @@ function gestisciStatoDeterminazione(dati) {
 }
 
 function gestisciRisultatoDeterminazione(dati) {
+  if (accodaEventoDeterminazioneDurantePresentazione("risultatoDeterminazione", dati)) return;
   possoTirareIoInDeterminazione = false;
   impostaDadiAbilitati(false);
   fermaCountdown(false);
@@ -521,6 +845,7 @@ function gestisciRisultatoDeterminazione(dati) {
 }
 
 function gestisciOrdineFinaleCalcolato(dati) {
+  if (accodaEventoDeterminazioneDurantePresentazione("ordineFinaleCalcolato", dati)) return;
   possoTirareIoInDeterminazione = false;
   impostaDadiAbilitati(false);
   fermaCountdown(false);
@@ -550,6 +875,7 @@ function gestisciOrdineFinaleCalcolato(dati) {
 }
 
 function gestisciDeterminazioneCompletata(dati) {
+  if (accodaEventoDeterminazioneDurantePresentazione("determinazioneCompletata", dati)) return;
   annullaVerificaDeterminazione();
   const tokenAnimazione = ++versioneAnimazioneStato;
   faseAttuale = "normale";
@@ -651,11 +977,49 @@ let timerRiprovaPeer = {};
 let timerDisconnessionePeer = {};
 let partecipantiMediaPronti = new Set();
 const nomiPartecipantiMedia = new Map();
-let CONFIGURAZIONE_ICE = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+let CONFIGURAZIONE_ICE = {
+  iceServers: [
+    { urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302", "stun:stun2.l.google.com:19302"] }
+  ],
+  iceCandidatePoolSize: 4,
+  bundlePolicy: "max-bundle"
+};
+
 const VINCOLI_MEDIA = {
   audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-  video: { width: { ideal: 320, max: 640 }, height: { ideal: 240, max: 480 }, frameRate: { ideal: 15, max: 20 }, facingMode: "user" }
+  video: {
+    width: { ideal: 320, max: 640 },
+    height: { ideal: 240, max: 480 },
+    frameRate: { ideal: 15, max: 20 },
+    facingMode: { ideal: "user" }
+  }
 };
+
+function aspettaWebRtc(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function nomeErroreMediaPartita(errore) {
+  return String(errore && errore.name ? errore.name : "");
+}
+
+function descriviErroreMediaPartita(errore) {
+  const nome = nomeErroreMediaPartita(errore);
+  if (nome === "NotAllowedError" || nome === "SecurityError" || nome === "PermissionDeniedError") {
+    return "Permesso negato: abilita webcam e microfono nelle impostazioni del browser.";
+  }
+  if (nome === "NotFoundError" || nome === "DevicesNotFoundError") {
+    return "Webcam o microfono non trovati.";
+  }
+  if (nome === "NotReadableError" || nome === "TrackStartError") {
+    return "Webcam o microfono sono occupati da un'altra app o scheda.";
+  }
+  if (nome === "OverconstrainedError" || nome === "ConstraintNotSatisfiedError") {
+    return "Il dispositivo non supporta le impostazioni video richieste.";
+  }
+  if (nome === "AbortError") return "Apertura di webcam o microfono interrotta dal browser.";
+  return "Webcam o microfono non disponibili.";
+}
 
 function aggiornaNomiPartecipanti(dati) {
   if (!dati || !Array.isArray(dati.giocatori)) return;
@@ -670,7 +1034,7 @@ function aggiornaNomiPartecipanti(dati) {
 
 function aggiornaConfigurazioneIce(configurazione) {
   if (!configurazione || !Array.isArray(configurazione.iceServers)) return;
-  const iceServers = configurazione.iceServers.slice(0, 4).filter(server => {
+  const iceServers = configurazione.iceServers.slice(0, 6).filter(server => {
     const urls = Array.isArray(server && server.urls) ? server.urls : [server && server.urls];
     return urls.length > 0 && urls.every(url => typeof url === "string" && /^(stun|stuns|turn|turns):/i.test(url));
   }).map(server => ({
@@ -678,7 +1042,13 @@ function aggiornaConfigurazioneIce(configurazione) {
     ...(typeof server.username === "string" ? { username: server.username } : {}),
     ...(typeof server.credential === "string" ? { credential: server.credential } : {})
   }));
-  if (iceServers.length) CONFIGURAZIONE_ICE = { iceServers };
+  if (iceServers.length) {
+    CONFIGURAZIONE_ICE = {
+      iceServers,
+      iceCandidatePoolSize: 4,
+      bundlePolicy: "max-bundle"
+    };
+  }
 }
 
 function aggiornaInterfacciaMedia(testo, errore) {
@@ -689,11 +1059,59 @@ function aggiornaInterfacciaMedia(testo, errore) {
   const stato = document.getElementById("stato-media-connessione");
   const voceMenu = document.getElementById("btn-stato-media");
   if (pannello) pannello.classList.toggle("nascosto", !mediaPartitaAttiva);
-  if (stato) { stato.textContent = testo || (mediaPartitaAttiva ? "Collegamento…" : "Non attiva"); stato.style.color = errore ? "#ff8a80" : ""; }
+  if (stato) {
+    stato.textContent = testo || (mediaPartitaAttiva ? "Collegamento…" : "Non attiva");
+    stato.style.color = errore ? "#ff8a80" : "";
+  }
   if (voceMenu) {
-    voceMenu.textContent = mediaPartitaAttiva ? (errore ? "⚠️ Webcam/microfono non disponibili" : "🎥 Webcam e microfono attivi") : "🔇 Videochiamata: non attiva";
+    voceMenu.textContent = mediaPartitaAttiva
+      ? (errore ? "⚠️ Webcam/microfono: verifica necessaria" : "🎥 Webcam e microfono attivi")
+      : "🔇 Videochiamata: non attiva";
     voceMenu.classList.toggle("media-attiva", mediaPartitaAttiva && !errore);
   }
+  aggiornaControlliMediaLocale();
+}
+
+function aggiornaControlliMediaLocale() {
+  const tracciaAudio = flussoMediaLocale && flussoMediaLocale.getAudioTracks().find(t => t.readyState === "live");
+  const tracciaVideo = flussoMediaLocale && flussoMediaLocale.getVideoTracks().find(t => t.readyState === "live");
+  const btnMic = document.getElementById("btn-toggle-microfono-media");
+  const btnCam = document.getElementById("btn-toggle-webcam-media");
+
+  if (btnMic) {
+    const acceso = !!(tracciaAudio && tracciaAudio.enabled);
+    btnMic.disabled = !tracciaAudio;
+    btnMic.textContent = acceso ? "🎙️ Microfono: On" : "🔇 Microfono: Muto";
+    btnMic.setAttribute("aria-pressed", acceso ? "false" : "true");
+    btnMic.classList.toggle("media-spento", !!tracciaAudio && !acceso);
+  }
+  if (btnCam) {
+    const acceso = !!(tracciaVideo && tracciaVideo.enabled);
+    btnCam.disabled = !tracciaVideo;
+    btnCam.textContent = acceso ? "📷 Webcam: On" : "🚫 Webcam: Off";
+    btnCam.setAttribute("aria-pressed", acceso ? "false" : "true");
+    btnCam.classList.toggle("media-spento", !!tracciaVideo && !acceso);
+  }
+}
+
+function toggleMicrofonoMedia() {
+  const traccia = flussoMediaLocale && flussoMediaLocale.getAudioTracks().find(t => t.readyState === "live");
+  if (!traccia) {
+    mostraNotificaGioco("Microfono non disponibile. Usa 'Riprova webcam e microfono'.");
+    return;
+  }
+  traccia.enabled = !traccia.enabled;
+  aggiornaControlliMediaLocale();
+}
+
+function toggleWebcamMedia() {
+  const traccia = flussoMediaLocale && flussoMediaLocale.getVideoTracks().find(t => t.readyState === "live");
+  if (!traccia) {
+    mostraNotificaGioco("Webcam non disponibile. Usa 'Riprova webcam e microfono'.");
+    return;
+  }
+  traccia.enabled = !traccia.enabled;
+  aggiornaControlliMediaLocale();
 }
 
 function impostaMediaPartitaAttiva(attiva) {
@@ -705,7 +1123,10 @@ function impostaMediaPartitaAttiva(attiva) {
     if (flussoMediaLocale) {
       const streamDaChiudere = flussoMediaLocale;
       flussoMediaLocale = null;
-      streamDaChiudere.getTracks().forEach(traccia => { traccia.onended = null; traccia.stop(); });
+      streamDaChiudere.getTracks().forEach(traccia => {
+        traccia.onended = null;
+        try { traccia.stop(); } catch (e) {}
+      });
     }
     Object.keys(connessioniPeer).forEach(chiudiConnessioneMedia);
     Object.values(timerRiprovaPeer).forEach(clearTimeout);
@@ -717,9 +1138,10 @@ function impostaMediaPartitaAttiva(attiva) {
     aggiornaInterfacciaMedia("Non attiva", false);
     return;
   }
+
   mediaPartitaAttiva = true;
   if (mediaRichiedeRiprovaManuale) {
-    aggiornaInterfacciaMedia("Webcam o microfono non disponibili", true);
+    aggiornaInterfacciaMedia("Autorizzazione o dispositivo da verificare", true);
     return;
   }
   aggiornaInterfacciaMedia(flussoMediaLocale ? "Collegata" : "Avvio webcam e microfono…", false);
@@ -728,59 +1150,143 @@ function impostaMediaPartitaAttiva(attiva) {
 
 function segnalaMediaPronto() {
   if (!mediaPartitaAttiva || !flussoMediaLocale || mediaProntoSegnalato) return;
+  const audio = flussoMediaLocale.getAudioTracks().some(t => t.readyState === "live");
+  const video = flussoMediaLocale.getVideoTracks().some(t => t.readyState === "live");
+  if (!audio || !video) return;
   if (inviaSocket({ tipo: "mediaPronto", partitaId, attivo: true })) mediaProntoSegnalato = true;
 }
 
 function gestisciInterruzioneMediaLocale() {
   if (puliziaMediaInCorso || !flussoMediaLocale) return;
+  const audioVivo = flussoMediaLocale.getAudioTracks().some(t => t.readyState === "live");
+  const videoVivo = flussoMediaLocale.getVideoTracks().some(t => t.readyState === "live");
+  if (audioVivo && videoVivo) return;
+
   const streamDaChiudere = flussoMediaLocale;
   flussoMediaLocale = null;
-  streamDaChiudere.getTracks().forEach(traccia => { if (traccia.readyState === "live") traccia.stop(); });
+  streamDaChiudere.getTracks().forEach(traccia => {
+    traccia.onended = null;
+    try { if (traccia.readyState === "live") traccia.stop(); } catch (e) {}
+  });
   mediaProntoSegnalato = false;
   mediaRichiedeRiprovaManuale = true;
   inviaSocket({ tipo: "mediaPronto", partitaId, attivo: false });
-  partecipantiMediaPronti.clear();
+  partecipantiMediaPronti.delete(mioUid);
   Object.keys(connessioniPeer).forEach(chiudiConnessioneMedia);
   const locale = document.getElementById("video-locale");
   if (locale) locale.srcObject = null;
-  aggiornaInterfacciaMedia("Webcam o microfono non disponibili", true);
+  aggiornaInterfacciaMedia("Webcam o microfono scollegati", true);
   const riprova = document.getElementById("btn-sblocca-media");
-  if (riprova) { riprova.textContent = "Riprova webcam e microfono"; riprova.classList.remove("nascosto"); }
+  if (riprova) {
+    riprova.textContent = "Riprova webcam e microfono";
+    riprova.classList.remove("nascosto");
+  }
+}
+
+async function ottieniFlussoMediaRobusto() {
+  const tentativiVincoli = [
+    VINCOLI_MEDIA,
+    { audio: { echoCancellation: true, noiseSuppression: true }, video: { facingMode: { ideal: "user" } } },
+    { audio: true, video: true }
+  ];
+  let ultimoErrore = null;
+
+  for (let indice = 0; indice < tentativiVincoli.length; indice++) {
+    const vincoli = tentativiVincoli[indice];
+    for (let tentativoOccupato = 0; tentativoOccupato < 3; tentativoOccupato++) {
+      try {
+        return await navigator.mediaDevices.getUserMedia(vincoli);
+      } catch (errore) {
+        ultimoErrore = errore;
+        const nome = nomeErroreMediaPartita(errore);
+        const vincoliTroppoStretti = nome === "OverconstrainedError" || nome === "ConstraintNotSatisfiedError";
+        const dispositivoTemporaneamenteOccupato = nome === "NotReadableError" || nome === "TrackStartError" || nome === "AbortError";
+
+        if (vincoliTroppoStretti) break;
+        if (dispositivoTemporaneamenteOccupato && tentativoOccupato < 2) {
+          await aspettaWebRtc(450 + tentativoOccupato * 550);
+          continue;
+        }
+        throw errore;
+      }
+    }
+  }
+  throw ultimoErrore || new Error("Impossibile aprire webcam e microfono");
 }
 
 async function inizializzaMediaPartita() {
   if (!mediaPartitaAttiva || paginaInChiusura) return false;
-  if (flussoMediaLocale) { segnalaMediaPronto(); return true; }
+  if (flussoMediaLocale) {
+    const audioVivo = flussoMediaLocale.getAudioTracks().some(t => t.readyState === "live");
+    const videoVivo = flussoMediaLocale.getVideoTracks().some(t => t.readyState === "live");
+    if (audioVivo && videoVivo) {
+      segnalaMediaPronto();
+      aggiornaControlliMediaLocale();
+      return true;
+    }
+  }
   if (avvioMediaInCorso) return avvioMediaInCorso;
+
   avvioMediaInCorso = (async () => {
     try {
-      if (!window.isSecureContext || !navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== "function") throw new Error("getUserMedia non disponibile");
-      const stream = await navigator.mediaDevices.getUserMedia(VINCOLI_MEDIA);
+      if (!window.isSecureContext || !navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== "function") {
+        throw new DOMException("getUserMedia non disponibile", "NotSupportedError");
+      }
+      if (typeof RTCPeerConnection !== "function") {
+        throw new DOMException("WebRTC non disponibile", "NotSupportedError");
+      }
+      const policy = document.permissionsPolicy || document.featurePolicy;
+      if (policy && typeof policy.allowsFeature === "function" && (!policy.allowsFeature("camera") || !policy.allowsFeature("microphone"))) {
+        throw new DOMException("Il contenitore iframe non autorizza camera/microfono", "NotAllowedError");
+      }
+
+      const stream = await ottieniFlussoMediaRobusto();
       if (!mediaPartitaAttiva || paginaInChiusura) {
         stream.getTracks().forEach(traccia => traccia.stop());
         return false;
       }
-      if (!stream.getAudioTracks().length || !stream.getVideoTracks().length) {
+
+      const audio = stream.getAudioTracks().find(t => t.readyState === "live");
+      const video = stream.getVideoTracks().find(t => t.readyState === "live");
+      if (!audio || !video) {
         stream.getTracks().forEach(traccia => traccia.stop());
-        throw new Error("Sono necessarie entrambe le tracce audio e video");
+        throw new DOMException("Sono necessarie entrambe le tracce", "NotFoundError");
       }
+
       flussoMediaLocale = stream;
       mediaRichiedeRiprovaManuale = false;
-      stream.getTracks().forEach(traccia => { traccia.onended = gestisciInterruzioneMediaLocale; });
+      stream.getTracks().forEach(traccia => {
+        traccia.onended = gestisciInterruzioneMediaLocale;
+      });
+
       const videoLocale = document.getElementById("video-locale");
-      if (videoLocale) { videoLocale.srcObject = stream; videoLocale.muted = true; videoLocale.play().catch(() => {}); }
+      if (videoLocale) {
+        videoLocale.srcObject = stream;
+        videoLocale.muted = true;
+        videoLocale.playsInline = true;
+        videoLocale.play().catch(() => {});
+      }
+
       const riprova = document.getElementById("btn-sblocca-media");
       if (riprova) riprova.classList.add("nascosto");
+      aggiornaControlliMediaLocale();
       aggiornaInterfacciaMedia("In attesa degli altri giocatori…", false);
       segnalaMediaPronto();
       return true;
     } catch (errore) {
       console.warn("Avvio webcam/microfono non riuscito:", errore);
       mediaRichiedeRiprovaManuale = true;
-      aggiornaInterfacciaMedia("Permesso o dispositivo non disponibile", true);
-      mostraNotificaGioco("Webcam e microfono non sono disponibili. La partita resta comunque utilizzabile.");
+      mediaProntoSegnalato = false;
+      inviaSocket({ tipo: "mediaPronto", partitaId, attivo: false });
+      const dettaglio = descriviErroreMediaPartita(errore);
+      aggiornaInterfacciaMedia(dettaglio, true);
+      mostraNotificaGioco(dettaglio + " La partita attenderà finché non riprovi.");
       const riprova = document.getElementById("btn-sblocca-media");
-      if (riprova) { riprova.textContent = "Riprova webcam e microfono"; riprova.classList.remove("nascosto"); }
+      if (riprova) {
+        riprova.textContent = "Riprova webcam e microfono";
+        riprova.classList.remove("nascosto");
+      }
+      aggiornaControlliMediaLocale();
       return false;
     } finally {
       avvioMediaInCorso = null;
@@ -794,89 +1300,143 @@ function creaElementiVideoRemoto(altroUid) {
   const figura = document.createElement("figure");
   figura.className = "video-tile";
   figura.dataset.uid = altroUid;
+
   const video = document.createElement("video");
   video.autoplay = true;
   video.playsInline = true;
   video.muted = true;
+
   const audio = document.createElement("audio");
   audio.autoplay = true;
+  audio.preload = "auto";
+
   const didascalia = document.createElement("figcaption");
   didascalia.textContent = nomiPartecipantiMedia.get(altroUid) || "Giocatore";
+  const streamRemoto = new MediaStream();
+
   figura.append(video, audio, didascalia);
-  document.getElementById("griglia-video").appendChild(figura);
-  elementiVideoRemoti[altroUid] = { figura, video, audio, didascalia };
+  const griglia = document.getElementById("griglia-video");
+  if (griglia) griglia.appendChild(figura);
+  elementiVideoRemoti[altroUid] = { figura, video, audio, didascalia, streamRemoto };
   return elementiVideoRemoti[altroUid];
 }
 
+function mostraPulsanteSbloccoAudio(testo) {
+  const pulsante = document.getElementById("btn-sblocca-media");
+  if (!pulsante) return;
+  if (testo) pulsante.textContent = testo;
+  pulsante.classList.remove("nascosto");
+}
+
 function tentaRiproduzioneElementoMedia(elemento) {
-  if (!elemento || typeof elemento.play !== "function") return;
-  elemento.play().then(() => {
-    const pulsante = document.getElementById("btn-sblocca-media");
-    if (pulsante && Object.values(elementiVideoRemoti).every(elementi => !elementi.video.paused && !elementi.audio.paused)) pulsante.classList.add("nascosto");
-  }).catch(() => {
-    const pulsante = document.getElementById("btn-sblocca-media");
-    if (pulsante) { pulsante.textContent = "🔊 Attiva l'audio"; pulsante.classList.remove("nascosto"); }
+  if (!elemento || typeof elemento.play !== "function") return Promise.resolve(false);
+  return elemento.play().then(() => true).catch(() => {
+    mostraPulsanteSbloccoAudio("🔊 Attiva l'audio");
+    return false;
   });
+}
+
+function chiudiPeerSenzaRimuovereTile(altroUid) {
+  if (timerRiprovaPeer[altroUid]) { clearTimeout(timerRiprovaPeer[altroUid]); delete timerRiprovaPeer[altroUid]; }
+  if (timerDisconnessionePeer[altroUid]) { clearTimeout(timerDisconnessionePeer[altroUid]); delete timerDisconnessionePeer[altroUid]; }
+  const pc = connessioniPeer[altroUid];
+  delete connessioniPeer[altroUid];
+  if (pc && pc.connectionState !== "closed") {
+    try { pc.onicecandidate = null; pc.ontrack = null; pc.onconnectionstatechange = null; pc.oniceconnectionstatechange = null; pc.close(); } catch (e) {}
+  }
+  delete candidatiIceInAttesa[altroUid];
 }
 
 function creaConnessionePeer(altroUid) {
   const esistente = connessioniPeer[altroUid];
-  if (esistente && esistente.connectionState !== "closed") return esistente;
+  if (esistente && esistente.connectionState !== "closed" && esistente.connectionState !== "failed") return esistente;
   if (!flussoMediaLocale) throw new Error("Stream locale non pronto");
+
   const pc = new RTCPeerConnection(CONFIGURAZIONE_ICE);
   flussoMediaLocale.getTracks().forEach(traccia => {
     const sender = pc.addTrack(traccia, flussoMediaLocale);
     if (traccia.kind === "video" && sender && typeof sender.getParameters === "function") {
       const parametri = sender.getParameters();
       if (!parametri.encodings || !parametri.encodings.length) parametri.encodings = [{}];
-      parametri.encodings[0].maxBitrate = 180000;
+      parametri.encodings[0].maxBitrate = 260000;
+      parametri.encodings[0].maxFramerate = 20;
       sender.setParameters(parametri).catch(() => {});
     }
   });
+
   pc.onicecandidate = evento => {
-    if (evento.candidate) inviaSocket({ tipo: "webrtc-ice-candidate", partitaId, destinatarioUid: altroUid, candidate: evento.candidate });
+    if (evento.candidate) {
+      inviaSocket({
+        tipo: "webrtc-ice-candidate",
+        partitaId,
+        destinatarioUid: altroUid,
+        candidate: evento.candidate.toJSON ? evento.candidate.toJSON() : evento.candidate
+      });
+    }
   };
+
   pc.ontrack = evento => {
     const elementi = creaElementiVideoRemoto(altroUid);
-    let streamRemoto = evento.streams && evento.streams[0];
-    if (!streamRemoto) {
-      streamRemoto = elementi.video.srcObject instanceof MediaStream ? elementi.video.srcObject : new MediaStream();
-      if (!streamRemoto.getTracks().includes(evento.track)) streamRemoto.addTrack(evento.track);
+    if (!elementi.streamRemoto.getTracks().some(t => t.id === evento.track.id)) {
+      elementi.streamRemoto.addTrack(evento.track);
     }
-    elementi.video.srcObject = streamRemoto;
-    elementi.audio.srcObject = streamRemoto;
+    elementi.video.srcObject = elementi.streamRemoto;
+    elementi.audio.srcObject = elementi.streamRemoto;
+    evento.track.onended = () => {
+      try { elementi.streamRemoto.removeTrack(evento.track); } catch (e) {}
+    };
     tentaRiproduzioneElementoMedia(elementi.video);
     tentaRiproduzioneElementoMedia(elementi.audio);
   };
-  pc.onconnectionstatechange = () => {
-    if (pc.connectionState === "connected") {
+
+  const gestisciStatoConnessione = () => {
+    const stato = pc.connectionState;
+    const statoIce = pc.iceConnectionState;
+    if (stato === "connected" || statoIce === "connected" || statoIce === "completed") {
       if (timerDisconnessionePeer[altroUid]) clearTimeout(timerDisconnessionePeer[altroUid]);
       delete timerDisconnessionePeer[altroUid];
       aggiornaInterfacciaMedia(`${partecipantiMediaPronti.size} partecipanti collegati`, false);
-    } else if (pc.connectionState === "disconnected") {
+      return;
+    }
+
+    if (stato === "failed" || statoIce === "failed") {
+      chiudiPeerSenzaRimuovereTile(altroUid);
+      pianificaRiprovaConnessioneMedia(altroUid, 900);
+      return;
+    }
+
+    if (stato === "disconnected" || statoIce === "disconnected") {
       if (!timerDisconnessionePeer[altroUid]) {
         timerDisconnessionePeer[altroUid] = setTimeout(() => {
           delete timerDisconnessionePeer[altroUid];
-          if (connessioniPeer[altroUid] === pc && pc.connectionState === "disconnected") {
-            chiudiConnessioneMedia(altroUid);
-            pianificaRiprovaConnessioneMedia(altroUid);
+          const attuale = connessioniPeer[altroUid];
+          if (attuale === pc && (pc.connectionState === "disconnected" || pc.iceConnectionState === "disconnected")) {
+            chiudiPeerSenzaRimuovereTile(altroUid);
+            pianificaRiprovaConnessioneMedia(altroUid, 600);
           }
-        }, 5000);
+        }, 6500);
       }
-    } else if (pc.connectionState === "failed") {
-      chiudiConnessioneMedia(altroUid);
-      pianificaRiprovaConnessioneMedia(altroUid);
     }
   };
+  pc.onconnectionstatechange = gestisciStatoConnessione;
+  pc.oniceconnectionstatechange = gestisciStatoConnessione;
+  pc.onicecandidateerror = evento => console.warn("ICE candidate error:", evento && evento.errorText ? evento.errorText : evento);
+
   connessioniPeer[altroUid] = pc;
   return pc;
 }
 
-async function avviaConnessioneMedia(altroUid) {
-  if (!flussoMediaLocale || !partecipantiMediaPronti.has(altroUid)) return;
-  if (connessioniPeer[altroUid]) return;
-  const pc = creaConnessionePeer(altroUid);
-  const offerta = await pc.createOffer();
+async function avviaConnessioneMedia(altroUid, riavvioIce = false) {
+  if (!flussoMediaLocale || !partecipantiMediaPronti.has(altroUid) || !mioUid) return;
+  if (String(mioUid) >= String(altroUid)) return; // un solo lato crea le offerte: niente glare
+
+  let pc = connessioniPeer[altroUid];
+  if (pc && pc.connectionState === "connected" && !riavvioIce) return;
+  if (pc && pc.signalingState !== "stable") return;
+  if (!pc || pc.connectionState === "closed" || pc.connectionState === "failed") pc = creaConnessionePeer(altroUid);
+
+  const offerta = await pc.createOffer(riavvioIce ? { iceRestart: true } : undefined);
+  if (pc.signalingState !== "stable") return;
   await pc.setLocalDescription(offerta);
   inviaSocket({ tipo: "webrtc-offer", partitaId, destinatarioUid: altroUid, sdp: pc.localDescription });
 }
@@ -886,14 +1446,23 @@ async function applicaCandidatiIceInAttesa(altroUid) {
   if (!pc || !pc.remoteDescription) return;
   const candidati = candidatiIceInAttesa[altroUid] || [];
   delete candidatiIceInAttesa[altroUid];
-  for (const candidate of candidati) {
-    try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch (errore) { console.warn("Candidato ICE ignorato:", errore); }
+  for (const candidate of candidati.slice(0, 100)) {
+    try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); }
+    catch (errore) { console.warn("Candidato ICE ignorato:", errore); }
   }
 }
 
 async function gestisciOffertaRicevuta(mittenteUid, sdp) {
   if (!mediaPartitaAttiva || !flussoMediaLocale || !partecipantiMediaPronti.has(mittenteUid) || !sdp) return;
-  const pc = connessioniPeer[mittenteUid] || creaConnessionePeer(mittenteUid);
+  if (sdp.type !== "offer") return;
+
+  let pc = connessioniPeer[mittenteUid];
+  if (pc && pc.signalingState !== "stable") {
+    chiudiPeerSenzaRimuovereTile(mittenteUid);
+    pc = null;
+  }
+  if (!pc) pc = creaConnessionePeer(mittenteUid);
+
   await pc.setRemoteDescription(new RTCSessionDescription(sdp));
   await applicaCandidatiIceInAttesa(mittenteUid);
   const risposta = await pc.createAnswer();
@@ -903,58 +1472,76 @@ async function gestisciOffertaRicevuta(mittenteUid, sdp) {
 
 async function gestisciRispostaRicevuta(mittenteUid, sdp) {
   const pc = connessioniPeer[mittenteUid];
-  if (!pc || !sdp) return;
+  if (!pc || !sdp || sdp.type !== "answer") return;
+  if (pc.signalingState !== "have-local-offer") return; // risposta vecchia dopo una riconnessione
   await pc.setRemoteDescription(new RTCSessionDescription(sdp));
   await applicaCandidatiIceInAttesa(mittenteUid);
 }
 
 async function gestisciCandidatoRicevuto(mittenteUid, candidate) {
-  if (!candidate) return;
+  if (!candidate || typeof candidate !== "object") return;
   const pc = connessioniPeer[mittenteUid];
   if (!pc || !pc.remoteDescription) {
     if (!candidatiIceInAttesa[mittenteUid]) candidatiIceInAttesa[mittenteUid] = [];
-    candidatiIceInAttesa[mittenteUid].push(candidate);
+    if (candidatiIceInAttesa[mittenteUid].length < 100) candidatiIceInAttesa[mittenteUid].push(candidate);
     return;
   }
-  try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch (errore) { console.warn("Candidato ICE ignorato:", errore); }
+  try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); }
+  catch (errore) { console.warn("Candidato ICE ignorato:", errore); }
 }
 
 function chiudiConnessioneMedia(altroUid) {
-  if (timerRiprovaPeer[altroUid]) { clearTimeout(timerRiprovaPeer[altroUid]); delete timerRiprovaPeer[altroUid]; }
-  if (timerDisconnessionePeer[altroUid]) { clearTimeout(timerDisconnessionePeer[altroUid]); delete timerDisconnessionePeer[altroUid]; }
-  const pc = connessioniPeer[altroUid];
-  delete connessioniPeer[altroUid];
-  if (pc && pc.connectionState !== "closed") pc.close();
+  chiudiPeerSenzaRimuovereTile(altroUid);
   const elementi = elementiVideoRemoti[altroUid];
-  if (elementi) { elementi.video.srcObject = null; elementi.audio.srcObject = null; elementi.figura.remove(); delete elementiVideoRemoti[altroUid]; }
-  delete candidatiIceInAttesa[altroUid];
+  if (elementi) {
+    elementi.video.srcObject = null;
+    elementi.audio.srcObject = null;
+    try { elementi.streamRemoto.getTracks().forEach(t => elementi.streamRemoto.removeTrack(t)); } catch (e) {}
+    elementi.figura.remove();
+    delete elementiVideoRemoti[altroUid];
+  }
 }
 
-function pianificaRiprovaConnessioneMedia(altroUid) {
+function pianificaRiprovaConnessioneMedia(altroUid, ritardoMs = 1800) {
   if (!altroUid || timerRiprovaPeer[altroUid] || !mioUid || String(mioUid) >= String(altroUid)) return;
   if (!mediaPartitaAttiva || !flussoMediaLocale || !partecipantiMediaPronti.has(altroUid)) return;
   timerRiprovaPeer[altroUid] = setTimeout(() => {
     delete timerRiprovaPeer[altroUid];
-    if (!connessioniPeer[altroUid] && partecipantiMediaPronti.has(altroUid)) gestisciPromessaWebRtc(avviaConnessioneMedia(altroUid));
-  }, 3000);
+    if (partecipantiMediaPronti.has(altroUid)) gestisciPromessaWebRtc(avviaConnessioneMedia(altroUid, true));
+  }, Math.max(400, Number(ritardoMs) || 1800));
 }
 
 function gestisciStatoMedia(dati) {
   impostaMediaPartitaAttiva(dati.mediaAttiva === true);
   if (!mediaPartitaAttiva) return;
-  partecipantiMediaPronti = new Set(Array.isArray(dati.partecipanti) ? dati.partecipanti.filter(uid => typeof uid === "string") : []);
-  Object.keys(connessioniPeer).forEach(uid => { if (!partecipantiMediaPronti.has(uid)) chiudiConnessioneMedia(uid); });
-  Object.keys(elementiVideoRemoti).forEach(uid => { if (!partecipantiMediaPronti.has(uid)) chiudiConnessioneMedia(uid); });
+
+  partecipantiMediaPronti = new Set(
+    Array.isArray(dati.partecipanti)
+      ? dati.partecipanti.filter(uid => typeof uid === "string")
+      : []
+  );
+
+  Object.keys(connessioniPeer).forEach(uid => {
+    if (!partecipantiMediaPronti.has(uid)) chiudiConnessioneMedia(uid);
+  });
+  Object.keys(elementiVideoRemoti).forEach(uid => {
+    if (!partecipantiMediaPronti.has(uid)) chiudiConnessioneMedia(uid);
+  });
+
   const quanti = partecipantiMediaPronti.size;
   aggiornaInterfacciaMedia(quanti > 1 ? `${quanti} partecipanti collegati` : "In attesa degli altri giocatori…", false);
+
   if (flussoMediaLocale && mioUid && !partecipantiMediaPronti.has(mioUid)) {
     mediaProntoSegnalato = false;
     segnalaMediaPronto();
     return;
   }
   if (!flussoMediaLocale || !mioUid || !partecipantiMediaPronti.has(mioUid)) return;
+
   partecipantiMediaPronti.forEach(altroUid => {
-    if (altroUid !== mioUid && String(mioUid) < String(altroUid)) gestisciPromessaWebRtc(avviaConnessioneMedia(altroUid));
+    if (altroUid !== mioUid && String(mioUid) < String(altroUid)) {
+      gestisciPromessaWebRtc(avviaConnessioneMedia(altroUid));
+    }
   });
   disegnaGiocatori();
 }
@@ -968,8 +1555,19 @@ async function sbloccaRiproduzioneMedia() {
   const risultati = await Promise.allSettled(elementiDaRiprodurre.map(elemento => elemento.play()));
   const fallita = risultati.some(risultato => risultato.status === "rejected");
   const pulsante = document.getElementById("btn-sblocca-media");
-  if (pulsante) pulsante.classList.toggle("nascosto", !fallita);
+  if (pulsante) {
+    pulsante.textContent = fallita ? "🔊 Attiva l'audio" : "🔊 Audio attivo";
+    pulsante.classList.toggle("nascosto", !fallita);
+  }
 }
+
+// Un tocco dell'utente è sufficiente per sbloccare l'audio remoto sui browser mobili
+// che vietano autoplay con audio.
+document.addEventListener("pointerdown", () => {
+  if (!mediaPartitaAttiva || !flussoMediaLocale) return;
+  const audioRemoti = Object.values(elementiVideoRemoti).map(elementi => elementi.audio).filter(Boolean);
+  audioRemoti.forEach(audio => audio.play().catch(() => mostraPulsanteSbloccoAudio("🔊 Attiva l'audio")));
+}, { passive: true });
 
 function pulisciMediaPagina() {
   if (puliziaMediaInCorso) return;
@@ -978,13 +1576,19 @@ function pulisciMediaPagina() {
   if (timerRiconnessione) clearTimeout(timerRiconnessione);
   if (timerRiprovaAvvio) clearTimeout(timerRiprovaAvvio);
   if (mediaProntoSegnalato) inviaSocket({ tipo: "mediaPronto", partitaId, attivo: false });
-  if (flussoMediaLocale) flussoMediaLocale.getTracks().forEach(traccia => traccia.stop());
+  if (flussoMediaLocale) {
+    flussoMediaLocale.getTracks().forEach(traccia => {
+      traccia.onended = null;
+      try { traccia.stop(); } catch (e) {}
+    });
+  }
   flussoMediaLocale = null;
   Object.keys(connessioniPeer).forEach(chiudiConnessioneMedia);
   Object.values(timerRiprovaPeer).forEach(clearTimeout);
   Object.values(timerDisconnessionePeer).forEach(clearTimeout);
   timerRiprovaPeer = {};
   timerDisconnessionePeer = {};
+  aggiornaControlliMediaLocale();
 }
 window.addEventListener("pagehide", pulisciMediaPagina);
 window.addEventListener("beforeunload", pulisciMediaPagina);
@@ -1126,6 +1730,27 @@ function animaSaltoPedina(idGiocatore, percorso, callback, tokenAnimazione) {
   saltaProssimo();
 }
 
+function gestisciPreparazionePartita(dati) {
+  annullaVerificaDeterminazione();
+  ++versioneAnimazioneStato;
+  faseAttuale = "preparazione";
+  possoTirareIoInDeterminazione = false;
+  mioTurno = false;
+  turnoAttualeId = null;
+  fermaCountdown(false);
+  impostaDadiAbilitati(false);
+  document.getElementById("overlay-determinazione").classList.remove("aperto");
+  riportaDadiAllaPartita();
+
+  ultimoStatoGiocatori = Array.isArray(dati.giocatori) ? dati.giocatori : ultimoStatoGiocatori;
+  impostaVisibilitaChat(dati.chatAttiva);
+  disegnaGiocatori();
+
+  const riga = document.getElementById("riga-turno");
+  if (riga) riga.textContent = dati.messaggio || (dati.mediaAttiva ? "🎥 Preparazione webcam e microfono…" : "⏳ Preparazione partita…");
+  segnalaStatoInizialeRicevuto();
+}
+
 function gestisciStatoPartita(dati) {
   annullaVerificaDeterminazione();
   ++versioneAnimazioneStato;
@@ -1245,6 +1870,7 @@ async function avvia() {
     if (!risposta.ok) throw new Error("Risposta server " + risposta.status);
     const profilo = await risposta.json();
     if (!profilo || !profilo.uid) throw new Error("Profilo non valido");
+    mioProfilo = profilo;
     mioUid = profilo.uid;
     if (timerRiprovaAvvio) { clearTimeout(timerRiprovaAvvio); timerRiprovaAvvio = null; }
     aggiornaCaricamento("Connessione alla partita…", 55);
@@ -1341,6 +1967,7 @@ function connetti() {
       return;
     }
 
+    if (dati.tipo === "preparazionePartita") { gestisciPreparazionePartita(dati); return; }
     if (dati.tipo === "statoDeterminazione") { gestisciStatoDeterminazione(dati); return; }
     if (dati.tipo === "risultatoDeterminazione") { gestisciRisultatoDeterminazione(dati); return; }
     if (dati.tipo === "ordineFinaleCalcolato") { gestisciOrdineFinaleCalcolato(dati); return; }
