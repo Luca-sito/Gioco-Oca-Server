@@ -418,113 +418,6 @@ button:disabled{
     }
 }
 /* =========================================================
-   CAMPANELLA NOTIFICHE
-========================================================= */
-#areaCampanella{
-    position:fixed;
-    top:14px;
-    right:14px;
-    z-index:520;
-}
-#btnCampanella{
-    position:relative;
-    width:44px;
-    height:44px;
-    border-radius:50%;
-    background:#111;
-    color:#ffd700;
-    font-size:19px;
-    border:2px solid #ffd700;
-    cursor:pointer;
-    padding:0;
-    margin:0;
-}
-.badge-notifiche{
-    position:absolute;
-    top:-4px;
-    right:-4px;
-    background:#e53935;
-    color:white;
-    font-size:10px;
-    font-weight:bold;
-    min-width:16px;
-    height:16px;
-    border-radius:8px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    padding:0 3px;
-}
-.pannello-notifiche{
-    position:absolute;
-    top:52px;
-    right:0;
-    width:300px;
-    max-width:calc(100vw - 20px);
-    background:white;
-    border:1px solid #ccc;
-    border-radius:10px;
-    box-shadow:0 8px 24px rgba(0,0,0,.25);
-    max-height:400px;
-    overflow-y:auto;
-}
-.pannello-notifiche.nascosto{
-    display:none;
-}
-.notifiche-titolo{
-    padding:12px 14px;
-    font-weight:bold;
-    background:#111;
-    color:#ffd700;
-    border-radius:10px 10px 0 0;
-}
-.notifica-riga{
-    padding:10px 14px;
-    border-bottom:1px solid #eee;
-    font-size:13px;
-}
-.notifica-testo{
-    margin-bottom:4px;
-}
-.notifica-data{
-    font-size:11px;
-    color:#999;
-    margin-bottom:6px;
-}
-.notifica-azioni{
-    display:flex;
-    gap:6px;
-}
-.notifica-vuota{
-    padding:20px;
-    text-align:center;
-    color:#999;
-    font-style:italic;
-    font-size:13px;
-}
-.btn-mini{
-    padding:6px 10px;
-    border:none;
-    border-radius:6px;
-    font-size:12px;
-    font-weight:bold;
-    cursor:pointer;
-    text-decoration:none;
-    display:inline-block;
-}
-.btn-mini.btn-accetta{
-    background:#43a047;
-    color:white;
-}
-.btn-mini.btn-rifiuta{
-    background:#e53935;
-    color:white;
-}
-.btn-mini.btn-vai{
-    background:#ff6600;
-    color:white;
-}
-/* =========================================================
    INVITO RICEVUTO
 ========================================================= */
 #cardInvitoRicevuto{
@@ -1631,16 +1524,7 @@ body.tema-scuro .giocatore-online{
 </head>
 <body>
 <div id="contenitoreNotifiche" aria-live="polite"></div>
-<div id="areaCampanella">
-  <button id="btnCampanella" type="button" onclick="toggleNotifiche()" aria-label="Apri notifiche">
-    🔔
-    <span id="badgeNotifiche" class="badge-notifiche" style="display:none;">0</span>
-  </button>
-  <div id="pannelloNotifiche" class="pannello-notifiche nascosto">
-    <div class="notifiche-titolo">Notifiche</div>
-    <div id="listaNotifiche"></div>
-  </div>
-</div>
+
 <div id="cardInvitoRicevuto" class="nascosto">
   <div id="testoInvitoRicevuto"></div>
   <div class="invito-bottoni">
@@ -3353,68 +3237,6 @@ async function rimuoviAmico(altroUid) {
     caricaAmici();
   } catch (e) { mostraNotifica("Errore di connessione."); }
 }
-// ===== NOTIFICHE =====
-async function caricaNotifiche(apriPannello) {
-  try {
-    const r = await fetch("https://gioco-oca-server.onrender.com/api/notifiche", { credentials: "include" });
-    if (!r.ok) return;
-    const d = await r.json();
-    aggiornaBadgeNotifiche(d.nonLette || 0);
-    if (apriPannello) disegnaListaNotifiche(d.notifiche || []);
-  } catch (e) {}
-}
-function aggiornaBadgeNotifiche(n) {
-  const badge = document.getElementById("badgeNotifiche");
-  if (!badge) return;
-  if (n > 0) { badge.style.display = "flex"; badge.textContent = n > 9 ? "9+" : n; }
-  else badge.style.display = "none";
-}
-function disegnaListaNotifiche(lista) {
-  const box = document.getElementById("listaNotifiche");
-  if (!lista.length) { box.innerHTML = '<div class="notifica-vuota">Nessuna notifica</div>'; return; }
-  box.innerHTML = lista.map(n => {
-    let azioni = "";
-    if (n.tipo === "richiestaAmicizia") {
-      azioni = `<div class="notifica-azioni">
-        <button class="btn-mini btn-accetta" onclick="accettaAmiciziaDaNotifica('${n.daUid}', this)">Accetta</button>
-        <button class="btn-mini btn-rifiuta" onclick="rifiutaAmiciziaDaNotifica('${n.daUid}', this)">Rifiuta</button>
-      </div>`;
-    } else if (n.tipo === "invitoPartita" && n.stanza) {
-      azioni = `<a class="btn-mini btn-vai" href="lobby.html?stanza=${encodeURIComponent(n.stanza)}">Vai alla stanza</a>`;
-    } else if (n.tipo === "avviso") {
-      azioni = `<a class="btn-mini btn-vai" href="messaggi.html">Vedi avviso</a>`;
-    }
-    return `<div class="notifica-riga">
-      <div class="notifica-testo">🔔 ${pulisciTestoHtml(n.testo || "Notifica")}</div>
-      <div class="notifica-data">${new Date(n.data).toLocaleString("it-IT")}</div>
-      ${azioni}
-    </div>`;
-  }).join("");
-}
-async function toggleNotifiche() {
-  const pannello = document.getElementById("pannelloNotifiche");
-  const aperto = !pannello.classList.contains("nascosto");
-  if (aperto) { pannello.classList.add("nascosto"); return; }
-  pannello.classList.remove("nascosto");
-  await caricaNotifiche(true);
-  try {
-    const risposta = await fetch("https://gioco-oca-server.onrender.com/api/notifiche/segna-lette", { method: "POST", credentials: "include" });
-    if (risposta.ok) aggiornaBadgeNotifiche(0);
-  } catch (e) {}
-}
-document.addEventListener("click", (e) => {
-  const pannello = document.getElementById("pannelloNotifiche");
-  if (pannello && !e.target.closest("#areaCampanella")) pannello.classList.add("nascosto");
-});
-async function accettaAmiciziaDaNotifica(daUid, bottone) {
-  if (!(await accettaAmicizia(daUid))) return;
-  bottone.closest(".notifica-riga").remove();
-}
-async function rifiutaAmiciziaDaNotifica(daUid, bottone) {
-  if (!(await rifiutaAmicizia(daUid))) return;
-  bottone.closest(".notifica-riga").remove();
-}
-setInterval(() => caricaNotifiche(false), 10000);
 // ===== INVITO A PARTITA PRIVATA =====
 function apriModalInvito(partitaId) {
   partitaDaInvitareId = partitaId;
