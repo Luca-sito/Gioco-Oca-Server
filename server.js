@@ -125,57 +125,152 @@ async function rimuoviPartita(nomeStanza, partitaId) {
   if (db) { try { await db.ref("partite/" + partitaId).remove(); } catch (e) { console.error("Errore rimozione partita da Firebase:", e.message); } }
 }
 
-// ===== LIVELLI, XP, BADGE =====
-const SOGLIE_LIVELLO = [0, 300, 700, 1200, 1800, 2500, 3300, 4200, 5200, 6300];
+// ===== ELO E BADGE =====
+const ELO_INIZIALE = 1500;
+const ELO_K = 32;
 const SOGLIA_VELOCISTA_SECONDI = 300;
-function calcolaLivello(xp) {
-  let livello = 1;
-  for (let i = 0; i < SOGLIE_LIVELLO.length; i++) { if (xp >= SOGLIE_LIVELLO[i]) livello = i + 1; else break; }
-  return { livello, sogliaAttuale: SOGLIE_LIVELLO[livello - 1], sogliaProssima: SOGLIE_LIVELLO[livello] !== undefined ? SOGLIE_LIVELLO[livello] : null };
+
+function ottieniElo(utente) {
+  const elo = Number(utente && utente.elo);
+  return Number.isFinite(elo) ? Math.round(elo) : ELO_INIZIALE;
 }
+
+function probabilitaVittoriaElo(eloA, eloB) {
+  return 1 / (1 + Math.pow(10, (eloB - eloA) / 400));
+}
+
+function calcolaNuovoElo(elo, eloAvversari, risultatoMedio) {
+  if (!Array.isArray(eloAvversari) || eloAvversari.length === 0) {
+    return Math.max(100, Math.round(elo));
+  }
+
+  const aspettativaMedia = eloAvversari.reduce(
+    (somma, eloAvversario) => somma + probabilitaVittoriaElo(elo, eloAvversario),
+    0
+  ) / eloAvversari.length;
+
+  return Math.max(
+    100,
+    Math.round(elo + ELO_K * (risultatoMedio - aspettativaMedia))
+  );
+}
+
 function calcolaBadge(utente) {
   const badge = [];
-  const vinte = utente.partiteVinte || 0, giocate = utente.partiteGiocate || 0, xp = utente.xp || 0;
-  const streakMax = utente.streakVittorieMassima || 0, vittoriaVeloce = utente.vittoriaPiuVeloceSecondi;
+  const vinte = utente.partiteVinte || 0;
+  const giocate = utente.partiteGiocate || 0;
+  const elo = ottieniElo(utente);
+  const streakMax = utente.streakVittorieMassima || 0;
+  const vittoriaVeloce = utente.vittoriaPiuVeloceSecondi;
+
   if (vinte >= 10) badge.push({ icona: "🥉", nome: "Prime 10 vittorie" });
   if (giocate >= 100) badge.push({ icona: "🥈", nome: "100 partite giocate" });
-  if (xp >= 500) badge.push({ icona: "🥇", nome: "500 punti XP" });
+  if (elo >= 1600) badge.push({ icona: "🥇", nome: "1600 ELO" });
   if (streakMax >= 20) badge.push({ icona: "👑", nome: "20 vittorie consecutive" });
-  if (vittoriaVeloce != null && vittoriaVeloce < SOGLIA_VELOCISTA_SECONDI) badge.push({ icona: "🏃", nome: "Velocista" });
+  if (vittoriaVeloce != null && vittoriaVeloce < SOGLIA_VELOCISTA_SECONDI) {
+    badge.push({ icona: "🏃", nome: "Velocista" });
+  }
   return badge;
 }
-function xpVincita() { return 50 + Math.floor(Math.random() * 151); }
-function xpSconfitta() { return 20 + Math.floor(Math.random() * 61); }
-function xpPenalitaAbbandonoAutomatico() { return 200 + Math.floor(Math.random() * 101); }
+
 function idConversazione(uidA, uidB) { return [uidA, uidB].sort().join("_"); }
 
-async function concludiPartita(partita, vincitoreUid, nomeStanza, elencoPartecipanti, escludiXpPer) {
+async function concludiPartita(partita, vincitoreUid, nomeStanza, elencoPartecipanti, escludiUid) {
   if (!db) return;
-  try {
-    const partecipanti = elencoPartecipanti || partita.ordineGiocatori.map(id => ({ uid: id, nome: partita.giocatori[id] ? partita.giocatori[id].nome : "?" }));
-    const esclusi = escludiXpPer || new Set();
-    const durataSecondi = partita.iniziataIl ? Math.round((Date.now() - partita.iniziataIl) / 1000) : null;
-    const xpVinti = xpVincita();
-    const nomeVincitore = (partecipanti.find(p => p.uid === vincitoreUid) || {}).nome || null;
 
-    for (const p of partecipanti) {
-      if (esclusi.has(p.uid)) continue;
-      const u = (await db.ref("utenti/" + p.uid).once("value")).val();
-      if (!u) continue;
-      if (p.uid === vincitoreUid) {
-        const nuovoStreak = (u.streakVittorieAttuale || 0) + 1;
-        const aggiornamenti = {
-          partiteGiocate: admin.database.ServerValue.increment(1), partiteVinte: admin.database.ServerValue.increment(1),
-          streakVittorieAttuale: nuovoStreak, streakVittorieMassima: Math.max(u.streakVittorieMassima || 0, nuovoStreak), xp: (u.xp || 0) + xpVinti
-        };
-        if (durataSecondi !== null && (u.vittoriaPiuVeloceSecondi == null || durataSecondi < u.vittoriaPiuVeloceSecondi)) aggiornamenti.vittoriaPiuVeloceSecondi = durataSecondi;
-        await db.ref("utenti/" + p.uid).update(aggiornamenti);
-      } else {
-        await db.ref("utenti/" + p.uid).update({ partiteGiocate: admin.database.ServerValue.increment(1), streakVittorieAttuale: 0, xp: Math.max(0, (u.xp || 0) - xpSconfitta()) });
-      }
+  try {
+    const partecipanti = elencoPartecipanti || (partita.ordineGiocatori || []).map(id => ({
+      uid: id,
+      nome: partita.giocatori[id] ? partita.giocatori[id].nome : "?"
+    }));
+    const esclusi = escludiUid || new Set();
+    const durataSecondi = partita.iniziataIl
+      ? Math.round((Date.now() - partita.iniziataIl) / 1000)
+      : null;
+    const nomeVincitore = (partecipanti.find(p => p.uid === vincitoreUid) || {}).nome || null;
+    const profili = [];
+
+    for (const partecipante of partecipanti) {
+      if (esclusi.has(partecipante.uid)) continue;
+      const utente = (await db.ref("utenti/" + partecipante.uid).once("value")).val();
+      if (!utente) continue;
+      profili.push({
+        uid: partecipante.uid,
+        nome: partecipante.nome || utente.nickname || "?",
+        utente,
+        eloPrima: ottieniElo(utente)
+      });
     }
-    await db.ref("storicoPartite").push().set({ data: Date.now(), stanza: nomeStanza, vincitoreUid, vincitoreNome: nomeVincitore, durataSecondi, xpVincitore: xpVinti, partecipanti });
-  } catch (e) { console.error("Errore conclusione partita:", e.message); }
+
+    const aggiornamentiElo = new Map();
+
+    for (const profilo of profili) {
+      const eloAvversari = profili
+        .filter(altro => altro.uid !== profilo.uid)
+        .map(altro => altro.eloPrima);
+      const risultato = profilo.uid === vincitoreUid ? 1 : 0;
+      const eloDopo = calcolaNuovoElo(profilo.eloPrima, eloAvversari, risultato);
+
+      aggiornamentiElo.set(profilo.uid, {
+        eloPrima: profilo.eloPrima,
+        eloDopo,
+        variazione: eloDopo - profilo.eloPrima
+      });
+    }
+
+    for (const profilo of profili) {
+      const utente = profilo.utente;
+      const risultatoElo = aggiornamentiElo.get(profilo.uid);
+      const aggiornamenti = {
+        elo: risultatoElo ? risultatoElo.eloDopo : profilo.eloPrima,
+        partiteGiocate: admin.database.ServerValue.increment(1)
+      };
+
+      if (profilo.uid === vincitoreUid) {
+        const nuovoStreak = (utente.streakVittorieAttuale || 0) + 1;
+        aggiornamenti.partiteVinte = admin.database.ServerValue.increment(1);
+        aggiornamenti.streakVittorieAttuale = nuovoStreak;
+        aggiornamenti.streakVittorieMassima = Math.max(
+          utente.streakVittorieMassima || 0,
+          nuovoStreak
+        );
+
+        if (
+          durataSecondi !== null &&
+          (utente.vittoriaPiuVeloceSecondi == null || durataSecondi < utente.vittoriaPiuVeloceSecondi)
+        ) {
+          aggiornamenti.vittoriaPiuVeloceSecondi = durataSecondi;
+        }
+      } else {
+        aggiornamenti.streakVittorieAttuale = 0;
+      }
+
+      await db.ref("utenti/" + profilo.uid).update(aggiornamenti);
+    }
+
+    const risultatiElo = {};
+    for (const profilo of profili) {
+      const risultatoElo = aggiornamentiElo.get(profilo.uid);
+      risultatiElo[profilo.uid] = {
+        nome: profilo.nome,
+        eloPrima: risultatoElo ? risultatoElo.eloPrima : profilo.eloPrima,
+        eloDopo: risultatoElo ? risultatoElo.eloDopo : profilo.eloPrima,
+        variazione: risultatoElo ? risultatoElo.variazione : 0
+      };
+    }
+
+    await db.ref("storicoPartite").push().set({
+      data: Date.now(),
+      stanza: nomeStanza,
+      vincitoreUid,
+      vincitoreNome: nomeVincitore,
+      durataSecondi,
+      risultatiElo,
+      partecipanti
+    });
+  } catch (e) {
+    console.error("Errore conclusione partita ELO:", e.message);
+  }
 }
 
 // ===== TOKEN =====
@@ -298,7 +393,7 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET && GOOGLE_CALLBACK_URL) {
         if (utente.stato === "sospeso" && utente.sospesoFino && utente.sospesoFino > Date.now()) {
           return done(new Error("Account sospeso fino al " + new Date(utente.sospesoFino).toLocaleString("it-IT") + "."));
         }
-        await db.ref("utenti/" + utente.uid).update({ googleId, providerGoogle: true, ultimoAccesso: Date.now() });
+        await db.ref("utenti/" + utente.uid).update({ googleId, providerGoogle: true, elo: ottieniElo(utente), ultimoAccesso: Date.now() });
         return done(null, { uid: utente.uid, nickname: utente.nickname, ruolo: utente.ruolo || "utente" });
       }
 
@@ -307,7 +402,7 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET && GOOGLE_CALLBACK_URL) {
       const uid = nuovoRef.key;
 
       await nuovoRef.set({
-        partiteVinte: 0, partiteGiocate: 0, puntiTotali: 0, xp: 0,
+        partiteVinte: 0, partiteGiocate: 0, puntiTotali: 0, elo: ELO_INIZIALE,
         streakVittorieAttuale: 0, streakVittorieMassima: 0, vittoriaPiuVeloceSecondi: null,
         email, emailLower: email,
         nickname, nicknameLower: nickname.toLowerCase(),
@@ -336,7 +431,7 @@ app.get("/auth/google/callback",
       if (!utente || !utente.uid) return res.redirect("/accedi.html?errore=google");
       const token = creaToken(utente.uid, utente.nickname, utente.ruolo || "utente");
       res.cookie("token", token, OPZIONI_COOKIE);
-      res.redirect("https://solfriniluca1.wixstudio.com/giochisocieta");
+      res.redirect("/");
     } catch (errore) {
       console.error("Errore callback Google:", errore);
       res.redirect("/accedi.html?errore=google");
@@ -363,7 +458,7 @@ app.post("/api/registrati", limiteLogin, async (req, res) => {
     const nuovoRef = db.ref("utenti").push();
     const uid = nuovoRef.key;
     await nuovoRef.set({
-      partiteVinte: 0, partiteGiocate: 0, puntiTotali: 0, xp: 0, streakVittorieAttuale: 0, streakVittorieMassima: 0, vittoriaPiuVeloceSecondi: null,
+      partiteVinte: 0, partiteGiocate: 0, puntiTotali: 0, elo: ELO_INIZIALE, streakVittorieAttuale: 0, streakVittorieMassima: 0, vittoriaPiuVeloceSecondi: null,
       email: emailPulita, emailLower: emailPulita, nickname: nicknamePulito, nicknameLower, passwordHash,
       avatar: null, ruolo: "utente", stato: "attivo", sospesoFino: null, avvisi: [], creatoIl: Date.now(), ultimoAccesso: Date.now()
     });
@@ -387,7 +482,7 @@ app.post("/api/login", limiteLogin, async (req, res) => {
       if (utente.sospesoFino && utente.sospesoFino > Date.now()) return res.status(403).json({ errore: "Account sospeso fino al " + new Date(utente.sospesoFino).toLocaleString("it-IT") + "." });
       await db.ref("utenti/" + utente.uid).update({ stato: "attivo", sospesoFino: null });
     }
-    await db.ref("utenti/" + utente.uid).update({ ultimoAccesso: Date.now() });
+    await db.ref("utenti/" + utente.uid).update({ ultimoAccesso: Date.now(), elo: ottieniElo(utente) });
     const token = creaToken(utente.uid, utente.nickname, utente.ruolo || "utente");
     res.cookie("token", token, OPZIONI_COOKIE);
     res.json({ nickname: utente.nickname, ruolo: utente.ruolo || "utente" });
@@ -401,15 +496,34 @@ app.get("/api/me", richiediAuth, async (req, res) => {
   try {
     const utente = (await db.ref("utenti/" + req.utente.uid).once("value")).val();
     if (!utente) return res.status(404).json({ errore: "Utente non trovato." });
-    const { livello, sogliaAttuale, sogliaProssima } = calcolaLivello(utente.xp || 0);
+
+    if (utente.elo == null) {
+      utente.elo = ELO_INIZIALE;
+      await db.ref("utenti/" + req.utente.uid).update({ elo: ELO_INIZIALE });
+    }
+
     res.json({
-      uid: req.utente.uid, nickname: utente.nickname, email: utente.email, avatar: utente.avatar || null,
-      ruolo: utente.ruolo || "utente", stato: utente.stato || "attivo", sospesoFino: utente.sospesoFino || null, avvisi: utente.avvisi || [],
-      partiteVinte: utente.partiteVinte || 0, partiteGiocate: utente.partiteGiocate || 0, creatoIl: utente.creatoIl || null, ultimoAccesso: utente.ultimoAccesso || null,
-      xp: utente.xp || 0, livello, sogliaAttuale, sogliaProssima, streakVittorieMassima: utente.streakVittorieMassima || 0,
-      vittoriaPiuVeloceSecondi: utente.vittoriaPiuVeloceSecondi ?? null, badge: calcolaBadge(utente)
+      uid: req.utente.uid,
+      nickname: utente.nickname,
+      email: utente.email,
+      avatar: utente.avatar || null,
+      ruolo: utente.ruolo || "utente",
+      stato: utente.stato || "attivo",
+      sospesoFino: utente.sospesoFino || null,
+      avvisi: utente.avvisi || [],
+      partiteVinte: utente.partiteVinte || 0,
+      partiteGiocate: utente.partiteGiocate || 0,
+      creatoIl: utente.creatoIl || null,
+      ultimoAccesso: utente.ultimoAccesso || null,
+      elo: ottieniElo(utente),
+      streakVittorieMassima: utente.streakVittorieMassima || 0,
+      vittoriaPiuVeloceSecondi: utente.vittoriaPiuVeloceSecondi ?? null,
+      badge: calcolaBadge(utente)
     });
-  } catch (err) { console.error(err); res.status(500).json({ errore: "Errore del server." }); }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ errore: "Errore del server." });
+  }
 });
 
 app.post("/api/modifica-nickname", richiediAuth, async (req, res) => {
@@ -2722,15 +2836,34 @@ app.get("/api/profilo-pubblico/:nickname", richiediAuth, async (req, res) => {
   try {
     const utente = await trovaUtentePerNickname(pulisciTesto(req.params.nickname, 20).toLowerCase());
     if (!utente) return res.status(404).json({ errore: "Utente non trovato." });
-    const giocate = utente.partiteGiocate || 0, vinte = utente.partiteVinte || 0;
-    const { livello, sogliaAttuale, sogliaProssima } = calcolaLivello(utente.xp || 0);
+
+    if (utente.elo == null) {
+      utente.elo = ELO_INIZIALE;
+      await db.ref("utenti/" + utente.uid).update({ elo: ELO_INIZIALE });
+    }
+
+    const giocate = utente.partiteGiocate || 0;
+    const vinte = utente.partiteVinte || 0;
+
     res.json({
-      uid: utente.uid, nickname: utente.nickname, avatar: utente.avatar || null, creatoIl: utente.creatoIl || null, ultimoAccesso: utente.ultimoAccesso || null,
-      partiteVinte: vinte, partiteGiocate: giocate, winRate: giocate > 0 ? Math.round((vinte / giocate) * 100) : 0, xp: utente.xp || 0,
-      livello, sogliaAttuale, sogliaProssima, streakVittorieMassima: utente.streakVittorieMassima || 0, vittoriaPiuVeloceSecondi: utente.vittoriaPiuVeloceSecondi ?? null,
-      badge: calcolaBadge(utente), statoAmicizia: await statoAmicizia(req.utente.uid, utente.uid)
+      uid: utente.uid,
+      nickname: utente.nickname,
+      avatar: utente.avatar || null,
+      creatoIl: utente.creatoIl || null,
+      ultimoAccesso: utente.ultimoAccesso || null,
+      partiteVinte: vinte,
+      partiteGiocate: giocate,
+      winRate: giocate > 0 ? Math.round((vinte / giocate) * 100) : 0,
+      elo: ottieniElo(utente),
+      streakVittorieMassima: utente.streakVittorieMassima || 0,
+      vittoriaPiuVeloceSecondi: utente.vittoriaPiuVeloceSecondi ?? null,
+      badge: calcolaBadge(utente),
+      statoAmicizia: await statoAmicizia(req.utente.uid, utente.uid)
     });
-  } catch (err) { console.error(err); res.status(500).json({ errore: "Errore del server." }); }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ errore: "Errore del server." });
+  }
 });
 
 app.get("/api/storico", richiediAuth, async (req, res) => {
@@ -3420,9 +3553,8 @@ async function forzaAbbandonoPerInattivita(partita, nomeStanza, idGiocatore) {
 
   if (db) {
     try {
-      const u = (await db.ref("utenti/" + idGiocatore).once("value")).val();
-      if (u) await db.ref("utenti/" + idGiocatore).update({ xp: Math.max(0, (u.xp || 0) - xpPenalitaAbbandonoAutomatico()), streakVittorieAttuale: 0 });
-    } catch (e) { console.error("Errore penalità abbandono automatico:", e.message); }
+      await db.ref("utenti/" + idGiocatore).update({ streakVittorieAttuale: 0 });
+    } catch (e) { console.error("Errore aggiornamento streak dopo inattività:", e.message); }
   }
 
   delete partita.giocatori[idGiocatore];
@@ -3440,7 +3572,7 @@ async function forzaAbbandonoPerInattivita(partita, nomeStanza, idGiocatore) {
       if (g.socket && g.socket.readyState === WebSocket.OPEN) g.socket.send(JSON.stringify({ tipo: "statoPartita", giocatori: statoGiocatori, turnoDiId: vincitoreId, vittoria: true, vincitore: vincitoreNome, messaggi: [nomeUscente + " è stato rimosso per inattività prolungata."] }));
     });
     const elencoCompleto = partita.ordineGiocatori.concat([idGiocatore]).map(id => id === idGiocatore ? { uid: idGiocatore, nome: nomeUscente } : { uid: id, nome: partita.giocatori[id].nome });
-    await concludiPartita(partita, vincitoreId, nomeStanza, elencoCompleto, new Set([idGiocatore]));
+    await concludiPartita(partita, vincitoreId, nomeStanza, elencoCompleto);
     await rimuoviPartita(nomeStanza, partita.id);
   } else {
     const idAttuale = partita.ordineGiocatori[partita.turnoAttuale];
@@ -3620,13 +3752,6 @@ async function avanzaDeterminazione(partita, nomeStanza) {
 async function espelliPerInattivitaDuranteDeterminazione(partita, nomeStanza, uid) {
   fermaTimerTurno(partita);
   const nomeUscente = partita.giocatori[uid] ? partita.giocatori[uid].nome : "?";
-
-  if (db) {
-    try {
-      const u = (await db.ref("utenti/" + uid).once("value")).val();
-      if (u) await db.ref("utenti/" + uid).update({ xp: Math.max(0, (u.xp || 0) - xpPenalitaAbbandonoAutomatico()) });
-    } catch (e) { console.error("Errore penalità inattività in determinazione:", e.message); }
-  }
 
   rimuoviPartecipanteMedia(partita, uid);
   rimuoviGiocatoreDaDeterminazione(partita, uid);
