@@ -2785,24 +2785,47 @@ function aggiornaBadgeChatMobile(){
 }
 function aggiungiMessaggio(uid, nome, testo) {
   const chat = document.getElementById("chat");
-  const cliccabile = uid && uid !== mioUid;
+
+  const sonoIo = uid === mioUid;
+  const cliccabile = uid && !sonoIo;
+
   const nomePulito = pulisciTestoHtml(nome || "Giocatore");
   const uidPulito = pulisciTestoHtml(uid || "");
+
+  // Io vedo sempre il mio nickname nero.
+  // Gli altri ricevono un colore stabile in base al loro nickname.
+  const coloreNickname = sonoIo
+    ? "#111111"
+    : coloreDaNome(nome);
+
   const nomeHtml = cliccabile
-    ? `<span class="nickname-riga player-card-trigger player-card-trigger-inline" tabindex="0" role="button" data-player-card-uid="${uidPulito}" data-player-card-nome="${nomePulito}" aria-label="Apri scheda di ${nomePulito}">${nomePulito}</span>`
-    : `<b>${nomePulito}</b>`;
-  const ora = new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
+    ? `<span
+        class="nickname-riga player-card-trigger player-card-trigger-inline"
+        tabindex="0"
+        role="button"
+        data-player-card-uid="${uidPulito}"
+        data-player-card-nome="${nomePulito}"
+        aria-label="Apri scheda di ${nomePulito}"
+        style="color:${coloreNickname};"
+      >${nomePulito}</span>`
+    : `<b style="color:${coloreNickname};">${nomePulito}</b>`;
+
   const rigaHtml = `
     <div class="messaggio">
-      <span style="color:#888;font-size:12px;">[${ora}]</span>
       ${nomeHtml}: ${pulisciTestoChat(testo)}
     </div>`;
+
   chat.innerHTML += rigaHtml;
   chat.scrollTop = chat.scrollHeight;
+
   const chatMobile = document.getElementById("chatMobile");
   const contenutoMobile = document.getElementById("contenutoMobile");
-  const vistaChatAttiva = document.getElementById("popupMobile").classList.contains("aperto")
-    && contenutoMobile && contenutoMobile.dataset.vista === "chat";
+
+  const vistaChatAttiva =
+    document.getElementById("popupMobile").classList.contains("aperto") &&
+    contenutoMobile &&
+    contenutoMobile.dataset.vista === "chat";
+
   if (chatMobile && vistaChatAttiva) {
     chatMobile.innerHTML += rigaHtml;
     chatMobile.scrollTop = chatMobile.scrollHeight;
