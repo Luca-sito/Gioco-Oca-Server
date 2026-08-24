@@ -1507,36 +1507,450 @@ function inviaMessaggioSocket(dati) {
   return true;
 }
 
-async function richiediConsensoMediaSeNecessario(mediaAttiva) {
-  if (!mediaAttiva) return true;
-  if (!socket || socket.readyState !== WebSocket.OPEN) {
-    mostraNotifica("Connessione al server non disponibile. Riprova tra qualche secondo.");
-    return false;
+const CHIAVE_MEDIA_LOBBY = "giochiSocieta.mediaVerificatiFino";
+const DURATA_CACHE_MEDIA_LOBBY_MS = 10 * 60 * 1000;
+
+let verificaMediaLobbyInCorso = null;
+let mediaLobbyVerificatiFino = 0;
+
+try {
+  mediaLobbyVerificatiFino =
+    Number(sessionStorage.getItem(CHIAVE_MEDIA_LOBBY) || 0);
+} catch (e) {}
+
+
+function aspettaMedia(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+
+function chiudiFlussoTestMedia(flusso) {
+  if (!flusso) return;
+
+  flusso.getTracks().forEach(traccia => {
+    try {
+      traccia.onended = null;
+    } catch (e) {}
+
+    try {
+      if (traccia.readyState === "live") {
+        traccia.stop();
+      }
+    } catch (e) {}
+  });
+}
+
+
+function nomeErroreMedia(errore) {
+  return String(
+    errore && errore.name
+      ? errore.name
+      : ""
+  );
+}
+
+
+function messaggioErroreMediaLobby(errore) {
+
+  const nome = nomeErroreMedia(errore);
+
+
+  if (
+    nome === "NotAllowedError" ||
+    nome === "SecurityError" ||
+    nome === "PermissionDeniedError"
+  ) {
+    return "Permesso negato. Consenti fotocamera e microfono nelle impostazioni del browser e riprova.";
   }
-  if (typeof RTCPeerConnection !== "function") {
-    mostraNotifica("Questo browser non supporta la videochiamata del tavolo.");
-    return false;
+
+
+  if (
+    nome === "NotFoundError" ||
+    nome === "DevicesNotFoundError"
+  ) {
+    return "Non trovo una webcam e un microfono disponibili su questo dispositivo.";
   }
-  if (!window.isSecureContext || !navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== "function") {
-    mostraNotifica("Webcam e microfono richiedono una connessione HTTPS e un browser compatibile.");
-    return false;
+
+
+  if (
+    nome === "NotReadableError" ||
+    nome === "TrackStartError"
+  ) {
+    return "Webcam o microfono risultano occupati. Chiudi eventuali altre app o schede che li usano e riprova.";
   }
-  mostraNotifica("Autorizza webcam e microfono nel messaggio del browser per entrare nel tavolo.");
-  let flusso = null;
-  try {
-    flusso = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-      video: { width: { ideal: 320, max: 640 }, height: { ideal: 240, max: 480 }, frameRate: { ideal: 15, max: 20 }, facingMode: "user" }
-    });
-    if (!flusso.getAudioTracks().length || !flusso.getVideoTracks().length) throw new Error("Tracce audio/video mancanti");
+
+
+  if (
+    nome === "OverconstrainedError" ||
+    nome === "ConstraintNotSatisfiedError"
+  ) {
+    return "La webcam non supporta le impostazioni richieste. Riprova: verranno usate automaticamente impostazioni più compatibili.";
+  }
+
+
+  if (nome === "AbortError") {
+    return "Il browser ha interrotto l'apertura di webcam o microfono. Riprova.";
+  }
+
+
+  return "Non riesco ad attivare webcam e microfono. Controlla i permessi del browser e che nessun'altra app li stia usando.";
+}
+
+
+async function apriFlussoTestMediaLobby() {
+
+  const tentativi = [
+
+    {
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true
+      },
+
+      video: {
+        width: {
+          ideal: 320,
+          max: 640
+        },
+
+        height: {
+          ideal: 240,
+          max: 480
+        },
+
+        frameRate: {
+          ideal: 15,
+          max: 20
+        },
+
+        facingMode: {
+          ideal: "user"
+        }
+      }
+    },
+
+
+    {
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true
+      },
+
+      video: {
+        facingMode: {
+          ideal: "user"
+        }
+      }
+    },
+
+
+    {
+      audio: true,
+      video: true
+    }
+
+  ];
+
+
+  let ultimoErrore = null;
+
+
+  for (
+    let i = 0;
+    i < tentativi.length;
+    i++
+  ) {
+
+    try {
+
+      return await navigator.mediaDevices.getUserMedia(
+        tentativi[i]
+      );
+
+    } catch (errore) {
+
+      ultimoErrore = errore;
+
+      const nome =
+        nomeErroreMedia(errore);
+
+
+      console.warn(
+        "Tentativo media",
+        i + 1,
+        "fallito:",
+        nome,
+        errore
+      );
+
+
+      if (
+        nome === "NotAllowedError" ||
+        nome === "SecurityError" ||
+        nome === "PermissionDeniedError"
+      ) {
+        throw errore;
+      }
+
+
+      if (
+        nome === "NotFoundError" ||
+        nome === "DevicesNotFoundError"
+      ) {
+        throw errore;
+      }
+
+
+      if (
+        nome === "NotReadableError" ||
+        nome === "TrackStartError" ||
+        nome === "AbortError"
+      ) {
+        await aspettaMedia(500);
+      }
+
+    }
+
+  }
+
+
+  throw (
+    ultimoErrore ||
+    new Error(
+      "Impossibile aprire webcam e microfono."
+    )
+  );
+}
+
+
+async function richiediConsensoMediaSeNecessario(
+  mediaAttiva,
+  forzaVerifica = false
+) {
+
+  if (!mediaAttiva) {
     return true;
-  } catch (errore) {
-    console.warn("Autorizzazione webcam/microfono non concessa:", errore);
-    mostraNotifica("Non sei entrato: per questo tavolo devi consentire sia webcam sia microfono.");
-    return false;
-  } finally {
-    if (flusso) flusso.getTracks().forEach(traccia => traccia.stop());
   }
+
+
+  if (
+    !socket ||
+    socket.readyState !== WebSocket.OPEN
+  ) {
+
+    mostraNotifica(
+      "Connessione al server non disponibile. Riprova tra qualche secondo."
+    );
+
+    return false;
+  }
+
+
+  if (
+    typeof RTCPeerConnection !== "function"
+  ) {
+
+    mostraNotifica(
+      "Questo browser non supporta la videochiamata del tavolo."
+    );
+
+    return false;
+  }
+
+
+  if (
+    !window.isSecureContext ||
+    !navigator.mediaDevices ||
+    typeof navigator.mediaDevices.getUserMedia !== "function"
+  ) {
+
+    mostraNotifica(
+      "Webcam e microfono richiedono HTTPS e un browser compatibile."
+    );
+
+    return false;
+  }
+
+
+  const policy =
+    document.permissionsPolicy ||
+    document.featurePolicy;
+
+
+  if (
+    policy &&
+    typeof policy.allowsFeature === "function"
+  ) {
+
+    const cameraConsentita =
+      policy.allowsFeature("camera");
+
+    const microfonoConsentito =
+      policy.allowsFeature("microphone");
+
+
+    if (
+      !cameraConsentita ||
+      !microfonoConsentito
+    ) {
+
+      mostraNotifica(
+        "Questa pagina o il suo contenitore blocca webcam o microfono."
+      );
+
+      console.error(
+        "Permissions Policy:",
+        {
+          camera: cameraConsentita,
+          microphone: microfonoConsentito
+        }
+      );
+
+      return false;
+    }
+
+  }
+
+
+  if (
+    !forzaVerifica &&
+    Date.now() < mediaLobbyVerificatiFino
+  ) {
+    return true;
+  }
+
+
+  if (verificaMediaLobbyInCorso) {
+    return verificaMediaLobbyInCorso;
+  }
+
+
+  verificaMediaLobbyInCorso =
+    (async () => {
+
+      let flusso = null;
+
+      try {
+
+        mostraNotifica(
+          "Autorizza webcam e microfono nel messaggio del browser."
+        );
+
+
+        flusso =
+          await apriFlussoTestMediaLobby();
+
+
+        const tracciaAudio =
+          flusso
+            .getAudioTracks()
+            .find(
+              traccia =>
+                traccia.readyState === "live"
+            );
+
+
+        const tracciaVideo =
+          flusso
+            .getVideoTracks()
+            .find(
+              traccia =>
+                traccia.readyState === "live"
+            );
+
+
+        if (!tracciaAudio) {
+          throw new DOMException(
+            "Microfono non disponibile.",
+            "NotFoundError"
+          );
+        }
+
+
+        if (!tracciaVideo) {
+          throw new DOMException(
+            "Webcam non disponibile.",
+            "NotFoundError"
+          );
+        }
+
+
+        mediaLobbyVerificatiFino =
+          Date.now() +
+          DURATA_CACHE_MEDIA_LOBBY_MS;
+
+
+        try {
+
+          sessionStorage.setItem(
+            CHIAVE_MEDIA_LOBBY,
+            String(mediaLobbyVerificatiFino)
+          );
+
+        } catch (e) {}
+
+
+        mostraNotifica(
+          "Webcam e microfono autorizzati correttamente."
+        );
+
+
+        return true;
+
+      } catch (errore) {
+
+        console.error(
+          "Verifica webcam/microfono fallita:",
+          errore.name,
+          errore.message,
+          errore
+        );
+
+
+        mediaLobbyVerificatiFino = 0;
+
+
+        try {
+          sessionStorage.removeItem(
+            CHIAVE_MEDIA_LOBBY
+          );
+        } catch (e) {}
+
+
+        mostraNotifica(
+          messaggioErroreMediaLobby(
+            errore
+          )
+        );
+
+
+        return false;
+
+      } finally {
+
+        chiudiFlussoTestMedia(
+          flusso
+        );
+
+
+        await aspettaMedia(250);
+
+      }
+
+    })();
+
+
+  try {
+
+    return await verificaMediaLobbyInCorso;
+
+  } finally {
+
+    verificaMediaLobbyInCorso = null;
+
+  }
+
 }
 
 function apriPartita(id, mediaAttiva) {
