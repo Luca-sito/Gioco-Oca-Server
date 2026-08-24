@@ -94,8 +94,8 @@ async function salvaPartita(partita) {
     creatore: partita.creatore,
     creatoDa: partita.creatoDa,
     tempo: partita.tempo,
-    punti: partita.punti,
     modalita: partita.modalita,
+    classificata: partita.classificata !== false,
     maxGiocatori: partita.maxGiocatori,
     chatAttiva: partita.chatAttiva !== false,
     mediaAttiva: partita.mediaAttiva === true,
@@ -184,6 +184,7 @@ async function concludiPartita(partita, vincitoreUid, nomeStanza, elencoPartecip
       nome: partita.giocatori[id] ? partita.giocatori[id].nome : "?"
     }));
     const esclusi = escludiUid || new Set();
+    const partitaClassificata = partita.classificata !== false;
     const durataSecondi = partita.iniziataIl
       ? Math.round((Date.now() - partita.iniziataIl) / 1000)
       : null;
@@ -209,7 +210,9 @@ async function concludiPartita(partita, vincitoreUid, nomeStanza, elencoPartecip
         .filter(altro => altro.uid !== profilo.uid)
         .map(altro => altro.eloPrima);
       const risultato = profilo.uid === vincitoreUid ? 1 : 0;
-      const eloDopo = calcolaNuovoElo(profilo.eloPrima, eloAvversari, risultato);
+      const eloDopo = partitaClassificata
+        ? calcolaNuovoElo(profilo.eloPrima, eloAvversari, risultato)
+        : profilo.eloPrima;
 
       aggiornamentiElo.set(profilo.uid, {
         eloPrima: profilo.eloPrima,
@@ -265,6 +268,7 @@ async function concludiPartita(partita, vincitoreUid, nomeStanza, elencoPartecip
       vincitoreUid,
       vincitoreNome: nomeVincitore,
       durataSecondi,
+      classificata: partitaClassificata,
       risultatiElo,
       partecipanti
     });
@@ -3274,7 +3278,7 @@ function inviaAllaStanza(nomeStanza, messaggio) {
 function inviaListaPartite(nomeStanza) {
   if (!stanze[nomeStanza]) return;
   const lista = Object.values(stanze[nomeStanza].partite).map(p => ({
-    id: p.id, creatore: p.creatore, creatoDa: p.creatoDa, tempo: p.tempo, punti: p.punti, modalita: p.modalita,
+    id: p.id, creatore: p.creatore, creatoDa: p.creatoDa, tempo: p.tempo, modalita: p.modalita, classificata: p.classificata !== false,
     maxGiocatori: p.maxGiocatori, numGiocatoriAttuali: Object.keys(p.giocatori).length, chatAttiva: p.chatAttiva !== false,
     mediaAttiva: p.mediaAttiva === true,
     iniziata: p.iniziata !== false,
@@ -4119,7 +4123,7 @@ inviaAllaStanza(stanzaAttuale, {
         const partitaId = "p" + Date.now() + Math.floor(Math.random() * 1000);
         const max = parseInt(dati.maxGiocatori);
         const nuovaPartita = {
-          id: partitaId, creatore: nickname, creatoDa: uid, tempo: dati.tempo, punti: dati.punti, modalita: dati.modalita,
+          id: partitaId, creatore: nickname, creatoDa: uid, tempo: dati.tempo, modalita: dati.modalita, classificata: dati.classificata !== false,
           maxGiocatori: (!max || max < 2 || max > 8 ? 2 : max),
           chatAttiva: dati.chatAttiva !== false,
           mediaAttiva,
