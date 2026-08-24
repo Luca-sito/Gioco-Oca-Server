@@ -336,7 +336,7 @@ app.get("/auth/google/callback",
       if (!utente || !utente.uid) return res.redirect("/accedi.html?errore=google");
       const token = creaToken(utente.uid, utente.nickname, utente.ruolo || "utente");
       res.cookie("token", token, OPZIONI_COOKIE);
-      res.redirect("/");
+      res.redirect("https://solfriniluca1.wixstudio.com/giochisocieta");
     } catch (errore) {
       console.error("Errore callback Google:", errore);
       res.redirect("/accedi.html?errore=google");
@@ -448,6 +448,2253 @@ app.get("/api/top-giocatori", async (req, res) => {
     res.json({ giocatori: top });
   } catch (e) { console.error("Errore classifica:", e); res.status(500).json({ giocatori: [] }); }
 });
+
+// ============================================================
+// COMMUNITY - API REALI (Firebase Realtime Database)
+// ============================================================
+
+const COMMUNITY_CATEGORIE = new Set([
+  "discussioni",
+  "giocatori",
+  "strategie",
+  "eventi",
+  "supporto"
+]);
+
+const limiteCommunityPost = rateLimit({
+  windowMs: 60 * 1000,
+  max: 8,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    errore: "Stai pubblicando troppo velocemente. Riprova tra poco."
+  }
+});
+
+const limiteCommunityCommenti = rateLimit({
+  windowMs: 60 * 1000,
+  max: 25,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    errore: "Stai commentando troppo velocemente. Rallenta un po'."
+  }
+});
+
+const limiteCommunityAzioni = rateLimit({
+  windowMs: 60 * 1000,
+  max: 90,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    errore: "Troppe azioni in poco tempo. Riprova tra qualche secondo."
+  }
+});
+
+
+function communityCategoria(categoria) {
+
+  const valore =
+    String(categoria || "")
+      .trim()
+      .toLowerCase();
+
+  return COMMUNITY_CATEGORIE.has(valore)
+    ? valore
+    : "discussioni";
+
+}
+
+
+function communityNumero(valore) {
+
+  const n =
+    Number(valore || 0);
+
+  return Number.isFinite(n) && n > 0
+    ? Math.floor(n)
+    : 0;
+
+}
+
+
+function communityId(valore) {
+
+  return String(valore || "")
+    .replace(/[^a-zA-Z0-9_-]/g, "")
+    .substring(0, 100);
+
+}
+
+
+async function communityProfilo(uid) {
+
+  if (!db || !uid) {
+    return null;
+  }
+
+  const snapshot =
+    await db
+      .ref("utenti/" + uid)
+      .once("value");
+
+  const u =
+    snapshot.val();
+
+  if (!u) {
+    return null;
+  }
+
+  return {
+    uid,
+    nickname:
+      u.nickname || "Giocatore",
+
+    avatar:
+      u.avatar || null,
+
+    ruolo:
+      u.ruolo || "utente",
+
+    stato:
+      u.stato || "attivo",
+
+    sospesoFino:
+      u.sospesoFino || null
+  };
+
+}
+
+
+async function communityUtenteScrittura(
+  req,
+  res
+) {
+
+  const u =
+    await communityProfilo(
+      req.utente &&
+      req.utente.uid
+    );
+
+
+  if (!u) {
+
+    res.status(404).json({
+      errore: "Utente non trovato."
+    });
+
+    return null;
+
+  }
+
+
+  if (
+    u.stato ===
+    "bannato"
+  ) {
+
+    res.status(403).json({
+      errore:
+        "Il tuo account è stato bannato."
+    });
+
+    return null;
+
+  }
+
+
+  if (
+    u.stato === "sospeso" &&
+    u.sospesoFino &&
+    Number(u.sospesoFino) >
+      Date.now()
+  ) {
+
+    res.status(403).json({
+      errore:
+        "Il tuo account è sospeso fino al " +
+        new Date(
+          u.sospesoFino
+        ).toLocaleString(
+          "it-IT"
+        ) +
+        "."
+    });
+
+    return null;
+
+  }
+
+
+  return u;
+
+}
+
+
+async function communityAggiornaContatore(
+  ref,
+  delta
+) {
+
+  const risultato =
+    await ref.transaction(
+      valore =>
+        Math.max(
+          0,
+          communityNumero(
+            valore
+          ) + delta
+        )
+    );
+
+
+  return communityNumero(
+    risultato.snapshot.val()
+  );
+
+}
+
+
+function communityPostJson(
+  id,
+  post,
+  profilo,
+  stato = {}
+) {
+
+  return {
+
+    id,
+
+    uidAutore:
+      post.uidAutore ||
+      null,
+
+    nicknameAutore:
+      (
+        profilo &&
+        profilo.nickname
+      ) ||
+      post.nicknameAutore ||
+      "Giocatore",
+
+    avatarAutore:
+      (
+        profilo &&
+        profilo.avatar
+      ) ||
+      null,
+
+    ruoloAutore:
+      (
+        profilo &&
+        profilo.ruolo
+      ) ||
+      post.ruoloAutore ||
+      "utente",
+
+    categoria:
+      communityCategoria(
+        post.categoria
+      ),
+
+    titolo:
+      String(
+        post.titolo || ""
+      ),
+
+    testo:
+      String(
+        post.testo || ""
+      ),
+
+    creatoIl:
+      Number(
+        post.creatoIl || 0
+      ),
+
+    aggiornatoIl:
+      Number(
+        post.aggiornatoIl ||
+        post.creatoIl ||
+        0
+      ),
+
+    conteggioReazioni:
+      communityNumero(
+        post.conteggioReazioni
+      ),
+
+    conteggioCommenti:
+      communityNumero(
+        post.conteggioCommenti
+      ),
+
+    conteggioCondivisioni:
+      communityNumero(
+        post.conteggioCondivisioni
+      ),
+
+    mioLike:
+      stato.mioLike === true,
+
+    salvato:
+      stato.salvato === true,
+
+    puoEliminare:
+      stato.puoEliminare === true
+
+  };
+
+}
+
+
+// ============================================================
+// GET FEED COMMUNITY
+// ============================================================
+
+app.get(
+  "/api/community/posts",
+  async (req, res) => {
+
+    if (!db) {
+
+      return res
+        .status(500)
+        .json({
+          errore:
+            "Servizio Community non disponibile."
+        });
+
+    }
+
+
+    try {
+
+      const token =
+        verificaToken(
+          estraiTokenHeader(req)
+        );
+
+
+      const mioUid =
+        token?.uid ||
+        null;
+
+
+      const mioRuolo =
+        token?.ruolo ||
+        "utente";
+
+
+      const limite =
+        Math.min(
+          100,
+          Math.max(
+            1,
+            parseInt(
+              req.query.limit,
+              10
+            ) || 60
+          )
+        );
+
+
+      const snapshot =
+        await db
+          .ref(
+            "community/posts"
+          )
+          .orderByChild(
+            "creatoIl"
+          )
+          .limitToLast(
+            limite
+          )
+          .once(
+            "value"
+          );
+
+
+      const posts =
+        Object.entries(
+          snapshot.val() ||
+          {}
+        )
+          .map(
+            ([id, post]) => ({
+              id,
+              ...post
+            })
+          )
+          .sort(
+            (a, b) =>
+              Number(
+                b.creatoIl ||
+                0
+              ) -
+              Number(
+                a.creatoIl ||
+                0
+              )
+          );
+
+
+      const autori =
+        [
+          ...new Set(
+            posts
+              .map(
+                post =>
+                  post.uidAutore
+              )
+              .filter(
+                Boolean
+              )
+          )
+        ];
+
+
+      const profili =
+        {};
+
+
+      await Promise.all(
+
+        autori.map(
+
+          async uid => {
+
+            try {
+
+              profili[uid] =
+                await communityProfilo(
+                  uid
+                );
+
+            } catch (
+              errore
+            ) {
+
+              profili[uid] =
+                null;
+
+            }
+
+          }
+
+        )
+
+      );
+
+
+      let mieiLike =
+        {};
+
+      let mieiSalvati =
+        {};
+
+
+      if (
+        mioUid
+      ) {
+
+        const [
+          snapshotLike,
+          snapshotSalvati
+        ] =
+          await Promise.all([
+
+            db
+              .ref(
+                "community/reazioniUtente/" +
+                mioUid
+              )
+              .once(
+                "value"
+              ),
+
+            db
+              .ref(
+                "community/salvati/" +
+                mioUid
+              )
+              .once(
+                "value"
+              )
+
+          ]);
+
+
+        mieiLike =
+          snapshotLike.val() ||
+          {};
+
+
+        mieiSalvati =
+          snapshotSalvati.val() ||
+          {};
+
+      }
+
+
+      res.json({
+
+        posts:
+          posts.map(
+
+            post =>
+              communityPostJson(
+
+                post.id,
+
+                post,
+
+                profili[
+                  post.uidAutore
+                ],
+
+                {
+
+                  mioLike:
+                    mieiLike[
+                      post.id
+                    ] === true,
+
+                  salvato:
+                    mieiSalvati[
+                      post.id
+                    ] === true,
+
+                  puoEliminare:
+                    !!(
+                      mioUid &&
+                      (
+                        post.uidAutore ===
+                          mioUid
+                        ||
+                        mioRuolo ===
+                          "admin"
+                      )
+                    )
+
+                }
+
+              )
+
+          )
+
+      });
+
+
+    } catch (
+      errore
+    ) {
+
+      console.error(
+        "Errore GET Community:",
+        errore
+      );
+
+
+      res
+        .status(500)
+        .json({
+          errore:
+            "Errore durante il caricamento della Community."
+        });
+
+    }
+
+  }
+);
+
+
+// ============================================================
+// CREA NUOVO POST
+// ============================================================
+
+app.post(
+  "/api/community/posts",
+
+  limiteCommunityPost,
+
+  richiediAuth,
+
+  async (req, res) => {
+
+    if (!db) {
+
+      return res
+        .status(500)
+        .json({
+          errore:
+            "Servizio Community non disponibile."
+        });
+
+    }
+
+
+    try {
+
+      const profilo =
+        await communityUtenteScrittura(
+          req,
+          res
+        );
+
+
+      if (
+        !profilo
+      ) {
+        return;
+      }
+
+
+      const categoria =
+        communityCategoria(
+          req.body?.categoria
+        );
+
+
+      const titolo =
+        pulisciTesto(
+          req.body?.titolo,
+          100
+        );
+
+
+      const testo =
+        pulisciTesto(
+          req.body?.testo,
+          1200
+        );
+
+
+      if (
+        titolo.length < 3
+      ) {
+
+        return res
+          .status(400)
+          .json({
+            errore:
+              "Il titolo deve contenere almeno 3 caratteri."
+          });
+
+      }
+
+
+      if (
+        !testo
+      ) {
+
+        return res
+          .status(400)
+          .json({
+            errore:
+              "Scrivi un messaggio prima di pubblicare."
+          });
+
+      }
+
+
+      const riferimento =
+        db
+          .ref(
+            "community/posts"
+          )
+          .push();
+
+
+      const ora =
+        Date.now();
+
+
+      const post = {
+
+        uidAutore:
+          req.utente.uid,
+
+        nicknameAutore:
+          profilo.nickname,
+
+        ruoloAutore:
+          profilo.ruolo,
+
+        categoria,
+
+        titolo,
+
+        testo,
+
+        creatoIl:
+          ora,
+
+        aggiornatoIl:
+          ora,
+
+        conteggioReazioni:
+          0,
+
+        conteggioCommenti:
+          0,
+
+        conteggioCondivisioni:
+          0
+
+      };
+
+
+      await riferimento.set(
+        post
+      );
+
+
+      res
+        .status(201)
+        .json({
+
+          ok:
+            true,
+
+          post:
+            communityPostJson(
+              riferimento.key,
+              post,
+              profilo,
+              {
+                puoEliminare:
+                  true
+              }
+            )
+
+        });
+
+
+    } catch (
+      errore
+    ) {
+
+      console.error(
+        "Errore creazione post Community:",
+        errore
+      );
+
+
+      res
+        .status(500)
+        .json({
+          errore:
+            "Errore durante la pubblicazione del post."
+        });
+
+    }
+
+  }
+);
+
+
+// ============================================================
+// ELIMINA POST
+// Autore del post oppure amministratore
+// ============================================================
+
+app.delete(
+  "/api/community/posts/:postId",
+
+  limiteCommunityAzioni,
+
+  richiediAuth,
+
+  async (req, res) => {
+
+    if (!db) {
+
+      return res
+        .status(500)
+        .json({
+          errore:
+            "Servizio Community non disponibile."
+        });
+
+    }
+
+
+    try {
+
+      const profilo =
+        await communityUtenteScrittura(
+          req,
+          res
+        );
+
+
+      if (
+        !profilo
+      ) {
+        return;
+      }
+
+
+      const postId =
+        communityId(
+          req.params.postId
+        );
+
+
+      if (
+        !postId
+      ) {
+
+        return res
+          .status(400)
+          .json({
+            errore:
+              "ID post non valido."
+          });
+
+      }
+
+
+      const riferimentoPost =
+        db.ref(
+          "community/posts/" +
+          postId
+        );
+
+
+      const post =
+        (
+          await riferimentoPost
+            .once(
+              "value"
+            )
+        ).val();
+
+
+      if (
+        !post
+      ) {
+
+        return res
+          .status(404)
+          .json({
+            errore:
+              "Post non trovato."
+          });
+
+      }
+
+
+      if (
+        post.uidAutore !==
+          req.utente.uid
+        &&
+        profilo.ruolo !==
+          "admin"
+      ) {
+
+        return res
+          .status(403)
+          .json({
+            errore:
+              "Non puoi eliminare questo post."
+          });
+
+      }
+
+
+      const [
+        snapshotReazioni,
+        snapshotSalvati
+      ] =
+        await Promise.all([
+
+          db
+            .ref(
+              "community/reazioni/" +
+              postId
+            )
+            .once(
+              "value"
+            ),
+
+          db
+            .ref(
+              "community/salvatiPost/" +
+              postId
+            )
+            .once(
+              "value"
+            )
+
+        ]);
+
+
+      const aggiornamenti = {
+
+        [
+          "community/posts/" +
+          postId
+        ]:
+          null,
+
+        [
+          "community/commenti/" +
+          postId
+        ]:
+          null,
+
+        [
+          "community/reazioni/" +
+          postId
+        ]:
+          null,
+
+        [
+          "community/condivisioni/" +
+          postId
+        ]:
+          null,
+
+        [
+          "community/segnalazioni/" +
+          postId
+        ]:
+          null,
+
+        [
+          "community/salvatiPost/" +
+          postId
+        ]:
+          null
+
+      };
+
+
+      Object.keys(
+        snapshotReazioni.val() ||
+        {}
+      ).forEach(
+        uid => {
+
+          aggiornamenti[
+            `community/reazioniUtente/${uid}/${postId}`
+          ] =
+            null;
+
+        }
+      );
+
+
+      Object.keys(
+        snapshotSalvati.val() ||
+        {}
+      ).forEach(
+        uid => {
+
+          aggiornamenti[
+            `community/salvati/${uid}/${postId}`
+          ] =
+            null;
+
+        }
+      );
+
+
+      await db
+        .ref()
+        .update(
+          aggiornamenti
+        );
+
+
+      res.json({
+        ok:
+          true
+      });
+
+
+    } catch (
+      errore
+    ) {
+
+      console.error(
+        "Errore eliminazione post Community:",
+        errore
+      );
+
+
+      res
+        .status(500)
+        .json({
+          errore:
+            "Errore durante l'eliminazione del post."
+        });
+
+    }
+
+  }
+);
+
+
+// ============================================================
+// LIKE / TOGLI LIKE
+// ============================================================
+
+app.post(
+  "/api/community/posts/:postId/reazione",
+
+  limiteCommunityAzioni,
+
+  richiediAuth,
+
+  async (req, res) => {
+
+    if (!db) {
+
+      return res
+        .status(500)
+        .json({
+          errore:
+            "Servizio Community non disponibile."
+        });
+
+    }
+
+
+    try {
+
+      const profilo =
+        await communityUtenteScrittura(
+          req,
+          res
+        );
+
+
+      if (
+        !profilo
+      ) {
+        return;
+      }
+
+
+      const postId =
+        communityId(
+          req.params.postId
+        );
+
+
+      const riferimentoPost =
+        db.ref(
+          "community/posts/" +
+          postId
+        );
+
+
+      if (
+        !(
+          await riferimentoPost
+            .once(
+              "value"
+            )
+        ).exists()
+      ) {
+
+        return res
+          .status(404)
+          .json({
+            errore:
+              "Post non trovato."
+          });
+
+      }
+
+
+      const riferimentoLike =
+        db.ref(
+          `community/reazioni/${postId}/${req.utente.uid}`
+        );
+
+
+      const transazione =
+        await riferimentoLike
+          .transaction(
+            valore =>
+              valore === true
+                ? null
+                : true
+          );
+
+
+      const attiva =
+        transazione
+          .snapshot
+          .val() ===
+        true;
+
+
+      await db
+        .ref(
+          `community/reazioniUtente/${req.utente.uid}/${postId}`
+        )
+        .set(
+          attiva
+            ? true
+            : null
+        );
+
+
+      const conteggio =
+        await communityAggiornaContatore(
+
+          riferimentoPost.child(
+            "conteggioReazioni"
+          ),
+
+          attiva
+            ? 1
+            : -1
+
+        );
+
+
+      res.json({
+
+        ok:
+          true,
+
+        attiva,
+
+        conteggio
+
+      });
+
+
+    } catch (
+      errore
+    ) {
+
+      console.error(
+        "Errore reazione Community:",
+        errore
+      );
+
+
+      res
+        .status(500)
+        .json({
+          errore:
+            "Errore durante l'aggiornamento della reazione."
+        });
+
+    }
+
+  }
+);
+
+
+// ============================================================
+// SALVA / RIMUOVI POST SALVATO
+// ============================================================
+
+app.post(
+  "/api/community/posts/:postId/salva",
+
+  limiteCommunityAzioni,
+
+  richiediAuth,
+
+  async (req, res) => {
+
+    if (!db) {
+
+      return res
+        .status(500)
+        .json({
+          errore:
+            "Servizio Community non disponibile."
+        });
+
+    }
+
+
+    try {
+
+      const profilo =
+        await communityUtenteScrittura(
+          req,
+          res
+        );
+
+
+      if (
+        !profilo
+      ) {
+        return;
+      }
+
+
+      const postId =
+        communityId(
+          req.params.postId
+        );
+
+
+      const esiste =
+        (
+          await db
+            .ref(
+              "community/posts/" +
+              postId
+            )
+            .once(
+              "value"
+            )
+        ).exists();
+
+
+      if (
+        !esiste
+      ) {
+
+        return res
+          .status(404)
+          .json({
+            errore:
+              "Post non trovato."
+          });
+
+      }
+
+
+      const riferimento =
+        db.ref(
+          `community/salvati/${req.utente.uid}/${postId}`
+        );
+
+
+      const transazione =
+        await riferimento
+          .transaction(
+            valore =>
+              valore === true
+                ? null
+                : true
+          );
+
+
+      const salvato =
+        transazione
+          .snapshot
+          .val() ===
+        true;
+
+
+      await db
+        .ref(
+          `community/salvatiPost/${postId}/${req.utente.uid}`
+        )
+        .set(
+          salvato
+            ? true
+            : null
+        );
+
+
+      res.json({
+
+        ok:
+          true,
+
+        salvato
+
+      });
+
+
+    } catch (
+      errore
+    ) {
+
+      console.error(
+        "Errore salvataggio Community:",
+        errore
+      );
+
+
+      res
+        .status(500)
+        .json({
+          errore:
+            "Errore durante il salvataggio del post."
+        });
+
+    }
+
+  }
+);
+
+
+// ============================================================
+// CARICA COMMENTI DI UN POST
+// ============================================================
+
+app.get(
+  "/api/community/posts/:postId/commenti",
+
+  async (req, res) => {
+
+    if (!db) {
+
+      return res
+        .status(500)
+        .json({
+          errore:
+            "Servizio Community non disponibile."
+        });
+
+    }
+
+
+    try {
+
+      const postId =
+        communityId(
+          req.params.postId
+        );
+
+
+      const postEsiste =
+        (
+          await db
+            .ref(
+              "community/posts/" +
+              postId
+            )
+            .once(
+              "value"
+            )
+        ).exists();
+
+
+      if (
+        !postEsiste
+      ) {
+
+        return res
+          .status(404)
+          .json({
+            errore:
+              "Post non trovato."
+          });
+
+      }
+
+
+      const token =
+        verificaToken(
+          estraiTokenHeader(req)
+        );
+
+
+      const mioUid =
+        token?.uid ||
+        null;
+
+
+      const mioRuolo =
+        token?.ruolo ||
+        "utente";
+
+
+      const snapshot =
+        await db
+          .ref(
+            "community/commenti/" +
+            postId
+          )
+          .orderByChild(
+            "creatoIl"
+          )
+          .limitToLast(
+            100
+          )
+          .once(
+            "value"
+          );
+
+
+      const commenti =
+        Object.entries(
+          snapshot.val() ||
+          {}
+        )
+          .map(
+            ([id, commento]) => ({
+              id,
+              ...commento
+            })
+          )
+          .sort(
+            (a, b) =>
+              Number(
+                a.creatoIl ||
+                0
+              ) -
+              Number(
+                b.creatoIl ||
+                0
+              )
+          );
+
+
+      const autori =
+        [
+          ...new Set(
+            commenti
+              .map(
+                commento =>
+                  commento.uidAutore
+              )
+              .filter(
+                Boolean
+              )
+          )
+        ];
+
+
+      const profili =
+        {};
+
+
+      await Promise.all(
+
+        autori.map(
+
+          async uid => {
+
+            try {
+
+              profili[uid] =
+                await communityProfilo(
+                  uid
+                );
+
+            } catch (
+              errore
+            ) {
+
+              profili[uid] =
+                null;
+
+            }
+
+          }
+
+        )
+
+      );
+
+
+      res.json({
+
+        commenti:
+          commenti.map(
+            commento => ({
+
+              id:
+                commento.id,
+
+              uidAutore:
+                commento.uidAutore ||
+                null,
+
+              nicknameAutore:
+                profili[
+                  commento.uidAutore
+                ]?.nickname ||
+                commento.nicknameAutore ||
+                "Giocatore",
+
+              avatarAutore:
+                profili[
+                  commento.uidAutore
+                ]?.avatar ||
+                null,
+
+              testo:
+                String(
+                  commento.testo ||
+                  ""
+                ),
+
+              creatoIl:
+                Number(
+                  commento.creatoIl ||
+                  0
+                ),
+
+              puoEliminare:
+                !!(
+                  mioUid &&
+                  (
+                    commento.uidAutore ===
+                      mioUid
+                    ||
+                    mioRuolo ===
+                      "admin"
+                  )
+                )
+
+            })
+          )
+
+      });
+
+
+    } catch (
+      errore
+    ) {
+
+      console.error(
+        "Errore caricamento commenti Community:",
+        errore
+      );
+
+
+      res
+        .status(500)
+        .json({
+          errore:
+            "Errore durante il caricamento dei commenti."
+        });
+
+    }
+
+  }
+);
+
+
+// ============================================================
+// CREA COMMENTO
+// ============================================================
+
+app.post(
+  "/api/community/posts/:postId/commenti",
+
+  limiteCommunityCommenti,
+
+  richiediAuth,
+
+  async (req, res) => {
+
+    if (!db) {
+
+      return res
+        .status(500)
+        .json({
+          errore:
+            "Servizio Community non disponibile."
+        });
+
+    }
+
+
+    try {
+
+      const profilo =
+        await communityUtenteScrittura(
+          req,
+          res
+        );
+
+
+      if (
+        !profilo
+      ) {
+        return;
+      }
+
+
+      const postId =
+        communityId(
+          req.params.postId
+        );
+
+
+      const testo =
+        pulisciTesto(
+          req.body?.testo,
+          600
+        );
+
+
+      if (
+        !testo
+      ) {
+
+        return res
+          .status(400)
+          .json({
+            errore:
+              "Scrivi un commento prima di inviare."
+          });
+
+      }
+
+
+      const riferimentoPost =
+        db.ref(
+          "community/posts/" +
+          postId
+        );
+
+
+      const post =
+        (
+          await riferimentoPost
+            .once(
+              "value"
+            )
+        ).val();
+
+
+      if (
+        !post
+      ) {
+
+        return res
+          .status(404)
+          .json({
+            errore:
+              "Post non trovato."
+          });
+
+      }
+
+
+      const riferimentoCommento =
+        db
+          .ref(
+            "community/commenti/" +
+            postId
+          )
+          .push();
+
+
+      const ora =
+        Date.now();
+
+
+      const commento = {
+
+        uidAutore:
+          req.utente.uid,
+
+        nicknameAutore:
+          profilo.nickname,
+
+        testo,
+
+        creatoIl:
+          ora
+
+      };
+
+
+      await riferimentoCommento.set(
+        commento
+      );
+
+
+      const conteggio =
+        await communityAggiornaContatore(
+
+          riferimentoPost.child(
+            "conteggioCommenti"
+          ),
+
+          1
+
+        );
+
+
+      // Notifica l'autore del post.
+      // Se la notifica fallisce, il commento rimane comunque valido.
+
+      if (
+        post.uidAutore &&
+        post.uidAutore !==
+          req.utente.uid
+      ) {
+
+        try {
+
+          await db
+            .ref(
+              `utenti/${post.uidAutore}/notifiche`
+            )
+            .push({
+
+              tipo:
+                "commentoCommunity",
+
+              testo:
+                `${profilo.nickname} ha commentato il tuo post nella Community`,
+
+              data:
+                ora,
+
+              letta:
+                false,
+
+              daUid:
+                req.utente.uid,
+
+              daNome:
+                profilo.nickname,
+
+              postId
+
+            });
+
+
+        } catch (
+          erroreNotifica
+        ) {
+
+          console.warn(
+            "Notifica commento Community non inviata:",
+            erroreNotifica.message
+          );
+
+        }
+
+      }
+
+
+      res
+        .status(201)
+        .json({
+
+          ok:
+            true,
+
+          conteggio,
+
+          commento: {
+
+            id:
+              riferimentoCommento.key,
+
+            uidAutore:
+              req.utente.uid,
+
+            nicknameAutore:
+              profilo.nickname,
+
+            avatarAutore:
+              profilo.avatar,
+
+            testo,
+
+            creatoIl:
+              ora,
+
+            puoEliminare:
+              true
+
+          }
+
+        });
+
+
+    } catch (
+      errore
+    ) {
+
+      console.error(
+        "Errore nuovo commento Community:",
+        errore
+      );
+
+
+      res
+        .status(500)
+        .json({
+          errore:
+            "Errore durante la pubblicazione del commento."
+        });
+
+    }
+
+  }
+);
+
+
+// ============================================================
+// ELIMINA COMMENTO
+// ============================================================
+
+app.delete(
+  "/api/community/posts/:postId/commenti/:commentoId",
+
+  limiteCommunityAzioni,
+
+  richiediAuth,
+
+  async (req, res) => {
+
+    if (!db) {
+
+      return res
+        .status(500)
+        .json({
+          errore:
+            "Servizio Community non disponibile."
+        });
+
+    }
+
+
+    try {
+
+      const profilo =
+        await communityUtenteScrittura(
+          req,
+          res
+        );
+
+
+      if (
+        !profilo
+      ) {
+        return;
+      }
+
+
+      const postId =
+        communityId(
+          req.params.postId
+        );
+
+
+      const commentoId =
+        communityId(
+          req.params.commentoId
+        );
+
+
+      const riferimento =
+        db.ref(
+          `community/commenti/${postId}/${commentoId}`
+        );
+
+
+      const commento =
+        (
+          await riferimento
+            .once(
+              "value"
+            )
+        ).val();
+
+
+      if (
+        !commento
+      ) {
+
+        return res
+          .status(404)
+          .json({
+            errore:
+              "Commento non trovato."
+          });
+
+      }
+
+
+      if (
+        commento.uidAutore !==
+          req.utente.uid
+        &&
+        profilo.ruolo !==
+          "admin"
+      ) {
+
+        return res
+          .status(403)
+          .json({
+            errore:
+              "Non puoi eliminare questo commento."
+          });
+
+      }
+
+
+      await riferimento.remove();
+
+
+      const conteggio =
+        await communityAggiornaContatore(
+
+          db.ref(
+            `community/posts/${postId}/conteggioCommenti`
+          ),
+
+          -1
+
+        );
+
+
+      res.json({
+
+        ok:
+          true,
+
+        conteggio
+
+      });
+
+
+    } catch (
+      errore
+    ) {
+
+      console.error(
+        "Errore eliminazione commento Community:",
+        errore
+      );
+
+
+      res
+        .status(500)
+        .json({
+          errore:
+            "Errore durante l'eliminazione del commento."
+        });
+
+    }
+
+  }
+);
+
+
+// ============================================================
+// REGISTRA CONDIVISIONE
+// Una condivisione conteggiata una sola volta per account
+// ============================================================
+
+app.post(
+  "/api/community/posts/:postId/condivisione",
+
+  limiteCommunityAzioni,
+
+  richiediAuth,
+
+  async (req, res) => {
+
+    if (!db) {
+
+      return res
+        .status(500)
+        .json({
+          errore:
+            "Servizio Community non disponibile."
+        });
+
+    }
+
+
+    try {
+
+      const profilo =
+        await communityUtenteScrittura(
+          req,
+          res
+        );
+
+
+      if (
+        !profilo
+      ) {
+        return;
+      }
+
+
+      const postId =
+        communityId(
+          req.params.postId
+        );
+
+
+      const riferimentoPost =
+        db.ref(
+          "community/posts/" +
+          postId
+        );
+
+
+      const post =
+        (
+          await riferimentoPost
+            .once(
+              "value"
+            )
+        ).val();
+
+
+      if (
+        !post
+      ) {
+
+        return res
+          .status(404)
+          .json({
+            errore:
+              "Post non trovato."
+          });
+
+      }
+
+
+      const riferimento =
+        db.ref(
+          `community/condivisioni/${postId}/${req.utente.uid}`
+        );
+
+
+      const giaCondiviso =
+        (
+          await riferimento
+            .once(
+              "value"
+            )
+        ).val() ===
+        true;
+
+
+      let conteggio =
+        communityNumero(
+          post.conteggioCondivisioni
+        );
+
+
+      if (
+        !giaCondiviso
+      ) {
+
+        await riferimento.set(
+          true
+        );
+
+
+        conteggio =
+          await communityAggiornaContatore(
+
+            riferimentoPost.child(
+              "conteggioCondivisioni"
+            ),
+
+            1
+
+          );
+
+      }
+
+
+      res.json({
+
+        ok:
+          true,
+
+        conteggio
+
+      });
+
+
+    } catch (
+      errore
+    ) {
+
+      console.error(
+        "Errore condivisione Community:",
+        errore
+      );
+
+
+      res
+        .status(500)
+        .json({
+          errore:
+            "Errore durante la registrazione della condivisione."
+        });
+
+    }
+
+  }
+);
+
+
+// ============================================================
+// SEGNALA POST
+// ============================================================
+
+app.post(
+  "/api/community/posts/:postId/segnala",
+
+  limiteCommunityAzioni,
+
+  richiediAuth,
+
+  async (req, res) => {
+
+    if (!db) {
+
+      return res
+        .status(500)
+        .json({
+          errore:
+            "Servizio Community non disponibile."
+        });
+
+    }
+
+
+    try {
+
+      const profilo =
+        await communityUtenteScrittura(
+          req,
+          res
+        );
+
+
+      if (
+        !profilo
+      ) {
+        return;
+      }
+
+
+      const postId =
+        communityId(
+          req.params.postId
+        );
+
+
+      const motivo =
+        pulisciTesto(
+          req.body?.motivo,
+          300
+        );
+
+
+      if (
+        !motivo
+      ) {
+
+        return res
+          .status(400)
+          .json({
+            errore:
+              "Inserisci il motivo della segnalazione."
+          });
+
+      }
+
+
+      const post =
+        (
+          await db
+            .ref(
+              "community/posts/" +
+              postId
+            )
+            .once(
+              "value"
+            )
+        ).val();
+
+
+      if (
+        !post
+      ) {
+
+        return res
+          .status(404)
+          .json({
+            errore:
+              "Post non trovato."
+          });
+
+      }
+
+
+      if (
+        post.uidAutore ===
+        req.utente.uid
+      ) {
+
+        return res
+          .status(400)
+          .json({
+            errore:
+              "Non puoi segnalare un tuo post."
+          });
+
+      }
+
+
+      await db
+        .ref(
+          `community/segnalazioni/${postId}/${req.utente.uid}`
+        )
+        .set({
+
+          uid:
+            req.utente.uid,
+
+          nickname:
+            profilo.nickname,
+
+          motivo,
+
+          data:
+            Date.now()
+
+        });
+
+
+      res.json({
+        ok:
+          true
+      });
+
+
+    } catch (
+      errore
+    ) {
+
+      console.error(
+        "Errore segnalazione Community:",
+        errore
+      );
+
+
+      res
+        .status(500)
+        .json({
+          errore:
+            "Errore durante l'invio della segnalazione."
+        });
+
+    }
+
+  }
+);
 
 app.post("/api/contatti", limiteContatti, async (req, res) => {
   if (!db) return res.status(500).json({ errore: "Servizio non disponibile al momento." });
