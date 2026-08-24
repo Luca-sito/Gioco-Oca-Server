@@ -50,11 +50,6 @@ let versioneAnimazioneStato = 0;
 const animazioniPedineAttive = new Map();
 let chatPartitaAttiva = true;
 
-// Evita che il server attivi visivamente il turno successivo mentre la pedina
-// sta ancora completando l'ultimo saltello.
-let mossaVisualeInCorso = false;
-let statoPartitaAccodato = null;
-
 let faseAttuale = "normale";
 let possoTirareIoInDeterminazione = false;
 
@@ -310,23 +305,13 @@ function aggiornaLayoutTabellone() {
   mondo.style.width = larghezzaCanvas + "px";
   mondo.style.height = altezzaCanvas + "px";
 
-  // Smartphone: nessun margine artificiale attorno al tabellone.
-  // La dimensione viene ricavata dal viewport reale del dispositivo, quindi
-  // resta adattiva su telefoni con rapporti d'aspetto diversi.
-  const eSmartphone =
-    !document.body.classList.contains("modalita-desktop") &&
-    Math.min(larghezzaFinestra, altezzaReale) <= 600;
-
-  const margineOrizzontale = eSmartphone
-    ? 0
-    : Math.max(16, larghezzaCanvas * 0.03);
-
-  const margineVerticale = eSmartphone
-    ? 0
-    : Math.max(16, altezzaCanvas * 0.06);
-
-  let larghezzaDisponibile = larghezzaCanvas - margineOrizzontale * 2;
-  const altezzaDisponibile = altezzaCanvas - margineVerticale * 2;
+  // Su telefono/tablet il tabellone usa praticamente tutto il viewport:
+  // 1 solo pixel di margine reale per lato. Su desktop manteniamo i margini originali.
+  const layoutMobile = !document.body.classList.contains("modalita-desktop");
+  const margineOrizzontale = layoutMobile ? 1 : Math.max(16, larghezzaCanvas * 0.03);
+  const margineVerticale = layoutMobile ? 1 : Math.max(16, altezzaCanvas * 0.06);
+  let larghezzaDisponibile = Math.max(1, larghezzaCanvas - margineOrizzontale * 2);
+  const altezzaDisponibile = Math.max(1, altezzaCanvas - margineVerticale * 2);
 
   if (videoDesktopAttivo) {
     const larghezzaColonnaDesiderata = Math.min(380, Math.max(180, larghezzaCanvas * 0.2));
@@ -1109,20 +1094,43 @@ function ottieniOCreaPedina(idGiocatore, colore, indice) {
   }
   return pedina;
 }
-function animaSaltoPedina(idGiocatore, percorso, callback, tokenAnimazione) {
-  if (!percorso || percorso.length === 0) { if (callback) callback(); return; }
+function animaSaltoPedina(idGiocatore, percorso, callback, tokenAnimazione, eventiPercorso) {
+  if (!percorso || percorso.length === 0) {
+    if (callback) callback();
+    return;
+  }
+
   const indice = ultimoStatoGiocatori.findIndex(g => g.id === idGiocatore);
   const colore = coloriGiocatori[(indice >= 0 ? indice : 0) % coloriGiocatori.length];
   const pedina = ottieniOCreaPedina(idGiocatore, colore, indice >= 0 ? indice : 0);
+
   if (animazioniPedineAttive.has(idGiocatore)) {
     const statoCorrente = ultimoStatoGiocatori.find(g => g.id === idGiocatore);
     if (statoCorrente) posizionaPedina(pedina, statoCorrente.posizione);
   }
+
   const tokenPedina = Symbol("animazione-pedina");
   animazioniPedineAttive.set(idGiocatore, tokenPedina);
+
+  // Gli eventi delle caselle speciali arrivano dal server con l'indice esatto
+  // del passo. In questo modo il testo NON compare appena escono i dadi:
+  // viene mostrato solo quando la pedina ha materialmente raggiunto la casella.
+  const eventiPerPasso = new Map();
+  if (Array.isArray(eventiPercorso)) {
+    eventiPercorso.forEach(evento => {
+      const indicePasso = Number(evento && evento.indicePasso);
+      const messaggio = evento && typeof evento.messaggio === "string" ? evento.messaggio.trim() : "";
+      if (!Number.isInteger(indicePasso) || indicePasso < 0 || !messaggio) return;
+      if (!eventiPerPasso.has(indicePasso)) eventiPerPasso.set(indicePasso, []);
+      eventiPerPasso.get(indicePasso).push(messaggio);
+    });
+  }
+
   let passo = 0;
+
   function saltaProssimo() {
     if (animazioniPedineAttive.get(idGiocatore) !== tokenPedina) return;
+
     if (passo >= percorso.length) {
       animazioniPedineAttive.delete(idGiocatore);
       const statoFinale = ultimoStatoGiocatori.find(g => g.id === idGiocatore);
@@ -1130,41 +1138,38 @@ function animaSaltoPedina(idGiocatore, percorso, callback, tokenAnimazione) {
       if (callback) callback();
       return;
     }
-    const casella = percorso[passo];
+
+    const indicePassoCorrente = passo;
+    const casella = percorso[indicePassoCorrente];
+
     pedina.classList.add("pedina-salta");
     posizionaPedina(pedina, casella);
     suonaPassoPedina();
+
     const et = document.getElementById("casella-" + idGiocatore);
-    if (et && (tokenAnimazione == null || tokenAnimazione === versioneAnimazioneStato)) et.textContent = casella;
+    if (et && (tokenAnimazione == null || tokenAnimazione === versioneAnimazioneStato)) {
+      et.textContent = casella;
+    }
+
     const pulisciSalto = () => pedina.classList.remove("pedina-salta");
     pedina.addEventListener("animationend", pulisciSalto, { once: true });
+
+    const messaggiPasso = eventiPerPasso.get(indicePassoCorrente);
+    if (messaggiPasso && messaggiPasso.length) {
+      // La transizione left/top dura 0,22 s; mostriamo il testo poco prima
+      // del passo successivo (260 ms), cioè quando la pedina è arrivata.
+      setTimeout(() => {
+        if (animazioniPedineAttive.get(idGiocatore) !== tokenPedina) return;
+        if (tokenAnimazione != null && tokenAnimazione !== versioneAnimazioneStato) return;
+        mostraMessaggioGiocoGrande(messaggiPasso.join(" "));
+      }, Math.max(0, DURATA_SALTO_MS - 35));
+    }
+
     passo++;
     setTimeout(saltaProssimo, DURATA_SALTO_MS);
   }
+
   saltaProssimo();
-}
-
-function applicaStatoPartitaQuandoPossibile(dati) {
-  if (mossaVisualeInCorso) {
-    // Teniamo soltanto lo stato più recente: verrà applicato appena finisce
-    // l'animazione della pedina.
-    statoPartitaAccodato = dati;
-    return;
-  }
-  gestisciStatoPartita(dati);
-}
-
-function terminaMossaVisualeEApplicaStatoAccodato() {
-  mossaVisualeInCorso = false;
-
-  if (!statoPartitaAccodato) return;
-
-  const stato = statoPartitaAccodato;
-  statoPartitaAccodato = null;
-
-  // Un microtask separato evita di sovrapporre il rendering dell'ultimo salto
-  // con l'aggiornamento del turno.
-  setTimeout(() => gestisciStatoPartita(stato), 0);
 }
 
 function gestisciStatoPartita(dati) {
@@ -1203,22 +1208,43 @@ function gestisciStatoPartita(dati) {
 }
 
 function gestisciAggiornamentoPartita(dati) {
-  mossaVisualeInCorso = true;
   const tokenAnimazione = ++versioneAnimazioneStato;
   mioTurno = false;
   turnoAttualeId = null;
   document.getElementById("riga-turno").textContent = "🎲 Mossa in corso…";
   impostaDadiAbilitati(false);
   fermaCountdown(false);
-  document.getElementById("messaggi-gioco").textContent = "🎲 " + dati.dado1 + " + " + dati.dado2 + " = " + dati.valoreDado;
+  document.getElementById("messaggi-gioco").textContent =
+    "🎲 " + dati.dado1 + " + " + dati.dado2 + " = " + dati.valoreDado;
 
   animaLancioDadi(dati.dado1, dati.dado2, () => {
     if (tokenAnimazione !== versioneAnimazioneStato) return;
-    if (Array.isArray(dati.messaggi) && dati.messaggi.length) mostraMessaggioGiocoGrande(dati.messaggi.join(" "));
+
+    // Solo i messaggi che devono davvero comparire subito (per esempio
+    // "tempo scaduto") vengono mostrati dopo il lancio. I messaggi delle
+    // caselle speciali vengono invece gestiti dentro animaSaltoPedina().
+    if (Array.isArray(dati.messaggiImmediati) && dati.messaggiImmediati.length) {
+      mostraMessaggioGiocoGrande(dati.messaggiImmediati.join(" "));
+    }
+
+    const eventiPercorso = Array.isArray(dati.eventiPercorso) ? dati.eventiPercorso : [];
 
     const completa = () => {
       if (tokenAnimazione !== versioneAnimazioneStato) return;
-      ultimoStatoGiocatori = Array.isArray(dati.giocatori) ? dati.giocatori : ultimoStatoGiocatori;
+
+      ultimoStatoGiocatori =
+        Array.isArray(dati.giocatori) ? dati.giocatori : ultimoStatoGiocatori;
+
+      // Compatibilità con un eventuale server vecchio: se non sono arrivati
+      // eventi indicizzati, i vecchi messaggi vengono mostrati SOLO alla fine
+      // del movimento, mai appena terminano di girare i dadi.
+      if (
+        eventiPercorso.length === 0 &&
+        Array.isArray(dati.messaggi) &&
+        dati.messaggi.length
+      ) {
+        mostraMessaggioGiocoGrande(dati.messaggi.join(" "));
+      }
 
       if (dati.vittoria) {
         turnoAttualeId = null;
@@ -1230,20 +1256,30 @@ function gestisciAggiornamentoPartita(dati) {
       } else if (dati.turnoDiId != null) {
         aggiornaTurno(dati.turnoDiId);
         disegnaGiocatori();
+
         if (dati.tempoInizioTurno != null && dati.durataMossaMs != null) {
           avviaCountdownTurno(dati.tempoInizioTurno, dati.durataMossaMs);
         }
       } else {
-        document.getElementById("riga-turno").textContent = "⏳ Preparazione del prossimo turno…";
+        document.getElementById("riga-turno").textContent =
+          "⏳ Preparazione del prossimo turno…";
         impostaDadiAbilitati(false);
         disegnaGiocatori();
       }
-
-      terminaMossaVisualeEApplicaStatoAccodato();
     };
 
-    if (Array.isArray(dati.percorso) && dati.percorso.length && dati.idGiocatoreCheHaTirato) {
-      animaSaltoPedina(dati.idGiocatoreCheHaTirato, dati.percorso, completa, tokenAnimazione);
+    if (
+      Array.isArray(dati.percorso) &&
+      dati.percorso.length &&
+      dati.idGiocatoreCheHaTirato
+    ) {
+      animaSaltoPedina(
+        dati.idGiocatoreCheHaTirato,
+        dati.percorso,
+        completa,
+        tokenAnimazione,
+        eventiPercorso
+      );
     } else {
       completa();
     }
@@ -1396,7 +1432,7 @@ function connetti() {
     if (dati.tipo === "webrtc-answer") { gestisciPromessaWebRtc(gestisciRispostaRicevuta(dati.mittenteUid, dati.sdp)); return; }
     if (dati.tipo === "webrtc-ice-candidate") { gestisciPromessaWebRtc(gestisciCandidatoRicevuto(dati.mittenteUid, dati.candidate)); return; }
 
-    if (dati.tipo === "statoPartita") { applicaStatoPartitaQuandoPossibile(dati); return; }
+    if (dati.tipo === "statoPartita") { gestisciStatoPartita(dati); return; }
     if (dati.tipo === "aggiornamentoPartita") { gestisciAggiornamentoPartita(dati); return; }
     if (dati.tipo === "chatPartita") { aggiungiMessaggioChatPartita(dati.nome, dati.testo); return; }
 
