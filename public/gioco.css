@@ -150,6 +150,512 @@ body.caricamento-in-corso #contenitore-notifiche-gioco {
 
 body.caricamento-in-corso #scena * { pointer-events: none !important; }
 
+
+
+/* =========================================================
+   PRESENTAZIONE SFIDA - PRE PARTITA
+   ========================================================= */
+#overlay-presentazione-sfida {
+  position: fixed;
+  inset: 0;
+  z-index: 940000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding:
+    max(12px, env(safe-area-inset-top))
+    max(12px, env(safe-area-inset-right))
+    max(12px, env(safe-area-inset-bottom))
+    max(12px, env(safe-area-inset-left));
+  background: rgba(5, 10, 15, 0.84);
+  backdrop-filter: blur(8px) saturate(.85);
+  -webkit-backdrop-filter: blur(8px) saturate(.85);
+}
+
+#overlay-presentazione-sfida.aperto {
+  display: flex;
+  animation: sfida-overlay-entra .24s ease both;
+}
+
+#overlay-presentazione-sfida[aria-hidden="true"] { pointer-events: none; }
+
+@keyframes sfida-overlay-entra {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.sfida-card {
+  width: min(760px, 100%);
+  max-height: min(760px, calc(var(--altezza-reale, 100vh) - 24px));
+  overflow: auto;
+  background: #f6f7f8;
+  color: #252a2f;
+  border: 1px solid rgba(255, 215, 0, .42);
+  border-radius: 18px;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, .56);
+  transform-origin: center;
+  animation: sfida-card-entra .3s cubic-bezier(.2,.8,.2,1) both;
+}
+
+@keyframes sfida-card-entra {
+  from { opacity: 0; transform: translateY(14px) scale(.975); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.sfida-header {
+  position: relative;
+  min-height: 118px;
+  padding: 19px 26px 18px;
+  overflow: hidden;
+  text-align: center;
+  color: #fff;
+  background:
+    radial-gradient(circle at 18% 22%, rgba(255,255,255,.17) 0 2px, transparent 3px),
+    radial-gradient(circle at 80% 70%, rgba(255,255,255,.13) 0 3px, transparent 4px),
+    linear-gradient(135deg, #f06a00 0%, #ff8900 48%, #e75b00 100%);
+  border-radius: 17px 17px 0 0;
+}
+
+.sfida-header::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 4px;
+  background: linear-gradient(90deg, rgba(255,255,255,.2), #ffd700, rgba(255,255,255,.2));
+}
+
+.sfida-header-pattern {
+  position: absolute;
+  inset: 0;
+  opacity: .18;
+  background-image:
+    linear-gradient(45deg, transparent 46%, #fff 47% 49%, transparent 50%),
+    linear-gradient(-45deg, transparent 46%, #fff 47% 49%, transparent 50%);
+  background-size: 62px 62px;
+  pointer-events: none;
+}
+
+.sfida-marchio,
+.sfida-header h1,
+.sfida-header p { position: relative; z-index: 1; }
+
+.sfida-marchio {
+  margin-bottom: 4px;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .16em;
+  opacity: .88;
+}
+
+.sfida-header h1 {
+  margin: 0;
+  font-size: clamp(28px, 5vw, 42px);
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: -.035em;
+  text-shadow: 0 3px 14px rgba(91, 31, 0, .28);
+}
+
+.sfida-header p {
+  margin: 9px 0 0;
+  font-size: 14px;
+  font-weight: 700;
+  opacity: .95;
+}
+
+.sfida-corpo {
+  padding: 15px 24px 0;
+  background: linear-gradient(180deg, #fff 0%, #f4f5f6 100%);
+}
+
+.sfida-intestazione-partita {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding-bottom: 12px;
+  text-align: center;
+  border-bottom: 1px solid #d9dde0;
+}
+
+.sfida-intestazione-partita strong {
+  font-size: 17px;
+  font-weight: 950;
+  letter-spacing: .06em;
+}
+
+.sfida-intestazione-partita span {
+  color: #68717a;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.sfida-giocatori {
+  min-height: 250px;
+  padding: 14px 0 16px;
+}
+
+.sfida-caricamento {
+  display: grid;
+  min-height: 220px;
+  place-items: center;
+  color: #6e767d;
+  font-weight: 800;
+}
+
+.sfida-duello {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 96px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.sfida-vs-colonna {
+  display: grid;
+  grid-template-rows: 94px repeat(3, 36px);
+  align-items: center;
+  text-align: center;
+}
+
+.sfida-vs {
+  align-self: center;
+  color: #22282d;
+  font-size: 43px;
+  font-style: italic;
+  font-weight: 1000;
+  letter-spacing: -.11em;
+  transform: skew(-7deg);
+  text-shadow: 0 3px 0 rgba(0,0,0,.08);
+}
+
+.sfida-vs-etichetta {
+  color: #353a40;
+  font-size: 12px;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.sfida-giocatore {
+  min-width: 0;
+}
+
+.sfida-identita {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-height: 94px;
+  padding: 4px 3px 10px;
+}
+
+.sfida-giocatore-destra .sfida-identita {
+  flex-direction: row-reverse;
+  text-align: right;
+}
+
+.sfida-avatar {
+  flex: 0 0 auto;
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 3px solid #fff;
+  border-radius: 12px;
+  background: #b8bec4;
+  color: #fff;
+  font-size: 25px;
+  font-weight: 950;
+  box-shadow: 0 4px 14px rgba(0,0,0,.14);
+}
+
+.sfida-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sfida-nome-wrap { min-width: 0; }
+
+.sfida-nome {
+  overflow: hidden;
+  color: #22272c;
+  font-size: 18px;
+  font-weight: 950;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sfida-stelle {
+  margin-top: 4px;
+  color: #ffb300;
+  font-size: 18px;
+  line-height: 1;
+  letter-spacing: -1px;
+  white-space: nowrap;
+}
+
+.sfida-stelle .vuota { color: #d9dde0; }
+
+.sfida-stat-riga {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 9px;
+  height: 36px;
+}
+
+.sfida-giocatore-destra .sfida-stat-riga {
+  grid-template-columns: auto 1fr;
+}
+
+.sfida-giocatore-destra .sfida-stat-barra { order: 2; }
+.sfida-giocatore-destra .sfida-stat-valore { order: 1; }
+
+.sfida-stat-barra {
+  height: 20px;
+  overflow: hidden;
+  background: #e4e6e8;
+  border-radius: 6px;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.06);
+}
+
+.sfida-stat-riempimento {
+  width: 0;
+  height: 100%;
+  background:
+    repeating-linear-gradient(135deg, rgba(255,255,255,.12) 0 7px, rgba(0,0,0,.05) 7px 14px),
+    #4e5358;
+  border-radius: inherit;
+  transition: width .55s cubic-bezier(.2,.8,.2,1);
+}
+
+.sfida-stat-valore {
+  min-width: 42px;
+  color: #373c41;
+  font-size: 13px;
+  font-weight: 950;
+  font-variant-numeric: tabular-nums;
+}
+
+.sfida-giocatore-destra .sfida-stat-valore { text-align: left; }
+.sfida-giocatore:not(.sfida-giocatore-destra) .sfida-stat-valore { text-align: right; }
+
+.sfida-multi {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 11px;
+}
+
+.sfida-multi-card {
+  min-width: 0;
+  padding: 12px;
+  background: #fff;
+  border: 1px solid #dde1e4;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,.05);
+}
+
+.sfida-multi-card .sfida-identita { min-height: 74px; padding: 0 0 8px; }
+.sfida-multi-card .sfida-avatar { width: 48px; height: 48px; border-radius: 10px; }
+.sfida-multi-card .sfida-nome { font-size: 15px; }
+.sfida-multi-card .sfida-stelle { font-size: 15px; }
+
+.sfida-multi-stat {
+  display: grid;
+  grid-template-columns: 58px 1fr auto;
+  align-items: center;
+  gap: 7px;
+  min-height: 28px;
+  font-size: 11px;
+}
+
+.sfida-multi-stat > span:first-child {
+  color: #6c747b;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.sfida-multi-stat strong { font-variant-numeric: tabular-nums; }
+
+.sfida-entra {
+  position: relative;
+  z-index: 2;
+  display: block;
+  width: calc(100% - 32px);
+  min-height: 52px;
+  margin: 0 auto -22px;
+  padding: 12px 18px;
+  color: #252525;
+  background: linear-gradient(180deg, #ffd96a 0%, #f6c84f 100%);
+  border: 1px solid #e1a92d;
+  border-radius: 8px;
+  font-size: 18px;
+  font-weight: 1000;
+  letter-spacing: .025em;
+  box-shadow: 0 5px 16px rgba(133, 91, 0, .24);
+  cursor: pointer;
+  transition: transform .14s ease, filter .14s ease;
+}
+
+.sfida-entra:hover { filter: brightness(1.035); transform: translateY(-1px); }
+.sfida-entra:active { transform: translateY(1px); }
+
+.sfida-footer {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr;
+  gap: 0;
+  padding: 38px 18px 15px;
+  color: #fff;
+  background: #292b2e;
+  border-radius: 0 0 17px 17px;
+}
+
+.sfida-footer-box {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 64px;
+  padding: 5px 12px;
+  border-right: 1px dashed rgba(255,255,255,.22);
+}
+
+.sfida-footer-box:last-child { border-right: 0; }
+
+.sfida-footer-icona {
+  flex: 0 0 auto;
+  min-width: 48px;
+  height: 45px;
+  display: grid;
+  place-items: center;
+  padding: 0 6px;
+  color: #fff;
+  background: #7d858c;
+  border-radius: 46% 54% 54% 46% / 58% 45% 55% 42%;
+  font-size: 14px;
+  font-weight: 1000;
+  transform: rotate(-4deg);
+}
+
+.sfida-footer-stella {
+  color: #ffd23f;
+  background: transparent;
+  font-size: 48px;
+  line-height: 1;
+}
+
+.sfida-footer-win {
+  color: #fff;
+  background: #169bc0;
+  border: 7px dashed #fff;
+  border-radius: 50%;
+  font-size: 16px;
+  transform: none;
+}
+
+.sfida-footer-testo {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.sfida-footer-testo small {
+  color: #aeb5bb;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .045em;
+  white-space: nowrap;
+}
+
+.sfida-footer-testo > strong,
+.sfida-elo-variazione strong {
+  font-size: 23px;
+  font-weight: 1000;
+  font-variant-numeric: tabular-nums;
+}
+
+.sfida-elo-variazione { display: flex; gap: 9px; }
+.sfida-negativo { color: #ff5c35; }
+.sfida-positivo { color: #75cf46; }
+
+.sfida-stato {
+  padding: 7px 12px 9px;
+  color: #7c858c;
+  background: #f6f7f8;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+@media (max-width: 660px) {
+  #overlay-presentazione-sfida { padding: 8px; }
+  .sfida-card { max-height: calc(var(--altezza-reale, 100vh) - 16px); border-radius: 14px; }
+  .sfida-header { min-height: 94px; padding: 14px 16px 13px; border-radius: 13px 13px 0 0; }
+  .sfida-header h1 { font-size: 28px; }
+  .sfida-header p { margin-top: 6px; font-size: 11px; }
+  .sfida-corpo { padding: 10px 12px 0; }
+  .sfida-intestazione-partita strong { font-size: 14px; }
+  .sfida-intestazione-partita span { font-size: 10px; }
+  .sfida-duello { grid-template-columns: minmax(0, 1fr) 56px minmax(0, 1fr); gap: 5px; }
+  .sfida-vs-colonna { grid-template-rows: 77px repeat(3, 32px); }
+  .sfida-vs { font-size: 30px; }
+  .sfida-vs-etichetta { font-size: 9px; }
+  .sfida-identita { min-height: 77px; gap: 6px; }
+  .sfida-avatar { width: 43px; height: 43px; border-radius: 9px; font-size: 19px; }
+  .sfida-nome { font-size: 13px; }
+  .sfida-stelle { font-size: 13px; }
+  .sfida-stat-riga { height: 32px; gap: 4px; }
+  .sfida-stat-barra { height: 16px; }
+  .sfida-stat-valore { min-width: 33px; font-size: 10px; }
+  .sfida-entra { width: calc(100% - 14px); min-height: 46px; margin-bottom: -19px; font-size: 15px; }
+  .sfida-footer { padding: 33px 8px 10px; }
+  .sfida-footer-box { min-height: 52px; gap: 5px; padding: 3px 5px; }
+  .sfida-footer-icona { min-width: 37px; height: 35px; font-size: 11px; }
+  .sfida-footer-stella { font-size: 35px; }
+  .sfida-footer-win { border-width: 5px; font-size: 12px; }
+  .sfida-footer-testo small { font-size: 7px; }
+  .sfida-footer-testo > strong,
+  .sfida-elo-variazione strong { font-size: 17px; }
+  .sfida-elo-variazione { gap: 5px; }
+  .sfida-multi { gap: 7px; }
+  .sfida-multi-card { padding: 8px; }
+  .sfida-multi-card .sfida-avatar { width: 38px; height: 38px; }
+  .sfida-multi-card .sfida-nome { font-size: 12px; }
+  .sfida-multi-stat { grid-template-columns: 45px 1fr auto; gap: 4px; font-size: 9px; }
+}
+
+@media (orientation: landscape) and (max-height: 600px) {
+  .sfida-card { width: min(680px, 96vw); max-height: calc(var(--altezza-reale, 100vh) - 10px); }
+  .sfida-header { min-height: 66px; padding: 8px 16px 9px; }
+  .sfida-marchio { margin-bottom: 1px; font-size: 8px; }
+  .sfida-header h1 { font-size: 22px; }
+  .sfida-header p { margin-top: 3px; font-size: 9px; }
+  .sfida-corpo { padding-top: 6px; }
+  .sfida-intestazione-partita { padding-bottom: 5px; }
+  .sfida-intestazione-partita span { display: none; }
+  .sfida-giocatori { min-height: 0; padding: 5px 0 7px; }
+  .sfida-duello { grid-template-columns: minmax(0, 1fr) 70px minmax(0, 1fr); }
+  .sfida-vs-colonna { grid-template-rows: 54px repeat(3, 25px); }
+  .sfida-identita { min-height: 54px; padding-bottom: 4px; }
+  .sfida-avatar { width: 38px; height: 38px; }
+  .sfida-nome { font-size: 12px; }
+  .sfida-stelle { margin-top: 2px; font-size: 11px; }
+  .sfida-stat-riga { height: 25px; }
+  .sfida-stat-barra { height: 14px; }
+  .sfida-entra { min-height: 38px; padding: 6px 14px; margin-bottom: -15px; font-size: 13px; }
+  .sfida-footer { padding-top: 25px; padding-bottom: 5px; }
+  .sfida-footer-box { min-height: 39px; }
+  .sfida-footer-icona { min-width: 32px; height: 29px; }
+  .sfida-footer-stella { font-size: 29px; }
+  .sfida-footer-testo > strong,
+  .sfida-elo-variazione strong { font-size: 15px; }
+  .sfida-stato { padding: 3px 8px 4px; font-size: 8px; }
+}
+
+
 /* ===== CONNESSIONE E NOTIFICHE ===== */
 #banner-disconnesso {
   position: fixed;
@@ -1104,5 +1610,263 @@ body.modalita-desktop.media-partita #btn-giocatori {
   .notifica-toast-gioco,
   #flash-messaggio-gioco.aperto span {
     animation: none !important;
+  }
+}
+
+/* =========================================================
+   CORREZIONE TABELLONE + PEDINE SOLO CELLULARE
+========================================================= */
+
+/*
+ * Salto specifico per mobile.
+ * Mantiene la pedina centrata sulla casella anche
+ * durante l'animazione.
+ */
+@keyframes salto-pedina-mobile {
+
+    0% {
+        transform:
+            translate(-50%, -50%)
+            scale(0.58);
+    }
+
+    40% {
+        transform:
+            translate(-50%, -75%)
+            scale(0.64);
+    }
+
+    100% {
+        transform:
+            translate(-50%, -50%)
+            scale(0.58);
+    }
+}
+
+
+/* =========================================================
+   SOLO SMARTPHONE
+========================================================= */
+@media (max-width: 600px) {
+
+    /* =====================================================
+       TABELLONE PIÙ GRANDE
+       ===================================================== */
+
+    body.modalita-ruotata #area-tabellone {
+
+        /*
+         * Ingrandisce tutto il tabellone mantenendo
+         * esattamente le sue proporzioni.
+         *
+         * 1.10 = +10%
+         */
+        transform: scale(1.10);
+
+        transform-origin:
+            center center;
+
+        /*
+         * Nessun margine aggiuntivo.
+         */
+        margin: 0;
+
+        padding: 0;
+    }
+
+
+    /* =====================================================
+       IMMAGINE TABELLONE
+       ===================================================== */
+
+    body.modalita-ruotata #immagine-tabellone {
+
+        width: 100%;
+        height: 100%;
+
+        /*
+         * Angoli molto meno arrotondati:
+         * visivamente il tabellone sfrutta più spazio.
+         */
+        border-radius: 4px;
+
+        /*
+         * Ombra ridotta, così non dà l'impressione
+         * di avere grossi margini.
+         */
+        box-shadow:
+            0 4px 14px
+            rgba(0, 0, 0, 0.45);
+    }
+
+
+    /* =====================================================
+       CONTENITORE PEDINE
+       ===================================================== */
+
+    body.modalita-ruotata #contenitore-pedine {
+
+        position: absolute;
+
+        top: 0;
+        left: 0;
+
+        width: 100%;
+        height: 100%;
+
+        /*
+         * Garantisce che una pedina non possa essere
+         * disegnata visivamente fuori dal tabellone.
+         */
+        overflow: hidden;
+
+        border-radius: 4px;
+
+        pointer-events: none;
+    }
+
+
+    /* =====================================================
+       PEDINE PIÙ PICCOLE E CENTRATE
+       ===================================================== */
+
+    body.modalita-ruotata .pedina {
+
+        /*
+         * PRIMA:
+         *
+         * translate(-50%, -100%)
+         *
+         * significava che la coordinata della casella
+         * corrispondeva alla parte bassa della pedina.
+         *
+         * ORA:
+         *
+         * translate(-50%, -50%)
+         *
+         * il CENTRO della pedina coincide con il CENTRO
+         * della casella.
+         */
+
+        transform:
+            translate(-50%, -50%)
+            scale(0.58);
+
+        transform-origin:
+            center center;
+
+        /*
+         * Manteniamo fluido lo spostamento.
+         */
+        transition:
+            left 0.5s ease,
+            top 0.5s ease;
+
+        /*
+         * Pedine sempre sopra all'immagine.
+         */
+        z-index: 5;
+    }
+
+
+    /* =====================================================
+       ANIMAZIONE SALTO MOBILE
+       ===================================================== */
+
+    body.modalita-ruotata .pedina-salta {
+
+        animation:
+            salto-pedina-mobile
+            0.32s
+            ease;
+    }
+
+}
+
+/* =========================================================
+   MEDIA ROBUSTI - CONTROLLI LOCALI E MOBILE
+========================================================= */
+#controlli-media-locale {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  margin: 0 0 7px;
+}
+
+#controlli-media-locale button {
+  min-width: 0;
+  min-height: 32px;
+  margin: 0;
+  padding: 5px 6px;
+  color: #fff;
+  background: rgba(255,255,255,.09);
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 7px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.15;
+  cursor: pointer;
+}
+
+#controlli-media-locale button.media-spento {
+  color: #ffd6d6;
+  background: rgba(170, 35, 35, .38);
+  border-color: rgba(255, 110, 110, .42);
+}
+
+body:not(.modalita-desktop) #controlli-media-locale {
+  grid-template-columns: 1fr;
+  gap: 4px;
+  margin-bottom: 5px;
+}
+
+body:not(.modalita-desktop) #controlli-media-locale button {
+  min-height: 27px;
+  padding: 4px 3px;
+  font-size: 8px;
+}
+
+body.modalita-desktop.media-partita #controlli-media-locale {
+  position: absolute;
+  right: 50%;
+  bottom: calc(47px + env(safe-area-inset-bottom));
+  z-index: 4;
+  display: flex;
+  width: max-content;
+  max-width: min(430px, 48vw);
+  margin: 0;
+  transform: translateX(50%);
+  pointer-events: auto;
+}
+
+body.modalita-desktop.media-partita #controlli-media-locale button {
+  min-width: 145px;
+  min-height: 36px;
+  padding: 7px 10px;
+  background: rgba(10, 16, 22, .94);
+  border-color: rgba(255, 215, 0, .28);
+  font-size: 11px;
+}
+
+body.modalita-desktop.media-partita #controlli-media-locale button.media-spento {
+  background: rgba(105, 24, 24, .95);
+  border-color: rgba(255, 110, 110, .45);
+}
+
+body.modalita-desktop.media-partita #btn-sblocca-media {
+  bottom: calc(91px + env(safe-area-inset-bottom));
+}
+
+/* Su mobile il pannello resta sopra alla scena ma non assorbe dimensioni eccessive. */
+@media (max-width: 600px) {
+  body:not(.modalita-desktop) #videochiamata {
+    width: min(108px, calc(100vw - 16px));
+    max-height: min(54vh, calc(var(--altezza-reale, 100vh) - 142px));
+  }
+
+  body:not(.modalita-desktop) #btn-sblocca-media {
+    min-height: 31px;
+    padding: 5px;
+    font-size: 9px;
   }
 }
