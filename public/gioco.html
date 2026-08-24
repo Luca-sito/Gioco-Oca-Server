@@ -21,6 +21,72 @@
   </div>
 </div>
 
+<div
+  id="overlay-presentazione-sfida"
+  class="presentazione-sfida"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="titolo-presentazione-sfida"
+  aria-hidden="true"
+>
+  <section class="sfida-card">
+    <header class="sfida-header">
+      <div class="sfida-header-pattern" aria-hidden="true"></div>
+      <div class="sfida-marchio">GIOCHI SOCIETÀ</div>
+      <h1 id="titolo-presentazione-sfida">GIOCO DELL'OCA</h1>
+      <p>Partita classificata · 63 caselle · ELO attivo</p>
+    </header>
+
+    <div class="sfida-corpo">
+      <div class="sfida-intestazione-partita">
+        <strong>SFIDA ONLINE</strong>
+        <span>Giocatori reali · il risultato modifica il rating ELO</span>
+      </div>
+
+      <div id="sfida-giocatori" class="sfida-giocatori" aria-live="polite">
+        <div class="sfida-caricamento">Caricamento giocatori…</div>
+      </div>
+
+      <button type="button" id="btn-entra-partita" class="sfida-entra">
+        ENTRA IN PARTITA
+      </button>
+    </div>
+
+    <footer class="sfida-footer">
+      <div class="sfida-footer-box">
+        <span class="sfida-footer-icona" aria-hidden="true">ELO</span>
+        <div class="sfida-footer-testo">
+          <small>VARIAZIONE POSSIBILE</small>
+          <div class="sfida-elo-variazione">
+            <strong id="sfida-elo-sconfitta" class="sfida-negativo">−</strong>
+            <strong id="sfida-elo-vittoria" class="sfida-positivo">+</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="sfida-footer-box">
+        <span class="sfida-footer-icona sfida-footer-stella" aria-hidden="true">★</span>
+        <div class="sfida-footer-testo">
+          <small>MIGLIORE SERIE</small>
+          <strong id="sfida-streak">0</strong>
+        </div>
+      </div>
+
+      <div class="sfida-footer-box">
+        <span class="sfida-footer-icona sfida-footer-win" aria-hidden="true">%</span>
+        <div class="sfida-footer-testo">
+          <small>WIN RATE</small>
+          <strong id="sfida-winrate">0%</strong>
+        </div>
+      </div>
+    </footer>
+
+    <div id="sfida-stato" class="sfida-stato" role="status" aria-live="polite">
+      Preparazione confronto…
+    </div>
+  </section>
+</div>
+
 <div id="banner-disconnesso" class="nascosto" role="status" aria-live="assertive">
   Connessione al server interrotta. Nuovo tentativo in corso…
 </div>
@@ -61,18 +127,13 @@
 
   <div id="flash-messaggio-gioco" role="status" aria-live="assertive"><span></span></div>
 
-  <section id="videochiamata" class="nascosto" aria-label="Videochiamata della partita">
-    <div class="videochiamata-intestazione">
-      <strong>🎥 Videochiamata</strong>
-      <span id="stato-media-connessione" role="status" aria-live="polite">Avvio…</span>
-    </div>
     <div id="griglia-video">
       <figure id="video-tile-locale" class="video-tile video-locale">
         <video id="video-locale" autoplay playsinline muted></video>
         <figcaption>Tu</figcaption>
       </figure>
     </div>
-    <button type="button" id="btn-sblocca-media" class="nascosto" onclick="sbloccaRiproduzioneMedia()">🔊 Attiva l'audio</button>
+    <button type="button" id="btn-sblocca-media" class="nascosto" onclick="sbloccaRiproduzioneMedia()">🔊 Attiva l'audio / riprova</button>
   </section>
 
   <div id="overlay-determinazione" class="overlay" role="dialog" aria-modal="true" aria-labelledby="titolo-determinazione">
