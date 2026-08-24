@@ -124,26 +124,24 @@ button:disabled{
 }
 
 
-}
-
-/* ===== MODALITÀ PARTITA ===== */
-
+/* =========================================================
+   MODALITÀ PARTITA
+========================================================= */
 .modalita-partita-box{
     margin-bottom:18px;
 }
-
 .modalita-partita-titolo{
+    margin:0 0 8px;
     font-weight:bold;
-    margin-bottom:8px;
+    color:#111;
 }
-
 .modalita-partita-scelte{
     display:flex;
     gap:8px;
 }
-
 .btn-modalita-partita{
     flex:1;
+    min-height:0;
     margin:0 !important;
     padding:10px !important;
     border:1px solid #ccc !important;
@@ -152,24 +150,34 @@ button:disabled{
     color:#222 !important;
     font-size:14px;
     font-weight:bold;
+    box-shadow:none !important;
+    transform:none !important;
 }
-
 .btn-modalita-partita:hover{
     background:#eee !important;
+    opacity:1 !important;
 }
-
 .btn-modalita-partita.attiva{
-    background:#ff6600 !important;
-    border-color:#ff6600 !important;
-    color:white !important;
+    background:#333 !important;
+    border-color:#333 !important;
+    color:#fff !important;
 }
-
-/* Non mostriamo più icona e spunta */
 .modalita-partita-icona,
 .modalita-partita-check{
-    display:none;
+    display:none !important;
 }
-
+body.tema-scuro .modalita-partita-titolo{
+    color:#fff;
+}
+body.tema-scuro .btn-modalita-partita{
+    background:#333 !important;
+    color:#fff !important;
+    border-color:#555 !important;
+}
+body.tema-scuro .btn-modalita-partita.attiva{
+    background:#111 !important;
+    border-color:#777 !important;
+}
 /* =========================================================
    ELENCO PARTITE
 ========================================================= */
@@ -1225,50 +1233,39 @@ button:disabled{
         box-shadow:0 -2px 8px rgba(0,0,0,.08);
     }
     .chat-mobile-input input{
-    flex:1;
-    width:auto;
-    height:44px;
-
-    margin:0;
-    padding:10px;
-
-    background:#fff;
-    color:#222;
-
-    border:1px solid #ccc;
-    border-radius:4px;
-
-    font-size:15px;
-    outline:none;
+        flex:1;
+        width:auto;
+        height:44px;
+        margin:0;
+        padding:10px;
+        background:#fff;
+        color:#222;
+        border:1px solid #ccc;
+        border-radius:4px;
+        font-size:15px;
+        outline:none;
     }
-
     .chat-mobile-input input:focus{
-    border-color:#999;
+        border-color:#999;
     }
     .chat-mobile-invia{
-    flex-shrink:0;
-    width:90px !important;
-    height:44px !important;
-
-    margin:0 !important;
-    padding:0 14px !important;
-
-    background:#333 !important;
-    color:#fff !important;
-
-    border:1px solid #444 !important;
-    border-radius:4px !important;
-
-    font-size:14px !important;
-    font-weight:bold !important;
-
-    box-shadow:none !important;
-}
-
-.chat-mobile-invia:hover{
-    background:#222 !important;
-    opacity:1 !important;
-}
+        flex-shrink:0;
+        width:90px !important;
+        height:44px !important;
+        margin:0 !important;
+        padding:0 14px !important;
+        background:#333 !important;
+        color:#fff !important;
+        border:1px solid #444 !important;
+        border-radius:4px !important;
+        font-size:14px !important;
+        font-weight:bold !important;
+        box-shadow:none !important;
+    }
+    .chat-mobile-invia:hover{
+        background:#222 !important;
+        opacity:1 !important;
+    }
     /* =====================================================
        PULSANTE CHIUDI MOBILE
     ===================================================== */
@@ -1394,20 +1391,12 @@ button:disabled{
         max-width:none;
         top:10px;
     }
-    #areaCampanella{
-        top:8px;
-        right:8px;
-    }
     #cardInvitoRicevuto{
         top:58px;
         right:8px;
         left:8px;
         width:auto;
         max-width:none;
-    }
-    .pannello-notifiche{
-        width:calc(100vw - 16px);
-        right:-6px;
     }
     .modal-invito-box{
         width:calc(100vw - 24px);
@@ -1514,17 +1503,16 @@ body.tema-scuro .giocatore-online{
    NASCONDI PULSANTE EMOJI SOLO SU CELLULARE
 ========================================================= */
 @media (max-width:600px){
-
+    /* Nasconde i pulsanti emoji soltanto su telefono */
+    button[onclick="apriEmoji()"],
     button[onclick="mostraEmojiMobile()"]{
         display:none !important;
     }
-
 }
 </style>
 </head>
 <body>
 <div id="contenitoreNotifiche" aria-live="polite"></div>
-
 <div id="cardInvitoRicevuto" class="nascosto">
   <div id="testoInvitoRicevuto"></div>
   <div class="invito-bottoni">
@@ -1681,6 +1669,65 @@ let timerRiconnessione = null;
 let sessioneVerificata = false;
 let paginaInUscita = false;
 const URL_SERVER_WS = "wss://gioco-oca-server.onrender.com";
+const CHIAVE_TOKEN_AUTH = "giochiSocietaAuthToken";
+
+function acquisisciTokenAutenticazioneDaUrl() {
+  try {
+    const parametriHash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const token = parametriHash.get("auth_token");
+
+    if (token) {
+      sessionStorage.setItem(CHIAVE_TOKEN_AUTH, token);
+      parametriHash.delete("auth_token");
+
+      const nuovoHash = parametriHash.toString();
+      const nuovoUrl =
+        window.location.pathname +
+        window.location.search +
+        (nuovoHash ? "#" + nuovoHash : "");
+
+      window.history.replaceState(null, "", nuovoUrl);
+    }
+  } catch (e) {
+    console.warn("Impossibile acquisire il token di autenticazione:", e);
+  }
+}
+
+function ottieniTokenAutenticazione() {
+  try {
+    return sessionStorage.getItem(CHIAVE_TOKEN_AUTH) || "";
+  } catch (e) {
+    return "";
+  }
+}
+
+function cancellaTokenAutenticazione() {
+  try {
+    sessionStorage.removeItem(CHIAVE_TOKEN_AUTH);
+  } catch (e) {}
+}
+
+function headersConAutenticazione(headersIniziali) {
+  const headers = new Headers(headersIniziali || {});
+  const token = ottieniTokenAutenticazione();
+
+  if (token) {
+    headers.set("Authorization", "Bearer " + token);
+  }
+
+  return headers;
+}
+
+function fetchAutenticato(url, opzioni = {}) {
+  return fetch(url, {
+    ...opzioni,
+    credentials: "include",
+    headers: headersConAutenticazione(opzioni.headers)
+  });
+}
+
+acquisisciTokenAutenticazioneDaUrl();
+
 const STANZE_VALIDE = new Set(["BAR", "PUB", "DISCOPUB", "SERATE"]);
 const parametri = new URLSearchParams(window.location.search);
 const stanzaRichiesta = (parametri.get("stanza") || "BAR").toUpperCase();
@@ -2405,23 +2452,39 @@ document.getElementById("contenutoMobile").dataset.vista = "";
 }
 async function verificaSessione() {
   try {
-    const risposta = await fetch("https://gioco-oca-server.onrender.com/api/me", { credentials: "include" });
-    if (!risposta.ok) { window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href); return; }
+    const risposta = await fetchAutenticato(
+      "https://gioco-oca-server.onrender.com/api/me"
+    );
+
+    if (!risposta.ok) {
+      if (risposta.status === 401) cancellaTokenAutenticazione();
+      window.location.href =
+        "login.html?redirect=" + encodeURIComponent(window.location.href);
+      return;
+    }
+
     const dati = await risposta.json();
     mioUid = dati.uid;
     sessioneVerificata = true;
     connetti();
     caricaAmici();
-    caricaNotifiche(false);
   } catch (e) {
     sessioneVerificata = false;
-    window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href);
+    window.location.href =
+      "login.html?redirect=" + encodeURIComponent(window.location.href);
   }
 }
 function vaiAccount() { window.location.href = "account.html"; }
 async function esci() {
   paginaInUscita = true;
-  try { await fetch("https://gioco-oca-server.onrender.com/api/logout", { method: "POST", credentials: "include" }); } catch (e) {}
+  try {
+    await fetchAutenticato(
+      "https://gioco-oca-server.onrender.com/api/logout",
+      { method: "POST" }
+    );
+  } catch (e) {}
+
+  cancellaTokenAutenticazione();
   window.location.href = "login.html";
 }
 function connetti() {
@@ -2439,7 +2502,8 @@ function connetti() {
     }
     connessione.send(JSON.stringify({
       tipo: "entraLobby",
-      stanza: stanza
+      stanza: stanza,
+      token: ottieniTokenAutenticazione() || undefined
     }));
   };
 
@@ -2461,7 +2525,9 @@ function connetti() {
     }
 
     if (dati.tipo === "sessioneScaduta") {
-      window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href);
+      cancellaTokenAutenticazione();
+      window.location.href =
+        "login.html?redirect=" + encodeURIComponent(window.location.href);
       return;
     }
 
@@ -2676,8 +2742,6 @@ function aggiungiMessaggio(uid, nome, testo) {
   const nomePulito = pulisciTestoHtml(nome || "Giocatore");
   const uidPulito = pulisciTestoHtml(uid || "");
 
-  // Io vedo sempre il mio nickname nero.
-  // Gli altri ricevono un colore stabile in base al loro nickname.
   const coloreNickname = sonoIo
     ? "#111111"
     : coloreDaNome(nome);
@@ -2836,7 +2900,7 @@ async function caricaTopGiocatori() {
 // ===== AMICI =====
 async function caricaAmici() {
   try {
-    const r = await fetch("https://gioco-oca-server.onrender.com/api/amici", { credentials: "include" });
+    const r = await fetchAutenticato("https://gioco-oca-server.onrender.com/api/amici");
     if (!r.ok) return;
     const d = await r.json();
     mieiAmiciUid = new Set((d.amici || []).map(a => a.uid));
@@ -3018,7 +3082,7 @@ function chiudiPlayerCardGiocatore() {
 
 async function caricaDatiPlayerCardGiocatore(nomeTarget, idRichiesta) {
   try {
-    const risposta = await fetch("https://gioco-oca-server.onrender.com/api/profilo-pubblico/" + encodeURIComponent(nomeTarget), { credentials: "include" });
+    const risposta = await fetchAutenticato("https://gioco-oca-server.onrender.com/api/profilo-pubblico/" + encodeURIComponent(nomeTarget));
     if (idRichiesta !== richiestaProfiloCorrente) return;
     if (!risposta.ok) {
       document.getElementById("playerCardContenuto").innerHTML = `<div class="player-card-errore">Impossibile caricare la scheda del giocatore.</div>`;
@@ -3189,7 +3253,7 @@ window.addEventListener("scroll", () => {
 
 async function inviaRichiestaAmicizia(destinatarioUid) {
   try {
-    const r = await fetch("https://gioco-oca-server.onrender.com/api/amici/richiedi", {
+    const r = await fetchAutenticato("https://gioco-oca-server.onrender.com/api/amici/richiedi", {
       method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ destinatarioUid })
     });
@@ -3200,7 +3264,7 @@ async function inviaRichiestaAmicizia(destinatarioUid) {
 }
 async function accettaAmicizia(daUid) {
   try {
-    const r = await fetch("https://gioco-oca-server.onrender.com/api/amici/accetta", {
+    const r = await fetchAutenticato("https://gioco-oca-server.onrender.com/api/amici/accetta", {
       method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ daUid })
     });
@@ -3212,7 +3276,7 @@ async function accettaAmicizia(daUid) {
 }
 async function rifiutaAmicizia(daUid) {
   try {
-    const r = await fetch("https://gioco-oca-server.onrender.com/api/amici/rifiuta", {
+    const r = await fetchAutenticato("https://gioco-oca-server.onrender.com/api/amici/rifiuta", {
       method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ daUid })
     });
@@ -3228,7 +3292,7 @@ async function rifiutaAmicizia(daUid) {
 async function rimuoviAmico(altroUid) {
   if (!confirm("Vuoi rimuovere questa persona dai tuoi amici?")) return;
   try {
-    const r = await fetch("https://gioco-oca-server.onrender.com/api/amici/rimuovi", {
+    const r = await fetchAutenticato("https://gioco-oca-server.onrender.com/api/amici/rimuovi", {
       method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ altroUid })
     });
