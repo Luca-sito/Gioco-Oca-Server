@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0d1620">
   <title>Gioco dell'Oca - Partita</title>
-  <link rel="stylesheet" href="gioco.css?v=20260823-turni-mobile-v2">
+  <link rel="stylesheet" href="gioco.css">
 </head>
 <body class="caricamento-in-corso">
 
@@ -30,7 +30,7 @@
 <main id="scena">
   <div id="mondo-ruotato">
     <div id="area-tabellone">
-      <img id="immagine-tabellone" src="https://gioco-oca-server.onrender.com/Immagini/tabellone.png" width="2500" height="1875" alt="Tabellone del Gioco dell'Oca" draggable="false" fetchpriority="high">
+      <img id="immagine-tabellone" src="Immagini/tabellone.png" width="2500" height="1875" alt="Tabellone del Gioco dell'Oca" draggable="false" fetchpriority="high">
       <div id="contenitore-pedine" aria-hidden="true"></div>
 
       <div id="area-dadi" class="disabilitato" role="button" tabindex="0" aria-label="Tira i dadi" aria-disabled="true">
@@ -66,13 +66,17 @@
       <strong>🎥 Videochiamata</strong>
       <span id="stato-media-connessione" role="status" aria-live="polite">Avvio…</span>
     </div>
+    <div id="controlli-media-locale" aria-label="Controlli webcam e microfono">
+      <button type="button" id="btn-toggle-microfono-media" onclick="toggleMicrofonoMedia()" aria-pressed="false">🎙️ Microfono: On</button>
+      <button type="button" id="btn-toggle-webcam-media" onclick="toggleWebcamMedia()" aria-pressed="false">📷 Webcam: On</button>
+    </div>
     <div id="griglia-video">
       <figure id="video-tile-locale" class="video-tile video-locale">
         <video id="video-locale" autoplay playsinline muted></video>
         <figcaption>Tu</figcaption>
       </figure>
     </div>
-    <button type="button" id="btn-sblocca-media" class="nascosto" onclick="sbloccaRiproduzioneMedia()">🔊 Attiva l'audio</button>
+    <button type="button" id="btn-sblocca-media" class="nascosto" onclick="sbloccaRiproduzioneMedia()">🔊 Attiva l'audio / riprova</button>
   </section>
 
   <div id="overlay-determinazione" class="overlay" role="dialog" aria-modal="true" aria-labelledby="titolo-determinazione">
@@ -130,6 +134,6 @@
   </div>
 </main>
 
-<script src="gioco.js?v=20260823-turni-mobile-v2"></script>
+<script src="gioco.js"></script>
 </body>
 </html>
