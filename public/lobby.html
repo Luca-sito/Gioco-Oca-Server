@@ -1507,450 +1507,222 @@ function inviaMessaggioSocket(dati) {
   return true;
 }
 
-const CHIAVE_MEDIA_LOBBY = "giochiSocieta.mediaVerificatiFino";
-const DURATA_CACHE_MEDIA_LOBBY_MS = 10 * 60 * 1000;
-
+// ===== VERIFICA WEBCAM + MICROFONO PRIMA DI CREARE/ENTRARE =====
+// Mantiene il comportamento voluto: il tavolo con media viene creato/accettato
+// solo dopo che il browser ha aperto DAVVERO sia microfono sia webcam.
 let verificaMediaLobbyInCorso = null;
 let mediaLobbyVerificatiFino = 0;
+const DURATA_VALIDITA_MEDIA_LOBBY_MS = 5 * 60 * 1000;
 
-try {
-  mediaLobbyVerificatiFino =
-    Number(sessionStorage.getItem(CHIAVE_MEDIA_LOBBY) || 0);
-} catch (e) {}
-
-
-function aspettaMedia(ms) {
+function attendiMediaLobby(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-
-function chiudiFlussoTestMedia(flusso) {
-  if (!flusso) return;
-
-  flusso.getTracks().forEach(traccia => {
+function fermaStreamMediaLobby(stream) {
+  if (!stream) return;
+  stream.getTracks().forEach(traccia => {
     try {
       traccia.onended = null;
-    } catch (e) {}
-
-    try {
-      if (traccia.readyState === "live") {
-        traccia.stop();
-      }
+      if (traccia.readyState === "live") traccia.stop();
     } catch (e) {}
   });
 }
 
-
-function nomeErroreMedia(errore) {
-  return String(
-    errore && errore.name
-      ? errore.name
-      : ""
-  );
+function nomeErroreMediaLobby(errore) {
+  return String(errore && errore.name ? errore.name : "");
 }
-
 
 function messaggioErroreMediaLobby(errore) {
+  const nome = nomeErroreMediaLobby(errore);
 
-  const nome = nomeErroreMedia(errore);
-
-
-  if (
-    nome === "NotAllowedError" ||
-    nome === "SecurityError" ||
-    nome === "PermissionDeniedError"
-  ) {
-    return "Permesso negato. Consenti fotocamera e microfono nelle impostazioni del browser e riprova.";
+  if (nome === "NotAllowedError" || nome === "SecurityError" || nome === "PermissionDeniedError") {
+    return "Webcam o microfono non autorizzati. Consenti entrambi nelle impostazioni del browser e riprova.";
   }
 
-
-  if (
-    nome === "NotFoundError" ||
-    nome === "DevicesNotFoundError"
-  ) {
-    return "Non trovo una webcam e un microfono disponibili su questo dispositivo.";
+  if (nome === "NotFoundError" || nome === "DevicesNotFoundError") {
+    return "Non trovo sia una webcam sia un microfono disponibili su questo dispositivo.";
   }
 
-
-  if (
-    nome === "NotReadableError" ||
-    nome === "TrackStartError"
-  ) {
-    return "Webcam o microfono risultano occupati. Chiudi eventuali altre app o schede che li usano e riprova.";
+  if (nome === "NotReadableError" || nome === "TrackStartError") {
+    return "Webcam o microfono risultano occupati da un'altra app o scheda. Chiudila e riprova.";
   }
 
-
-  if (
-    nome === "OverconstrainedError" ||
-    nome === "ConstraintNotSatisfiedError"
-  ) {
-    return "La webcam non supporta le impostazioni richieste. Riprova: verranno usate automaticamente impostazioni più compatibili.";
+  if (nome === "OverconstrainedError" || nome === "ConstraintNotSatisfiedError") {
+    return "La webcam non supporta le impostazioni richieste. Riprova.";
   }
-
 
   if (nome === "AbortError") {
-    return "Il browser ha interrotto l'apertura di webcam o microfono. Riprova.";
+    return "Il browser non ha completato l'apertura di webcam e microfono. Riprova.";
   }
 
-
-  return "Non riesco ad attivare webcam e microfono. Controlla i permessi del browser e che nessun'altra app li stia usando.";
+  return "Non è stato possibile aprire contemporaneamente webcam e microfono. Controlla i dispositivi e riprova.";
 }
 
+function getUserMediaConTimeout(vincoli, timeoutMs) {
+  return new Promise((resolve, reject) => {
+    let conclusa = false;
 
-async function apriFlussoTestMediaLobby() {
+    const timer = setTimeout(() => {
+      if (conclusa) return;
+      conclusa = true;
+      reject(new DOMException("Tempo scaduto durante l'apertura dei dispositivi.", "AbortError"));
+    }, timeoutMs);
 
+    navigator.mediaDevices.getUserMedia(vincoli).then(stream => {
+      if (conclusa) {
+        fermaStreamMediaLobby(stream);
+        return;
+      }
+
+      conclusa = true;
+      clearTimeout(timer);
+      resolve(stream);
+    }).catch(errore => {
+      if (conclusa) return;
+      conclusa = true;
+      clearTimeout(timer);
+      reject(errore);
+    });
+  });
+}
+
+async function apriStreamMediaLobby() {
   const tentativi = [
-
     {
       audio: {
         echoCancellation: true,
         noiseSuppression: true,
         autoGainControl: true
       },
-
       video: {
-        width: {
-          ideal: 320,
-          max: 640
-        },
-
-        height: {
-          ideal: 240,
-          max: 480
-        },
-
-        frameRate: {
-          ideal: 15,
-          max: 20
-        },
-
-        facingMode: {
-          ideal: "user"
-        }
+        width: { ideal: 320, max: 640 },
+        height: { ideal: 240, max: 480 },
+        frameRate: { ideal: 15, max: 20 },
+        facingMode: { ideal: "user" }
       }
     },
-
-
-    {
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true
-      },
-
-      video: {
-        facingMode: {
-          ideal: "user"
-        }
-      }
-    },
-
-
     {
       audio: true,
       video: true
     }
-
   ];
-
 
   let ultimoErrore = null;
 
-
-  for (
-    let i = 0;
-    i < tentativi.length;
-    i++
-  ) {
-
+  for (let i = 0; i < tentativi.length; i++) {
     try {
-
-      return await navigator.mediaDevices.getUserMedia(
-        tentativi[i]
-      );
-
+      // Il primo tentativo lascia tempo anche a chi deve ancora confermare
+      // il popup del browser. Il secondo è un fallback di compatibilità.
+      const timeout = i === 0 ? 45000 : 15000;
+      return await getUserMediaConTimeout(tentativi[i], timeout);
     } catch (errore) {
-
       ultimoErrore = errore;
+      const nome = nomeErroreMediaLobby(errore);
 
-      const nome =
-        nomeErroreMedia(errore);
+      console.warn("Tentativo webcam/microfono lobby fallito:", i + 1, nome, errore);
 
-
-      console.warn(
-        "Tentativo media",
-        i + 1,
-        "fallito:",
-        nome,
-        errore
-      );
-
-
+      // Se il browser ha negato esplicitamente il permesso o non esiste
+      // un dispositivo, ripetere la richiesta non risolve il problema.
       if (
         nome === "NotAllowedError" ||
         nome === "SecurityError" ||
-        nome === "PermissionDeniedError"
-      ) {
-        throw errore;
-      }
-
-
-      if (
+        nome === "PermissionDeniedError" ||
         nome === "NotFoundError" ||
         nome === "DevicesNotFoundError"
       ) {
         throw errore;
       }
-
-
-      if (
-        nome === "NotReadableError" ||
-        nome === "TrackStartError" ||
-        nome === "AbortError"
-      ) {
-        await aspettaMedia(500);
-      }
-
     }
-
   }
 
-
-  throw (
-    ultimoErrore ||
-    new Error(
-      "Impossibile aprire webcam e microfono."
-    )
-  );
+  throw ultimoErrore || new Error("Webcam e microfono non disponibili.");
 }
 
+async function richiediConsensoMediaSeNecessario(mediaAttiva) {
+  if (!mediaAttiva) return true;
 
-async function richiediConsensoMediaSeNecessario(
-  mediaAttiva,
-  forzaVerifica = false
-) {
-
-  if (!mediaAttiva) {
-    return true;
-  }
-
-
-  if (
-    !socket ||
-    socket.readyState !== WebSocket.OPEN
-  ) {
-
-    mostraNotifica(
-      "Connessione al server non disponibile. Riprova tra qualche secondo."
-    );
-
+  if (!socket || socket.readyState !== WebSocket.OPEN) {
+    mostraNotifica("Connessione al server non disponibile. Riprova tra qualche secondo.");
     return false;
   }
 
-
-  if (
-    typeof RTCPeerConnection !== "function"
-  ) {
-
-    mostraNotifica(
-      "Questo browser non supporta la videochiamata del tavolo."
-    );
-
+  if (typeof RTCPeerConnection !== "function") {
+    mostraNotifica("Questo browser non supporta la videochiamata del tavolo.");
     return false;
   }
-
 
   if (
     !window.isSecureContext ||
     !navigator.mediaDevices ||
     typeof navigator.mediaDevices.getUserMedia !== "function"
   ) {
-
-    mostraNotifica(
-      "Webcam e microfono richiedono HTTPS e un browser compatibile."
-    );
-
+    mostraNotifica("Webcam e microfono richiedono una connessione HTTPS e un browser compatibile.");
     return false;
   }
 
+  // Se il browser espone la Permissions Policy, controlliamo che la pagina
+  // (o l'eventuale iframe che la contiene) autorizzi entrambi i dispositivi.
+  const policy = document.permissionsPolicy || document.featurePolicy;
+  if (policy && typeof policy.allowsFeature === "function") {
+    const cameraConsentita = policy.allowsFeature("camera");
+    const microfonoConsentito = policy.allowsFeature("microphone");
 
-  const policy =
-    document.permissionsPolicy ||
-    document.featurePolicy;
-
-
-  if (
-    policy &&
-    typeof policy.allowsFeature === "function"
-  ) {
-
-    const cameraConsentita =
-      policy.allowsFeature("camera");
-
-    const microfonoConsentito =
-      policy.allowsFeature("microphone");
-
-
-    if (
-      !cameraConsentita ||
-      !microfonoConsentito
-    ) {
-
+    if (!cameraConsentita || !microfonoConsentito) {
       mostraNotifica(
-        "Questa pagina o il suo contenitore blocca webcam o microfono."
+        "Questa pagina è aperta in un contenitore che non consente webcam e microfono. Apri la lobby direttamente oppure abilita camera e microphone nell'iframe."
       );
-
-      console.error(
-        "Permissions Policy:",
-        {
-          camera: cameraConsentita,
-          microphone: microfonoConsentito
-        }
-      );
-
       return false;
     }
-
   }
 
-
-  if (
-    !forzaVerifica &&
-    Date.now() < mediaLobbyVerificatiFino
-  ) {
-    return true;
-  }
-
+  // Evita la SECONDA apertura inutile quando il tavolo si riempie e la lobby
+  // riceve "partitaAvviata": il consenso appena verificato resta valido.
+  if (Date.now() < mediaLobbyVerificatiFino) return true;
 
   if (verificaMediaLobbyInCorso) {
     return verificaMediaLobbyInCorso;
   }
 
+  verificaMediaLobbyInCorso = (async () => {
+    let flusso = null;
 
-  verificaMediaLobbyInCorso =
-    (async () => {
+    try {
+      mostraNotifica("Verifica webcam e microfono in corso…");
 
-      let flusso = null;
+      flusso = await apriStreamMediaLobby();
 
-      try {
+      const audio = flusso.getAudioTracks().find(traccia => traccia.readyState === "live");
+      const video = flusso.getVideoTracks().find(traccia => traccia.readyState === "live");
 
-        mostraNotifica(
-          "Autorizza webcam e microfono nel messaggio del browser."
-        );
-
-
-        flusso =
-          await apriFlussoTestMediaLobby();
-
-
-        const tracciaAudio =
-          flusso
-            .getAudioTracks()
-            .find(
-              traccia =>
-                traccia.readyState === "live"
-            );
-
-
-        const tracciaVideo =
-          flusso
-            .getVideoTracks()
-            .find(
-              traccia =>
-                traccia.readyState === "live"
-            );
-
-
-        if (!tracciaAudio) {
-          throw new DOMException(
-            "Microfono non disponibile.",
-            "NotFoundError"
-          );
-        }
-
-
-        if (!tracciaVideo) {
-          throw new DOMException(
-            "Webcam non disponibile.",
-            "NotFoundError"
-          );
-        }
-
-
-        mediaLobbyVerificatiFino =
-          Date.now() +
-          DURATA_CACHE_MEDIA_LOBBY_MS;
-
-
-        try {
-
-          sessionStorage.setItem(
-            CHIAVE_MEDIA_LOBBY,
-            String(mediaLobbyVerificatiFino)
-          );
-
-        } catch (e) {}
-
-
-        mostraNotifica(
-          "Webcam e microfono autorizzati correttamente."
-        );
-
-
-        return true;
-
-      } catch (errore) {
-
-        console.error(
-          "Verifica webcam/microfono fallita:",
-          errore.name,
-          errore.message,
-          errore
-        );
-
-
-        mediaLobbyVerificatiFino = 0;
-
-
-        try {
-          sessionStorage.removeItem(
-            CHIAVE_MEDIA_LOBBY
-          );
-        } catch (e) {}
-
-
-        mostraNotifica(
-          messaggioErroreMediaLobby(
-            errore
-          )
-        );
-
-
-        return false;
-
-      } finally {
-
-        chiudiFlussoTestMedia(
-          flusso
-        );
-
-
-        await aspettaMedia(250);
-
+      if (!audio || !video) {
+        throw new DOMException("Sono necessarie entrambe le tracce audio e video.", "NotFoundError");
       }
 
-    })();
+      // Il controllo è realmente riuscito: solo da questo momento
+      // creaPartita()/entraPartita() possono proseguire.
+      mediaLobbyVerificatiFino = Date.now() + DURATA_VALIDITA_MEDIA_LOBBY_MS;
 
+      mostraNotifica("Webcam e microfono autorizzati correttamente.");
+      return true;
+    } catch (errore) {
+      mediaLobbyVerificatiFino = 0;
+      console.error("Verifica webcam/microfono lobby fallita:", errore);
+      mostraNotifica(messaggioErroreMediaLobby(errore));
+      return false;
+    } finally {
+      fermaStreamMediaLobby(flusso);
+
+      // Alcuni browser mobili impiegano un istante a rilasciare fisicamente
+      // la fotocamera dopo stop(); evitiamo una riapertura troppo ravvicinata.
+      await attendiMediaLobby(180);
+    }
+  })();
 
   try {
-
     return await verificaMediaLobbyInCorso;
-
   } finally {
-
     verificaMediaLobbyInCorso = null;
-
   }
-
 }
 
 function apriPartita(id, mediaAttiva) {
