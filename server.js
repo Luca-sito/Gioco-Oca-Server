@@ -431,7 +431,7 @@ app.get("/auth/google/callback",
       if (!utente || !utente.uid) return res.redirect("/accedi.html?errore=google");
       const token = creaToken(utente.uid, utente.nickname, utente.ruolo || "utente");
       res.cookie("token", token, OPZIONI_COOKIE);
-      res.redirect("/");
+      res.redirect("https://solfriniluca1.wixstudio.com/giochisocieta");
     } catch (errore) {
       console.error("Errore callback Google:", errore);
       res.redirect("/accedi.html?errore=google");
