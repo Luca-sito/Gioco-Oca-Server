@@ -337,7 +337,7 @@ body.modalita-ruotata #area-tabellone > #area-dadi {
   padding: 7px;
   background: #fdfdfd;
   border: 2px solid #ccc;
-  border-radius: 9px;
+  border-radius: 3px;
   box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.08);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
@@ -824,6 +824,133 @@ body:not(.modalita-desktop) .videochiamata-intestazione { justify-content: cente
 }
 
 #btn-sblocca-media.nascosto { display: none; }
+
+/* Desktop: fino a quattro video grandi per lato, senza coprire il tabellone. */
+body.modalita-desktop.media-partita #videochiamata {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: auto;
+  max-height: none;
+  padding: 0;
+  overflow: visible;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  pointer-events: none;
+}
+
+body.modalita-desktop.media-partita #griglia-video {
+  position: absolute;
+  top: calc(88px + env(safe-area-inset-top));
+  right: calc(14px + env(safe-area-inset-right));
+  bottom: calc(18px + env(safe-area-inset-bottom));
+  left: calc(14px + env(safe-area-inset-left));
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, var(--larghezza-colonna-video, 260px)));
+  grid-template-rows: repeat(4, minmax(0, 1fr));
+  grid-auto-flow: row;
+  justify-content: space-between;
+  align-content: stretch;
+  row-gap: 14px;
+  column-gap: 0;
+  overflow: visible;
+  scroll-snap-type: none;
+  pointer-events: none;
+}
+
+body.modalita-desktop.media-partita #griglia-video .video-tile {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  aspect-ratio: auto;
+  border: 2px solid rgba(255, 255, 255, 0.26);
+  border-radius: 14px;
+  box-shadow: 0 7px 24px rgba(0, 0, 0, 0.48);
+}
+
+body.modalita-desktop.media-partita #griglia-video .video-locale {
+  border-color: rgba(255, 215, 0, 0.78);
+}
+
+body.modalita-desktop.media-partita .video-tile figcaption {
+  padding: 16px 10px 7px;
+  font-size: 13px;
+}
+
+body.modalita-desktop.media-partita .videochiamata-intestazione {
+  position: absolute;
+  bottom: calc(10px + env(safe-area-inset-bottom));
+  left: 50%;
+  z-index: 2;
+  max-width: min(440px, 42vw);
+  padding: 6px 11px;
+  transform: translateX(-50%);
+  background: rgba(10, 16, 22, 0.9);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  border-radius: 999px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.32);
+}
+
+body.modalita-desktop.media-partita #btn-sblocca-media {
+  position: absolute;
+  bottom: calc(52px + env(safe-area-inset-bottom));
+  left: 50%;
+  z-index: 3;
+  width: auto;
+  min-width: 190px;
+  max-width: min(360px, 46vw);
+  margin: 0;
+  padding: 9px 15px;
+  transform: translateX(-50%);
+  pointer-events: auto;
+}
+
+/* Con la doppia colonna video il riepilogo giocatori resta compatto;
+   il pulsante accanto lo espande solo quando serve. */
+body.modalita-desktop.media-partita #pannello-giocatori {
+  min-width: 210px;
+  max-width: min(260px, calc(100vw - 86px));
+  padding: 8px 12px;
+}
+
+body.modalita-desktop.media-partita #pannello-giocatori #lista-giocatori {
+  display: none;
+}
+
+body.modalita-desktop.media-partita #pannello-giocatori.aperto #lista-giocatori {
+  display: block;
+}
+
+body.modalita-desktop.media-partita #giocatori-wrapper {
+  top: calc(14px + env(safe-area-inset-top));
+  bottom: auto;
+  left: calc(238px + env(safe-area-inset-left));
+  display: block;
+}
+
+body.modalita-desktop.media-partita #btn-giocatori {
+  width: 44px;
+  height: 44px;
+  font-size: 17px;
+}
+
+@media (max-height: 700px) {
+  body.modalita-desktop.media-partita #griglia-video {
+    top: calc(72px + env(safe-area-inset-top));
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    row-gap: 9px;
+  }
+
+  body.modalita-desktop.media-partita .videochiamata-intestazione {
+    padding: 4px 9px;
+    font-size: 10px;
+  }
+}
 
 /* ===== CHAT ===== */
 #chat-wrapper {
