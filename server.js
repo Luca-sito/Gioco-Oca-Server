@@ -3026,25 +3026,129 @@ let contatoreId = 0;
 const socketsPerId = {};
 
 function calcolaMovimento(posizioneAttuale, valoreDado) {
-  let percorso = [], nuovaPosizione = posizioneAttuale + valoreDado, messaggi = [], turniDaSaltare = 0, vittoria = false, tiraAncora = false;
+  let percorso = [];
+  let nuovaPosizione = posizioneAttuale + valoreDado;
+  let messaggi = [];
+  let eventiPercorso = [];
+  let turniDaSaltare = 0;
+  let vittoria = false;
+  let tiraAncora = false;
+
+  const aggiungiEvento = (indicePasso, casella, messaggio) => {
+    const testo = String(messaggio || "").trim();
+    if (!testo) return;
+    messaggi.push(testo);
+    eventiPercorso.push({
+      indicePasso: Math.max(0, Number(indicePasso) || 0),
+      casella: Number(casella),
+      messaggio: testo
+    });
+  };
+
   if (nuovaPosizione > CASELLA_VITTORIA) {
-    for (let p = posizioneAttuale + 1; p <= CASELLA_VITTORIA; p++) percorso.push(p);
+    for (let p = posizioneAttuale + 1; p <= CASELLA_VITTORIA; p++) {
+      percorso.push(p);
+    }
+
+    // Il messaggio di rimbalzo compare quando la pedina ARRIVA sul 63,
+    // non appena vengono mostrati i dadi.
+    const indiceTraguardo = percorso.lastIndexOf(CASELLA_VITTORIA);
+    aggiungiEvento(
+      indiceTraguardo >= 0 ? indiceTraguardo : Math.max(0, percorso.length - 1),
+      CASELLA_VITTORIA,
+      "Hai superato il traguardo, rimbalzi indietro!"
+    );
+
     const eccesso = nuovaPosizione - CASELLA_VITTORIA;
     nuovaPosizione = CASELLA_VITTORIA - eccesso;
-    for (let p = CASELLA_VITTORIA - 1; p >= nuovaPosizione; p--) percorso.push(p);
-    messaggi.push("Hai superato il traguardo, rimbalzi indietro!");
-  } else { for (let p = posizioneAttuale + 1; p <= nuovaPosizione; p++) percorso.push(p); }
-  if (nuovaPosizione === CASELLA_VITTORIA) { vittoria = true; messaggi.push("🎉 Hai vinto!"); return { nuovaPosizione, percorso, messaggi, turniDaSaltare, vittoria, tiraAncora }; }
-  if (nuovaPosizione === CASELLA_TIRA_ANCORA) { tiraAncora = true; messaggi.push("Sali sul ponte! Tira ancora i dadi."); }
-  if (CASELLE_AVANZA_ANCORA.includes(nuovaPosizione)) {
-    messaggi.push("Avanzi dello stesso numero di caselle!");
-    const r = calcolaMovimento(nuovaPosizione, valoreDado);
-    return { nuovaPosizione: r.nuovaPosizione, percorso: percorso.concat(r.percorso), messaggi: messaggi.concat(r.messaggi), turniDaSaltare: r.turniDaSaltare, vittoria: r.vittoria, tiraAncora: r.tiraAncora };
+
+    for (let p = CASELLA_VITTORIA - 1; p >= nuovaPosizione; p--) {
+      percorso.push(p);
+    }
+  } else {
+    for (let p = posizioneAttuale + 1; p <= nuovaPosizione; p++) {
+      percorso.push(p);
+    }
   }
-  if (CASELLE_SALTA_TRE_TURNI.includes(nuovaPosizione)) { turniDaSaltare = 3; messaggi.push("Rimani fermo per 3 turni!"); }
-  if (CASELLE_SALTA_UN_TURNO.includes(nuovaPosizione)) { turniDaSaltare = 1; messaggi.push("Salti un turno!"); }
-  if (CASELLE_TORNA_A[nuovaPosizione] !== undefined) { const cf = CASELLE_TORNA_A[nuovaPosizione]; messaggi.push(`Torni alla casella ${cf}!`); percorso.push(cf); nuovaPosizione = cf; }
-  return { nuovaPosizione, percorso, messaggi, turniDaSaltare, vittoria, tiraAncora };
+
+  const indiceArrivo = Math.max(0, percorso.length - 1);
+
+  if (nuovaPosizione === CASELLA_VITTORIA) {
+    vittoria = true;
+    aggiungiEvento(indiceArrivo, nuovaPosizione, "🎉 Hai vinto!");
+    return {
+      nuovaPosizione,
+      percorso,
+      messaggi,
+      eventiPercorso,
+      turniDaSaltare,
+      vittoria,
+      tiraAncora
+    };
+  }
+
+  if (nuovaPosizione === CASELLA_TIRA_ANCORA) {
+    tiraAncora = true;
+    aggiungiEvento(indiceArrivo, nuovaPosizione, "Sali sul ponte! Tira ancora i dadi.");
+  }
+
+  if (CASELLE_AVANZA_ANCORA.includes(nuovaPosizione)) {
+    aggiungiEvento(indiceArrivo, nuovaPosizione, "Avanzi dello stesso numero di caselle!");
+
+    const r = calcolaMovimento(nuovaPosizione, valoreDado);
+    const offset = percorso.length;
+
+    return {
+      nuovaPosizione: r.nuovaPosizione,
+      percorso: percorso.concat(r.percorso),
+      messaggi: messaggi.concat(r.messaggi),
+      eventiPercorso: eventiPercorso.concat(
+        (r.eventiPercorso || []).map(evento => ({
+          ...evento,
+          indicePasso: Number(evento.indicePasso || 0) + offset
+        }))
+      ),
+      turniDaSaltare: r.turniDaSaltare,
+      vittoria: r.vittoria,
+      tiraAncora: r.tiraAncora
+    };
+  }
+
+  if (CASELLE_SALTA_TRE_TURNI.includes(nuovaPosizione)) {
+    turniDaSaltare = 3;
+    aggiungiEvento(indiceArrivo, nuovaPosizione, "Rimani fermo per 3 turni!");
+  }
+
+  if (CASELLE_SALTA_UN_TURNO.includes(nuovaPosizione)) {
+    turniDaSaltare = 1;
+    aggiungiEvento(indiceArrivo, nuovaPosizione, "Salti un turno!");
+  }
+
+  if (CASELLE_TORNA_A[nuovaPosizione] !== undefined) {
+    const casellaSpeciale = nuovaPosizione;
+    const casellaFinale = CASELLE_TORNA_A[nuovaPosizione];
+
+    // Il messaggio compare mentre la pedina è SULLA casella speciale,
+    // poi il percorso prosegue verso la casella di destinazione.
+    aggiungiEvento(
+      indiceArrivo,
+      casellaSpeciale,
+      `Torni alla casella ${casellaFinale}!`
+    );
+
+    percorso.push(casellaFinale);
+    nuovaPosizione = casellaFinale;
+  }
+
+  return {
+    nuovaPosizione,
+    percorso,
+    messaggi,
+    eventiPercorso,
+    turniDaSaltare,
+    vittoria,
+    tiraAncora
+  };
 }
 
 function passaAlProssimoTurno(partita) {
@@ -3196,12 +3300,12 @@ function inviaConteggioStanze() {
 }
 
 const HEARTBEAT_MS = 15000;
-const DURATA_ANIMAZIONE_DADI_SERVER_MS = 1080;
+const DURATA_ANIMAZIONE_TIRO_MS = 1080;
 const DURATA_PASSO_PEDINA_SERVER_MS = 260;
 
 function durataAnimazioneMossaMs(percorso) {
-  const numeroPassi = Array.isArray(percorso) ? percorso.length : 0;
-  return DURATA_ANIMAZIONE_DADI_SERVER_MS + (numeroPassi * DURATA_PASSO_PEDINA_SERVER_MS);
+  const passi = Array.isArray(percorso) ? percorso.length : 0;
+  return DURATA_ANIMAZIONE_TIRO_MS + passi * DURATA_PASSO_PEDINA_SERVER_MS;
 }
 const heartbeatInterval = setInterval(() => {
   wss.clients.forEach(socket => { if (socket.isAlive === false) return socket.terminate(); socket.isAlive = false; socket.ping(); });
@@ -3292,13 +3396,6 @@ async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, auto
     const valoreDado = dado1 + dado2;
     const risultato = calcolaMovimento(giocatore.posizione, valoreDado);
 
-    // Il prossimo turno deve iniziare esattamente quando il client ha finito:
-    // 1080 ms di animazione dadi + 260 ms per ogni casella percorsa.
-    // Memorizziamo una scadenza assoluta PRIMA dei salvataggi Firebase, così
-    // il tempo impiegato dal database non si somma all'attesa visuale.
-    const fineAnimazionePrevista =
-      Date.now() + durataAnimazioneMossaMs(risultato.percorso);
-
     if (risultato.tiraAncora) partita.tiriConsentitiNelTurno = partita.tiriEffettuatiNelTurno + 1;
 
     giocatore.posizione = risultato.nuovaPosizione;
@@ -3307,7 +3404,12 @@ async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, auto
     if (!risultato.tiraAncora && !risultato.vittoria) passaAlProssimoTurno(partita);
 
     const statoGiocatori = costruisciStatoGiocatori(partita);
-    const messaggiFinali = automatico ? ["⏱️ Tempo scaduto: mossa automatica."].concat(risultato.messaggi) : risultato.messaggi;
+    // I messaggi delle caselle speciali NON sono più messaggi immediati:
+    // vengono associati all'indice preciso del percorso e mostrati dal client
+    // quando la pedina raggiunge davvero quella casella.
+    const messaggiFinali = Array.isArray(risultato.messaggi) ? risultato.messaggi : [];
+    const messaggiImmediati = automatico ? ["⏱️ Tempo scaduto: mossa automatica."] : [];
+    const eventiPercorso = Array.isArray(risultato.eventiPercorso) ? risultato.eventiPercorso : [];
 
     if (risultato.vittoria) {
       Object.values(partita.giocatori).forEach(g => {
@@ -3315,7 +3417,8 @@ async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, auto
           g.socket.send(JSON.stringify({
             tipo: "aggiornamentoPartita", giocatori: statoGiocatori, dado1, dado2, valoreDado,
             percorso: risultato.percorso, idGiocatoreCheHaTirato: idGiocatore, automatico: !!automatico,
-            messaggi: messaggiFinali, turnoDiId: null, tempoInizioTurno: null, durataMossaMs: 0,
+            messaggi: messaggiFinali, messaggiImmediati, eventiPercorso,
+            turnoDiId: null, tempoInizioTurno: null, durataMossaMs: 0,
             vittoria: true, vincitore: giocatore.nome
           }));
         }
@@ -3338,6 +3441,8 @@ async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, auto
           tipo: "aggiornamentoPartita", giocatori: statoGiocatori, dado1, dado2, valoreDado,
           percorso: risultato.percorso, idGiocatoreCheHaTirato: idGiocatore, automatico: !!automatico,
           messaggi: messaggiFinali,
+          messaggiImmediati,
+          eventiPercorso,
           turnoDiId: null,
           tempoInizioTurno: null,
           durataMossaMs: 0,
@@ -3345,6 +3450,11 @@ async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, auto
         }));
       }
     });
+
+    // Fissiamo ADESSO l'istante in cui la mossa visiva deve essere terminata.
+    // L'eventuale tempo impiegato da Firebase non viene sommato alla pausa.
+    const fineAnimazionePrevista =
+      Date.now() + durataAnimazioneMossaMs(risultato.percorso);
 
     await aggiornaStatoPartita(partita.id, {
       giocatori: preparaGiocatoriPerFirebase(partita.giocatori),
@@ -3397,10 +3507,7 @@ async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, auto
         tempoInizioTurno: partita.tempoInizioTurno,
         scadenzaTurno: partita.scadenzaTurno
       });
-    }, Math.max(
-      0,
-      fineAnimazionePrevista - Date.now()
-    ));
+    }, Math.max(0, fineAnimazionePrevista - Date.now()));
 
   } catch (erroreTiro) {
     // FIX (turni): se anche il ripiego locale fallisse per qualche motivo
