@@ -1337,7 +1337,7 @@ body.tema-scuro .giocatore-online{
         <option value="off">🔇 Disattivi</option>
         <option value="on">🎥 Attivi per tutti</option>
       </select>
-      <p style="font-size:12px;line-height:1.35;color:#777;margin-top:8px;">Se attivi, ogni partecipante dovrà autorizzare webcam e microfono prima di entrare.</p>
+      <p style="font-size:12px;line-height:1.35;color:#777;margin-top:8px;">Se attivi, ogni partecipante autorizza webcam e microfono prima di entrare; nella partita potrà mettere microfono in muto o spegnere la propria videocamera.</p>
       <button class="crea" onclick="creaPartita()">Crea partita</button>
     </div>
   </div>
@@ -1463,8 +1463,73 @@ function inviaMessaggioSocket(dati) {
   return true;
 }
 
-async function richiediConsensoMediaSeNecessario(mediaAttiva) {
+const CHIAVE_MEDIA_LOBBY = "giochiSocieta.mediaVerificatiFino";
+const DURATA_CACHE_MEDIA_LOBBY_MS = 10 * 60 * 1000;
+let verificaMediaLobbyInCorso = null;
+let mediaLobbyVerificatiFino = 0;
+try {
+  mediaLobbyVerificatiFino = Number(sessionStorage.getItem(CHIAVE_MEDIA_LOBBY) || 0);
+} catch (e) {}
+
+function aspettaMedia(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function chiudiFlussoTestMedia(flusso) {
+  if (!flusso) return;
+  flusso.getTracks().forEach(traccia => {
+    try { traccia.onended = null; } catch (e) {}
+    try { if (traccia.readyState === "live") traccia.stop(); } catch (e) {}
+  });
+}
+
+function nomeErroreMedia(errore) {
+  return String(errore && errore.name ? errore.name : "");
+}
+
+function messaggioErroreMediaLobby(errore) {
+  const nome = nomeErroreMedia(errore);
+  if (nome === "NotAllowedError" || nome === "SecurityError" || nome === "PermissionDeniedError") {
+    return "Permesso negato. Consenti fotocamera e microfono dalle impostazioni del browser e riprova.";
+  }
+  if (nome === "NotFoundError" || nome === "DevicesNotFoundError") {
+    return "Non trovo una webcam e un microfono disponibili su questo dispositivo.";
+  }
+  if (nome === "NotReadableError" || nome === "TrackStartError") {
+    return "Webcam o microfono sono già usati da un'altra app o scheda. Chiudila e riprova.";
+  }
+  if (nome === "OverconstrainedError" || nome === "ConstraintNotSatisfiedError") {
+    return "La webcam non supporta le impostazioni richieste. Riprova: userò automaticamente una modalità più compatibile.";
+  }
+  if (nome === "AbortError") {
+    return "Il browser ha interrotto l'apertura di webcam o microfono. Riprova.";
+  }
+  return "Non riesco ad attivare webcam e microfono. Controlla i permessi del browser e che nessun'altra app li stia usando.";
+}
+
+async function apriFlussoTestMediaLobby() {
+  const vincoliPreferiti = {
+    audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+    video: {
+      width: { ideal: 320, max: 640 },
+      height: { ideal: 240, max: 480 },
+      frameRate: { ideal: 15, max: 20 },
+      facingMode: { ideal: "user" }
+    }
+  };
+
+  try {
+    return await navigator.mediaDevices.getUserMedia(vincoliPreferiti);
+  } catch (errore) {
+    const nome = nomeErroreMedia(errore);
+    if (nome !== "OverconstrainedError" && nome !== "ConstraintNotSatisfiedError") throw errore;
+    return navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+  }
+}
+
+async function richiediConsensoMediaSeNecessario(mediaAttiva, forzaVerifica = false) {
   if (!mediaAttiva) return true;
+
   if (!socket || socket.readyState !== WebSocket.OPEN) {
     mostraNotifica("Connessione al server non disponibile. Riprova tra qualche secondo.");
     return false;
@@ -1474,24 +1539,48 @@ async function richiediConsensoMediaSeNecessario(mediaAttiva) {
     return false;
   }
   if (!window.isSecureContext || !navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== "function") {
-    mostraNotifica("Webcam e microfono richiedono una connessione HTTPS e un browser compatibile.");
+    mostraNotifica("Webcam e microfono richiedono HTTPS e un browser compatibile.");
     return false;
   }
-  mostraNotifica("Autorizza webcam e microfono nel messaggio del browser per entrare nel tavolo.");
-  let flusso = null;
-  try {
-    flusso = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-      video: { width: { ideal: 320, max: 640 }, height: { ideal: 240, max: 480 }, frameRate: { ideal: 15, max: 20 }, facingMode: "user" }
-    });
-    if (!flusso.getAudioTracks().length || !flusso.getVideoTracks().length) throw new Error("Tracce audio/video mancanti");
-    return true;
-  } catch (errore) {
-    console.warn("Autorizzazione webcam/microfono non concessa:", errore);
-    mostraNotifica("Non sei entrato: per questo tavolo devi consentire sia webcam sia microfono.");
+
+  const policy = document.permissionsPolicy || document.featurePolicy;
+  if (policy && typeof policy.allowsFeature === "function" && (!policy.allowsFeature("camera") || !policy.allowsFeature("microphone"))) {
+    mostraNotifica("Il contenitore della pagina blocca webcam o microfono. Se il gioco è in un iframe, aggiungi allow=\"camera; microphone\" all'iframe.");
     return false;
+  }
+
+  if (!forzaVerifica && Date.now() < mediaLobbyVerificatiFino) return true;
+  if (verificaMediaLobbyInCorso) return verificaMediaLobbyInCorso;
+
+  verificaMediaLobbyInCorso = (async () => {
+    let flusso = null;
+    try {
+      mostraNotifica("Autorizza webcam e microfono nel messaggio del browser.");
+      flusso = await apriFlussoTestMediaLobby();
+
+      const audio = flusso.getAudioTracks().find(t => t.readyState === "live");
+      const video = flusso.getVideoTracks().find(t => t.readyState === "live");
+      if (!audio || !video) throw new DOMException("Sono necessarie webcam e microfono", "NotFoundError");
+
+      mediaLobbyVerificatiFino = Date.now() + DURATA_CACHE_MEDIA_LOBBY_MS;
+      try { sessionStorage.setItem(CHIAVE_MEDIA_LOBBY, String(mediaLobbyVerificatiFino)); } catch (e) {}
+      mostraNotifica("Webcam e microfono autorizzati. Verranno attivati nella partita.");
+      return true;
+    } catch (errore) {
+      console.warn("Verifica webcam/microfono non riuscita:", errore);
+      mostraNotifica(messaggioErroreMediaLobby(errore));
+      return false;
+    } finally {
+      chiudiFlussoTestMedia(flusso);
+      // Alcuni telefoni impiegano qualche istante a liberare fisicamente la camera.
+      await aspettaMedia(160);
+    }
+  })();
+
+  try {
+    return await verificaMediaLobbyInCorso;
   } finally {
-    if (flusso) flusso.getTracks().forEach(traccia => traccia.stop());
+    verificaMediaLobbyInCorso = null;
   }
 }
 
@@ -1580,7 +1669,7 @@ CREA TAVOLO
 <option value="off">🔇 Disattivi</option>
 <option value="on">🎥 Attivi per tutti</option>
 </select>
-<p style="font-size:12px;line-height:1.35;color:#777;">Se attivi, ogni partecipante dovrà autorizzarli prima di entrare.</p>
+<p style="font-size:12px;line-height:1.35;color:#777;">Se attivi, ogni partecipante li autorizza prima di entrare; nella partita potrà mettere il microfono in muto o spegnere la propria videocamera.</p>
 <button onclick="creaPartitaMobile()" 
 style="
 margin-top:20px;
@@ -1867,7 +1956,9 @@ function connetti() {
     }
 
     if (dati.tipo === "partitaAvviata") {
-      riprendiPartita(dati.partitaId, dati.mediaAttiva === true);
+      // Il consenso è già stato verificato quando il giocatore ha creato/accettato/entrato.
+      // Evitiamo un secondo getUserMedia in lobby: su alcuni telefoni blocca la camera per alcuni secondi.
+      apriPartita(dati.partitaId, dati.mediaAttiva === true);
     }
 
     if (dati.tipo === "invitoRicevuto") {
