@@ -124,137 +124,52 @@ button:disabled{
 }
 
 
-/* =========================================================
-   MODALITÀ PARTITA - SELETTORE PRINCIPALE
-========================================================= */
+}
+
+/* ===== MODALITÀ PARTITA ===== */
+
 .modalita-partita-box{
-    margin:0 0 22px;
-    padding:14px;
-    border:1px solid #d7d7d7;
-    border-radius:18px;
-    background:linear-gradient(145deg,#ffffff 0%,#f4f4f4 100%);
-    box-shadow:0 10px 28px rgba(0,0,0,.10);
+    margin-bottom:18px;
 }
 
 .modalita-partita-titolo{
-    margin:0 0 12px;
-    font-size:15px;
-    font-weight:900;
-    letter-spacing:.02em;
-    color:#111;
-    text-align:center;
+    font-weight:bold;
+    margin-bottom:8px;
 }
 
 .modalita-partita-scelte{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:10px;
+    display:flex;
+    gap:8px;
 }
 
 .btn-modalita-partita{
-    position:relative;
-    width:100%;
-    min-height:84px;
+    flex:1;
     margin:0 !important;
-    padding:12px 8px !important;
-    border:2px solid transparent !important;
-    border-radius:15px !important;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    gap:7px;
-    color:#fff !important;
-    cursor:pointer;
-    overflow:hidden;
-    box-shadow:0 7px 16px rgba(0,0,0,.16);
-    transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease,filter .16s ease,opacity .16s ease;
-}
-
-.btn-modalita-partita::after{
-    content:"";
-    position:absolute;
-    inset:0;
-    background:linear-gradient(120deg,rgba(255,255,255,.18),transparent 46%,rgba(255,255,255,.10));
-    pointer-events:none;
-}
-
-.btn-modalita-partita.classifica{
-    background:linear-gradient(135deg,#161616 0%,#2c2c2c 58%,#4a3900 100%) !important;
-}
-
-.btn-modalita-partita.divertimento{
-    background:linear-gradient(135deg,#e85d04 0%,#ff7b00 52%,#ff9f1c 100%) !important;
+    padding:10px !important;
+    border:1px solid #ccc !important;
+    border-radius:6px !important;
+    background:#f5f5f5 !important;
+    color:#222 !important;
+    font-size:14px;
+    font-weight:bold;
 }
 
 .btn-modalita-partita:hover{
-    opacity:1;
-    transform:translateY(-2px);
-    box-shadow:0 10px 22px rgba(0,0,0,.22);
-}
-
-.btn-modalita-partita:not(.attiva){
-    opacity:.72;
-    filter:saturate(.72);
+    background:#eee !important;
 }
 
 .btn-modalita-partita.attiva{
-    opacity:1;
-    filter:none;
-    transform:translateY(-2px);
-    border-color:#ffd000 !important;
-    box-shadow:0 0 0 3px rgba(255,208,0,.20),0 11px 24px rgba(0,0,0,.24);
+    background:#ff6600 !important;
+    border-color:#ff6600 !important;
+    color:white !important;
 }
 
-.modalita-partita-icona{
-    position:relative;
-    z-index:1;
-    font-size:25px;
-    line-height:1;
-}
-
-.modalita-partita-label{
-    position:relative;
-    z-index:1;
-    font-size:14px;
-    font-weight:900;
-    letter-spacing:.01em;
-    line-height:1.05;
-}
-
+/* Non mostriamo più icona e spunta */
+.modalita-partita-icona,
 .modalita-partita-check{
-    position:absolute;
-    z-index:2;
-    top:7px;
-    right:8px;
-    width:19px;
-    height:19px;
-    border-radius:50%;
-    background:#ffd000;
-    color:#111;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-size:12px;
-    font-weight:900;
-    opacity:0;
-    transform:scale(.7);
-    transition:opacity .16s ease,transform .16s ease;
+    display:none;
 }
 
-.btn-modalita-partita.attiva .modalita-partita-check{
-    opacity:1;
-    transform:scale(1);
-}
-
-body.tema-scuro .modalita-partita-box{
-    background:linear-gradient(145deg,#2a2a2a 0%,#1d1d1d 100%);
-    border-color:#444;
-}
-
-body.tema-scuro .modalita-partita-titolo{
-    color:#fff;
-}
 /* =========================================================
    ELENCO PARTITE
 ========================================================= */
