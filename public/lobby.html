@@ -1507,9 +1507,9 @@ function inviaMessaggioSocket(dati) {
   return true;
 }
 
-// ===== VERIFICA WEBCAM + MICROFONO PRIMA DI CREARE/ENTRARE =====
-// Mantiene il comportamento voluto: il tavolo con media viene creato/accettato
-// solo dopo che il browser ha aperto DAVVERO sia microfono sia webcam.
+// ===== VERIFICA WEBCAM PRIMA DI CREARE/ENTRARE =====
+// La webcam è obbligatoria.
+// Il microfono è facoltativo e viene gestito successivamente nel gioco.
 let verificaMediaLobbyInCorso = null;
 let mediaLobbyVerificatiFino = 0;
 const DURATA_VALIDITA_MEDIA_LOBBY_MS = 5 * 60 * 1000;
@@ -1586,68 +1586,30 @@ function getUserMediaConTimeout(vincoli, timeoutMs) {
   });
 }
 
-async function apriStreamMediaLobby() {
-  const tentativi = [
-    {
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true
-      },
-      video: {
-        width: { ideal: 320, max: 640 },
-        height: { ideal: 240, max: 480 },
-        frameRate: { ideal: 15, max: 20 },
-        facingMode: { ideal: "user" }
-      }
-    },
-    {
-      audio: true,
-      video: true
-    }
-  ];
+async function richiediConsensoMediaSeNecessario(mediaAttiva) {
 
-  let ultimoErrore = null;
-
-  for (let i = 0; i < tentativi.length; i++) {
-    try {
-      // Il primo tentativo lascia tempo anche a chi deve ancora confermare
-      // il popup del browser. Il secondo è un fallback di compatibilità.
-      const timeout = i === 0 ? 45000 : 15000;
-      return await getUserMediaConTimeout(tentativi[i], timeout);
-    } catch (errore) {
-      ultimoErrore = errore;
-      const nome = nomeErroreMediaLobby(errore);
-
-      console.warn("Tentativo webcam/microfono lobby fallito:", i + 1, nome, errore);
-
-      // Se il browser ha negato esplicitamente il permesso o non esiste
-      // un dispositivo, ripetere la richiesta non risolve il problema.
-      if (
-        nome === "NotAllowedError" ||
-        nome === "SecurityError" ||
-        nome === "PermissionDeniedError" ||
-        nome === "NotFoundError" ||
-        nome === "DevicesNotFoundError"
-      ) {
-        throw errore;
-      }
-    }
+  if (!mediaAttiva) {
+    return true;
   }
 
-  throw ultimoErrore || new Error("Webcam e microfono non disponibili.");
-}
+  if (
+    !socket ||
+    socket.readyState !== WebSocket.OPEN
+  ) {
+    mostraNotifica(
+      "Connessione al server non disponibile. Riprova tra qualche secondo."
+    );
 
-async function richiediConsensoMediaSeNecessario(mediaAttiva) {
-  if (!mediaAttiva) return true;
-
-  if (!socket || socket.readyState !== WebSocket.OPEN) {
-    mostraNotifica("Connessione al server non disponibile. Riprova tra qualche secondo.");
     return false;
   }
 
-  if (typeof RTCPeerConnection !== "function") {
-    mostraNotifica("Questo browser non supporta la videochiamata del tavolo.");
+  if (
+    typeof RTCPeerConnection !== "function"
+  ) {
+    mostraNotifica(
+      "Questo browser non supporta la videochiamata del tavolo."
+    );
+
     return false;
   }
 
@@ -1656,73 +1618,115 @@ async function richiediConsensoMediaSeNecessario(mediaAttiva) {
     !navigator.mediaDevices ||
     typeof navigator.mediaDevices.getUserMedia !== "function"
   ) {
-    mostraNotifica("Webcam e microfono richiedono una connessione HTTPS e un browser compatibile.");
+    mostraNotifica(
+      "La webcam richiede HTTPS e un browser compatibile."
+    );
+
     return false;
   }
 
-  // Se il browser espone la Permissions Policy, controlliamo che la pagina
-  // (o l'eventuale iframe che la contiene) autorizzi entrambi i dispositivi.
-  const policy = document.permissionsPolicy || document.featurePolicy;
-  if (policy && typeof policy.allowsFeature === "function") {
-    const cameraConsentita = policy.allowsFeature("camera");
-    const microfonoConsentito = policy.allowsFeature("microphone");
-
-    if (!cameraConsentita || !microfonoConsentito) {
-      mostraNotifica(
-        "Questa pagina è aperta in un contenitore che non consente webcam e microfono. Apri la lobby direttamente oppure abilita camera e microphone nell'iframe."
-      );
-      return false;
-    }
-  }
-
-  // Evita la SECONDA apertura inutile quando il tavolo si riempie e la lobby
-  // riceve "partitaAvviata": il consenso appena verificato resta valido.
-  if (Date.now() < mediaLobbyVerificatiFino) return true;
-
-  if (verificaMediaLobbyInCorso) {
-    return verificaMediaLobbyInCorso;
-  }
-
-  verificaMediaLobbyInCorso = (async () => {
-    let flusso = null;
-
-    try {
-      mostraNotifica("Verifica webcam e microfono in corso…");
-
-      flusso = await apriStreamMediaLobby();
-
-      const audio = flusso.getAudioTracks().find(traccia => traccia.readyState === "live");
-      const video = flusso.getVideoTracks().find(traccia => traccia.readyState === "live");
-
-      if (!audio || !video) {
-        throw new DOMException("Sono necessarie entrambe le tracce audio e video.", "NotFoundError");
-      }
-
-      // Il controllo è realmente riuscito: solo da questo momento
-      // creaPartita()/entraPartita() possono proseguire.
-      mediaLobbyVerificatiFino = Date.now() + DURATA_VALIDITA_MEDIA_LOBBY_MS;
-
-      mostraNotifica("Webcam e microfono autorizzati correttamente.");
-      return true;
-    } catch (errore) {
-      mediaLobbyVerificatiFino = 0;
-      console.error("Verifica webcam/microfono lobby fallita:", errore);
-      mostraNotifica(messaggioErroreMediaLobby(errore));
-      return false;
-    } finally {
-      fermaStreamMediaLobby(flusso);
-
-      // Alcuni browser mobili impiegano un istante a rilasciare fisicamente
-      // la fotocamera dopo stop(); evitiamo una riapertura troppo ravvicinata.
-      await attendiMediaLobby(180);
-    }
-  })();
+  let streamVideo = null;
 
   try {
-    return await verificaMediaLobbyInCorso;
+
+    /* =====================================================
+       WEBCAM OBBLIGATORIA
+    ===================================================== */
+
+    mostraNotifica(
+      "Verifica webcam in corso…"
+    );
+
+    streamVideo =
+      await navigator.mediaDevices.getUserMedia({
+
+        audio: false,
+
+        video: {
+          width: {
+            ideal: 320,
+            max: 640
+          },
+
+          height: {
+            ideal: 240,
+            max: 480
+          },
+
+          frameRate: {
+            ideal: 15,
+            max: 20
+          },
+
+          facingMode: {
+            ideal: "user"
+          }
+        }
+
+      });
+
+    const tracciaVideo =
+      streamVideo
+        .getVideoTracks()
+        .find(
+          traccia =>
+            traccia.readyState === "live"
+        );
+
+    if (!tracciaVideo) {
+
+      throw new Error(
+        "Webcam non disponibile"
+      );
+
+    }
+
+    /*
+     * WEBCAM OK.
+     *
+     * Il microfono NON viene controllato qui,
+     * perché è facoltativo.
+     *
+     * Verrà tentato successivamente nel gioco.
+     */
+
+    mostraNotifica(
+      "Webcam disponibile. Puoi entrare nel tavolo."
+    );
+
+    return true;
+
+  } catch (erroreWebcam) {
+
+    console.error(
+      "Webcam non disponibile:",
+      erroreWebcam
+    );
+
+    mostraNotifica(
+      "Impossibile creare il tavolo: la webcam è obbligatoria."
+    );
+
+    return false;
+
   } finally {
-    verificaMediaLobbyInCorso = null;
+
+    if (streamVideo) {
+
+      streamVideo
+        .getTracks()
+        .forEach(
+          traccia => {
+            try {
+              traccia.stop();
+            } catch (e) {}
+          }
+        );
+
+    }
+
   }
+
 }
 
 function apriPartita(id, mediaAttiva) {
