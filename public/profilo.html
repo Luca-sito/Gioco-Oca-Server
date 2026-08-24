@@ -541,56 +541,73 @@ body {
 }
 
 /* =========================================================
-   LIVELLO
+   RATING ELO
    ========================================================= */
 
-.level-row {
-    display: flex;
-    justify-content: space-between;
+.elo-card {
+    position: relative;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-    gap: 15px;
-    margin-bottom: 16px;
+    gap: 22px;
+    background: linear-gradient(135deg, #ffffff 0%, #fffdf2 100%);
 }
 
-.level-badge {
-    display: inline-flex;
-    align-items: center;
-    min-height: 38px;
-    padding: 0 16px;
-    border-radius: 999px;
+.elo-card::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 5px;
     background: #ffd700;
-    color: #171717;
-    font-size: 13px;
+}
+
+.elo-eyebrow {
+    color: #8a7210;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+}
+
+.elo-title {
+    margin-top: 5px;
+    color: #17212a;
+    font-size: 18px;
     font-weight: 900;
 }
 
-.xp-total {
-    color: #6f7982;
+.elo-description {
+    margin-top: 5px;
+    max-width: 620px;
+    color: #7b858d;
     font-size: 12px;
-    font-weight: 800;
+    line-height: 1.55;
 }
 
-.xp-track {
-    height: 14px;
-    border-radius: 999px;
-    background: #edf0f2;
-    border: 1px solid #e2e6e9;
-    overflow: hidden;
+.elo-value-wrap {
+    min-width: 155px;
+    padding: 15px 18px;
+    border: 1px solid #eadb8a;
+    border-radius: 14px;
+    background: #fff9d9;
+    text-align: center;
 }
 
-.xp-fill {
-    width: 0%;
-    height: 100%;
-    border-radius: inherit;
-    background: linear-gradient(90deg, #ffd700, #ffbf00);
-    transition: width .45s ease;
+.elo-value {
+    color: #171717;
+    font-size: 30px;
+    font-weight: 950;
+    line-height: 1;
 }
 
-.xp-caption {
-    margin-top: 8px;
-    color: #8b959d;
+.elo-unit {
+    margin-top: 5px;
+    color: #796600;
     font-size: 11px;
-    text-align: right;
+    font-weight: 900;
+    letter-spacing: .12em;
+    text-transform: uppercase;
 }
 
 /* =========================================================
@@ -1122,13 +1139,12 @@ body {
         grid-template-columns: 1fr;
     }
 
-    .level-row {
-        flex-direction: column;
-        align-items: flex-start;
+    .elo-card {
+        grid-template-columns: 1fr;
     }
 
-    .xp-caption {
-        text-align: left;
+    .elo-value-wrap {
+        width: 100%;
     }
 
     .avatar-dropzone {
@@ -1586,38 +1602,19 @@ body {
                 </div>
 
 
-                <div class="card">
+                <div class="card elo-card">
 
-                    <div class="level-row">
-
-                        <div
-                            class="level-badge"
-                            id="levelBadge"
-                        >
-                            ⭐ Livello -
+                    <div>
+                        <div class="elo-eyebrow">Rating competitivo</div>
+                        <div class="elo-title">Punteggio ELO</div>
+                        <div class="elo-description">
+                            Il rating parte da 1500 e cambia in base al risultato della partita e alla forza ELO degli avversari.
                         </div>
-
-                        <div
-                            class="xp-total"
-                            id="xpTotal"
-                        >
-                            0 ELO
-                        </div>
-
                     </div>
 
-                    <div class="xp-track">
-                        <div
-                            class="xp-fill"
-                            id="xpFill"
-                        ></div>
-                    </div>
-
-                    <div
-                        class="xp-caption"
-                        id="xpCaption"
-                    >
-                        ...
+                    <div class="elo-value-wrap" aria-label="Rating ELO">
+                        <div class="elo-value" id="eloValue">1500</div>
+                        <div class="elo-unit">ELO</div>
                     </div>
 
                 </div>
@@ -1728,7 +1725,7 @@ body {
                     </h2>
 
                     <p class="card-subtitle">
-                        Una panoramica del tuo account e della tua progressione.
+                        Una panoramica del tuo account e del tuo rating competitivo.
                     </p>
 
                     <div class="info-list">
@@ -1744,22 +1741,12 @@ body {
                         </div>
 
                         <div class="info-row">
-                            <span class="info-label">Livello</span>
+                            <span class="info-label">Rating ELO</span>
                             <span
                                 class="info-value"
-                                id="summaryLevel"
+                                id="summaryElo"
                             >
-                                -
-                            </span>
-                        </div>
-
-                        <div class="info-row">
-                            <span class="info-label">ELO</span>
-                            <span
-                                class="info-value"
-                                id="summaryXp"
-                            >
-                                -
+                                1500 ELO
                             </span>
                         </div>
 
@@ -2606,89 +2593,16 @@ function aggiornaInterfaccia() {
         );
 
 
-    /* LIVELLO ED ELO */
+    /* RATING ELO */
 
-    const livello =
-        datiUtente.livello ||
-        1;
-
-    const elo =
-        datiUtente.elo != null
-            ? datiUtente.elo
-            : 1000;
+    const elo = Number.isFinite(Number(datiUtente.elo))
+        ? Math.round(Number(datiUtente.elo))
+        : 1500;
 
     document.getElementById(
-        "levelBadge"
+        "eloValue"
     ).textContent =
-        "⭐ Livello " +
-        livello;
-
-
-    document.getElementById(
-        "xpTotal"
-    ).textContent =
-        elo + " ELO";
-
-
-    let progresso = 0;
-
-
-    if (
-        datiUtente.sogliaProssima !== null &&
-        datiUtente.sogliaProssima !== undefined
-    ) {
-
-        const intervallo =
-            datiUtente.sogliaProssima -
-            datiUtente.sogliaAttuale;
-
-
-        if (intervallo > 0) {
-
-            progresso =
-                Math.round(
-                    (
-                        (elo -
-                            datiUtente.sogliaAttuale) /
-                        intervallo
-                    ) * 100
-                );
-        }
-
-        document.getElementById(
-            "xpCaption"
-        ).textContent =
-            elo +
-            " ELO · " +
-            Math.max(
-                0,
-                datiUtente.sogliaProssima - elo
-            ) +
-            " ELO al prossimo livello";
-
-    } else {
-
-        progresso = 100;
-
-        document.getElementById(
-            "xpCaption"
-        ).textContent =
-            elo +
-            " ELO · livello massimo raggiunto";
-
-    }
-
-
-    document.getElementById(
-        "xpFill"
-    ).style.width =
-        Math.max(
-            0,
-            Math.min(
-                100,
-                progresso
-            )
-        ) + "%";
+        elo;
 
 
     /* STATISTICHE */
@@ -2741,13 +2655,7 @@ function aggiornaInterfaccia() {
 
 
     document.getElementById(
-        "summaryLevel"
-    ).textContent =
-        "Livello " + livello;
-
-
-    document.getElementById(
-        "summaryXp"
+        "summaryElo"
     ).textContent =
         elo + " ELO";
 
