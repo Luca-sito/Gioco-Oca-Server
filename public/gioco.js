@@ -1,137 +1,29 @@
 const posizioniCaselle = {
-  1: { x: 2247, y: 815 },
-  2: { x: 2232, y: 1064 },
-  3: { x: 2104, y: 1336 },
-  4: { x: 1802, y: 1545 },
-  5: { x: 1426, y: 1598 },
-  6: { x: 1128, y: 1592 },
-  7: { x: 868, y: 1592 },
-  8: { x: 574, y: 1518 },
-  9: { x: 325, y: 1288 },
-  10: { x: 245, y: 1019 },
-  11: { x: 245, y: 760 },
-  12: { x: 336, y: 496 },
-  13: { x: 589, y: 300 },
-  14: { x: 891, y: 255 },
-  15: { x: 1126, y: 253 },
-  16: { x: 1374, y: 251 },
-  17: { x: 1679, y: 298 },
-  18: { x: 1926, y: 489 },
-  19: { x: 2000, y: 726 },
-  20: { x: 2006, y: 975 },
-  21: { x: 1923, y: 1230 },
-  22: { x: 1694, y: 1400 },
-  23: { x: 1319, y: 1430 },
-  24: { x: 992, y: 1430 },
-  25: { x: 675, y: 1379 },
-  26: { x: 474, y: 1198 },
-  27: { x: 432, y: 994 },
-  28: { x: 430, y: 804 },
-  29: { x: 477, y: 589 },
-  30: { x: 681, y: 426 },
-  31: { x: 992, y: 409 },
-  32: { x: 1275, y: 404 },
-  33: { x: 1583, y: 434 },
-  34: { x: 1774, y: 590 },
-  35: { x: 1811, y: 766 },
-  36: { x: 1808, y: 949 },
-  37: { x: 1764, y: 1139 },
-  38: { x: 1577, y: 1268 },
-  39: { x: 1287, y: 1283 },
-  40: { x: 1023, y: 1283 },
-  41: { x: 766, y: 1258 },
-  42: { x: 625, y: 1122 },
-  43: { x: 598, y: 970 },
-  44: { x: 591, y: 826 },
-  45: { x: 617, y: 681 },
-  46: { x: 772, y: 556 },
-  47: { x: 1023, y: 543 },
-  48: { x: 1251, y: 543 },
-  49: { x: 1492, y: 555 },
-  50: { x: 1642, y: 719 },
-  51: { x: 1642, y: 983 },
-  52: { x: 1483, y: 1136 },
-  53: { x: 1243, y: 1151 },
-  54: { x: 1051, y: 1151 },
-  55: { x: 849, y: 1132 },
-  56: { x: 749, y: 985 },
-  57: { x: 743, y: 802 },
-  58: { x: 858, y: 685 },
-  59: { x: 1040, y: 675 },
-  60: { x: 1221, y: 673 },
-  61: { x: 1387, y: 679 },
-  62: { x: 1500, y: 779 },
-  63: { x: 1491, y: 924 }
-};
-
-// Slot extra: punti alternativi per quando più pedine condividono la stessa casella.
-const slotExtraCaselle = {
-  1: [{ x: 2164, y: 871 }, { x: 2183, y: 821 }, { x: 2217, y: 866 }, { x: 2304, y: 871 }, { x: 2262, y: 898 }, { x: 2309, y: 792 }, { x: 2238, y: 760 }],
-  2: [{ x: 2170, y: 1043 }, { x: 2232, y: 1013 }, { x: 2302, y: 987 }, { x: 2300, y: 1070 }, { x: 2175, y: 1090 }, { x: 2296, y: 1115 }, { x: 2219, y: 1126 }],
-  3: [{ x: 2077, y: 1269 }, { x: 2038, y: 1317 }, { x: 1994, y: 1356 }, { x: 2179, y: 1320 }, { x: 2151, y: 1364 }, { x: 2098, y: 1419 }, { x: 2025, y: 1407 }],
-  4: [{ x: 1847, y: 1468 }, { x: 1970, y: 1503 }, { x: 1887, y: 1534 }, { x: 1785, y: 1596 }, { x: 1779, y: 1486 }, { x: 1726, y: 1524 }, { x: 1677, y: 1598 }],
-  5: [{ x: 1462, y: 1556 }, { x: 1409, y: 1534 }, { x: 1377, y: 1569 }, { x: 1317, y: 1532 }, { x: 1483, y: 1603 }, { x: 1400, y: 1641 }, { x: 1332, y: 1607 }],
-  6: [{ x: 1028, y: 1571 }, { x: 1085, y: 1547 }, { x: 1047, y: 1643 }, { x: 1236, y: 1635 }, { x: 1191, y: 1609 }, { x: 1121, y: 1649 }, { x: 1145, y: 1543 }],
-  7: [{ x: 804, y: 1528 }, { x: 798, y: 1577 }, { x: 860, y: 1547 }, { x: 930, y: 1581 }, { x: 898, y: 1635 }, { x: 817, y: 1630 }, { x: 908, y: 1535 }],
-  8: [{ x: 649, y: 1601 }, { x: 647, y: 1532 }, { x: 600, y: 1571 }, { x: 500, y: 1543 }, { x: 534, y: 1492 }, { x: 602, y: 1471 }, { x: 500, y: 1430 }],
-  9: [{ x: 349, y: 1402 }, { x: 432, y: 1368 }, { x: 360, y: 1337 }, { x: 291, y: 1319 }, { x: 362, y: 1258 }, { x: 274, y: 1256 }, { x: 313, y: 1196 }],
-  10: [{ x: 198, y: 1098 }, { x: 272, y: 1096 }, { x: 242, y: 1060 }, { x: 181, y: 1037 }, { x: 296, y: 1041 }, { x: 292, y: 1002 }, { x: 200, y: 964 }],
-  11: [{ x: 279, y: 868 }, { x: 236, y: 824 }, { x: 208, y: 875 }, { x: 198, y: 779 }, { x: 308, y: 807 }, { x: 221, y: 709 }, { x: 289, y: 713 }],
-  12: [{ x: 349, y: 551 }, { x: 270, y: 562 }, { x: 332, y: 607 }, { x: 277, y: 498 }, { x: 223, y: 590 }, { x: 391, y: 498 }, { x: 358, y: 385 }],
-  13: [{ x: 500, y: 379 }, { x: 511, y: 334 }, { x: 425, y: 332 }, { x: 526, y: 277 }, { x: 649, y: 321 }, { x: 645, y: 249 }, { x: 757, y: 300 }],
-  14: [{ x: 792, y: 219 }, { x: 825, y: 290 }, { x: 838, y: 245 }, { x: 892, y: 213 }, { x: 889, y: 298 }, { x: 934, y: 253 }, { x: 953, y: 300 }],
-  15: [{ x: 1045, y: 298 }, { x: 1043, y: 258 }, { x: 1015, y: 213 }, { x: 1119, y: 307 }, { x: 1089, y: 228 }, { x: 1158, y: 298 }, { x: 1211, y: 294 }],
-  16: [{ x: 1296, y: 209 }, { x: 1285, y: 274 }, { x: 1362, y: 300 }, { x: 1328, y: 255 }, { x: 1358, y: 209 }, { x: 1425, y: 211 }, { x: 1413, y: 275 }],
-  17: [{ x: 1558, y: 217 }, { x: 1636, y: 238 }, { x: 1574, y: 266 }, { x: 1519, y: 296 }, { x: 1630, y: 324 }, { x: 1721, y: 275 }, { x: 1711, y: 349 }],
-  18: [{ x: 1823, y: 447 }, { x: 1906, y: 392 }, { x: 1879, y: 458 }, { x: 1881, y: 543 }, { x: 1972, y: 470 }, { x: 1936, y: 547 }, { x: 2028, y: 536 }],
-  19: [{ x: 1926, y: 673 }, { x: 1991, y: 662 }, { x: 2079, y: 709 }, { x: 1930, y: 734 }, { x: 2068, y: 621 }, { x: 2043, y: 764 }, { x: 1955, y: 798 }],
-  20: [{ x: 2057, y: 921 }, { x: 1964, y: 900 }, { x: 2070, y: 1026 }, { x: 1938, y: 983 }, { x: 2030, y: 873 }, { x: 2015, y: 1037 }, { x: 1938, y: 1060 }],
-  21: [{ x: 1919, y: 1128 }, { x: 1889, y: 1185 }, { x: 1960, y: 1168 }, { x: 2034, y: 1160 }, { x: 2008, y: 1217 }, { x: 1955, y: 1271 }, { x: 1870, y: 1243 }],
-  22: [{ x: 1742, y: 1337 }, { x: 1677, y: 1345 }, { x: 1766, y: 1381 }, { x: 1825, y: 1383 }, { x: 1726, y: 1441 }, { x: 1640, y: 1424 }, { x: 1613, y: 1379 }],
-  23: [{ x: 1419, y: 1381 }, { x: 1306, y: 1377 }, { x: 1409, y: 1426 }, { x: 1477, y: 1473 }, { x: 1353, y: 1475 }, { x: 1258, y: 1447 }, { x: 1226, y: 1386 }],
-  24: [{ x: 1079, y: 1388 }, { x: 1015, y: 1377 }, { x: 1102, y: 1451 }, { x: 1042, y: 1462 }, { x: 955, y: 1464 }, { x: 908, y: 1417 }, { x: 855, y: 1462 }],
-  25: [{ x: 774, y: 1371 }, { x: 726, y: 1435 }, { x: 642, y: 1417 }, { x: 702, y: 1349 }, { x: 617, y: 1375 }, { x: 647, y: 1330 }, { x: 581, y: 1330 }],
-  26: [{ x: 475, y: 1292 }, { x: 528, y: 1260 }, { x: 442, y: 1232 }, { x: 491, y: 1241 }, { x: 532, y: 1188 }, { x: 491, y: 1137 }],
-  27: [{ x: 392, y: 1054 }, { x: 449, y: 1045 }, { x: 374, y: 1007 }, { x: 389, y: 945 }, { x: 489, y: 1013 }, { x: 475, y: 943 }, { x: 370, y: 1081 }],
-  28: [{ x: 477, y: 856 }, { x: 411, y: 858 }, { x: 375, y: 815 }, { x: 372, y: 879 }, { x: 485, y: 798 }, { x: 385, y: 755 }, { x: 443, y: 739 }],
-  29: [{ x: 487, y: 655 }, { x: 425, y: 645 }, { x: 415, y: 596 }, { x: 543, y: 587 }, { x: 464, y: 524 }, { x: 513, y: 536 }, { x: 430, y: 555 }],
-  30: [{ x: 609, y: 496 }, { x: 645, y: 456 }, { x: 566, y: 447 }, { x: 713, y: 398 }, { x: 768, y: 379 }, { x: 811, y: 438 }, { x: 745, y: 443 }],
-  31: [{ x: 870, y: 377 }, { x: 930, y: 441 }, { x: 945, y: 389 }, { x: 1066, y: 445 }, { x: 1000, y: 453 }, { x: 1074, y: 390 }, { x: 1013, y: 366 }],
-  32: [{ x: 1215, y: 434 }, { x: 1170, y: 407 }, { x: 1311, y: 443 }, { x: 1208, y: 383 }, { x: 1349, y: 413 }, { x: 1321, y: 373 }, { x: 1402, y: 373 }],
-  33: [{ x: 1462, y: 430 }, { x: 1655, y: 489 }, { x: 1694, y: 440 }, { x: 1506, y: 377 }, { x: 1536, y: 441 }, { x: 1634, y: 392 }, { x: 1596, y: 481 }],
-  34: [{ x: 1762, y: 483 }, { x: 1736, y: 536 }, { x: 1742, y: 632 }, { x: 1717, y: 568 }, { x: 1777, y: 539 }, { x: 1840, y: 615 }, { x: 1796, y: 636 }],
-  35: [{ x: 1757, y: 726 }, { x: 1804, y: 704 }, { x: 1857, y: 683 }, { x: 1853, y: 745 }, { x: 1770, y: 781 }, { x: 1808, y: 815 }],
-  36: [{ x: 1760, y: 877 }, { x: 1851, y: 879 }, { x: 1808, y: 898 }, { x: 1757, y: 943 }, { x: 1857, y: 947 }, { x: 1849, y: 1013 }, { x: 1781, y: 988 }],
-  37: [{ x: 1743, y: 1054 }, { x: 1849, y: 1083 }, { x: 1791, y: 1090 }, { x: 1808, y: 1166 }, { x: 1768, y: 1203 }, { x: 1711, y: 1156 }, { x: 1719, y: 1103 }],
-  38: [{ x: 1628, y: 1198 }, { x: 1706, y: 1247 }, { x: 1642, y: 1253 }, { x: 1585, y: 1311 }, { x: 1542, y: 1222 }, { x: 1528, y: 1294 }, { x: 1489, y: 1245 }],
-  39: [{ x: 1192, y: 1226 }, { x: 1206, y: 1277 }, { x: 1260, y: 1243 }, { x: 1368, y: 1234 }, { x: 1409, y: 1313 }, { x: 1355, y: 1281 }, { x: 1249, y: 1319 }],
-  40: [{ x: 1119, y: 1237 }, { x: 1119, y: 1315 }, { x: 1075, y: 1279 }, { x: 996, y: 1319 }, { x: 983, y: 1234 }, { x: 947, y: 1313 }, { x: 932, y: 1251 }],
-  41: [{ x: 857, y: 1239 }, { x: 808, y: 1313 }, { x: 813, y: 1256 }, { x: 745, y: 1292 }, { x: 768, y: 1209 }, { x: 711, y: 1260 }, { x: 717, y: 1207 }],
-  42: [{ x: 613, y: 1209 }, { x: 653, y: 1179 }, { x: 596, y: 1162 }, { x: 674, y: 1139 }, { x: 658, y: 1090 }, { x: 574, y: 1100 }],
-  43: [{ x: 553, y: 1030 }, { x: 647, y: 1022 }, { x: 600, y: 1011 }, { x: 557, y: 981 }, { x: 640, y: 979 }, { x: 568, y: 934 }, { x: 642, y: 932 }],
-  44: [{ x: 549, y: 879 }, { x: 594, y: 879 }, { x: 638, y: 870 }, { x: 549, y: 832 }, { x: 638, y: 826 }, { x: 551, y: 770 }, { x: 598, y: 785 }],
-  45: [{ x: 647, y: 747 }, { x: 600, y: 721 }, { x: 560, y: 696 }, { x: 657, y: 700 }, { x: 587, y: 639 }, { x: 636, y: 632 }, { x: 687, y: 668 }],
-  46: [{ x: 715, y: 613 }, { x: 653, y: 566 }, { x: 709, y: 547 }, { x: 787, y: 507 }, { x: 794, y: 587 }, { x: 838, y: 524 }, { x: 875, y: 573 }],
-  47: [{ x: 949, y: 572 }, { x: 925, y: 530 }, { x: 975, y: 498 }, { x: 991, y: 572 }, { x: 1062, y: 568 }, { x: 1053, y: 507 }, { x: 1096, y: 547 }],
-  48: [{ x: 1172, y: 568 }, { x: 1162, y: 504 }, { x: 1208, y: 530 }, { x: 1281, y: 507 }, { x: 1243, y: 583 }, { x: 1296, y: 566 }, { x: 1326, y: 507 }],
-  49: [{ x: 1391, y: 566 }, { x: 1413, y: 528 }, { x: 1453, y: 506 }, { x: 1442, y: 577 }, { x: 1506, y: 594 }, { x: 1542, y: 534 }, { x: 1557, y: 577 }],
-  50: [{ x: 1574, y: 658 }, { x: 1642, y: 598 }, { x: 1636, y: 658 }, { x: 1606, y: 745 }, { x: 1683, y: 766 }, { x: 1683, y: 689 }, { x: 1634, y: 800 }],
-  51: [{ x: 1606, y: 888 }, { x: 1692, y: 887 }, { x: 1649, y: 930 }, { x: 1591, y: 1000 }, { x: 1677, y: 1007 }, { x: 1645, y: 1056 }, { x: 1589, y: 1058 }],
-  52: [{ x: 1511, y: 1083 }, { x: 1591, y: 1137 }, { x: 1542, y: 1137 }, { x: 1458, y: 1164 }, { x: 1442, y: 1107 }, { x: 1368, y: 1113 }, { x: 1404, y: 1153 }],
-  53: [{ x: 1308, y: 1115 }, { x: 1332, y: 1173 }, { x: 1292, y: 1168 }, { x: 1206, y: 1171 }, { x: 1255, y: 1111 }, { x: 1211, y: 1111 }, { x: 1181, y: 1139 }],
-  54: [{ x: 1123, y: 1115 }, { x: 1123, y: 1177 }, { x: 1092, y: 1143 }, { x: 1013, y: 1171 }, { x: 1058, y: 1113 }, { x: 1008, y: 1120 }, { x: 977, y: 1154 }],
-  55: [{ x: 932, y: 1113 }, { x: 909, y: 1153 }, { x: 870, y: 1173 }, { x: 815, y: 1153 }, { x: 892, y: 1113 }, { x: 809, y: 1103 }, { x: 847, y: 1077 }],
-  56: [{ x: 736, y: 1092 }, { x: 806, y: 1036 }, { x: 747, y: 1037 }, { x: 702, y: 1015 }, { x: 791, y: 977 }, { x: 709, y: 949 }, { x: 783, y: 934 }],
-  57: [{ x: 704, y: 877 }, { x: 777, y: 881 }, { x: 734, y: 843 }, { x: 700, y: 779 }, { x: 783, y: 815 }, { x: 740, y: 741 }, { x: 781, y: 772 }],
-  58: [{ x: 842, y: 743 }, { x: 802, y: 707 }, { x: 772, y: 668 }, { x: 815, y: 645 }, { x: 879, y: 724 }, { x: 885, y: 658 }, { x: 930, y: 715 }],
-  59: [{ x: 964, y: 639 }, { x: 991, y: 709 }, { x: 998, y: 672 }, { x: 1019, y: 638 }, { x: 1047, y: 715 }, { x: 1079, y: 645 }, { x: 1100, y: 715 }],
-  60: [{ x: 1166, y: 639 }, { x: 1223, y: 634 }, { x: 1179, y: 687 }, { x: 1225, y: 717 }, { x: 1279, y: 636 }, { x: 1260, y: 685 }, { x: 1158, y: 719 }],
-  61: [{ x: 1347, y: 639 }, { x: 1411, y: 639 }, { x: 1466, y: 660 }, { x: 1425, y: 700 }, { x: 1340, y: 679 }, { x: 1398, y: 721 }, { x: 1345, y: 715 }],
-  62: [{ x: 1521, y: 694 }, { x: 1491, y: 728 }, { x: 1540, y: 813 }, { x: 1447, y: 822 }, { x: 1436, y: 777 }, { x: 1492, y: 824 }, { x: 1542, y: 755 }]
+  1: { x: 2246, y: 817 }, 2: { x: 2227, y: 1064 }, 3: { x: 2102, y: 1329 },
+  4: { x: 1801, y: 1545 }, 5: { x: 1421, y: 1599 }, 6: { x: 1126, y: 1591 },
+  7: { x: 873, y: 1591 }, 8: { x: 567, y: 1518 }, 9: { x: 321, y: 1286 },
+  10: { x: 249, y: 1017 }, 11: { x: 244, y: 759 }, 12: { x: 334, y: 492 },
+  13: { x: 591, y: 298 }, 14: { x: 897, y: 258 }, 15: { x: 1139, y: 257 },
+  16: { x: 1366, y: 246 }, 17: { x: 1674, y: 286 }, 18: { x: 1933, y: 490 },
+  19: { x: 2008, y: 720 }, 20: { x: 2016, y: 974 }, 21: { x: 1930, y: 1232 },
+  22: { x: 1694, y: 1395 }, 23: { x: 1325, y: 1423 }, 24: { x: 993, y: 1428 },
+  25: { x: 673, y: 1386 }, 26: { x: 465, y: 1205 }, 27: { x: 435, y: 992 },
+  28: { x: 425, y: 802 }, 29: { x: 480, y: 590 }, 30: { x: 685, y: 427 },
+  31: { x: 999, y: 403 }, 32: { x: 1287, y: 398 }, 33: { x: 1578, y: 425 },
+  34: { x: 1779, y: 579 }, 35: { x: 1811, y: 766 }, 36: { x: 1816, y: 943 },
+  37: { x: 1765, y: 1134 }, 38: { x: 1566, y: 1264 }, 39: { x: 1269, y: 1275 },
+  40: { x: 1022, y: 1267 }, 41: { x: 776, y: 1248 }, 42: { x: 622, y: 1106 },
+  43: { x: 606, y: 967 }, 44: { x: 592, y: 829 }, 45: { x: 629, y: 676 },
+  46: { x: 767, y: 554 }, 47: { x: 1044, y: 546 }, 48: { x: 1260, y: 527 },
+  49: { x: 1505, y: 546 }, 50: { x: 1635, y: 722 }, 51: { x: 1639, y: 979 },
+  52: { x: 1484, y: 1135 }, 53: { x: 1243, y: 1146 }, 54: { x: 1049, y: 1143 },
+  55: { x: 857, y: 1129 }, 56: { x: 739, y: 986 }, 57: { x: 733, y: 798 },
+  58: { x: 866, y: 679 }, 59: { x: 1040, y: 670 }, 60: { x: 1236, y: 668 },
+  61: { x: 1400, y: 665 }, 62: { x: 1506, y: 738 }, 63: { x: 1486, y: 926 }
 };
 
 const coloriGiocatori = ["#6a2c70", "#dddddd", "#1e40af", "#43a047", "#f57c00", "#c0ca33", "#e53935", "#2b2b2b"];
-const DURATA_SALTO_MS = 260;
+const DURATA_SALTO_MS = 380;
 
 const origineConfigurata = typeof window.GIOCO_SERVER_URL === "string" ? window.GIOCO_SERVER_URL.trim() : "";
 const hostLocale = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" || window.location.hostname === "[::1]";
@@ -413,13 +305,10 @@ function aggiornaLayoutTabellone() {
   mondo.style.width = larghezzaCanvas + "px";
   mondo.style.height = altezzaCanvas + "px";
 
-  // Su telefono/tablet il tabellone usa praticamente tutto il viewport:
-  // 1 solo pixel di margine reale per lato. Su desktop manteniamo i margini originali.
-  const layoutMobile = !document.body.classList.contains("modalita-desktop");
-  const margineOrizzontale = layoutMobile ? 1 : Math.max(16, larghezzaCanvas * 0.03);
-  const margineVerticale = layoutMobile ? 1 : Math.max(16, altezzaCanvas * 0.06);
-  let larghezzaDisponibile = Math.max(1, larghezzaCanvas - margineOrizzontale * 2);
-  const altezzaDisponibile = Math.max(1, altezzaCanvas - margineVerticale * 2);
+  const margineOrizzontale = Math.max(16, larghezzaCanvas * 0.03);
+  const margineVerticale = Math.max(16, altezzaCanvas * 0.06);
+  let larghezzaDisponibile = larghezzaCanvas - margineOrizzontale * 2;
+  const altezzaDisponibile = altezzaCanvas - margineVerticale * 2;
 
   if (videoDesktopAttivo) {
     const larghezzaColonnaDesiderata = Math.min(380, Math.max(180, larghezzaCanvas * 0.2));
@@ -762,11 +651,49 @@ let timerRiprovaPeer = {};
 let timerDisconnessionePeer = {};
 let partecipantiMediaPronti = new Set();
 const nomiPartecipantiMedia = new Map();
-let CONFIGURAZIONE_ICE = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+let CONFIGURAZIONE_ICE = {
+  iceServers: [
+    { urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302", "stun:stun2.l.google.com:19302"] }
+  ],
+  iceCandidatePoolSize: 4,
+  bundlePolicy: "max-bundle"
+};
+
 const VINCOLI_MEDIA = {
   audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-  video: { width: { ideal: 320, max: 640 }, height: { ideal: 240, max: 480 }, frameRate: { ideal: 15, max: 20 }, facingMode: "user" }
+  video: {
+    width: { ideal: 320, max: 640 },
+    height: { ideal: 240, max: 480 },
+    frameRate: { ideal: 15, max: 20 },
+    facingMode: { ideal: "user" }
+  }
 };
+
+function aspettaWebRtc(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function nomeErroreMediaPartita(errore) {
+  return String(errore && errore.name ? errore.name : "");
+}
+
+function descriviErroreMediaPartita(errore) {
+  const nome = nomeErroreMediaPartita(errore);
+  if (nome === "NotAllowedError" || nome === "SecurityError" || nome === "PermissionDeniedError") {
+    return "Permesso negato: abilita webcam e microfono nelle impostazioni del browser.";
+  }
+  if (nome === "NotFoundError" || nome === "DevicesNotFoundError") {
+    return "Webcam o microfono non trovati.";
+  }
+  if (nome === "NotReadableError" || nome === "TrackStartError") {
+    return "Webcam o microfono sono occupati da un'altra app o scheda.";
+  }
+  if (nome === "OverconstrainedError" || nome === "ConstraintNotSatisfiedError") {
+    return "Il dispositivo non supporta le impostazioni video richieste.";
+  }
+  if (nome === "AbortError") return "Apertura di webcam o microfono interrotta dal browser.";
+  return "Webcam o microfono non disponibili.";
+}
 
 function aggiornaNomiPartecipanti(dati) {
   if (!dati || !Array.isArray(dati.giocatori)) return;
@@ -781,7 +708,7 @@ function aggiornaNomiPartecipanti(dati) {
 
 function aggiornaConfigurazioneIce(configurazione) {
   if (!configurazione || !Array.isArray(configurazione.iceServers)) return;
-  const iceServers = configurazione.iceServers.slice(0, 4).filter(server => {
+  const iceServers = configurazione.iceServers.slice(0, 6).filter(server => {
     const urls = Array.isArray(server && server.urls) ? server.urls : [server && server.urls];
     return urls.length > 0 && urls.every(url => typeof url === "string" && /^(stun|stuns|turn|turns):/i.test(url));
   }).map(server => ({
@@ -789,7 +716,13 @@ function aggiornaConfigurazioneIce(configurazione) {
     ...(typeof server.username === "string" ? { username: server.username } : {}),
     ...(typeof server.credential === "string" ? { credential: server.credential } : {})
   }));
-  if (iceServers.length) CONFIGURAZIONE_ICE = { iceServers };
+  if (iceServers.length) {
+    CONFIGURAZIONE_ICE = {
+      iceServers,
+      iceCandidatePoolSize: 4,
+      bundlePolicy: "max-bundle"
+    };
+  }
 }
 
 function aggiornaInterfacciaMedia(testo, errore) {
@@ -800,11 +733,59 @@ function aggiornaInterfacciaMedia(testo, errore) {
   const stato = document.getElementById("stato-media-connessione");
   const voceMenu = document.getElementById("btn-stato-media");
   if (pannello) pannello.classList.toggle("nascosto", !mediaPartitaAttiva);
-  if (stato) { stato.textContent = testo || (mediaPartitaAttiva ? "Collegamento…" : "Non attiva"); stato.style.color = errore ? "#ff8a80" : ""; }
+  if (stato) {
+    stato.textContent = testo || (mediaPartitaAttiva ? "Collegamento…" : "Non attiva");
+    stato.style.color = errore ? "#ff8a80" : "";
+  }
   if (voceMenu) {
-    voceMenu.textContent = mediaPartitaAttiva ? (errore ? "⚠️ Webcam/microfono non disponibili" : "🎥 Webcam e microfono attivi") : "🔇 Videochiamata: non attiva";
+    voceMenu.textContent = mediaPartitaAttiva
+      ? (errore ? "⚠️ Webcam/microfono: verifica necessaria" : "🎥 Webcam e microfono attivi")
+      : "🔇 Videochiamata: non attiva";
     voceMenu.classList.toggle("media-attiva", mediaPartitaAttiva && !errore);
   }
+  aggiornaControlliMediaLocale();
+}
+
+function aggiornaControlliMediaLocale() {
+  const tracciaAudio = flussoMediaLocale && flussoMediaLocale.getAudioTracks().find(t => t.readyState === "live");
+  const tracciaVideo = flussoMediaLocale && flussoMediaLocale.getVideoTracks().find(t => t.readyState === "live");
+  const btnMic = document.getElementById("btn-toggle-microfono-media");
+  const btnCam = document.getElementById("btn-toggle-webcam-media");
+
+  if (btnMic) {
+    const acceso = !!(tracciaAudio && tracciaAudio.enabled);
+    btnMic.disabled = !tracciaAudio;
+    btnMic.textContent = acceso ? "🎙️ Microfono: On" : "🔇 Microfono: Muto";
+    btnMic.setAttribute("aria-pressed", acceso ? "false" : "true");
+    btnMic.classList.toggle("media-spento", !!tracciaAudio && !acceso);
+  }
+  if (btnCam) {
+    const acceso = !!(tracciaVideo && tracciaVideo.enabled);
+    btnCam.disabled = !tracciaVideo;
+    btnCam.textContent = acceso ? "📷 Webcam: On" : "🚫 Webcam: Off";
+    btnCam.setAttribute("aria-pressed", acceso ? "false" : "true");
+    btnCam.classList.toggle("media-spento", !!tracciaVideo && !acceso);
+  }
+}
+
+function toggleMicrofonoMedia() {
+  const traccia = flussoMediaLocale && flussoMediaLocale.getAudioTracks().find(t => t.readyState === "live");
+  if (!traccia) {
+    mostraNotificaGioco("Microfono non disponibile. Usa 'Riprova webcam e microfono'.");
+    return;
+  }
+  traccia.enabled = !traccia.enabled;
+  aggiornaControlliMediaLocale();
+}
+
+function toggleWebcamMedia() {
+  const traccia = flussoMediaLocale && flussoMediaLocale.getVideoTracks().find(t => t.readyState === "live");
+  if (!traccia) {
+    mostraNotificaGioco("Webcam non disponibile. Usa 'Riprova webcam e microfono'.");
+    return;
+  }
+  traccia.enabled = !traccia.enabled;
+  aggiornaControlliMediaLocale();
 }
 
 function impostaMediaPartitaAttiva(attiva) {
@@ -816,7 +797,10 @@ function impostaMediaPartitaAttiva(attiva) {
     if (flussoMediaLocale) {
       const streamDaChiudere = flussoMediaLocale;
       flussoMediaLocale = null;
-      streamDaChiudere.getTracks().forEach(traccia => { traccia.onended = null; traccia.stop(); });
+      streamDaChiudere.getTracks().forEach(traccia => {
+        traccia.onended = null;
+        try { traccia.stop(); } catch (e) {}
+      });
     }
     Object.keys(connessioniPeer).forEach(chiudiConnessioneMedia);
     Object.values(timerRiprovaPeer).forEach(clearTimeout);
@@ -828,9 +812,10 @@ function impostaMediaPartitaAttiva(attiva) {
     aggiornaInterfacciaMedia("Non attiva", false);
     return;
   }
+
   mediaPartitaAttiva = true;
   if (mediaRichiedeRiprovaManuale) {
-    aggiornaInterfacciaMedia("Webcam o microfono non disponibili", true);
+    aggiornaInterfacciaMedia("Autorizzazione o dispositivo da verificare", true);
     return;
   }
   aggiornaInterfacciaMedia(flussoMediaLocale ? "Collegata" : "Avvio webcam e microfono…", false);
@@ -839,59 +824,143 @@ function impostaMediaPartitaAttiva(attiva) {
 
 function segnalaMediaPronto() {
   if (!mediaPartitaAttiva || !flussoMediaLocale || mediaProntoSegnalato) return;
+  const audio = flussoMediaLocale.getAudioTracks().some(t => t.readyState === "live");
+  const video = flussoMediaLocale.getVideoTracks().some(t => t.readyState === "live");
+  if (!audio || !video) return;
   if (inviaSocket({ tipo: "mediaPronto", partitaId, attivo: true })) mediaProntoSegnalato = true;
 }
 
 function gestisciInterruzioneMediaLocale() {
   if (puliziaMediaInCorso || !flussoMediaLocale) return;
+  const audioVivo = flussoMediaLocale.getAudioTracks().some(t => t.readyState === "live");
+  const videoVivo = flussoMediaLocale.getVideoTracks().some(t => t.readyState === "live");
+  if (audioVivo && videoVivo) return;
+
   const streamDaChiudere = flussoMediaLocale;
   flussoMediaLocale = null;
-  streamDaChiudere.getTracks().forEach(traccia => { if (traccia.readyState === "live") traccia.stop(); });
+  streamDaChiudere.getTracks().forEach(traccia => {
+    traccia.onended = null;
+    try { if (traccia.readyState === "live") traccia.stop(); } catch (e) {}
+  });
   mediaProntoSegnalato = false;
   mediaRichiedeRiprovaManuale = true;
   inviaSocket({ tipo: "mediaPronto", partitaId, attivo: false });
-  partecipantiMediaPronti.clear();
+  partecipantiMediaPronti.delete(mioUid);
   Object.keys(connessioniPeer).forEach(chiudiConnessioneMedia);
   const locale = document.getElementById("video-locale");
   if (locale) locale.srcObject = null;
-  aggiornaInterfacciaMedia("Webcam o microfono non disponibili", true);
+  aggiornaInterfacciaMedia("Webcam o microfono scollegati", true);
   const riprova = document.getElementById("btn-sblocca-media");
-  if (riprova) { riprova.textContent = "Riprova webcam e microfono"; riprova.classList.remove("nascosto"); }
+  if (riprova) {
+    riprova.textContent = "Riprova webcam e microfono";
+    riprova.classList.remove("nascosto");
+  }
+}
+
+async function ottieniFlussoMediaRobusto() {
+  const tentativiVincoli = [
+    VINCOLI_MEDIA,
+    { audio: { echoCancellation: true, noiseSuppression: true }, video: { facingMode: { ideal: "user" } } },
+    { audio: true, video: true }
+  ];
+  let ultimoErrore = null;
+
+  for (let indice = 0; indice < tentativiVincoli.length; indice++) {
+    const vincoli = tentativiVincoli[indice];
+    for (let tentativoOccupato = 0; tentativoOccupato < 3; tentativoOccupato++) {
+      try {
+        return await navigator.mediaDevices.getUserMedia(vincoli);
+      } catch (errore) {
+        ultimoErrore = errore;
+        const nome = nomeErroreMediaPartita(errore);
+        const vincoliTroppoStretti = nome === "OverconstrainedError" || nome === "ConstraintNotSatisfiedError";
+        const dispositivoTemporaneamenteOccupato = nome === "NotReadableError" || nome === "TrackStartError" || nome === "AbortError";
+
+        if (vincoliTroppoStretti) break;
+        if (dispositivoTemporaneamenteOccupato && tentativoOccupato < 2) {
+          await aspettaWebRtc(450 + tentativoOccupato * 550);
+          continue;
+        }
+        throw errore;
+      }
+    }
+  }
+  throw ultimoErrore || new Error("Impossibile aprire webcam e microfono");
 }
 
 async function inizializzaMediaPartita() {
   if (!mediaPartitaAttiva || paginaInChiusura) return false;
-  if (flussoMediaLocale) { segnalaMediaPronto(); return true; }
+  if (flussoMediaLocale) {
+    const audioVivo = flussoMediaLocale.getAudioTracks().some(t => t.readyState === "live");
+    const videoVivo = flussoMediaLocale.getVideoTracks().some(t => t.readyState === "live");
+    if (audioVivo && videoVivo) {
+      segnalaMediaPronto();
+      aggiornaControlliMediaLocale();
+      return true;
+    }
+  }
   if (avvioMediaInCorso) return avvioMediaInCorso;
+
   avvioMediaInCorso = (async () => {
     try {
-      if (!window.isSecureContext || !navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== "function") throw new Error("getUserMedia non disponibile");
-      const stream = await navigator.mediaDevices.getUserMedia(VINCOLI_MEDIA);
+      if (!window.isSecureContext || !navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== "function") {
+        throw new DOMException("getUserMedia non disponibile", "NotSupportedError");
+      }
+      if (typeof RTCPeerConnection !== "function") {
+        throw new DOMException("WebRTC non disponibile", "NotSupportedError");
+      }
+      const policy = document.permissionsPolicy || document.featurePolicy;
+      if (policy && typeof policy.allowsFeature === "function" && (!policy.allowsFeature("camera") || !policy.allowsFeature("microphone"))) {
+        throw new DOMException("Il contenitore iframe non autorizza camera/microfono", "NotAllowedError");
+      }
+
+      const stream = await ottieniFlussoMediaRobusto();
       if (!mediaPartitaAttiva || paginaInChiusura) {
         stream.getTracks().forEach(traccia => traccia.stop());
         return false;
       }
-      if (!stream.getAudioTracks().length || !stream.getVideoTracks().length) {
+
+      const audio = stream.getAudioTracks().find(t => t.readyState === "live");
+      const video = stream.getVideoTracks().find(t => t.readyState === "live");
+      if (!audio || !video) {
         stream.getTracks().forEach(traccia => traccia.stop());
-        throw new Error("Sono necessarie entrambe le tracce audio e video");
+        throw new DOMException("Sono necessarie entrambe le tracce", "NotFoundError");
       }
+
       flussoMediaLocale = stream;
       mediaRichiedeRiprovaManuale = false;
-      stream.getTracks().forEach(traccia => { traccia.onended = gestisciInterruzioneMediaLocale; });
+      stream.getTracks().forEach(traccia => {
+        traccia.onended = gestisciInterruzioneMediaLocale;
+      });
+
       const videoLocale = document.getElementById("video-locale");
-      if (videoLocale) { videoLocale.srcObject = stream; videoLocale.muted = true; videoLocale.play().catch(() => {}); }
+      if (videoLocale) {
+        videoLocale.srcObject = stream;
+        videoLocale.muted = true;
+        videoLocale.playsInline = true;
+        videoLocale.play().catch(() => {});
+      }
+
       const riprova = document.getElementById("btn-sblocca-media");
       if (riprova) riprova.classList.add("nascosto");
+      aggiornaControlliMediaLocale();
       aggiornaInterfacciaMedia("In attesa degli altri giocatori…", false);
       segnalaMediaPronto();
       return true;
     } catch (errore) {
       console.warn("Avvio webcam/microfono non riuscito:", errore);
       mediaRichiedeRiprovaManuale = true;
-      aggiornaInterfacciaMedia("Permesso o dispositivo non disponibile", true);
-      mostraNotificaGioco("Webcam e microfono non sono disponibili. La partita resta comunque utilizzabile.");
+      mediaProntoSegnalato = false;
+      inviaSocket({ tipo: "mediaPronto", partitaId, attivo: false });
+      const dettaglio = descriviErroreMediaPartita(errore);
+      aggiornaInterfacciaMedia(dettaglio, true);
+      mostraNotificaGioco(dettaglio + " La partita attenderà finché non riprovi.");
       const riprova = document.getElementById("btn-sblocca-media");
-      if (riprova) { riprova.textContent = "Riprova webcam e microfono"; riprova.classList.remove("nascosto"); }
+      if (riprova) {
+        riprova.textContent = "Riprova webcam e microfono";
+        riprova.classList.remove("nascosto");
+      }
+      aggiornaControlliMediaLocale();
       return false;
     } finally {
       avvioMediaInCorso = null;
@@ -905,89 +974,143 @@ function creaElementiVideoRemoto(altroUid) {
   const figura = document.createElement("figure");
   figura.className = "video-tile";
   figura.dataset.uid = altroUid;
+
   const video = document.createElement("video");
   video.autoplay = true;
   video.playsInline = true;
   video.muted = true;
+
   const audio = document.createElement("audio");
   audio.autoplay = true;
+  audio.preload = "auto";
+
   const didascalia = document.createElement("figcaption");
   didascalia.textContent = nomiPartecipantiMedia.get(altroUid) || "Giocatore";
+  const streamRemoto = new MediaStream();
+
   figura.append(video, audio, didascalia);
-  document.getElementById("griglia-video").appendChild(figura);
-  elementiVideoRemoti[altroUid] = { figura, video, audio, didascalia };
+  const griglia = document.getElementById("griglia-video");
+  if (griglia) griglia.appendChild(figura);
+  elementiVideoRemoti[altroUid] = { figura, video, audio, didascalia, streamRemoto };
   return elementiVideoRemoti[altroUid];
 }
 
+function mostraPulsanteSbloccoAudio(testo) {
+  const pulsante = document.getElementById("btn-sblocca-media");
+  if (!pulsante) return;
+  if (testo) pulsante.textContent = testo;
+  pulsante.classList.remove("nascosto");
+}
+
 function tentaRiproduzioneElementoMedia(elemento) {
-  if (!elemento || typeof elemento.play !== "function") return;
-  elemento.play().then(() => {
-    const pulsante = document.getElementById("btn-sblocca-media");
-    if (pulsante && Object.values(elementiVideoRemoti).every(elementi => !elementi.video.paused && !elementi.audio.paused)) pulsante.classList.add("nascosto");
-  }).catch(() => {
-    const pulsante = document.getElementById("btn-sblocca-media");
-    if (pulsante) { pulsante.textContent = "🔊 Attiva l'audio"; pulsante.classList.remove("nascosto"); }
+  if (!elemento || typeof elemento.play !== "function") return Promise.resolve(false);
+  return elemento.play().then(() => true).catch(() => {
+    mostraPulsanteSbloccoAudio("🔊 Attiva l'audio");
+    return false;
   });
+}
+
+function chiudiPeerSenzaRimuovereTile(altroUid) {
+  if (timerRiprovaPeer[altroUid]) { clearTimeout(timerRiprovaPeer[altroUid]); delete timerRiprovaPeer[altroUid]; }
+  if (timerDisconnessionePeer[altroUid]) { clearTimeout(timerDisconnessionePeer[altroUid]); delete timerDisconnessionePeer[altroUid]; }
+  const pc = connessioniPeer[altroUid];
+  delete connessioniPeer[altroUid];
+  if (pc && pc.connectionState !== "closed") {
+    try { pc.onicecandidate = null; pc.ontrack = null; pc.onconnectionstatechange = null; pc.oniceconnectionstatechange = null; pc.close(); } catch (e) {}
+  }
+  delete candidatiIceInAttesa[altroUid];
 }
 
 function creaConnessionePeer(altroUid) {
   const esistente = connessioniPeer[altroUid];
-  if (esistente && esistente.connectionState !== "closed") return esistente;
+  if (esistente && esistente.connectionState !== "closed" && esistente.connectionState !== "failed") return esistente;
   if (!flussoMediaLocale) throw new Error("Stream locale non pronto");
+
   const pc = new RTCPeerConnection(CONFIGURAZIONE_ICE);
   flussoMediaLocale.getTracks().forEach(traccia => {
     const sender = pc.addTrack(traccia, flussoMediaLocale);
     if (traccia.kind === "video" && sender && typeof sender.getParameters === "function") {
       const parametri = sender.getParameters();
       if (!parametri.encodings || !parametri.encodings.length) parametri.encodings = [{}];
-      parametri.encodings[0].maxBitrate = 180000;
+      parametri.encodings[0].maxBitrate = 260000;
+      parametri.encodings[0].maxFramerate = 20;
       sender.setParameters(parametri).catch(() => {});
     }
   });
+
   pc.onicecandidate = evento => {
-    if (evento.candidate) inviaSocket({ tipo: "webrtc-ice-candidate", partitaId, destinatarioUid: altroUid, candidate: evento.candidate });
+    if (evento.candidate) {
+      inviaSocket({
+        tipo: "webrtc-ice-candidate",
+        partitaId,
+        destinatarioUid: altroUid,
+        candidate: evento.candidate.toJSON ? evento.candidate.toJSON() : evento.candidate
+      });
+    }
   };
+
   pc.ontrack = evento => {
     const elementi = creaElementiVideoRemoto(altroUid);
-    let streamRemoto = evento.streams && evento.streams[0];
-    if (!streamRemoto) {
-      streamRemoto = elementi.video.srcObject instanceof MediaStream ? elementi.video.srcObject : new MediaStream();
-      if (!streamRemoto.getTracks().includes(evento.track)) streamRemoto.addTrack(evento.track);
+    if (!elementi.streamRemoto.getTracks().some(t => t.id === evento.track.id)) {
+      elementi.streamRemoto.addTrack(evento.track);
     }
-    elementi.video.srcObject = streamRemoto;
-    elementi.audio.srcObject = streamRemoto;
+    elementi.video.srcObject = elementi.streamRemoto;
+    elementi.audio.srcObject = elementi.streamRemoto;
+    evento.track.onended = () => {
+      try { elementi.streamRemoto.removeTrack(evento.track); } catch (e) {}
+    };
     tentaRiproduzioneElementoMedia(elementi.video);
     tentaRiproduzioneElementoMedia(elementi.audio);
   };
-  pc.onconnectionstatechange = () => {
-    if (pc.connectionState === "connected") {
+
+  const gestisciStatoConnessione = () => {
+    const stato = pc.connectionState;
+    const statoIce = pc.iceConnectionState;
+    if (stato === "connected" || statoIce === "connected" || statoIce === "completed") {
       if (timerDisconnessionePeer[altroUid]) clearTimeout(timerDisconnessionePeer[altroUid]);
       delete timerDisconnessionePeer[altroUid];
       aggiornaInterfacciaMedia(`${partecipantiMediaPronti.size} partecipanti collegati`, false);
-    } else if (pc.connectionState === "disconnected") {
+      return;
+    }
+
+    if (stato === "failed" || statoIce === "failed") {
+      chiudiPeerSenzaRimuovereTile(altroUid);
+      pianificaRiprovaConnessioneMedia(altroUid, 900);
+      return;
+    }
+
+    if (stato === "disconnected" || statoIce === "disconnected") {
       if (!timerDisconnessionePeer[altroUid]) {
         timerDisconnessionePeer[altroUid] = setTimeout(() => {
           delete timerDisconnessionePeer[altroUid];
-          if (connessioniPeer[altroUid] === pc && pc.connectionState === "disconnected") {
-            chiudiConnessioneMedia(altroUid);
-            pianificaRiprovaConnessioneMedia(altroUid);
+          const attuale = connessioniPeer[altroUid];
+          if (attuale === pc && (pc.connectionState === "disconnected" || pc.iceConnectionState === "disconnected")) {
+            chiudiPeerSenzaRimuovereTile(altroUid);
+            pianificaRiprovaConnessioneMedia(altroUid, 600);
           }
-        }, 5000);
+        }, 6500);
       }
-    } else if (pc.connectionState === "failed") {
-      chiudiConnessioneMedia(altroUid);
-      pianificaRiprovaConnessioneMedia(altroUid);
     }
   };
+  pc.onconnectionstatechange = gestisciStatoConnessione;
+  pc.oniceconnectionstatechange = gestisciStatoConnessione;
+  pc.onicecandidateerror = evento => console.warn("ICE candidate error:", evento && evento.errorText ? evento.errorText : evento);
+
   connessioniPeer[altroUid] = pc;
   return pc;
 }
 
-async function avviaConnessioneMedia(altroUid) {
-  if (!flussoMediaLocale || !partecipantiMediaPronti.has(altroUid)) return;
-  if (connessioniPeer[altroUid]) return;
-  const pc = creaConnessionePeer(altroUid);
-  const offerta = await pc.createOffer();
+async function avviaConnessioneMedia(altroUid, riavvioIce = false) {
+  if (!flussoMediaLocale || !partecipantiMediaPronti.has(altroUid) || !mioUid) return;
+  if (String(mioUid) >= String(altroUid)) return; // un solo lato crea le offerte: niente glare
+
+  let pc = connessioniPeer[altroUid];
+  if (pc && pc.connectionState === "connected" && !riavvioIce) return;
+  if (pc && pc.signalingState !== "stable") return;
+  if (!pc || pc.connectionState === "closed" || pc.connectionState === "failed") pc = creaConnessionePeer(altroUid);
+
+  const offerta = await pc.createOffer(riavvioIce ? { iceRestart: true } : undefined);
+  if (pc.signalingState !== "stable") return;
   await pc.setLocalDescription(offerta);
   inviaSocket({ tipo: "webrtc-offer", partitaId, destinatarioUid: altroUid, sdp: pc.localDescription });
 }
@@ -997,14 +1120,23 @@ async function applicaCandidatiIceInAttesa(altroUid) {
   if (!pc || !pc.remoteDescription) return;
   const candidati = candidatiIceInAttesa[altroUid] || [];
   delete candidatiIceInAttesa[altroUid];
-  for (const candidate of candidati) {
-    try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch (errore) { console.warn("Candidato ICE ignorato:", errore); }
+  for (const candidate of candidati.slice(0, 100)) {
+    try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); }
+    catch (errore) { console.warn("Candidato ICE ignorato:", errore); }
   }
 }
 
 async function gestisciOffertaRicevuta(mittenteUid, sdp) {
   if (!mediaPartitaAttiva || !flussoMediaLocale || !partecipantiMediaPronti.has(mittenteUid) || !sdp) return;
-  const pc = connessioniPeer[mittenteUid] || creaConnessionePeer(mittenteUid);
+  if (sdp.type !== "offer") return;
+
+  let pc = connessioniPeer[mittenteUid];
+  if (pc && pc.signalingState !== "stable") {
+    chiudiPeerSenzaRimuovereTile(mittenteUid);
+    pc = null;
+  }
+  if (!pc) pc = creaConnessionePeer(mittenteUid);
+
   await pc.setRemoteDescription(new RTCSessionDescription(sdp));
   await applicaCandidatiIceInAttesa(mittenteUid);
   const risposta = await pc.createAnswer();
@@ -1014,58 +1146,76 @@ async function gestisciOffertaRicevuta(mittenteUid, sdp) {
 
 async function gestisciRispostaRicevuta(mittenteUid, sdp) {
   const pc = connessioniPeer[mittenteUid];
-  if (!pc || !sdp) return;
+  if (!pc || !sdp || sdp.type !== "answer") return;
+  if (pc.signalingState !== "have-local-offer") return; // risposta vecchia dopo una riconnessione
   await pc.setRemoteDescription(new RTCSessionDescription(sdp));
   await applicaCandidatiIceInAttesa(mittenteUid);
 }
 
 async function gestisciCandidatoRicevuto(mittenteUid, candidate) {
-  if (!candidate) return;
+  if (!candidate || typeof candidate !== "object") return;
   const pc = connessioniPeer[mittenteUid];
   if (!pc || !pc.remoteDescription) {
     if (!candidatiIceInAttesa[mittenteUid]) candidatiIceInAttesa[mittenteUid] = [];
-    candidatiIceInAttesa[mittenteUid].push(candidate);
+    if (candidatiIceInAttesa[mittenteUid].length < 100) candidatiIceInAttesa[mittenteUid].push(candidate);
     return;
   }
-  try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch (errore) { console.warn("Candidato ICE ignorato:", errore); }
+  try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); }
+  catch (errore) { console.warn("Candidato ICE ignorato:", errore); }
 }
 
 function chiudiConnessioneMedia(altroUid) {
-  if (timerRiprovaPeer[altroUid]) { clearTimeout(timerRiprovaPeer[altroUid]); delete timerRiprovaPeer[altroUid]; }
-  if (timerDisconnessionePeer[altroUid]) { clearTimeout(timerDisconnessionePeer[altroUid]); delete timerDisconnessionePeer[altroUid]; }
-  const pc = connessioniPeer[altroUid];
-  delete connessioniPeer[altroUid];
-  if (pc && pc.connectionState !== "closed") pc.close();
+  chiudiPeerSenzaRimuovereTile(altroUid);
   const elementi = elementiVideoRemoti[altroUid];
-  if (elementi) { elementi.video.srcObject = null; elementi.audio.srcObject = null; elementi.figura.remove(); delete elementiVideoRemoti[altroUid]; }
-  delete candidatiIceInAttesa[altroUid];
+  if (elementi) {
+    elementi.video.srcObject = null;
+    elementi.audio.srcObject = null;
+    try { elementi.streamRemoto.getTracks().forEach(t => elementi.streamRemoto.removeTrack(t)); } catch (e) {}
+    elementi.figura.remove();
+    delete elementiVideoRemoti[altroUid];
+  }
 }
 
-function pianificaRiprovaConnessioneMedia(altroUid) {
+function pianificaRiprovaConnessioneMedia(altroUid, ritardoMs = 1800) {
   if (!altroUid || timerRiprovaPeer[altroUid] || !mioUid || String(mioUid) >= String(altroUid)) return;
   if (!mediaPartitaAttiva || !flussoMediaLocale || !partecipantiMediaPronti.has(altroUid)) return;
   timerRiprovaPeer[altroUid] = setTimeout(() => {
     delete timerRiprovaPeer[altroUid];
-    if (!connessioniPeer[altroUid] && partecipantiMediaPronti.has(altroUid)) gestisciPromessaWebRtc(avviaConnessioneMedia(altroUid));
-  }, 3000);
+    if (partecipantiMediaPronti.has(altroUid)) gestisciPromessaWebRtc(avviaConnessioneMedia(altroUid, true));
+  }, Math.max(400, Number(ritardoMs) || 1800));
 }
 
 function gestisciStatoMedia(dati) {
   impostaMediaPartitaAttiva(dati.mediaAttiva === true);
   if (!mediaPartitaAttiva) return;
-  partecipantiMediaPronti = new Set(Array.isArray(dati.partecipanti) ? dati.partecipanti.filter(uid => typeof uid === "string") : []);
-  Object.keys(connessioniPeer).forEach(uid => { if (!partecipantiMediaPronti.has(uid)) chiudiConnessioneMedia(uid); });
-  Object.keys(elementiVideoRemoti).forEach(uid => { if (!partecipantiMediaPronti.has(uid)) chiudiConnessioneMedia(uid); });
+
+  partecipantiMediaPronti = new Set(
+    Array.isArray(dati.partecipanti)
+      ? dati.partecipanti.filter(uid => typeof uid === "string")
+      : []
+  );
+
+  Object.keys(connessioniPeer).forEach(uid => {
+    if (!partecipantiMediaPronti.has(uid)) chiudiConnessioneMedia(uid);
+  });
+  Object.keys(elementiVideoRemoti).forEach(uid => {
+    if (!partecipantiMediaPronti.has(uid)) chiudiConnessioneMedia(uid);
+  });
+
   const quanti = partecipantiMediaPronti.size;
   aggiornaInterfacciaMedia(quanti > 1 ? `${quanti} partecipanti collegati` : "In attesa degli altri giocatori…", false);
+
   if (flussoMediaLocale && mioUid && !partecipantiMediaPronti.has(mioUid)) {
     mediaProntoSegnalato = false;
     segnalaMediaPronto();
     return;
   }
   if (!flussoMediaLocale || !mioUid || !partecipantiMediaPronti.has(mioUid)) return;
+
   partecipantiMediaPronti.forEach(altroUid => {
-    if (altroUid !== mioUid && String(mioUid) < String(altroUid)) gestisciPromessaWebRtc(avviaConnessioneMedia(altroUid));
+    if (altroUid !== mioUid && String(mioUid) < String(altroUid)) {
+      gestisciPromessaWebRtc(avviaConnessioneMedia(altroUid));
+    }
   });
   disegnaGiocatori();
 }
@@ -1079,8 +1229,19 @@ async function sbloccaRiproduzioneMedia() {
   const risultati = await Promise.allSettled(elementiDaRiprodurre.map(elemento => elemento.play()));
   const fallita = risultati.some(risultato => risultato.status === "rejected");
   const pulsante = document.getElementById("btn-sblocca-media");
-  if (pulsante) pulsante.classList.toggle("nascosto", !fallita);
+  if (pulsante) {
+    pulsante.textContent = fallita ? "🔊 Attiva l'audio" : "🔊 Audio attivo";
+    pulsante.classList.toggle("nascosto", !fallita);
+  }
 }
+
+// Un tocco dell'utente è sufficiente per sbloccare l'audio remoto sui browser mobili
+// che vietano autoplay con audio.
+document.addEventListener("pointerdown", () => {
+  if (!mediaPartitaAttiva || !flussoMediaLocale) return;
+  const audioRemoti = Object.values(elementiVideoRemoti).map(elementi => elementi.audio).filter(Boolean);
+  audioRemoti.forEach(audio => audio.play().catch(() => mostraPulsanteSbloccoAudio("🔊 Attiva l'audio")));
+}, { passive: true });
 
 function pulisciMediaPagina() {
   if (puliziaMediaInCorso) return;
@@ -1089,13 +1250,19 @@ function pulisciMediaPagina() {
   if (timerRiconnessione) clearTimeout(timerRiconnessione);
   if (timerRiprovaAvvio) clearTimeout(timerRiprovaAvvio);
   if (mediaProntoSegnalato) inviaSocket({ tipo: "mediaPronto", partitaId, attivo: false });
-  if (flussoMediaLocale) flussoMediaLocale.getTracks().forEach(traccia => traccia.stop());
+  if (flussoMediaLocale) {
+    flussoMediaLocale.getTracks().forEach(traccia => {
+      traccia.onended = null;
+      try { traccia.stop(); } catch (e) {}
+    });
+  }
   flussoMediaLocale = null;
   Object.keys(connessioniPeer).forEach(chiudiConnessioneMedia);
   Object.values(timerRiprovaPeer).forEach(clearTimeout);
   Object.values(timerDisconnessionePeer).forEach(clearTimeout);
   timerRiprovaPeer = {};
   timerDisconnessionePeer = {};
+  aggiornaControlliMediaLocale();
 }
 window.addEventListener("pagehide", pulisciMediaPagina);
 window.addEventListener("beforeunload", pulisciMediaPagina);
@@ -1202,43 +1369,20 @@ function ottieniOCreaPedina(idGiocatore, colore, indice) {
   }
   return pedina;
 }
-function animaSaltoPedina(idGiocatore, percorso, callback, tokenAnimazione, eventiPercorso) {
-  if (!percorso || percorso.length === 0) {
-    if (callback) callback();
-    return;
-  }
-
+function animaSaltoPedina(idGiocatore, percorso, callback, tokenAnimazione) {
+  if (!percorso || percorso.length === 0) { if (callback) callback(); return; }
   const indice = ultimoStatoGiocatori.findIndex(g => g.id === idGiocatore);
   const colore = coloriGiocatori[(indice >= 0 ? indice : 0) % coloriGiocatori.length];
   const pedina = ottieniOCreaPedina(idGiocatore, colore, indice >= 0 ? indice : 0);
-
   if (animazioniPedineAttive.has(idGiocatore)) {
     const statoCorrente = ultimoStatoGiocatori.find(g => g.id === idGiocatore);
     if (statoCorrente) posizionaPedina(pedina, statoCorrente.posizione);
   }
-
   const tokenPedina = Symbol("animazione-pedina");
   animazioniPedineAttive.set(idGiocatore, tokenPedina);
-
-  // Gli eventi delle caselle speciali arrivano dal server con l'indice esatto
-  // del passo. In questo modo il testo NON compare appena escono i dadi:
-  // viene mostrato solo quando la pedina ha materialmente raggiunto la casella.
-  const eventiPerPasso = new Map();
-  if (Array.isArray(eventiPercorso)) {
-    eventiPercorso.forEach(evento => {
-      const indicePasso = Number(evento && evento.indicePasso);
-      const messaggio = evento && typeof evento.messaggio === "string" ? evento.messaggio.trim() : "";
-      if (!Number.isInteger(indicePasso) || indicePasso < 0 || !messaggio) return;
-      if (!eventiPerPasso.has(indicePasso)) eventiPerPasso.set(indicePasso, []);
-      eventiPerPasso.get(indicePasso).push(messaggio);
-    });
-  }
-
   let passo = 0;
-
   function saltaProssimo() {
     if (animazioniPedineAttive.get(idGiocatore) !== tokenPedina) return;
-
     if (passo >= percorso.length) {
       animazioniPedineAttive.delete(idGiocatore);
       const statoFinale = ultimoStatoGiocatori.find(g => g.id === idGiocatore);
@@ -1246,38 +1390,39 @@ function animaSaltoPedina(idGiocatore, percorso, callback, tokenAnimazione, even
       if (callback) callback();
       return;
     }
-
-    const indicePassoCorrente = passo;
-    const casella = percorso[indicePassoCorrente];
-
+    const casella = percorso[passo];
     pedina.classList.add("pedina-salta");
     posizionaPedina(pedina, casella);
     suonaPassoPedina();
-
     const et = document.getElementById("casella-" + idGiocatore);
-    if (et && (tokenAnimazione == null || tokenAnimazione === versioneAnimazioneStato)) {
-      et.textContent = casella;
-    }
-
+    if (et && (tokenAnimazione == null || tokenAnimazione === versioneAnimazioneStato)) et.textContent = casella;
     const pulisciSalto = () => pedina.classList.remove("pedina-salta");
     pedina.addEventListener("animationend", pulisciSalto, { once: true });
-
-    const messaggiPasso = eventiPerPasso.get(indicePassoCorrente);
-    if (messaggiPasso && messaggiPasso.length) {
-      // La transizione left/top dura 0,22 s; mostriamo il testo poco prima
-      // del passo successivo (260 ms), cioè quando la pedina è arrivata.
-      setTimeout(() => {
-        if (animazioniPedineAttive.get(idGiocatore) !== tokenPedina) return;
-        if (tokenAnimazione != null && tokenAnimazione !== versioneAnimazioneStato) return;
-        mostraMessaggioGiocoGrande(messaggiPasso.join(" "));
-      }, Math.max(0, DURATA_SALTO_MS - 35));
-    }
-
     passo++;
     setTimeout(saltaProssimo, DURATA_SALTO_MS);
   }
-
   saltaProssimo();
+}
+
+function gestisciPreparazionePartita(dati) {
+  annullaVerificaDeterminazione();
+  ++versioneAnimazioneStato;
+  faseAttuale = "preparazione";
+  possoTirareIoInDeterminazione = false;
+  mioTurno = false;
+  turnoAttualeId = null;
+  fermaCountdown(false);
+  impostaDadiAbilitati(false);
+  document.getElementById("overlay-determinazione").classList.remove("aperto");
+  riportaDadiAllaPartita();
+
+  ultimoStatoGiocatori = Array.isArray(dati.giocatori) ? dati.giocatori : ultimoStatoGiocatori;
+  impostaVisibilitaChat(dati.chatAttiva);
+  disegnaGiocatori();
+
+  const riga = document.getElementById("riga-turno");
+  if (riga) riga.textContent = dati.messaggio || (dati.mediaAttiva ? "🎥 Preparazione webcam e microfono…" : "⏳ Preparazione partita…");
+  segnalaStatoInizialeRicevuto();
 }
 
 function gestisciStatoPartita(dati) {
@@ -1322,37 +1467,15 @@ function gestisciAggiornamentoPartita(dati) {
   document.getElementById("riga-turno").textContent = "🎲 Mossa in corso…";
   impostaDadiAbilitati(false);
   fermaCountdown(false);
-  document.getElementById("messaggi-gioco").textContent =
-    "🎲 " + dati.dado1 + " + " + dati.dado2 + " = " + dati.valoreDado;
+  document.getElementById("messaggi-gioco").textContent = "🎲 " + dati.dado1 + " + " + dati.dado2 + " = " + dati.valoreDado;
 
   animaLancioDadi(dati.dado1, dati.dado2, () => {
     if (tokenAnimazione !== versioneAnimazioneStato) return;
-
-    // Solo i messaggi che devono davvero comparire subito (per esempio
-    // "tempo scaduto") vengono mostrati dopo il lancio. I messaggi delle
-    // caselle speciali vengono invece gestiti dentro animaSaltoPedina().
-    if (Array.isArray(dati.messaggiImmediati) && dati.messaggiImmediati.length) {
-      mostraMessaggioGiocoGrande(dati.messaggiImmediati.join(" "));
-    }
-
-    const eventiPercorso = Array.isArray(dati.eventiPercorso) ? dati.eventiPercorso : [];
+    if (Array.isArray(dati.messaggi) && dati.messaggi.length) mostraMessaggioGiocoGrande(dati.messaggi.join(" "));
 
     const completa = () => {
       if (tokenAnimazione !== versioneAnimazioneStato) return;
-
-      ultimoStatoGiocatori =
-        Array.isArray(dati.giocatori) ? dati.giocatori : ultimoStatoGiocatori;
-
-      // Compatibilità con un eventuale server vecchio: se non sono arrivati
-      // eventi indicizzati, i vecchi messaggi vengono mostrati SOLO alla fine
-      // del movimento, mai appena terminano di girare i dadi.
-      if (
-        eventiPercorso.length === 0 &&
-        Array.isArray(dati.messaggi) &&
-        dati.messaggi.length
-      ) {
-        mostraMessaggioGiocoGrande(dati.messaggi.join(" "));
-      }
+      ultimoStatoGiocatori = Array.isArray(dati.giocatori) ? dati.giocatori : ultimoStatoGiocatori;
 
       if (dati.vittoria) {
         turnoAttualeId = null;
@@ -1364,30 +1487,18 @@ function gestisciAggiornamentoPartita(dati) {
       } else if (dati.turnoDiId != null) {
         aggiornaTurno(dati.turnoDiId);
         disegnaGiocatori();
-
         if (dati.tempoInizioTurno != null && dati.durataMossaMs != null) {
           avviaCountdownTurno(dati.tempoInizioTurno, dati.durataMossaMs);
         }
       } else {
-        document.getElementById("riga-turno").textContent =
-          "⏳ Preparazione del prossimo turno…";
+        document.getElementById("riga-turno").textContent = "⏳ Preparazione del prossimo turno…";
         impostaDadiAbilitati(false);
         disegnaGiocatori();
       }
     };
 
-    if (
-      Array.isArray(dati.percorso) &&
-      dati.percorso.length &&
-      dati.idGiocatoreCheHaTirato
-    ) {
-      animaSaltoPedina(
-        dati.idGiocatoreCheHaTirato,
-        dati.percorso,
-        completa,
-        tokenAnimazione,
-        eventiPercorso
-      );
+    if (Array.isArray(dati.percorso) && dati.percorso.length && dati.idGiocatoreCheHaTirato) {
+      animaSaltoPedina(dati.idGiocatoreCheHaTirato, dati.percorso, completa, tokenAnimazione);
     } else {
       completa();
     }
@@ -1529,6 +1640,7 @@ function connetti() {
       return;
     }
 
+    if (dati.tipo === "preparazionePartita") { gestisciPreparazionePartita(dati); return; }
     if (dati.tipo === "statoDeterminazione") { gestisciStatoDeterminazione(dati); return; }
     if (dati.tipo === "risultatoDeterminazione") { gestisciRisultatoDeterminazione(dati); return; }
     if (dati.tipo === "ordineFinaleCalcolato") { gestisciOrdineFinaleCalcolato(dati); return; }
