@@ -1332,18 +1332,25 @@ button:disabled{
         box-shadow:0 -2px 8px rgba(0,0,0,.08);
     }
     .chat-mobile-input input{
-        flex:1;
-        width:auto;
-        height:44px;
-        margin:0;
-        padding:10px 14px;
-        border:1px solid #ccc;
-        border-radius:22px;
-        font-size:15px;
-        outline:none;
+    flex:1;
+    width:auto;
+    height:44px;
+
+    margin:0;
+    padding:10px;
+
+    background:#fff;
+    color:#222;
+
+    border:1px solid #ccc;
+    border-radius:4px;
+
+    font-size:15px;
+    outline:none;
     }
+
     .chat-mobile-input input:focus{
-        border-color:#ff6600;
+    border-color:#999;
     }
     .chat-mobile-invia{
     flex-shrink:0;
@@ -1614,10 +1621,11 @@ body.tema-scuro .giocatore-online{
    NASCONDI PULSANTE EMOJI SOLO SU CELLULARE
 ========================================================= */
 @media (max-width:600px){
-    /* Nasconde il pulsante che apre gli emoji */
-    button[onclick="apriEmoji()"]{
+
+    button[onclick="mostraEmojiMobile()"]{
         display:none !important;
     }
+
 }
 </style>
 </head>
