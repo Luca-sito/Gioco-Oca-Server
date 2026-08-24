@@ -2143,20 +2143,100 @@ window.addEventListener("pageshow", () => {
 });
 // ===== CREAZIONE / LISTA PARTITE =====
 async function creaPartita() {
-  const tipo = document.getElementById("tipoPartita").value;
-  const mediaAttiva = document.getElementById("mediaPartita").value === "on";
-  if (!(await richiediConsensoMediaSeNecessario(mediaAttiva))) return;
-  const inviato = inviaMessaggioSocket({
-    tipo: "creaPartita",
-    tempo: document.getElementById("tempo").value,
-    punti: document.getElementById("punti").value,
-    modalita: tipo,
-    maxGiocatori: document.getElementById("numeroGiocatori").value,
-    mediaAttiva,
-    mediaConsenso: mediaAttiva
-  });
-  if (!inviato) return;
-  if (tipo === "privata") aspettaPropriaPartitaPrivata = true;
+
+  const tipo =
+    document.getElementById("tipoPartita").value;
+
+  const mediaAttiva =
+    document.getElementById("mediaPartita").value === "on";
+
+
+  console.log(
+    "[CREA PARTITA] Inizio",
+    {
+      tipo,
+      mediaAttiva
+    }
+  );
+
+
+  const mediaOk =
+    await richiediConsensoMediaSeNecessario(
+      mediaAttiva
+    );
+
+
+  console.log(
+    "[CREA PARTITA] Risultato webcam:",
+    mediaOk
+  );
+
+
+  if (!mediaOk) {
+
+    console.error(
+      "[CREA PARTITA] Bloccata dalla verifica webcam"
+    );
+
+    return;
+  }
+
+
+  console.log(
+    "[CREA PARTITA] Webcam OK, invio richiesta al server..."
+  );
+
+
+  const inviato =
+    inviaMessaggioSocket({
+
+      tipo: "creaPartita",
+
+      tempo:
+        document.getElementById("tempo").value,
+
+      punti:
+        document.getElementById("punti").value,
+
+      modalita:
+        tipo,
+
+      maxGiocatori:
+        document.getElementById("numeroGiocatori").value,
+
+      mediaAttiva,
+
+      mediaConsenso:
+        mediaAttiva
+
+    });
+
+
+  console.log(
+    "[CREA PARTITA] Messaggio WebSocket inviato:",
+    inviato
+  );
+
+
+  if (!inviato) {
+
+    mostraNotifica(
+      "La webcam funziona, ma la richiesta di creazione non è stata inviata al server."
+    );
+
+    return;
+  }
+
+
+  if (
+    tipo === "privata"
+  ) {
+
+    aspettaPropriaPartitaPrivata =
+      true;
+
+  }
+
 }
 function eliminaPartita() {
   if (!confirm("Vuoi eliminare la partita creata?")) return;
