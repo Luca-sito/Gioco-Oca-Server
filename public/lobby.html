@@ -652,14 +652,12 @@ body.tema-scuro .modalita-partita-titolo{
     color:white;
 }
 /* =========================================================
-   POPUP GIOCATORE
+   PLAYER CARD GIOCATORE
 ========================================================= */
-.overlay-popup-giocatore,
 .overlay-modal-invito{
     display:none;
     position:fixed;
-    top:0;
-    left:0;
+    inset:0;
     width:100%;
     height:100%;
     background:rgba(0,0,0,.55);
@@ -667,100 +665,349 @@ body.tema-scuro .modalita-partita-titolo{
     align-items:center;
     justify-content:center;
 }
-.overlay-popup-giocatore.aperto,
 .overlay-modal-invito.aperto{
     display:flex;
 }
-.popup-giocatore-box{
-    position:relative;
-    background:white;
-    border-radius:12px;
-    padding:22px;
-    width:260px;
-    max-width:calc(100vw - 32px);
-    text-align:center;
+.player-card-trigger{
+    cursor:pointer;
 }
-.popup-giocatore-box .chiudi-popup{
+.player-card-trigger:focus-visible{
+    outline:3px solid rgba(255,102,0,.45);
+    outline-offset:3px;
+}
+.player-card-trigger-inline{
+    color:#ff6600;
+    font-weight:800;
+    border-radius:4px;
+}
+.player-card-giocatore{
+    position:fixed;
+    display:none;
+    width:360px;
+    max-width:calc(100vw - 24px);
+    max-height:calc(100vh - 24px);
+    overflow:auto;
+    z-index:1800;
+    color:#f7f8fa;
+    background:
+        radial-gradient(circle at 8% 0%, rgba(255,102,0,.16), transparent 34%),
+        linear-gradient(155deg,#181a1f 0%,#101216 58%,#0b0d10 100%);
+    border:1px solid rgba(255,255,255,.13);
+    border-radius:16px;
+    box-shadow:0 24px 70px rgba(0,0,0,.48),0 6px 18px rgba(0,0,0,.28);
+    opacity:0;
+    transform:translateY(5px) scale(.985);
+    transform-origin:top left;
+    transition:opacity .16s ease,transform .16s ease;
+    isolation:isolate;
+}
+.player-card-giocatore.aperta{
+    display:block;
+}
+.player-card-giocatore.visibile{
+    opacity:1;
+    transform:translateY(0) scale(1);
+}
+.player-card-giocatore[data-lato="sinistra"]{
+    transform-origin:top right;
+}
+.player-card-giocatore::before{
+    content:"";
+    position:fixed;
+    width:12px;
+    height:12px;
+    background:#17191d;
+    border-left:1px solid rgba(255,255,255,.13);
+    border-bottom:1px solid rgba(255,255,255,.13);
+    transform:rotate(45deg);
+    pointer-events:none;
+    display:none;
+}
+.player-card-chiudi{
     position:absolute;
-    top:8px;
+    top:10px;
     right:10px;
-    background:none;
-    border:none;
-    font-size:16px;
-    color:#999;
-    width:auto;
-    padding:4px;
-    margin:0;
-}
-.popup-avatar-container{
+    width:32px !important;
+    height:32px;
+    margin:0 !important;
+    padding:0 !important;
     display:flex;
+    align-items:center;
     justify-content:center;
-    margin-bottom:8px;
+    border:1px solid rgba(255,255,255,.12) !important;
+    border-radius:9px !important;
+    background:rgba(255,255,255,.06) !important;
+    color:#d8dbe0 !important;
+    z-index:2;
 }
-.popup-avatar{
-    width:64px;
-    height:64px;
-    border-radius:50%;
+.player-card-chiudi:hover{
+    background:rgba(255,255,255,.12) !important;
+    opacity:1;
+}
+.player-card-chiudi svg{
+    width:15px;
+    height:15px;
+}
+.player-card-caricamento{
+    min-height:280px;
+    padding:22px;
+}
+.player-card-skeleton-riga{
+    height:12px;
+    margin:12px 0;
+    border-radius:999px;
+    background:linear-gradient(90deg,rgba(255,255,255,.06),rgba(255,255,255,.13),rgba(255,255,255,.06));
+    background-size:200% 100%;
+    animation:player-card-skeleton 1.15s linear infinite;
+}
+.player-card-skeleton-riga:nth-child(1){width:64px;height:64px;border-radius:14px;}
+.player-card-skeleton-riga:nth-child(2){width:58%;}
+.player-card-skeleton-riga:nth-child(3){width:38%;}
+.player-card-skeleton-riga:nth-child(4){width:100%;margin-top:28px;}
+.player-card-skeleton-riga:nth-child(5){width:82%;}
+@keyframes player-card-skeleton{
+    from{background-position:200% 0;}
+    to{background-position:-200% 0;}
+}
+.player-card-header{
+    position:relative;
+    display:grid;
+    grid-template-columns:68px minmax(0,1fr);
+    gap:14px;
+    align-items:center;
+    padding:20px 48px 17px 18px;
+    border-bottom:1px solid rgba(255,255,255,.09);
+}
+.player-card-avatar-wrap{
+    position:relative;
+    width:68px;
+    height:68px;
+}
+.player-card-avatar{
+    width:68px;
+    height:68px;
+    border-radius:14px;
     object-fit:cover;
     display:flex;
     align-items:center;
     justify-content:center;
-    color:white;
-    font-weight:bold;
-    font-size:24px;
+    color:#fff;
+    font-size:26px;
+    font-weight:900;
+    border:1px solid rgba(255,255,255,.16);
+    box-shadow:inset 0 0 0 1px rgba(0,0,0,.18),0 7px 18px rgba(0,0,0,.28);
 }
-.popup-nickname{
-    font-weight:bold;
-    font-size:16px;
-    margin-bottom:4px;
+.player-card-presenza-dot{
+    position:absolute;
+    right:-2px;
+    bottom:-2px;
+    width:16px;
+    height:16px;
+    border-radius:50%;
+    background:#7f8792;
+    border:3px solid #15171b;
 }
-.popup-stato-online{
-    font-size:12px;
-    color:#666;
-    margin-bottom:14px;
+.player-card-presenza-dot.online{background:#32c766;}
+.player-card-presenza-dot.partita{background:#ff7b22;}
+.player-card-identita{
+    min-width:0;
 }
-.popup-azioni{
-    margin-bottom:10px;
+.player-card-nickname{
+    margin:0 0 3px;
+    font-size:20px;
+    line-height:1.15;
+    font-weight:900;
+    letter-spacing:.1px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+.player-card-stato{
     display:flex;
+    align-items:center;
+    gap:7px;
+    color:#adb3bc;
+    font-size:12px;
+    font-weight:700;
+    line-height:1.25;
+}
+.player-card-stato .player-card-stato-punto{
+    width:7px;
+    height:7px;
+    border-radius:50%;
+    background:#7f8792;
+    flex:0 0 auto;
+}
+.player-card-stato.online .player-card-stato-punto{background:#32c766;box-shadow:0 0 0 4px rgba(50,199,102,.1);}
+.player-card-stato.partita .player-card-stato-punto{background:#ff7b22;box-shadow:0 0 0 4px rgba(255,123,34,.11);}
+.player-card-corpo{
+    padding:14px 16px 16px;
+}
+.player-card-sezione{
+    padding:12px 0 13px;
+    border-bottom:1px solid rgba(255,255,255,.075);
+}
+.player-card-sezione:first-child{padding-top:4px;}
+.player-card-sezione:last-of-type{border-bottom:0;}
+.player-card-sezione-titolo{
+    margin-bottom:10px;
+    color:#8f98a5;
+    font-size:10px;
+    line-height:1;
+    font-weight:900;
+    letter-spacing:1.35px;
+    text-transform:uppercase;
+}
+.player-card-griglia{
+    display:grid;
+    grid-template-columns:1fr 1fr;
     gap:8px;
 }
-.btn-popup{
-    flex:1;
+.player-card-stat{
+    min-width:0;
+    display:grid;
+    grid-template-columns:34px minmax(0,1fr);
+    gap:9px;
+    align-items:center;
     padding:10px;
-    border:none;
-    border-radius:8px;
-    font-weight:bold;
-    cursor:pointer;
-    font-size:13px;
-    margin:0;
+    background:rgba(255,255,255,.045);
+    border:1px solid rgba(255,255,255,.07);
+    border-radius:11px;
 }
-.btn-popup:disabled{
-    background:#ddd;
-    color:#888;
-    cursor:not-allowed;
+.player-card-stat-icona{
+    width:34px;
+    height:34px;
+    border-radius:9px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:rgba(255,102,0,.12);
+    color:#ff944d;
 }
-.btn-invia-richiesta{
-    background:#ffc400;
-    color:#111;
+.player-card-stat-icona svg{
+    width:18px;
+    height:18px;
 }
-.btn-accetta{
-    background:#43a047;
-    color:white;
+.player-card-stat-testo{
+    min-width:0;
 }
-.btn-rifiuta{
-    background:#e53935;
-    color:white;
-}
-.btn-rimuovi-amico{
-    background:#7a1b1b;
-    color:#ffab91;
-}
-.popup-link-profilo{
+.player-card-stat-label{
     display:block;
+    margin-bottom:2px;
+    color:#8f98a5;
+    font-size:10px;
+    font-weight:800;
+    text-transform:uppercase;
+    letter-spacing:.55px;
+}
+.player-card-stat-valore{
+    display:block;
+    color:#fff;
+    font-size:16px;
+    font-weight:900;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+.player-card-stat.player-card-elo .player-card-stat-valore{color:#ffd166;font-size:19px;}
+.player-card-stat.player-card-winrate .player-card-stat-valore{color:#61d58b;}
+.player-card-badge-lista{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+}
+.player-card-badge{
+    display:inline-flex;
+    align-items:center;
+    min-height:28px;
+    padding:5px 9px;
+    border-radius:999px;
+    color:#d7dbe1;
+    background:rgba(255,255,255,.055);
+    border:1px solid rgba(255,255,255,.08);
+    font-size:11px;
+    font-weight:800;
+}
+.player-card-badge-vuoto{
+    color:#7f8792;
     font-size:12px;
-    color:#ff6600;
+}
+.player-card-azioni{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+    padding:12px 16px 16px;
+    border-top:1px solid rgba(255,255,255,.08);
+    background:rgba(0,0,0,.12);
+}
+.player-card-azione{
+    min-height:42px;
+    margin:0 !important;
+    padding:9px 10px !important;
+    display:flex !important;
+    align-items:center;
+    justify-content:center;
+    gap:7px;
+    border-radius:10px !important;
+    border:1px solid rgba(255,255,255,.12) !important;
+    background:rgba(255,255,255,.06) !important;
+    color:#f5f6f8 !important;
     text-decoration:none;
-    margin-top:6px;
+    font-size:12px !important;
+    font-weight:900 !important;
+    line-height:1.1;
+}
+.player-card-azione:hover{
+    opacity:1 !important;
+    background:rgba(255,255,255,.11) !important;
+    transform:translateY(-1px);
+}
+.player-card-azione svg{
+    width:16px;
+    height:16px;
+    flex:0 0 auto;
+}
+.player-card-azione.primaria{
+    background:linear-gradient(135deg,#ff7a1a,#ff5b00) !important;
+    border-color:#ff7a1a !important;
+    color:#fff !important;
+}
+.player-card-azione.successo{
+    background:rgba(50,199,102,.13) !important;
+    border-color:rgba(50,199,102,.38) !important;
+    color:#8ce4aa !important;
+}
+.player-card-azione.pericolo{
+    background:rgba(238,76,76,.10) !important;
+    border-color:rgba(238,76,76,.30) !important;
+    color:#ff9d9d !important;
+}
+.player-card-azione:disabled{
+    opacity:.55 !important;
+    cursor:not-allowed;
+    transform:none !important;
+}
+.player-card-errore{
+    padding:30px 22px;
+    text-align:center;
+    color:#d7dbe1;
+    font-size:13px;
+}
+@media(max-width:600px){
+    .player-card-giocatore{
+        left:8px !important;
+        right:8px !important;
+        bottom:72px !important;
+        top:auto !important;
+        width:auto !important;
+        max-width:none !important;
+        max-height:calc(100dvh - 92px) !important;
+        border-radius:18px 18px 12px 12px;
+        z-index:100150;
+        transform-origin:bottom center !important;
+    }
+    .player-card-griglia{grid-template-columns:1fr 1fr;}
+    .player-card-header{padding-left:16px;}
 }
 .conteggio-stanza{
     display:inline-flex;
@@ -1066,7 +1313,6 @@ body.tema-scuro .modalita-partita-titolo{
         box-shadow:none !important;
         z-index:99999 !important;
     }
-    .overlay-popup-giocatore,
     .overlay-modal-invito{
         z-index:100100;
     }
@@ -1467,11 +1713,11 @@ body.tema-scuro .giocatore-online{
     <button class="btn-accetta-invito" onclick="rispondiInvito(true)">Accetta invito</button>
   </div>
 </div>
-<div id="overlayPopupGiocatore" class="overlay-popup-giocatore">
-  <div class="popup-giocatore-box">
-    <button class="chiudi-popup" onclick="chiudiPopupGiocatore()">✕</button>
-    <div id="popupGiocatoreContenuto">Caricamento...</div>
-  </div>
+<div id="playerCardGiocatore" class="player-card-giocatore" role="dialog" aria-modal="false" aria-hidden="true" aria-label="Scheda giocatore">
+  <button id="playerCardChiudi" class="player-card-chiudi" type="button" aria-label="Chiudi scheda giocatore">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+  </button>
+  <div id="playerCardContenuto"></div>
 </div>
 <div id="overlayModalInvito" class="overlay-modal-invito">
   <div class="modal-invito-box">
@@ -2606,8 +2852,9 @@ function aggiungiMessaggio(uid, nome, testo) {
   const chat = document.getElementById("chat");
   const cliccabile = uid && uid !== mioUid;
   const nomePulito = pulisciTestoHtml(nome || "Giocatore");
+  const uidPulito = pulisciTestoHtml(uid || "");
   const nomeHtml = cliccabile
-    ? `<span class="nickname-riga" style="cursor:pointer;color:#ff6600;" onclick="apriPopupGiocatore('${uid}','${nomePulito}')">${nomePulito}</span>`
+    ? `<span class="nickname-riga player-card-trigger player-card-trigger-inline" tabindex="0" role="button" data-player-card-uid="${uidPulito}" data-player-card-nome="${nomePulito}" aria-label="Apri scheda di ${nomePulito}">${nomePulito}</span>`
     : `<b>${nomePulito}</b>`;
   const ora = new Date().toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
   const rigaHtml = `
@@ -2670,8 +2917,12 @@ function creaRigaGiocatore(g) {
       ? `<img class="avatar-mini" src="${pulisciTestoHtml(g.avatar)}" alt="Avatar di ${nicknamePulito}">`
       : `<div class="avatar-mini" style="background:${coloreDaNome(g.nickname)};">${iniziale(g.nickname)}</div>`;
     const cliccabile = g.uid && g.uid !== mioUid;
+    const uidPulito = pulisciTestoHtml(g.uid || "");
+    const attributiPlayerCard = cliccabile
+      ? `data-player-card-uid="${uidPulito}" data-player-card-nome="${nicknamePulito}" tabindex="0" role="button" aria-label="Apri scheda di ${nicknamePulito}"`
+      : "";
     return `
-      <div class="giocatore-online" ${cliccabile ? `onclick="apriPopupGiocatore('${g.uid}','${g.nickname}')" style="cursor:pointer;"` : ""}>
+      <div class="giocatore-online ${cliccabile ? "player-card-trigger" : ""}" ${attributiPlayerCard}>
         ${immagine}
         <div>
   <span class="nickname-riga">${nicknamePulito}</span>
@@ -2755,76 +3006,345 @@ function aggiornaContatoreAmiciOnline() {
   const el = document.getElementById("amiciOnline");
   if (el) el.textContent = conteggio;
 }
-// ===== POPUP PICCOLO SU UN GIOCATORE =====
-function apriPopupGiocatore(uidTarget, nomeTarget) {
-  if (!uidTarget || uidTarget === mioUid) return;
+// ===== PLAYER CARD LATERALE GIOCATORE =====
+const RITARDO_HOVER_PLAYER_CARD_MS = 1000;
+const RITARDO_CHIUSURA_PLAYER_CARD_MS = 220;
+let timerHoverPlayerCard = null;
+let timerChiusuraPlayerCard = null;
+let playerCardBloccata = false;
+let playerCardTriggerAttivo = null;
+let playerCardUidAttivo = null;
+let playerCardNomeAttivo = null;
+
+function iconaPlayerCard(tipo) {
+  const comuni = `fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"`;
+  const percorsi = {
+    elo: `<path d="M4 18h16M6 15l3-4 3 2 5-7 2 3" ${comuni}/><path d="M17 6h3v3" ${comuni}/>` ,
+    percentuale: `<circle cx="7.5" cy="7.5" r="2.5" ${comuni}/><circle cx="16.5" cy="16.5" r="2.5" ${comuni}/><path d="M18.5 5.5l-13 13" ${comuni}/>` ,
+    partite: `<rect x="4" y="5" width="16" height="14" rx="3" ${comuni}/><path d="M8 9h8M8 13h5" ${comuni}/>` ,
+    vittorie: `<path d="M8 4h8v4a4 4 0 01-8 0V4z" ${comuni}/><path d="M8 6H5v1a4 4 0 004 4M16 6h3v1a4 4 0 01-4 4M12 12v4M9 20h6M10 16h4" ${comuni}/>` ,
+    streak: `<path d="M13 3s1 4-2 6c-2-2-4-1-5 1-2 5 1 10 6 10s8-4 5-10c-1 2-3 3-4 2 2-3 1-7 0-9z" ${comuni}/>` ,
+    clock: `<circle cx="12" cy="12" r="8" ${comuni}/><path d="M12 8v5l3 2" ${comuni}/>` ,
+    profilo: `<circle cx="12" cy="8" r="3.2" ${comuni}/><path d="M5.5 20c.7-4 3-6 6.5-6s5.8 2 6.5 6" ${comuni}/>` ,
+    aggiungi: `<circle cx="9" cy="8" r="3" ${comuni}/><path d="M3.5 19c.6-3.5 2.5-5.3 5.5-5.3 1.1 0 2.1.2 3 .7M17 12v7M13.5 15.5h7" ${comuni}/>` ,
+    check: `<path d="M5 12.5l4 4L19 6.5" ${comuni}/>` ,
+    rifiuta: `<path d="M7 7l10 10M17 7L7 17" ${comuni}/>`
+  };
+  return `<svg viewBox="0 0 24 24" aria-hidden="true">${percorsi[tipo] || percorsi.profilo}</svg>`;
+}
+
+function formattaDurataPlayerCard(secondi) {
+  const totale = Number(secondi);
+  if (!Number.isFinite(totale) || totale < 0) return "—";
+  const minuti = Math.floor(totale / 60);
+  const sec = Math.round(totale % 60);
+  if (minuti <= 0) return `${sec}s`;
+  if (minuti < 60) return `${minuti}m ${String(sec).padStart(2, "0")}s`;
+  const ore = Math.floor(minuti / 60);
+  return `${ore}h ${minuti % 60}m`;
+}
+
+function trovaAncoraPlayerCard(trigger) {
+  if (!trigger) return null;
+  return trigger.querySelector(".avatar-mini, .avatar-partita-mini") || trigger;
+}
+
+function annullaTimerHoverPlayerCard() {
+  if (timerHoverPlayerCard) clearTimeout(timerHoverPlayerCard);
+  timerHoverPlayerCard = null;
+}
+
+function annullaTimerChiusuraPlayerCard() {
+  if (timerChiusuraPlayerCard) clearTimeout(timerChiusuraPlayerCard);
+  timerChiusuraPlayerCard = null;
+}
+
+function posizionaPlayerCard(trigger) {
+  const card = document.getElementById("playerCardGiocatore");
+  if (!card || !trigger || window.matchMedia("(max-width:600px)").matches) return;
+  const ancora = trovaAncoraPlayerCard(trigger);
+  if (!ancora) return;
+
+  const rect = ancora.getBoundingClientRect();
+  const margine = 12;
+  const spazio = 10;
+  const larghezza = card.offsetWidth || 360;
+  const altezza = card.offsetHeight || 430;
+  let left = rect.right + spazio;
+  let lato = "destra";
+
+  if (left + larghezza > window.innerWidth - margine) {
+    left = rect.left - larghezza - spazio;
+    lato = "sinistra";
+  }
+  left = Math.max(margine, Math.min(left, window.innerWidth - larghezza - margine));
+
+  let top = rect.top + (rect.height / 2) - 58;
+  top = Math.max(margine, Math.min(top, window.innerHeight - altezza - margine));
+
+  card.style.left = `${Math.round(left)}px`;
+  card.style.top = `${Math.round(top)}px`;
+  card.style.right = "auto";
+  card.style.bottom = "auto";
+  card.dataset.lato = lato;
+}
+
+function mostraCaricamentoPlayerCard() {
+  document.getElementById("playerCardContenuto").innerHTML = `
+    <div class="player-card-caricamento" aria-label="Caricamento profilo">
+      <div class="player-card-skeleton-riga"></div>
+      <div class="player-card-skeleton-riga"></div>
+      <div class="player-card-skeleton-riga"></div>
+      <div class="player-card-skeleton-riga"></div>
+      <div class="player-card-skeleton-riga"></div>
+    </div>`;
+}
+
+function apriPlayerCard(trigger, bloccata) {
+  if (!trigger) return;
+  const uidTarget = trigger.dataset.playerCardUid;
+  const nomeTarget = trigger.dataset.playerCardNome;
+  if (!uidTarget || uidTarget === mioUid || !nomeTarget) return;
+
+  annullaTimerHoverPlayerCard();
+  annullaTimerChiusuraPlayerCard();
+  playerCardBloccata = bloccata === true;
+  playerCardTriggerAttivo = trigger;
+  playerCardUidAttivo = uidTarget;
+  playerCardNomeAttivo = nomeTarget;
+
+  const card = document.getElementById("playerCardGiocatore");
+  const stessaSchedaGiaAperta = card.classList.contains("aperta") && card.dataset.uid === uidTarget;
+  card.dataset.uid = uidTarget;
+  card.setAttribute("aria-hidden", "false");
+  card.classList.add("aperta");
+  posizionaPlayerCard(trigger);
+  requestAnimationFrame(() => card.classList.add("visibile"));
+
+  if (stessaSchedaGiaAperta && document.getElementById("playerCardContenuto").children.length) {
+    posizionaPlayerCard(trigger);
+    return;
+  }
+
+  mostraCaricamentoPlayerCard();
+  posizionaPlayerCard(trigger);
   const idRichiesta = ++richiestaProfiloCorrente;
-  const overlay = document.getElementById("overlayPopupGiocatore");
-  document.getElementById("popupGiocatoreContenuto").innerHTML = "Caricamento...";
-  overlay.classList.add("aperto");
-  caricaDatiPopupGiocatore(nomeTarget, idRichiesta);
+  caricaDatiPlayerCardGiocatore(nomeTarget, idRichiesta);
 }
-function chiudiPopupGiocatore() {
+
+function apriPlayerCardDaClick(trigger) {
+  apriPlayerCard(trigger, true);
+}
+
+function pianificaAperturaPlayerCard(trigger) {
+  if (!window.matchMedia("(hover:hover) and (pointer:fine)").matches) return;
+  annullaTimerHoverPlayerCard();
+  timerHoverPlayerCard = setTimeout(() => {
+    timerHoverPlayerCard = null;
+    apriPlayerCard(trigger, false);
+  }, RITARDO_HOVER_PLAYER_CARD_MS);
+}
+
+function pianificaChiusuraPlayerCard() {
+  if (playerCardBloccata) return;
+  annullaTimerChiusuraPlayerCard();
+  timerChiusuraPlayerCard = setTimeout(() => {
+    timerChiusuraPlayerCard = null;
+    chiudiPlayerCardGiocatore();
+  }, RITARDO_CHIUSURA_PLAYER_CARD_MS);
+}
+
+function chiudiPlayerCardGiocatore() {
+  annullaTimerHoverPlayerCard();
+  annullaTimerChiusuraPlayerCard();
   richiestaProfiloCorrente++;
-  document.getElementById("overlayPopupGiocatore").classList.remove("aperto");
+  playerCardBloccata = false;
+  playerCardTriggerAttivo = null;
+  playerCardUidAttivo = null;
+  playerCardNomeAttivo = null;
+  const card = document.getElementById("playerCardGiocatore");
+  if (!card) return;
+  card.classList.remove("visibile");
+  card.setAttribute("aria-hidden", "true");
+  setTimeout(() => {
+    if (!card.classList.contains("visibile")) {
+      card.classList.remove("aperta");
+      card.removeAttribute("data-uid");
+    }
+  }, 170);
 }
-document.getElementById("overlayPopupGiocatore").addEventListener("click", (e) => {
-  if (e.target.id === "overlayPopupGiocatore") chiudiPopupGiocatore();
-});
-async function caricaDatiPopupGiocatore(nomeTarget, idRichiesta) {
+
+async function caricaDatiPlayerCardGiocatore(nomeTarget, idRichiesta) {
   try {
     const risposta = await fetch("https://gioco-oca-server.onrender.com/api/profilo-pubblico/" + encodeURIComponent(nomeTarget), { credentials: "include" });
     if (idRichiesta !== richiestaProfiloCorrente) return;
-    if (!risposta.ok) { document.getElementById("popupGiocatoreContenuto").innerHTML = "Errore nel caricamento."; return; }
+    if (!risposta.ok) {
+      document.getElementById("playerCardContenuto").innerHTML = `<div class="player-card-errore">Impossibile caricare la scheda del giocatore.</div>`;
+      return;
+    }
     const dati = await risposta.json();
     if (idRichiesta !== richiestaProfiloCorrente) return;
-    disegnaPopupGiocatore(dati);
+    disegnaPlayerCardGiocatore(dati);
   } catch (e) {
     if (idRichiesta !== richiestaProfiloCorrente) return;
-    document.getElementById("popupGiocatoreContenuto").innerHTML = "Errore di connessione.";
+    document.getElementById("playerCardContenuto").innerHTML = `<div class="player-card-errore">Connessione non disponibile. Riprova.</div>`;
   }
 }
+
 function creaGiocatoriPartita(partita){
   if(!partita.giocatori) return "";
   return partita.giocatori.map(g=>{
     const nomePulito = pulisciTestoHtml(g.nome || "Giocatore");
+    const uidPulito = pulisciTestoHtml(g.uid || "");
     const avatar = g.avatar
     ? `<img class="avatar-partita-mini" src="${pulisciTestoHtml(g.avatar)}" alt="Avatar di ${nomePulito}">`
-    : `<div class="avatar-partita-mini" style="background:${coloreDaNome(g.nome)}">
-        ${iniziale(g.nome)}
-       </div>`;
+    : `<div class="avatar-partita-mini" style="background:${coloreDaNome(g.nome)}">${iniziale(g.nome)}</div>`;
+    const cliccabile = g.uid && g.uid !== mioUid;
+    const attributi = cliccabile
+      ? `data-player-card-uid="${uidPulito}" data-player-card-nome="${nomePulito}" tabindex="0" role="button" aria-label="Apri scheda di ${nomePulito}"`
+      : "";
     return `
-      <div class="mini-giocatore">
+      <div class="mini-giocatore ${cliccabile ? "player-card-trigger" : ""}" ${attributi}>
         ${avatar}
-        ${nomePulito} 🟢
-      </div>
-    `;
+        <span>${nomePulito}</span><span class="stato-partita-online" aria-label="Online">●</span>
+      </div>`;
   }).join("");
 }
-function disegnaPopupGiocatore(dati) {
-  const online = ultimaListaOnlineStanza.some(g => g.uid === dati.uid);
+
+function disegnaPlayerCardGiocatore(dati) {
+  const presenza = ultimaListaOnlineStanza.find(g => g.uid === dati.uid) || null;
+  const online = !!presenza;
+  const inPartita = presenza && presenza.stato === "partita";
+  const statoClasse = inPartita ? "partita" : (online ? "online" : "offline");
+  const statoTesto = inPartita ? "In partita" : (online ? "Online in questa stanza" : "Non online in questa stanza");
   const nicknamePulito = pulisciTestoHtml(dati.nickname || "Giocatore");
+  const elo = Number.isFinite(Number(dati.elo)) ? Math.round(Number(dati.elo)) : 1500;
+  const giocate = Math.max(0, Number(dati.partiteGiocate) || 0);
+  const vinte = Math.max(0, Number(dati.partiteVinte) || 0);
+  const winRate = Number.isFinite(Number(dati.winRate)) ? Math.max(0, Math.min(100, Math.round(Number(dati.winRate)))) : (giocate ? Math.round(vinte / giocate * 100) : 0);
+  const streak = Math.max(0, Number(dati.streakVittorieMassima) || 0);
+  const veloce = formattaDurataPlayerCard(dati.vittoriaPiuVeloceSecondi);
   const immagine = dati.avatar
-    ? `<img class="popup-avatar" src="${pulisciTestoHtml(dati.avatar)}" alt="Avatar di ${nicknamePulito}">`
-    : `<div class="popup-avatar" style="background:${coloreDaNome(dati.nickname)};">${iniziale(dati.nickname)}</div>`;
-  let azioneHtml;
+    ? `<img class="player-card-avatar" src="${pulisciTestoHtml(dati.avatar)}" alt="Avatar di ${nicknamePulito}">`
+    : `<div class="player-card-avatar" style="background:${coloreDaNome(dati.nickname)};">${iniziale(dati.nickname)}</div>`;
+
+  const badge = Array.isArray(dati.badge) ? dati.badge.slice(0, 4) : [];
+  const badgeHtml = badge.length
+    ? badge.map(b => `<span class="player-card-badge">${pulisciTestoHtml(b && b.nome ? b.nome : "Badge")}</span>`).join("")
+    : `<span class="player-card-badge-vuoto">Nessun riconoscimento ancora.</span>`;
+
+  let amiciziaHtml = "";
   if (dati.statoAmicizia === "amici") {
-    azioneHtml = `<button class="btn-popup btn-rimuovi-amico" onclick="rimuoviAmico('${dati.uid}')">Rimuovi amico</button>`;
+    amiciziaHtml = `<button class="player-card-azione successo" type="button" onclick="rimuoviAmico('${dati.uid}')">${iconaPlayerCard("check")}<span>Amico</span></button>`;
   } else if (dati.statoAmicizia === "richiesta_inviata") {
-    azioneHtml = `<button class="btn-popup" disabled>⏳ Richiesta inviata</button>`;
+    amiciziaHtml = `<button class="player-card-azione" type="button" disabled>${iconaPlayerCard("check")}<span>Richiesta inviata</span></button>`;
   } else if (dati.statoAmicizia === "richiesta_ricevuta") {
-    azioneHtml = `<button class="btn-popup btn-accetta" onclick="accettaAmicizia('${dati.uid}')">Accetta</button><button class="btn-popup btn-rifiuta" onclick="rifiutaAmicizia('${dati.uid}')">Rifiuta</button>`;
+    amiciziaHtml = `<button class="player-card-azione successo" type="button" onclick="accettaAmicizia('${dati.uid}')">${iconaPlayerCard("check")}<span>Accetta</span></button><button class="player-card-azione pericolo" type="button" onclick="rifiutaAmicizia('${dati.uid}')">${iconaPlayerCard("rifiuta")}<span>Rifiuta</span></button>`;
   } else {
-    azioneHtml = `<button class="btn-popup btn-invia-richiesta" onclick="inviaRichiestaAmicizia('${dati.uid}')">➕ Invia richiesta</button>`;
+    amiciziaHtml = `<button class="player-card-azione primaria" type="button" onclick="inviaRichiestaAmicizia('${dati.uid}')">${iconaPlayerCard("aggiungi")}<span>Aggiungi</span></button>`;
   }
-  document.getElementById("popupGiocatoreContenuto").innerHTML = `
-    <div class="popup-avatar-container">${immagine}</div>
-    <div class="popup-nickname">${nicknamePulito}</div>
-    <div class="popup-stato-online">${online ? "Online ora in questa stanza" : "⚫ Non online in questa stanza al momento"}</div>
-    <div class="popup-azioni">${azioneHtml}</div>
-    <a href="profilo-pubblico.html?nickname=${encodeURIComponent(dati.nickname)}" class="popup-link-profilo">Vedi profilo completo</a>
-  `;
+
+  document.getElementById("playerCardContenuto").innerHTML = `
+    <div class="player-card-header">
+      <div class="player-card-avatar-wrap">
+        ${immagine}
+        <span class="player-card-presenza-dot ${statoClasse}" aria-hidden="true"></span>
+      </div>
+      <div class="player-card-identita">
+        <div class="player-card-nickname">${nicknamePulito}</div>
+        <div class="player-card-stato ${statoClasse}"><span class="player-card-stato-punto"></span><span>${statoTesto}</span></div>
+      </div>
+    </div>
+    <div class="player-card-corpo">
+      <section class="player-card-sezione">
+        <div class="player-card-sezione-titolo">Classifica</div>
+        <div class="player-card-griglia">
+          <div class="player-card-stat player-card-elo"><span class="player-card-stat-icona">${iconaPlayerCard("elo")}</span><span class="player-card-stat-testo"><span class="player-card-stat-label">ELO</span><span class="player-card-stat-valore">${elo.toLocaleString("it-IT")}</span></span></div>
+          <div class="player-card-stat player-card-winrate"><span class="player-card-stat-icona">${iconaPlayerCard("percentuale")}</span><span class="player-card-stat-testo"><span class="player-card-stat-label">Win rate</span><span class="player-card-stat-valore">${winRate}%</span></span></div>
+        </div>
+      </section>
+      <section class="player-card-sezione">
+        <div class="player-card-sezione-titolo">Carriera</div>
+        <div class="player-card-griglia">
+          <div class="player-card-stat player-card-partite"><span class="player-card-stat-icona">${iconaPlayerCard("partite")}</span><span class="player-card-stat-testo"><span class="player-card-stat-label">Partite</span><span class="player-card-stat-valore">${giocate.toLocaleString("it-IT")}</span></span></div>
+          <div class="player-card-stat player-card-vittorie"><span class="player-card-stat-icona">${iconaPlayerCard("vittorie")}</span><span class="player-card-stat-testo"><span class="player-card-stat-label">Vittorie</span><span class="player-card-stat-valore">${vinte.toLocaleString("it-IT")}</span></span></div>
+        </div>
+      </section>
+      <section class="player-card-sezione">
+        <div class="player-card-sezione-titolo">Prestazioni</div>
+        <div class="player-card-griglia">
+          <div class="player-card-stat player-card-streak"><span class="player-card-stat-icona">${iconaPlayerCard("streak")}</span><span class="player-card-stat-testo"><span class="player-card-stat-label">Serie migliore</span><span class="player-card-stat-valore">${streak}</span></span></div>
+          <div class="player-card-stat player-card-veloce"><span class="player-card-stat-icona">${iconaPlayerCard("clock")}</span><span class="player-card-stat-testo"><span class="player-card-stat-label">Vittoria veloce</span><span class="player-card-stat-valore">${veloce}</span></span></div>
+        </div>
+      </section>
+      <section class="player-card-sezione">
+        <div class="player-card-sezione-titolo">Riconoscimenti</div>
+        <div class="player-card-badge-lista">${badgeHtml}</div>
+      </section>
+    </div>
+    <div class="player-card-azioni">
+      <a class="player-card-azione" href="profilo-pubblico.html?nickname=${encodeURIComponent(dati.nickname)}">${iconaPlayerCard("profilo")}<span>Profilo</span></a>
+      ${amiciziaHtml}
+    </div>`;
+
+  if (playerCardTriggerAttivo) requestAnimationFrame(() => posizionaPlayerCard(playerCardTriggerAttivo));
 }
+
+function triggerPlayerCardDaEvento(target) {
+  return target && target.closest ? target.closest("[data-player-card-uid]") : null;
+}
+
+document.addEventListener("mouseover", (e) => {
+  const trigger = triggerPlayerCardDaEvento(e.target);
+  if (!trigger) return;
+  if (e.relatedTarget && trigger.contains(e.relatedTarget)) return;
+  pianificaAperturaPlayerCard(trigger);
+});
+
+document.addEventListener("mouseout", (e) => {
+  const trigger = triggerPlayerCardDaEvento(e.target);
+  if (!trigger) return;
+  if (e.relatedTarget && trigger.contains(e.relatedTarget)) return;
+  annullaTimerHoverPlayerCard();
+  const card = document.getElementById("playerCardGiocatore");
+  if (e.relatedTarget && card && card.contains(e.relatedTarget)) return;
+  if (playerCardTriggerAttivo === trigger) pianificaChiusuraPlayerCard();
+});
+
+document.addEventListener("click", (e) => {
+  const trigger = triggerPlayerCardDaEvento(e.target);
+  if (trigger) {
+    e.preventDefault();
+    apriPlayerCardDaClick(trigger);
+    return;
+  }
+  const card = document.getElementById("playerCardGiocatore");
+  if (playerCardBloccata && card && !card.contains(e.target)) chiudiPlayerCardGiocatore();
+});
+
+document.addEventListener("keydown", (e) => {
+  const trigger = triggerPlayerCardDaEvento(e.target);
+  if (trigger && (e.key === "Enter" || e.key === " ")) {
+    e.preventDefault();
+    apriPlayerCardDaClick(trigger);
+  }
+  if (e.key === "Escape") chiudiPlayerCardGiocatore();
+});
+
+const playerCardElemento = document.getElementById("playerCardGiocatore");
+playerCardElemento.addEventListener("mouseenter", () => annullaTimerChiusuraPlayerCard());
+playerCardElemento.addEventListener("mouseleave", () => pianificaChiusuraPlayerCard());
+document.getElementById("playerCardChiudi").addEventListener("click", (e) => {
+  e.stopPropagation();
+  chiudiPlayerCardGiocatore();
+});
+window.addEventListener("resize", () => {
+  if (playerCardTriggerAttivo && playerCardElemento.classList.contains("aperta")) posizionaPlayerCard(playerCardTriggerAttivo);
+});
+window.addEventListener("scroll", () => {
+  if (playerCardTriggerAttivo && playerCardElemento.classList.contains("aperta")) posizionaPlayerCard(playerCardTriggerAttivo);
+}, true);
+
 async function inviaRichiestaAmicizia(destinatarioUid) {
   try {
     const r = await fetch("https://gioco-oca-server.onrender.com/api/amici/richiedi", {
@@ -2833,7 +3353,7 @@ async function inviaRichiestaAmicizia(destinatarioUid) {
     });
     const d = await r.json();
     if (!r.ok) { mostraNotifica(d.errore || "Errore."); return; }
-    chiudiPopupGiocatore();
+    chiudiPlayerCardGiocatore();
   } catch (e) { mostraNotifica("Errore di connessione."); }
 }
 async function accettaAmicizia(daUid) {
@@ -2843,7 +3363,7 @@ async function accettaAmicizia(daUid) {
       body: JSON.stringify({ daUid })
     });
     if (!r.ok) { const d = await r.json(); mostraNotifica(d.errore || "Errore."); return false; }
-    chiudiPopupGiocatore();
+    chiudiPlayerCardGiocatore();
     await caricaAmici();
     return true;
   } catch (e) { mostraNotifica("Errore di connessione."); return false; }
@@ -2859,7 +3379,7 @@ async function rifiutaAmicizia(daUid) {
       mostraNotifica(d.errore || "Errore.");
       return false;
     }
-    chiudiPopupGiocatore();
+    chiudiPlayerCardGiocatore();
     return true;
   } catch (e) { mostraNotifica("Errore di connessione."); return false; }
 }
@@ -2871,7 +3391,7 @@ async function rimuoviAmico(altroUid) {
       body: JSON.stringify({ altroUid })
     });
     if (!r.ok) { const d = await r.json(); mostraNotifica(d.errore || "Errore."); return; }
-    chiudiPopupGiocatore();
+    chiudiPlayerCardGiocatore();
     caricaAmici();
   } catch (e) { mostraNotifica("Errore di connessione."); }
 }
