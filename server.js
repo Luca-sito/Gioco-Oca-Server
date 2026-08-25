@@ -123,8 +123,20 @@ async function salvaPartita(partita) {
 async function caricaPartite() { if (!db) return {}; const snap = await db.ref("partite").once("value"); return snap.val() || {}; }
 async function aggiornaStatoPartita(partitaId, dati) { if (!db) return; await db.ref("partite/" + partitaId).update({ ...dati, aggiornataIl: Date.now() }); }
 async function rimuoviPartita(nomeStanza, partitaId) {
-  if (stanze[nomeStanza]) { const p = stanze[nomeStanza].partite[partitaId]; if (p) fermaTimerTurno(p); delete stanze[nomeStanza].partite[partitaId]; }
-  if (db) { try { await db.ref("partite/" + partitaId).remove(); } catch (e) { console.error("Errore rimozione partita da Firebase:", e.message); } }
+  if (stanze[nomeStanza]) {
+    const p = stanze[nomeStanza].partite[partitaId];
+    if (p) fermaTimerTurno(p);
+    delete stanze[nomeStanza].partite[partitaId];
+
+    // La Lobby deve vedere sparire il tavolo subito: Firebase viene pulito
+    // dopo, senza tenere bloccato l'aggiornamento WebSocket dell'interfaccia.
+    inviaListaPartite(nomeStanza);
+    inviaConteggioStanze();
+  }
+  if (db) {
+    try { await db.ref("partite/" + partitaId).remove(); }
+    catch (e) { console.error("Errore rimozione partita da Firebase:", e.message); }
+  }
 }
 
 // ===== ELO E BADGE =====
@@ -4824,7 +4836,9 @@ function inviaConteggioStanze() {
 }
 
 const HEARTBEAT_MS = 15000;
-const DURATA_ANIMAZIONE_TIRO_MS = 1200;
+const DURATA_ANIMAZIONE_DADI_MS = 1080;
+const DURATA_PASSO_PEDINA_MS = 380;
+const MARGINE_SINCRONIZZAZIONE_MOSSA_MS = 90;
 const heartbeatInterval = setInterval(() => {
   wss.clients.forEach(socket => { if (socket.isAlive === false) return socket.terminate(); socket.isAlive = false; socket.ping(); });
 }, HEARTBEAT_MS);
@@ -4861,6 +4875,11 @@ function avviaTimerTurno(partita, nomeStanza) {
     partita.timerTurno = null;
     await gestisciScadenzaTurno(partita, nomeStanza);
   }, durata);
+}
+
+function durataAnimazioneMossaMs(percorso) {
+  const passi = Array.isArray(percorso) ? percorso.length : 0;
+  return DURATA_ANIMAZIONE_DADI_MS + (passi * DURATA_PASSO_PEDINA_MS) + MARGINE_SINCRONIZZAZIONE_MOSSA_MS;
 }
 
 function ripristinaTimerTurno(partita, nomeStanza) {
@@ -4935,10 +4954,8 @@ async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, auto
           }));
         }
       });
-      await concludiPartita(partita, idGiocatore, nomeStanza, null);
       await rimuoviPartita(nomeStanza, partita.id);
-      inviaListaPartite(nomeStanza);
-      inviaConteggioStanze();
+      await concludiPartita(partita, idGiocatore, nomeStanza, null);
       return;
     }
 
@@ -4961,7 +4978,7 @@ async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, auto
       }
     });
 
-    await aggiornaStatoPartita(partita.id, {
+    aggiornaStatoPartita(partita.id, {
       giocatori: preparaGiocatoriPerFirebase(partita.giocatori),
       ordineGiocatori: partita.ordineGiocatori,
       turnoAttuale: partita.turnoAttuale,
@@ -4970,6 +4987,8 @@ async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, auto
       tiriConsentitiNelTurno: partita.tiriConsentitiNelTurno,
       tempoInizioTurno: null,
       scadenzaTurno: null
+    }).catch(errore => {
+      console.error("Errore salvataggio stato durante animazione:", errore.message);
     });
 
     // Seconda fase, dopo l'animazione: SOLO ORA il countdown vero parte, con
@@ -5012,7 +5031,7 @@ async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, auto
         tempoInizioTurno: partita.tempoInizioTurno,
         scadenzaTurno: partita.scadenzaTurno
       });
-    }, DURATA_ANIMAZIONE_TIRO_MS);
+    }, durataAnimazioneMossaMs(risultato.percorso));
 
   } catch (erroreTiro) {
     // FIX (turni): se anche il ripiego locale fallisse per qualche motivo
@@ -5067,8 +5086,8 @@ async function forzaAbbandonoPerInattivita(partita, nomeStanza, idGiocatore) {
       if (g.socket && g.socket.readyState === WebSocket.OPEN) g.socket.send(JSON.stringify({ tipo: "statoPartita", giocatori: statoGiocatori, turnoDiId: vincitoreId, vittoria: true, vincitore: vincitoreNome, messaggi: [nomeUscente + " è stato rimosso per inattività prolungata."] }));
     });
     const elencoCompleto = partita.ordineGiocatori.concat([idGiocatore]).map(id => id === idGiocatore ? { uid: idGiocatore, nome: nomeUscente } : { uid: id, nome: partita.giocatori[id].nome });
-    await concludiPartita(partita, vincitoreId, nomeStanza, elencoCompleto);
     await rimuoviPartita(nomeStanza, partita.id);
+    await concludiPartita(partita, vincitoreId, nomeStanza, elencoCompleto);
   } else {
     const idAttuale = partita.ordineGiocatori[partita.turnoAttuale];
     partita.tiriEffettuatiNelTurno = 0;
@@ -5124,6 +5143,7 @@ function inviaStatoDeterminazione(partita, nomeStanza) {
     gruppoSpareggioAttuale: partita.gruppoSpareggioAttuale || null,
     tempoInizioTurno: partita.tempoInizioTurno || null,
     durataMossaMs: millisecondiMossa(partita),
+    classificata: partita.classificata !== false,
     chatAttiva: partita.chatAttiva !== false,
     mediaAttiva: partita.mediaAttiva === true
   });
@@ -5300,6 +5320,7 @@ async function completaDeterminazione(partita, nomeStanza, ordineFinale) {
         giocatori: statoGiocatori, turnoDiId: idPrimoTurno,
         tempoInizioTurno: partita.tempoInizioTurno, durataMossaMs: millisecondiMossa(partita),
         vittoria: false, vincitore: null,
+        classificata: partita.classificata !== false,
         chatAttiva: partita.chatAttiva !== false,
         mediaAttiva: partita.mediaAttiva === true
       }));
@@ -5357,6 +5378,10 @@ async function esciDaPartitaInAttesa(partita, nomeStanza, uid) {
       partita.creatore = nuovoCreatore.nome;
     }
   }
+
+  // Aggiorna subito Lobby e contatori; la persistenza può completarsi dopo.
+  inviaListaPartite(nomeStanza);
+  inviaConteggioStanze();
 
   await aggiornaStatoPartita(partita.id, {
     creatore: partita.creatore, creatoDa: partita.creatoDa,
@@ -5498,8 +5523,17 @@ wss.on("connection", (socket, request) => {
 
   const nomeStanzaDaLasciare = stanzaAttuale;
 
+  // Stacchiamo subito il socket dalla stanza. Se il browser chiude la
+  // connessione mentre prosegue la pulizia, l'evento close non ripeterà
+  // la stessa uscita in parallelo.
+  stanzaAttuale = null;
+
   // Rimuove esclusivamente questa connessione WebSocket.
   delete stanze[nomeStanzaDaLasciare].giocatoriOnline[socketId];
+
+  // La presenza viene pubblicata PRIMA di eventuali scritture Firebase: gli
+  // altri client vedono l'uscita senza attendere la pulizia del tavolo.
+  inviaConteggioStanze();
 
   // Se il giocatore aveva una partita ancora in attesa,
   // deve essere rimosso anche dalla partita.
@@ -5526,9 +5560,6 @@ wss.on("connection", (socket, request) => {
   // Aggiorna immediatamente tutti i dati della stanza.
   inviaListaPartite(nomeStanzaDaLasciare);
   inviaConteggioStanze();
-
-  // Questa WebSocket non appartiene più alla stanza.
-  stanzaAttuale = null;
 
   return;
 }
@@ -5615,6 +5646,7 @@ inviaAllaStanza(stanzaAttuale, {
             gruppoSpareggioAttuale: partita.gruppoSpareggioAttuale || null,
             tempoInizioTurno: partita.tempoInizioTurno || Date.now(),
             durataMossaMs: millisecondiMossa(partita),
+            classificata: partita.classificata !== false,
             chatAttiva: partita.chatAttiva !== false,
             mediaAttiva: partita.mediaAttiva === true
           }));
@@ -5921,8 +5953,8 @@ inviaAllaStanza(stanzaAttuale, {
           Object.values(partita.giocatori).forEach(g => {
             if (g.socket && g.socket.readyState === WebSocket.OPEN) g.socket.send(JSON.stringify({ tipo: "statoPartita", giocatori: statoGiocatori, turnoDiId: vincitoreId, vittoria: true, vincitore: vincitoreNome, messaggi: [nomeUscente + " ha abbandonato la partita."] }));
           });
-          await concludiPartita(partita, vincitoreId, nomeStanza, elencoPartecipantiOriginali);
           await rimuoviPartita(nomeStanza, partita.id);
+          await concludiPartita(partita, vincitoreId, nomeStanza, elencoPartecipantiOriginali);
         } else {
           if (eraLuiIlGiocatoreAttivo) {
             partita.tiriEffettuatiNelTurno = 0;
@@ -5977,6 +6009,9 @@ socket.on("close", async () => {
 
     // Rimuove esclusivamente questa connessione.
     delete stanze[nomeStanza].giocatoriOnline[socketId];
+
+    // Aggiorna subito la presenza, prima di qualsiasi await su Firebase.
+    inviaConteggioStanze();
 
     // Rimuove il socket dal roster media. Nelle partite in corso il giocatore
     // resta al tavolo e potrà riconnettersi; in attesa viene invece alzato.
