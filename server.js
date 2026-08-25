@@ -409,11 +409,76 @@ async function partitaContieneUtenteBloccato(partita, uid) {
   const altriUid = Object.keys(partita.giocatori || {})
     .filter(altroUid => altroUid !== uid);
 
-  for (const altroUid of altriUid) {
-    if (await sonoBloccatiTraLoro(uid, altroUid)) return true;
+  if (!altriUid.length) return false;
+
+  // I controlli sono indipendenti: eseguirli in parallelo evita una
+  // sequenza di letture Firebase che, con più giocatori, poteva durare secondi.
+  const risultati = await Promise.all(
+    altriUid.map(altroUid => sonoBloccatiTraLoro(uid, altroUid))
+  );
+
+  return risultati.some(Boolean);
+}
+
+const URL_SERVER_PUBBLICO =
+  String(process.env.PUBLIC_SERVER_URL || "https://gioco-oca-server.onrender.com")
+    .replace(/\/$/, "");
+
+function creaUrlAvatarRealtime(uid, avatarPresente, avatarVersione) {
+  if (!avatarPresente || !uid) return null;
+  const versione = Math.max(1, Number(avatarVersione) || 1);
+  return URL_SERVER_PUBBLICO +
+    "/api/avatar/" +
+    encodeURIComponent(String(uid)) +
+    "?v=" +
+    encodeURIComponent(String(versione));
+}
+
+async function caricaUtenteRealtimeLeggero(uid, nicknameFallback = "Utente") {
+  if (!db || !uid) return null;
+
+  const refUtente = db.ref("utenti/" + uid);
+
+  // Leggiamo solo i campi necessari alla presenza realtime. In precedenza
+  // veniva scaricato l'intero /utenti/{uid}, compresi avatar base64 e dati
+  // annidati non utili al WebSocket.
+  const [
+    snapNickname,
+    snapStato,
+    snapSospesoFino,
+    snapAvatarPresente,
+    snapAvatarAggiornatoIl
+  ] = await Promise.all([
+    refUtente.child("nickname").once("value"),
+    refUtente.child("stato").once("value"),
+    refUtente.child("sospesoFino").once("value"),
+    refUtente.child("avatarPresente").once("value"),
+    refUtente.child("avatarAggiornatoIl").once("value")
+  ]);
+
+  if (!snapNickname.exists()) return null;
+
+  let avatarPresente = snapAvatarPresente.val();
+  let avatarAggiornatoIl = Number(snapAvatarAggiornatoIl.val()) || 0;
+
+  // Compatibilità con account creati prima dei metadati avatar.
+  if (typeof avatarPresente !== "boolean") {
+    const snapAvatar = await refUtente.child("avatar").once("value");
+    avatarPresente = Boolean(snapAvatar.val());
+    if (avatarPresente && !avatarAggiornatoIl) avatarAggiornatoIl = 1;
+
+    refUtente.update({
+      avatarPresente,
+      avatarAggiornatoIl
+    }).catch(() => {});
   }
 
-  return false;
+  return {
+    nickname: snapNickname.val() || nicknameFallback,
+    stato: snapStato.val() || "attivo",
+    sospesoFino: snapSospesoFino.val() || null,
+    avatar: creaUrlAvatarRealtime(uid, avatarPresente, avatarAggiornatoIl)
+  };
 }
 
 function preparaNicknameGoogle(nome, email) {
@@ -4489,10 +4554,16 @@ app.post("/api/admin/riattiva", richiediAdmin, async (req, res) => {
 });
 
 // ===== DADO DA RANDOM.ORG, con ripiego locale SOLO se davvero irraggiungibile =====
+const randomOrgAgent = new https.Agent({
+  keepAlive: true,
+  keepAliveMsecs: 30000,
+  maxSockets: 4
+});
+
 function tiraDadoRandomOrg() {
   return new Promise((resolve) => {
     const url = "https://www.random.org/integers/?num=2&min=1&max=6&col=1&base=10&format=plain&rnd=new";
-    const richiesta = https.get(url, { timeout: 1500 }, (res) => {
+    const richiesta = https.get(url, { timeout: 1500, agent: randomOrgAgent }, (res) => {
       let dati = "";
       res.on("data", chunk => dati += chunk);
       res.on("end", () => {
@@ -4837,7 +4908,7 @@ function inviaConteggioStanze() {
 
 const HEARTBEAT_MS = 15000;
 const DURATA_ANIMAZIONE_DADI_MS = 1080;
-const DURATA_PASSO_PEDINA_MS = 380;
+const DURATA_PASSO_PEDINA_MS = 260;
 const MARGINE_SINCRONIZZAZIONE_MOSSA_MS = 90;
 const heartbeatInterval = setInterval(() => {
   wss.clients.forEach(socket => { if (socket.isAlive === false) return socket.terminate(); socket.isAlive = false; socket.ping(); });
@@ -5575,14 +5646,40 @@ wss.on("connection", (socket, request) => {
           socket.send(JSON.stringify({ tipo: "errore", messaggio: "Sei già collegato a un'altra stanza." }));
           return;
         }
-        const utenteDb = (await db.ref("utenti/" + uid).once("value")).val();
-        if (!utenteDb) { socket.send(JSON.stringify({ tipo: "sessioneScaduta" })); return; }
-        if (utenteDb.stato === "bannato") { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Il tuo account è stato bannato." })); return; }
-        if (utenteDb.stato === "sospeso" && utenteDb.sospesoFino && utenteDb.sospesoFino > Date.now()) {
-          socket.send(JSON.stringify({ tipo: "errore", messaggio: "Account sospeso fino al " + new Date(utenteDb.sospesoFino).toLocaleString("it-IT") + "." }));
+        const utenteDb = await caricaUtenteRealtimeLeggero(
+          uid,
+          datiTokenIniziali && datiTokenIniziali.nickname
+            ? datiTokenIniziali.nickname
+            : "Utente"
+        );
+
+        if (!utenteDb) {
+          socket.send(JSON.stringify({ tipo: "sessioneScaduta" }));
           return;
         }
-        stanzaAttuale = dati.stanza; nickname = utenteDb.nickname; mioAvatar = utenteDb.avatar || null;
+
+        if (utenteDb.stato === "bannato") {
+          socket.send(JSON.stringify({ tipo: "errore", messaggio: "Il tuo account è stato bannato." }));
+          return;
+        }
+
+        if (
+          utenteDb.stato === "sospeso" &&
+          utenteDb.sospesoFino &&
+          utenteDb.sospesoFino > Date.now()
+        ) {
+          socket.send(JSON.stringify({
+            tipo: "errore",
+            messaggio: "Account sospeso fino al " +
+              new Date(utenteDb.sospesoFino).toLocaleString("it-IT") +
+              "."
+          }));
+          return;
+        }
+
+        stanzaAttuale = dati.stanza;
+        nickname = utenteDb.nickname;
+        mioAvatar = utenteDb.avatar || null;
         if (!stanze[stanzaAttuale]) stanze[stanzaAttuale] = { giocatoriOnline: {}, partite: {} };
         stanze[stanzaAttuale].giocatoriOnline[socketId] = {
   uid,
@@ -5614,7 +5711,12 @@ inviaAllaStanza(stanzaAttuale, {
         stanzaAttuale = nomeStanza;
         const mioGiocatore = partita.giocatori[uid];
         if (!mioGiocatore) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Non fai parte di questa partita." })); return; }
-        if (db) { try { const u = (await db.ref("utenti/" + uid).once("value")).val(); if (u) mioGiocatore.avatar = u.avatar || null; } catch (e) {} }
+        if (db) {
+          try {
+            const u = await caricaUtenteRealtimeLeggero(uid, mioGiocatore.nome);
+            if (u) mioGiocatore.avatar = u.avatar || null;
+          } catch (e) {}
+        }
         const socketPrecedente = mioGiocatore.socket;
         if (socketPrecedente && socketPrecedente !== socket) {
           rimuoviPartecipanteMedia(partita, uid);
@@ -5694,15 +5796,22 @@ inviaAllaStanza(stanzaAttuale, {
           partecipantiMediaInfo: new Map()
         };
         stanze[stanzaAttuale].partite[partitaId] = nuovaPartita;
+
+        // La Lobby vede subito il nuovo tavolo; Firebase resta la fonte persistente.
+        inviaListaPartite(stanzaAttuale);
+        inviaConteggioStanze();
+
         try {
           await salvaPartita({ ...nuovaPartita, stanza: stanzaAttuale });
         } catch (erroreSalvataggio) {
           delete stanze[stanzaAttuale].partite[partitaId];
+          inviaListaPartite(stanzaAttuale);
+          inviaConteggioStanze();
           console.error("Errore creazione partita:", erroreSalvataggio.message);
           socket.send(JSON.stringify({ tipo: "errore", messaggio: "Non è stato possibile creare la partita. Riprova." }));
           return;
         }
-        inviaListaPartite(stanzaAttuale);
+
         return;
       }
 
@@ -5729,17 +5838,30 @@ inviaAllaStanza(stanzaAttuale, {
         }
         partita.giocatori[uid] = { nome: nickname, avatar: mioAvatar, posizione: 0, socket, tipoDispositivo, turniSaltati: 0, tentativiAutomaticiConsecutivi: 0 };
         partita.ordineGiocatori.push(uid);
+
+        // Aggiornamento visivo immediato; se Firebase fallisce facciamo rollback.
+        inviaListaPartite(stanzaAttuale);
+        inviaConteggioStanze();
+
         try {
-          await aggiornaStatoPartita(partita.id, { giocatori: preparaGiocatoriPerFirebase(partita.giocatori), ordineGiocatori: partita.ordineGiocatori });
+          await aggiornaStatoPartita(partita.id, {
+            giocatori: preparaGiocatoriPerFirebase(partita.giocatori),
+            ordineGiocatori: partita.ordineGiocatori
+          });
         } catch (erroreSalvataggio) {
           delete partita.giocatori[uid];
           partita.ordineGiocatori = partita.ordineGiocatori.filter(id => id !== uid);
+          inviaListaPartite(stanzaAttuale);
+          inviaConteggioStanze();
           console.error("Errore ingresso partita:", erroreSalvataggio.message);
           socket.send(JSON.stringify({ tipo: "errore", messaggio: "Non è stato possibile entrare nella partita. Riprova." }));
           return;
         }
-        inviaListaPartite(stanzaAttuale);
-        if (Object.keys(partita.giocatori).length === partita.maxGiocatori) await avviaPartitaAutomaticamente(partita);
+
+        if (Object.keys(partita.giocatori).length === partita.maxGiocatori) {
+          await avviaPartitaAutomaticamente(partita);
+        }
+
         return;
       }
 
@@ -5807,18 +5929,31 @@ inviaAllaStanza(stanzaAttuale, {
         stanzaAttuale = nomeStanza;
         partita.giocatori[uid] = { nome: nickname, avatar: mioAvatar, posizione: 0, socket, tipoDispositivo, turniSaltati: 0, tentativiAutomaticiConsecutivi: 0 };
         partita.ordineGiocatori.push(uid);
+
+        inviaListaPartite(nomeStanza);
+        inviaConteggioStanze();
+
         try {
-          await aggiornaStatoPartita(partita.id, { giocatori: preparaGiocatoriPerFirebase(partita.giocatori), ordineGiocatori: partita.ordineGiocatori });
+          await aggiornaStatoPartita(partita.id, {
+            giocatori: preparaGiocatoriPerFirebase(partita.giocatori),
+            ordineGiocatori: partita.ordineGiocatori
+          });
         } catch (erroreSalvataggio) {
           delete partita.giocatori[uid];
           partita.ordineGiocatori = partita.ordineGiocatori.filter(id => id !== uid);
+          inviaListaPartite(nomeStanza);
+          inviaConteggioStanze();
           console.error("Errore accettazione invito:", erroreSalvataggio.message);
           socket.send(JSON.stringify({ tipo: "errore", messaggio: "Non è stato possibile entrare nella partita. Riprova." }));
           return;
         }
+
         delete partita.invitati[uid];
-        inviaListaPartite(nomeStanza);
-        if (Object.keys(partita.giocatori).length === partita.maxGiocatori) await avviaPartitaAutomaticamente(partita);
+
+        if (Object.keys(partita.giocatori).length === partita.maxGiocatori) {
+          await avviaPartitaAutomaticamente(partita);
+        }
+
         return;
       }
 
