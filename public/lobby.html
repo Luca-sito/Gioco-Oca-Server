@@ -850,6 +850,86 @@ body.tema-scuro .btn-modalita-partita.attiva{
     filter: brightness(0) invert(1);
 }
 /* =========================================================
+   CONFERME INTERNE LOBBY / BLOCCO UTENTE
+========================================================= */
+.overlay-conferma-lobby{
+    display:none;
+    position:fixed;
+    inset:0;
+    z-index:2100;
+    align-items:center;
+    justify-content:center;
+    padding:18px;
+    background:rgba(0,0,0,.64);
+    backdrop-filter:blur(3px);
+}
+.overlay-conferma-lobby.aperto{display:flex;}
+.conferma-lobby-box{
+    width:min(430px,calc(100vw - 32px));
+    border:1px solid rgba(255,255,255,.14);
+    border-radius:16px;
+    overflow:hidden;
+    background:linear-gradient(155deg,#1a1c21,#0f1115);
+    color:#f7f8fa;
+    box-shadow:0 28px 90px rgba(0,0,0,.58);
+}
+.conferma-lobby-testata{
+    display:flex;
+    gap:12px;
+    align-items:center;
+    padding:18px 20px 13px;
+}
+.conferma-lobby-icona{
+    width:42px;
+    height:42px;
+    flex:0 0 42px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:12px;
+    background:rgba(238,76,76,.13);
+    color:#ff8f8f;
+}
+.conferma-lobby-icona svg{width:23px;height:23px;}
+.conferma-lobby-titolo{font-size:17px;font-weight:900;}
+.conferma-lobby-testo{
+    padding:0 20px 18px;
+    color:#b9c0c9;
+    font-size:13px;
+    line-height:1.55;
+}
+.conferma-lobby-azioni{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:9px;
+    padding:14px 20px 20px;
+    border-top:1px solid rgba(255,255,255,.08);
+}
+.conferma-lobby-azioni button{
+    min-height:43px;
+    margin:0;
+    border-radius:10px;
+}
+.btn-conferma-annulla{
+    background:rgba(255,255,255,.08)!important;
+    border:1px solid rgba(255,255,255,.12)!important;
+    color:#f1f3f5!important;
+}
+.btn-conferma-azione{
+    background:#d94a4a!important;
+    border:1px solid #ef6666!important;
+    color:#fff!important;
+}
+.player-card-azione.bloccato{
+    background:rgba(238,76,76,.13)!important;
+    border-color:rgba(238,76,76,.35)!important;
+    color:#ffabab!important;
+}
+@media(max-width:600px){
+    .overlay-conferma-lobby{z-index:100500;}
+}
+
+/* =========================================================
    MODAL INVITA GIOCATORI
 ========================================================= */
 .modal-invito-box{
@@ -1526,6 +1606,21 @@ body.tema-scuro .giocatore-online{
   </button>
   <div id="playerCardContenuto"></div>
 </div>
+<div id="overlayConfermaBlocco" class="overlay-conferma-lobby" aria-hidden="true">
+  <div class="conferma-lobby-box" role="dialog" aria-modal="true" aria-labelledby="confermaLobbyTitolo">
+    <div class="conferma-lobby-testata">
+      <div class="conferma-lobby-icona" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M6 6l12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </div>
+      <div class="conferma-lobby-titolo" id="confermaLobbyTitolo">Conferma</div>
+    </div>
+    <div class="conferma-lobby-testo" id="confermaLobbyTesto"></div>
+    <div class="conferma-lobby-azioni">
+      <button type="button" class="btn-conferma-annulla" id="confermaLobbyAnnulla">Annulla</button>
+      <button type="button" class="btn-conferma-azione" id="confermaLobbyAzione">Conferma</button>
+    </div>
+  </div>
+</div>
 <div id="overlayModalInvito" class="overlay-modal-invito">
   <div class="modal-invito-box">
     <div class="modal-invito-titolo">
@@ -1736,6 +1831,8 @@ const stanzaCodificata = encodeURIComponent(stanza);
 document.getElementById("nomeStanza").firstChild.textContent = stanza + " ";
 let mioUid = null;
 let mieiAmiciUid = new Set();
+let uidBloccatiInterazione = new Set();
+let confermaLobbyRisolvi = null;
 let ultimaListaOnlineStanza = [];
 let aspettaPropriaPartitaPrivata = false;
 let partitaDaInvitareId = null;
@@ -1755,7 +1852,7 @@ function selezionaModalitaPartita(modalita) {
   });
 }
 
-// ===== NUOVO: notifiche interne al posto di alert() =====
+// ===== NOTIFICHE INTERNE =====
 function mostraNotifica(testo) {
   const contenitore = document.getElementById("contenitoreNotifiche");
   if (!contenitore) return;
@@ -2468,6 +2565,7 @@ async function verificaSessione() {
     sessioneVerificata = true;
     connetti();
     caricaAmici();
+    caricaBlocchiLobby();
   } catch (e) {
     sessioneVerificata = false;
     window.location.href =
@@ -2611,14 +2709,24 @@ async function creaPartita() {
   if (!inviato) return;
   if (tipo === "privata") aspettaPropriaPartitaPrivata = true;
 }
-function eliminaPartita() {
-  if (!confirm("Vuoi eliminare la partita creata?")) return;
+async function eliminaPartita() {
+  const confermato = await chiediConfermaLobby({
+    titolo: "Eliminare la partita?",
+    messaggio: "La partita creata verrà eliminata e non sarà più disponibile per gli altri giocatori.",
+    testoConferma: "Elimina partita"
+  });
+  if (!confermato) return;
   inviaMessaggioSocket({ tipo: "eliminaPartita" });
 }
 // NUOVO: il creatore (o un giocatore già dentro) lascia un tavolo non ancora
 // avviato senza distruggerlo per gli altri
-function alzatiDaPartita(id) {
-  if (!confirm("Vuoi alzarti da questo tavolo?")) return;
+async function alzatiDaPartita(id) {
+  const confermato = await chiediConfermaLobby({
+    titolo: "Lasciare il tavolo?",
+    messaggio: "Uscirai da questo tavolo. Gli altri giocatori resteranno nella partita.",
+    testoConferma: "Alzati"
+  });
+  if (!confermato) return;
   inviaMessaggioSocket({ tipo: "abbandonaPartita", partitaId: id });
 }
 function mostraPartite(lista) {
@@ -2934,7 +3042,9 @@ function iconaPlayerCard(tipo) {
     profilo: `<circle cx="12" cy="8" r="3.2" ${comuni}/><path d="M5.5 20c.7-4 3-6 6.5-6s5.8 2 6.5 6" ${comuni}/>` ,
     aggiungi: `<circle cx="9" cy="8" r="3" ${comuni}/><path d="M3.5 19c.6-3.5 2.5-5.3 5.5-5.3 1.1 0 2.1.2 3 .7M17 12v7M13.5 15.5h7" ${comuni}/>` ,
     check: `<path d="M5 12.5l4 4L19 6.5" ${comuni}/>` ,
-    rifiuta: `<path d="M7 7l10 10M17 7L7 17" ${comuni}/>`
+    rifiuta: `<path d="M7 7l10 10M17 7L7 17" ${comuni}/>` ,
+    blocca: `<circle cx="12" cy="12" r="8.5" ${comuni}/><path d="M6 6l12 12" ${comuni}/>` ,
+    sblocca: `<circle cx="12" cy="12" r="8.5" ${comuni}/><path d="M8 12h8" ${comuni}/>`
   };
   return `<svg viewBox="0 0 24 24" aria-hidden="true">${percorsi[tipo] || percorsi.profilo}</svg>`;
 }
@@ -3140,7 +3250,9 @@ function disegnaPlayerCardGiocatore(dati) {
     : `<span class="player-card-badge-vuoto">Nessun riconoscimento ancora.</span>`;
 
   let amiciziaHtml = "";
-  if (dati.statoAmicizia === "amici") {
+  if (dati.statoBlocco && dati.statoBlocco !== "nessuno") {
+    amiciziaHtml = "";
+  } else if (dati.statoAmicizia === "amici") {
     amiciziaHtml = `<button class="player-card-azione successo" type="button" onclick="rimuoviAmico('${dati.uid}')">${iconaPlayerCard("check")}<span>Amico</span></button>`;
   } else if (dati.statoAmicizia === "richiesta_inviata") {
     amiciziaHtml = `<button class="player-card-azione" type="button" disabled>${iconaPlayerCard("check")}<span>Richiesta inviata</span></button>`;
@@ -3191,6 +3303,11 @@ function disegnaPlayerCardGiocatore(dati) {
     <div class="player-card-azioni">
       <a class="player-card-azione" href="profilo-pubblico.html?nickname=${encodeURIComponent(dati.nickname)}">${iconaPlayerCard("profilo")}<span>Profilo</span></a>
       ${amiciziaHtml}
+      ${dati.statoBlocco === "bloccato_da_me"
+        ? `<button class="player-card-azione bloccato" type="button" onclick="sbloccaGiocatore('${dati.uid}')">${iconaPlayerCard("sblocca")}<span>Sblocca</span></button>`
+        : dati.statoBlocco === "mi_ha_bloccato"
+          ? `<button class="player-card-azione bloccato" type="button" disabled>${iconaPlayerCard("blocca")}<span>Interazione bloccata</span></button>`
+          : `<button class="player-card-azione pericolo" type="button" onclick="bloccaGiocatore('${dati.uid}', '${nicknamePulito.replace(/'/g, "\'")}')">${iconaPlayerCard("blocca")}<span>Blocca</span></button>`}
     </div>`;
 
   if (playerCardTriggerAttivo) requestAnimationFrame(() => posizionaPlayerCard(playerCardTriggerAttivo));
@@ -3251,6 +3368,106 @@ window.addEventListener("scroll", () => {
   if (playerCardTriggerAttivo && playerCardElemento.classList.contains("aperta")) posizionaPlayerCard(playerCardTriggerAttivo);
 }, true);
 
+function chiudiConfermaLobby(esito) {
+  const overlay = document.getElementById("overlayConfermaBlocco");
+  if (overlay) {
+    overlay.classList.remove("aperto");
+    overlay.setAttribute("aria-hidden", "true");
+  }
+  const risolvi = confermaLobbyRisolvi;
+  confermaLobbyRisolvi = null;
+  if (risolvi) risolvi(esito === true);
+}
+
+function chiediConfermaLobby({ titolo, messaggio, testoConferma = "Conferma" }) {
+  if (confermaLobbyRisolvi) chiudiConfermaLobby(false);
+  const overlay = document.getElementById("overlayConfermaBlocco");
+  document.getElementById("confermaLobbyTitolo").textContent = titolo || "Conferma";
+  document.getElementById("confermaLobbyTesto").textContent = messaggio || "";
+  document.getElementById("confermaLobbyAzione").textContent = testoConferma;
+  overlay.classList.add("aperto");
+  overlay.setAttribute("aria-hidden", "false");
+  return new Promise(resolve => {
+    confermaLobbyRisolvi = resolve;
+  });
+}
+
+document.getElementById("confermaLobbyAnnulla").addEventListener("click", () => chiudiConfermaLobby(false));
+document.getElementById("confermaLobbyAzione").addEventListener("click", () => chiudiConfermaLobby(true));
+document.getElementById("overlayConfermaBlocco").addEventListener("click", e => {
+  if (e.target.id === "overlayConfermaBlocco") chiudiConfermaLobby(false);
+});
+
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && document.getElementById("overlayConfermaBlocco").classList.contains("aperto")) {
+    chiudiConfermaLobby(false);
+  }
+});
+
+async function caricaBlocchiLobby() {
+  if (!mioUid) return;
+  try {
+    const risposta = await fetchAutenticato("https://gioco-oca-server.onrender.com/api/blocchi");
+    if (!risposta.ok) return;
+    const dati = await risposta.json();
+    uidBloccatiInterazione = new Set(Array.isArray(dati.interazioniBloccateUid) ? dati.interazioniBloccateUid : []);
+  } catch (e) {
+    console.warn("Impossibile aggiornare la lista blocchi:", e);
+  }
+}
+
+async function bloccaGiocatore(utenteUid, nickname) {
+  if (!utenteUid || utenteUid === mioUid) return;
+  const confermato = await chiediConfermaLobby({
+    titolo: "Bloccare " + (nickname || "questo giocatore") + "?",
+    messaggio: "Non potrete inviarvi messaggi, vedere i messaggi reciproci nelle chat, invitarvi o entrare nella stessa partita. L'eventuale amicizia verrà rimossa.",
+    testoConferma: "Blocca giocatore"
+  });
+  if (!confermato) return;
+  try {
+    const risposta = await fetchAutenticato("https://gioco-oca-server.onrender.com/api/blocchi", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ utenteUid })
+    });
+    const dati = await risposta.json().catch(() => ({}));
+    if (!risposta.ok) {
+      mostraNotifica(dati.errore || "Impossibile bloccare questo giocatore.");
+      return;
+    }
+    await Promise.all([caricaBlocchiLobby(), caricaAmici()]);
+    chiudiPlayerCardGiocatore();
+    mostraNotifica("Giocatore bloccato.");
+  } catch (e) {
+    mostraNotifica("Errore di connessione.");
+  }
+}
+
+async function sbloccaGiocatore(utenteUid) {
+  if (!utenteUid || utenteUid === mioUid) return;
+  const confermato = await chiediConfermaLobby({
+    titolo: "Sbloccare questo giocatore?",
+    messaggio: "Rimuoverai il blocco che hai impostato. L'amicizia non verrà ripristinata automaticamente.",
+    testoConferma: "Sblocca"
+  });
+  if (!confermato) return;
+  try {
+    const risposta = await fetchAutenticato("https://gioco-oca-server.onrender.com/api/blocchi/" + encodeURIComponent(utenteUid), {
+      method: "DELETE"
+    });
+    const dati = await risposta.json().catch(() => ({}));
+    if (!risposta.ok) {
+      mostraNotifica(dati.errore || "Impossibile sbloccare questo giocatore.");
+      return;
+    }
+    await caricaBlocchiLobby();
+    chiudiPlayerCardGiocatore();
+    mostraNotifica("Giocatore sbloccato.");
+  } catch (e) {
+    mostraNotifica("Errore di connessione.");
+  }
+}
+
 async function inviaRichiestaAmicizia(destinatarioUid) {
   try {
     const r = await fetchAutenticato("https://gioco-oca-server.onrender.com/api/amici/richiedi", {
@@ -3290,7 +3507,12 @@ async function rifiutaAmicizia(daUid) {
   } catch (e) { mostraNotifica("Errore di connessione."); return false; }
 }
 async function rimuoviAmico(altroUid) {
-  if (!confirm("Vuoi rimuovere questa persona dai tuoi amici?")) return;
+  const confermato = await chiediConfermaLobby({
+    titolo: "Rimuovere dagli amici?",
+    messaggio: "La persona verrà rimossa dalla tua lista amici.",
+    testoConferma: "Rimuovi"
+  });
+  if (!confermato) return;
   try {
     const r = await fetchAutenticato("https://gioco-oca-server.onrender.com/api/amici/rimuovi", {
       method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
@@ -3315,7 +3537,11 @@ document.getElementById("overlayModalInvito").addEventListener("click", (e) => {
   if (e.target.id === "overlayModalInvito") chiudiModalInvito();
 });
 function disegnaListaModalInvito() {
-  const altri = ultimaListaOnlineStanza.filter(g => g.uid !== mioUid && g.stato !== "partita");
+  const altri = ultimaListaOnlineStanza.filter(g =>
+    g.uid !== mioUid &&
+    g.stato !== "partita" &&
+    !uidBloccatiInterazione.has(g.uid)
+  );
   const box = document.getElementById("listaModalInvito");
   if (!altri.length) { box.innerHTML = "<p style='text-align:center;color:#999;padding:20px;'>Nessun altro giocatore online in questa stanza al momento.</p>"; return; }
   box.innerHTML = altri.map(g => {
