@@ -560,38 +560,190 @@ app.post("/api/login", limiteLogin, async (req, res) => {
 app.post("/api/logout", (req, res) => { res.clearCookie("token", OPZIONI_COOKIE); res.json({ ok: true }); });
 
 app.get("/api/me", richiediAuth, async (req, res) => {
-  if (!db) return res.status(500).json({ errore: "Servizio account non disponibile." });
+  if (!db) {
+    return res.status(500).json({
+      errore: "Servizio account non disponibile."
+    });
+  }
+
   try {
-    const utente = (await db.ref("utenti/" + req.utente.uid).once("value")).val();
-    if (!utente) return res.status(404).json({ errore: "Utente non trovato." });
+    const utente = (
+      await db
+        .ref("utenti/" + req.utente.uid)
+        .once("value")
+    ).val();
+
+    if (!utente) {
+      return res.status(404).json({
+        errore: "Utente non trovato."
+      });
+    }
 
     if (utente.elo == null) {
       utente.elo = ELO_INIZIALE;
-      await db.ref("utenti/" + req.utente.uid).update({ elo: ELO_INIZIALE });
+
+      await db
+        .ref("utenti/" + req.utente.uid)
+        .update({
+          elo: ELO_INIZIALE
+        });
     }
 
     res.json({
       uid: req.utente.uid,
+
       nickname: utente.nickname,
       email: utente.email,
       avatar: utente.avatar || null,
+
+      // =========================================
+      // DATI PERSONALI
+      // =========================================
+      nome: utente.nome || "",
+      cognome: utente.cognome || "",
+      dataNascita: utente.dataNascita || "",
+      sesso: utente.sesso || "",
+      citta: utente.citta || "",
+      provincia: utente.provincia || "",
+
       ruolo: utente.ruolo || "utente",
       stato: utente.stato || "attivo",
       sospesoFino: utente.sospesoFino || null,
       avvisi: utente.avvisi || [],
+
       partiteVinte: utente.partiteVinte || 0,
       partiteGiocate: utente.partiteGiocate || 0,
+
       creatoIl: utente.creatoIl || null,
       ultimoAccesso: utente.ultimoAccesso || null,
+
       elo: ottieniElo(utente),
-      streakVittorieMassima: utente.streakVittorieMassima || 0,
-      vittoriaPiuVeloceSecondi: utente.vittoriaPiuVeloceSecondi ?? null,
+
+      streakVittorieMassima:
+        utente.streakVittorieMassima || 0,
+
+      vittoriaPiuVeloceSecondi:
+        utente.vittoriaPiuVeloceSecondi ?? null,
+
       badge: calcolaBadge(utente)
     });
+
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ errore: "Errore del server." });
+    console.error(
+      "Errore /api/me:",
+      err
+    );
+
+    res.status(500).json({
+      errore: "Errore del server."
+    });
   }
+});
+
+app.post("/api/modifica-profilo", richiediAuth, async (req, res) => {
+
+  if (!db) {
+    return res.status(500).json({
+      errore: "Servizio account non disponibile."
+    });
+  }
+
+  try {
+
+    const {
+      nome,
+      cognome,
+      dataNascita,
+      sesso,
+      citta,
+      provincia
+    } = req.body || {};
+
+    const datiAggiornati = {
+
+      nome: pulisciTesto(nome || "", 60),
+
+      cognome: pulisciTesto(cognome || "", 60),
+
+      dataNascita: pulisciTesto(
+        dataNascita || "",
+        10
+      ),
+
+      sesso: pulisciTesto(
+        sesso || "",
+        20
+      ),
+
+      citta: pulisciTesto(
+        citta || "",
+        80
+      ),
+
+      provincia: pulisciTesto(
+        provincia || "",
+        80
+      ),
+
+      profiloAggiornatoIl: Date.now()
+
+    };
+
+    const sessiConsentiti = [
+      "",
+      "M",
+      "F",
+      "Altro"
+    ];
+
+    if (
+      !sessiConsentiti.includes(
+        datiAggiornati.sesso
+      )
+    ) {
+      return res.status(400).json({
+        errore: "Valore del sesso non valido."
+      });
+    }
+
+    if (
+      datiAggiornati.dataNascita &&
+      !/^\d{4}-\d{2}-\d{2}$/.test(
+        datiAggiornati.dataNascita
+      )
+    ) {
+      return res.status(400).json({
+        errore: "Data di nascita non valida."
+      });
+    }
+
+    await db
+      .ref(
+        "utenti/" + req.utente.uid
+      )
+      .update(
+        datiAggiornati
+      );
+
+    res.json({
+      ok: true,
+      ...datiAggiornati
+    });
+
+  } catch (errore) {
+
+    console.error(
+      "Errore modifica profilo:",
+      errore
+    );
+
+    res.status(500).json({
+      errore:
+        "Errore durante il salvataggio del profilo."
+    });
+
+  }
+
 });
 
 app.post("/api/modifica-nickname", richiediAuth, async (req, res) => {
