@@ -794,11 +794,13 @@ body.modalita-ruotata #mondo-ruotato {
 }
 
 body.modalita-ruotata #area-tabellone > #area-dadi {
+  /* Dopo la rotazione del tabellone questo lato diventa il bordo inferiore
+     visivo del telefono in orizzontale. Il box resta interamente dentro. */
   top: 50%;
-  right: auto;
+  right: max(18px, 2.5%);
   bottom: auto;
-  left: calc(100% - 52px);
-  transform: translate(-50%, -50%);
+  left: auto;
+  transform: translateY(-50%);
 }
 
 #area-dadi.dadi-in-popup {
@@ -1850,8 +1852,8 @@ body.modalita-desktop.media-partita #btn-giocatori {
          * Manteniamo fluido lo spostamento.
          */
         transition:
-            left 0.5s ease,
-            top 0.5s ease;
+            left 0.28s ease,
+            top 0.28s ease;
 
         /*
          * Pedine sempre sopra all'immagine.
