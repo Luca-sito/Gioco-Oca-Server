@@ -23,7 +23,7 @@ const posizioniCaselle = {
 };
 
 const coloriGiocatori = ["#6a2c70", "#dddddd", "#1e40af", "#43a047", "#f57c00", "#c0ca33", "#e53935", "#2b2b2b"];
-const DURATA_SALTO_MS = 380;
+const DURATA_SALTO_MS = 260;
 
 const origineConfigurata = typeof window.GIOCO_SERVER_URL === "string" ? window.GIOCO_SERVER_URL.trim() : "";
 const hostLocale = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" || window.location.hostname === "[::1]";
@@ -2022,7 +2022,7 @@ function pianificaRecuperoTurno() {
     timerRecuperoTurno = null;
     if (paginaInChiusura || faseAttuale !== "normale" || animazioneMossaInCorso) return;
     inviaSocket({ tipo: "riprendiPartita", partitaId });
-  }, 1600);
+  }, 650);
 }
 
 function gestisciPreparazionePartita(dati) {
@@ -2199,29 +2199,58 @@ async function avvia() {
 
   aggiornaCaricamento("Verifica accesso…", 25);
   try {
-    const risposta = await fetch(ORIGINE_SERVER + "/api/me", { credentials: "include", cache: "no-store" });
+    // Per aprire il WebSocket non serve scaricare l'intero profilo:
+    // /api/me-menu restituisce solo pochi dati e non trasferisce l'avatar base64.
+    const risposta = await fetch(ORIGINE_SERVER + "/api/me-menu", {
+      credentials: "include",
+      cache: "no-store"
+    });
+
     if (risposta.status >= 400 && risposta.status < 500 && risposta.status !== 429) {
       paginaInChiusura = true;
       window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href);
       return;
     }
+
     if (!risposta.ok) throw new Error("Risposta server " + risposta.status);
-    const profilo = await risposta.json();
-    if (!profilo || !profilo.uid) throw new Error("Profilo non valido");
-    mioProfilo = profilo;
-    mioUid = profilo.uid;
-    if (timerRiprovaAvvio) { clearTimeout(timerRiprovaAvvio); timerRiprovaAvvio = null; }
+
+    const profiloRapido = await risposta.json();
+    if (!profiloRapido || !profiloRapido.uid) throw new Error("Profilo non valido");
+
+    mioUid = profiloRapido.uid;
+
+    if (timerRiprovaAvvio) {
+      clearTimeout(timerRiprovaAvvio);
+      timerRiprovaAvvio = null;
+    }
+
     aggiornaCaricamento("Connessione alla partita…", 55);
     connetti();
+
+    // Le statistiche complete servono solo alla presentazione della sfida:
+    // le carichiamo in parallelo senza ritardare la connessione WebSocket.
+    fetch(ORIGINE_SERVER + "/api/me", {
+      credentials: "include",
+      cache: "no-store"
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(profilo => {
+        if (profilo && profilo.uid === mioUid) mioProfilo = profilo;
+      })
+      .catch(erroreProfilo => {
+        console.warn("Profilo completo non disponibile durante l'avvio:", erroreProfilo);
+      });
+
   } catch (errore) {
     console.error("Accesso al server non riuscito:", errore);
     impostaStatoConnessione(true);
     aggiornaCaricamento("Server non raggiungibile. Nuovo tentativo…", 25);
+
     if (!paginaInChiusura && !timerRiprovaAvvio) {
       timerRiprovaAvvio = setTimeout(() => {
         timerRiprovaAvvio = null;
         avvia();
-      }, 3000);
+      }, 1500);
     }
   }
 }
@@ -2231,7 +2260,7 @@ function pianificaRiconnessione() {
   timerRiconnessione = setTimeout(() => {
     timerRiconnessione = null;
     connetti();
-  }, 3000);
+  }, 1200);
 }
 
 function connetti() {
