@@ -483,11 +483,11 @@ app.get("/auth/google", (req, res, next) => {
 });
 
 app.get("/auth/google/callback",
-  passport.authenticate("google", { session: false, failureRedirect: "/login.html?errore=google" }),
+  passport.authenticate("google", { session: false, failureRedirect: "/accedi.html?errore=google" }),
   async (req, res) => {
     try {
       const utente = req.user;
-      if (!utente || !utente.uid) return res.redirect("/login.html?errore=google");
+      if (!utente || !utente.uid) return res.redirect("/accedi.html?errore=google");
 
       const token = creaToken(utente.uid, utente.nickname, utente.ruolo || "utente");
       res.cookie("token", token, OPZIONI_COOKIE);
@@ -500,7 +500,7 @@ app.get("/auth/google/callback",
       return res.redirect(URL_HOME_WIX);
     } catch (errore) {
       console.error("Errore callback Google:", errore);
-      return res.redirect("/login.html?errore=google");
+      return res.redirect("/accedi.html?errore=google");
     }
   }
 );
@@ -617,6 +617,53 @@ app.post("/api/carica-avatar", richiediAuth, uploadAvatar.single("avatar"), asyn
     await db.ref("utenti/" + req.utente.uid).update({ avatar: dataUri });
     res.json({ avatar: dataUri });
   } catch (err) { console.error(err); res.status(400).json({ errore: err.message || "Errore durante il caricamento." }); }
+});
+
+
+// Restituisce l'avatar come una normale immagine HTTPS.
+// Serve a evitare i problemi di data: URI / Blob URL dentro gli HTML Embed Wix.
+app.get("/api/avatar/:uid", async (req, res) => {
+  if (!db) return res.status(503).end();
+
+  try {
+    const uid = String(req.params.uid || "").trim();
+    if (!uid || uid.length > 128) return res.status(400).end();
+
+    const avatar = (await db.ref("utenti/" + uid + "/avatar").once("value")).val();
+    if (!avatar || typeof avatar !== "string") return res.status(404).end();
+
+    const valore = avatar.trim();
+
+    // Avatar Google o altro URL HTTPS già remoto.
+    if (/^https:\/\//i.test(valore)) {
+      res.set("Cross-Origin-Resource-Policy", "cross-origin");
+      res.set("Cache-Control", "private, max-age=60");
+      return res.redirect(302, valore);
+    }
+
+    // Avatar caricato dal sito e memorizzato in Firebase come data URI.
+    const match = valore.match(/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=\s]+)$/i);
+    if (!match) return res.status(415).end();
+
+    const mime = match[1].toLowerCase();
+    const base64 = match[2].replace(/\s/g, "");
+    const buffer = Buffer.from(base64, "base64");
+
+    if (!buffer.length) return res.status(404).end();
+
+    res.set({
+      "Content-Type": mime,
+      "Content-Length": String(buffer.length),
+      "Cache-Control": "private, max-age=300",
+      "X-Content-Type-Options": "nosniff",
+      "Cross-Origin-Resource-Policy": "cross-origin"
+    });
+
+    return res.send(buffer);
+  } catch (err) {
+    console.error("Errore lettura avatar:", err);
+    return res.status(500).end();
+  }
 });
 
 app.get("/api/top-giocatori", async (req, res) => {
