@@ -1763,12 +1763,12 @@ body.tema-scuro .giocatore-online{
         <option value="pubblica">🔓 Pubblica</option>
         <option value="privata">🔒 Privata (solo su invito)</option>
       </select>
-      <p>Microfono e webcam</p>
+      <p>Chiamata del tavolo</p>
       <select id="mediaPartita">
-        <option value="off">🔇 Disattivi</option>
-        <option value="on">🎥 Attivi per tutti</option>
+        <option value="off">🔇 Disattiva</option>
+        <option value="on">🎥 Attiva</option>
       </select>
-      <p style="font-size:12px;line-height:1.35;color:#777;margin-top:8px;">Se attivi, ogni partecipante dovrà autorizzare webcam e microfono prima di entrare.</p>
+      <p style="font-size:12px;line-height:1.35;color:#777;margin-top:8px;">Su computer usa webcam e microfono; su cellulare usa soltanto il microfono.</p>
       <button class="crea" onclick="creaPartita()">Crea partita</button>
     </div>
   </div>
@@ -1857,6 +1857,7 @@ let sessioneVerificata = false;
 let paginaInUscita = false;
 const URL_SERVER_WS = "wss://gioco-oca-server.onrender.com";
 const CHIAVE_TOKEN_AUTH = "giochiSocietaAuthToken";
+const CHIAVE_RITORNO_LOBBY_PARTITA = "giochiSocietaRitornoLobbyPartita";
 
 function acquisisciTokenAutenticazioneDaUrl() {
   try {
@@ -2072,15 +2073,78 @@ async function richiediConsensoMediaSeNecessario(mediaAttiva) {
     return false;
   }
 
+  const clientCellulareAudioOnly =
+    rilevaTipoDispositivoClient() === "cellulare";
+
   if (
     !window.isSecureContext ||
     !navigator.mediaDevices ||
     typeof navigator.mediaDevices.getUserMedia !== "function"
   ) {
     mostraNotifica(
-      "Webcam e microfono richiedono HTTPS e un browser compatibile."
+      clientCellulareAudioOnly
+        ? "Il microfono richiede HTTPS e un browser compatibile."
+        : "Webcam e microfono richiedono HTTPS e un browser compatibile."
     );
     return false;
+  }
+
+  if (clientCellulareAudioOnly) {
+    let streamAudioOnly = null;
+
+    try {
+      mostraNotifica("Verifica microfono in corso…");
+
+      streamAudioOnly = await getUserMediaConTimeout({
+        video: false,
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      }, 12000);
+
+      const tracciaAudioOnly = streamAudioOnly
+        .getAudioTracks()
+        .find(traccia => traccia.readyState === "live");
+
+      if (!tracciaAudioOnly) {
+        mostraNotifica("Il microfono non ha prodotto una traccia audio valida.");
+        return false;
+      }
+
+      console.log("[MEDIA] Cellulare audio-only, microfono verificato:", tracciaAudioOnly.label);
+      mostraNotifica("Microfono verificato. Su cellulare parteciperai solo con l'audio.");
+      return true;
+
+    } catch (erroreMicrofono) {
+      console.error("Errore apertura microfono su cellulare:", erroreMicrofono);
+
+      if (
+        erroreMicrofono.name === "NotAllowedError" ||
+        erroreMicrofono.name === "SecurityError"
+      ) {
+        mostraNotifica("Devi consentire l'accesso al microfono per partecipare a questo tavolo.");
+      } else if (
+        erroreMicrofono.name === "NotFoundError" ||
+        erroreMicrofono.name === "DevicesNotFoundError"
+      ) {
+        mostraNotifica("Nessun microfono disponibile. Il microfono è obbligatorio per questo tavolo.");
+      } else if (
+        erroreMicrofono.name === "NotReadableError" ||
+        erroreMicrofono.name === "TrackStartError" ||
+        erroreMicrofono.name === "AbortError"
+      ) {
+        mostraNotifica("Il microfono non può essere avviato. Controlla che non sia utilizzato da altre applicazioni.");
+      } else {
+        mostraNotifica("Impossibile utilizzare il microfono. Riprova.");
+      }
+
+      return false;
+
+    } finally {
+      fermaStreamMediaLobby(streamAudioOnly);
+    }
   }
 
   let streamVideo = null;
@@ -2347,6 +2411,21 @@ function apriPartita(id, mediaAttiva) {
   destinazione.searchParams.set("partita", id);
   destinazione.searchParams.set("stanza", stanza);
   if (mediaAttiva === true) destinazione.searchParams.set("media", "1");
+
+  try {
+    sessionStorage.setItem(
+      CHIAVE_RITORNO_LOBBY_PARTITA,
+      JSON.stringify({
+        partitaId: String(id || ""),
+        stanza: String(stanza || ""),
+        lobbyUrl: window.location.href,
+        creatoIl: Date.now()
+      })
+    );
+  } catch (e) {
+    console.warn("Impossibile preparare il ritorno alla Lobby:", e);
+  }
+
   window.location.href = destinazione.href;
 }
 async function riprendiPartita(id, mediaAttiva) {
@@ -2433,12 +2512,12 @@ CREA TAVOLO
 🔒 Privata
 </option>
 </select>
-<p>Microfono e webcam</p>
+<p>Chiamata del tavolo</p>
 <select id="mediaPartitaMobile">
-<option value="off">🔇 Disattivi</option>
-<option value="on">🎥 Attivi per tutti</option>
+<option value="off">🔇 Disattiva</option>
+<option value="on">🎙️ Attiva (su cellulare solo audio)</option>
 </select>
-<p style="font-size:12px;line-height:1.35;color:#777;">Se attivi, ogni partecipante dovrà autorizzarli prima di entrare.</p>
+<p style="font-size:12px;line-height:1.35;color:#777;">Su cellulare viene usato solo il microfono: niente webcam e niente video degli altri giocatori.</p>
 <button onclick="creaPartitaMobile()" 
 style="
 margin-top:20px;
@@ -2810,6 +2889,9 @@ window.addEventListener("pagehide", () => {
 
 window.addEventListener("pageshow", () => {
   paginaInUscita = false;
+  try {
+    sessionStorage.removeItem(CHIAVE_RITORNO_LOBBY_PARTITA);
+  } catch (e) {}
   if (sessioneVerificata) connetti();
 });
 // ===== CREAZIONE / LISTA PARTITE =====
@@ -2895,7 +2977,11 @@ function mostraPartite(lista) {
       <div class="info-partita">
         🎲 ${creatorePulito}<br>
         ${partita.modalita === "privata" ? "🔒 Privata" : "🔓 Pubblica"}<br>
-        ${partita.mediaAttiva === true ? "🎥 Webcam e microfono attivi" : "🔇 Webcam e microfono disattivi"}<br>
+        ${partita.mediaAttiva === true
+          ? (rilevaTipoDispositivoClient() === "cellulare"
+              ? "🎙️ Chiamata attiva · solo audio su cellulare"
+              : "🎥 Webcam e microfono attivi")
+          : "🔇 Chiamata disattiva"}<br>
         ${testoModalitaSfida}<br>
         ⏱ ${tempoPulito} secondi
         <div style="margin-top:8px;">👥 ${partita.numGiocatoriAttuali} su ${partita.maxGiocatori}</div>
@@ -3690,8 +3776,14 @@ function segnaInvitatoNelModal(destinatarioUid) {
 function mostraInvitoRicevuto(dati) {
   invitoAttivoPartitaId = dati.partitaId;
   invitoAttivoMedia = dati.mediaAttiva === true;
-  document.getElementById("testoInvitoRicevuto").textContent = "🎲 " + dati.daNome + " ti ha invitato a giocare! " +
-    (invitoAttivoMedia ? "🎥 In questo tavolo webcam e microfono sono attivi per tutti." : "🔇 Webcam e microfono sono disattivi.");
+  const testoMediaInvito = invitoAttivoMedia
+    ? (rilevaTipoDispositivoClient() === "cellulare"
+        ? "🎙️ In questo tavolo la chiamata è attiva. Da cellulare parteciperai solo con il microfono."
+        : "🎥 In questo tavolo webcam e microfono sono attivi.")
+    : "🔇 Webcam e microfono sono disattivi.";
+
+  document.getElementById("testoInvitoRicevuto").textContent =
+    "🎲 " + dati.daNome + " ti ha invitato a giocare! " + testoMediaInvito;
   document.getElementById("cardInvitoRicevuto").classList.remove("nascosto");
 }
 async function rispondiInvito(accettato) {
