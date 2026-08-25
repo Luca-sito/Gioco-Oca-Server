@@ -158,7 +158,7 @@ body {
     width: 100%;
     min-height: 42px;
     padding: 0 12px;
-    margin-bottom: 18px;
+    margin-bottom: 0;
     border-radius: 10px;
     border: 1px solid #e6eaee;
     background: #fafbfc;
@@ -171,6 +171,27 @@ body {
 
 .home-link:hover {
     background: #f4f6f8;
+}
+
+.sidebar-nav-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 18px;
+}
+
+.sidebar-nav-actions .home-link {
+    min-width: 0;
+    min-height: 44px;
+    padding: 0 8px;
+    justify-content: center;
+    text-align: center;
+    line-height: 1.15;
+    font-size: 11px;
+}
+
+.sidebar-nav-actions .home-link span:last-child {
+    min-width: 0;
 }
 
 .menu-label {
@@ -770,6 +791,52 @@ body {
     object-fit: cover;
 }
 
+.avatar-preview-wrap {
+    position: relative;
+    width: 122px;
+    height: 122px;
+    flex: 0 0 122px;
+}
+
+.avatar-preview-wrap .avatar-preview {
+    width: 100%;
+    height: 100%;
+}
+
+.avatar-delete-btn {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    width: 34px;
+    height: 34px;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    background: #c83f3f;
+    color: #fff;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    box-shadow: 0 5px 14px rgba(95, 20, 20, .22);
+    z-index: 5;
+}
+
+.avatar-delete-btn.show {
+    display: flex;
+}
+
+.avatar-delete-btn:hover {
+    background: #ad3030;
+}
+
+.avatar-delete-btn:disabled {
+    opacity: .55;
+    cursor: not-allowed;
+}
+
 .avatar-preview-placeholder {
     width: 100%;
     height: 100%;
@@ -1005,6 +1072,110 @@ body {
 }
 
 /* =========================================================
+   MODALE PERSONALIZZATA
+   ========================================================= */
+
+.custom-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 5000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(12, 18, 24, .48);
+    backdrop-filter: blur(5px);
+}
+
+.custom-modal-overlay[hidden] {
+    display: none !important;
+}
+
+.custom-modal-card {
+    width: min(430px, 100%);
+    border: 1px solid rgba(255, 255, 255, .55);
+    border-radius: 18px;
+    background: #fff;
+    box-shadow: 0 22px 70px rgba(0, 0, 0, .22);
+    padding: 24px;
+    animation: customModalIn .16s ease;
+}
+
+@keyframes customModalIn {
+    from { opacity: 0; transform: translateY(8px) scale(.985); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.custom-modal-icon {
+    width: 46px;
+    height: 46px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 14px;
+    border-radius: 14px;
+    background: #fff5cf;
+    font-size: 22px;
+}
+
+.custom-modal-card.danger .custom-modal-icon {
+    background: #fff0f0;
+}
+
+.custom-modal-title {
+    margin: 0;
+    color: #18222c;
+    font-size: 20px;
+    font-weight: 900;
+}
+
+.custom-modal-message {
+    margin-top: 9px;
+    color: #69747e;
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+.custom-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 9px;
+    margin-top: 22px;
+}
+
+.custom-modal-btn {
+    min-height: 42px;
+    padding: 0 16px;
+    border-radius: 10px;
+    border: 1px solid #dce2e7;
+    background: #fff;
+    color: #35414c;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.custom-modal-btn:hover {
+    background: #f6f8f9;
+}
+
+.custom-modal-btn.primary {
+    border-color: #e4c100;
+    background: #ffd700;
+    color: #171717;
+}
+
+.custom-modal-btn.danger {
+    border-color: #c83f3f;
+    background: #c83f3f;
+    color: #fff;
+}
+
+.custom-modal-btn.danger:hover {
+    background: #ad3030;
+}
+
+/* =========================================================
    MOBILE
    ========================================================= */
 
@@ -1152,9 +1323,11 @@ body {
         padding: 20px 14px;
     }
 
-    .avatar-preview {
+    .avatar-preview,
+    .avatar-preview-wrap {
         width: 102px;
         height: 102px;
+        flex-basis: 102px;
     }
 
     .avatar-file-info {
@@ -1232,14 +1405,27 @@ body {
 
         <div class="sidebar-scroll">
 
-            <button
-    type="button"
-    class="home-link"
-    onclick="history.back()"
->
-    <span>←</span>
-    <span>Torna indietro</span>
-</button>
+            <div class="sidebar-nav-actions">
+
+                <button
+                    type="button"
+                    class="home-link"
+                    onclick="history.back()"
+                >
+                    <span>←</span>
+                    <span>Torna indietro</span>
+                </button>
+
+                <button
+                    type="button"
+                    class="home-link"
+                    onclick="tornaHome()"
+                >
+                    <span>⌂</span>
+                    <span>Ritorna alla Home</span>
+                </button>
+
+            </div>
 
 
             <div class="menu-label">
@@ -2140,13 +2326,27 @@ body {
                         id="avatarDropzone"
                     >
 
-                        <div
-                            class="avatar-preview"
-                            id="avatarPreview"
-                        >
-                            <div class="avatar-preview-placeholder">
-                                +
+                        <div class="avatar-preview-wrap">
+
+                            <div
+                                class="avatar-preview"
+                                id="avatarPreview"
+                            >
+                                <div class="avatar-preview-placeholder">
+                                    +
+                                </div>
                             </div>
+
+                            <button
+                                type="button"
+                                class="avatar-delete-btn"
+                                id="avatarDeleteBtn"
+                                aria-label="Elimina avatar"
+                                title="Elimina avatar"
+                            >
+                                🗑️
+                            </button>
+
                         </div>
 
                         <div class="avatar-select-area">
@@ -2348,6 +2548,54 @@ body {
 </div>
 
 
+<!-- =========================================================
+     MODALE PERSONALIZZATA - NESSUN ALERT/CONFIRM DEL BROWSER
+     ========================================================= -->
+<div
+    class="custom-modal-overlay"
+    id="modalConferma"
+    hidden
+    aria-hidden="true"
+>
+    <div
+        class="custom-modal-card"
+        id="modalConfermaCard"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modalConfermaTitolo"
+    >
+        <div
+            class="custom-modal-icon"
+            id="modalConfermaIcona"
+        >⚠️</div>
+
+        <h2
+            class="custom-modal-title"
+            id="modalConfermaTitolo"
+        >Conferma</h2>
+
+        <div
+            class="custom-modal-message"
+            id="modalConfermaMessaggio"
+        ></div>
+
+        <div class="custom-modal-actions">
+            <button
+                type="button"
+                class="custom-modal-btn"
+                id="modalConfermaAnnulla"
+            >Annulla</button>
+
+            <button
+                type="button"
+                class="custom-modal-btn primary"
+                id="modalConfermaOk"
+            >Conferma</button>
+        </div>
+    </div>
+</div>
+
+
 <script>
 /* =========================================================
    CONFIGURAZIONE
@@ -2375,6 +2623,187 @@ const PALETTE = [
 
 let datiUtente = null;
 let avatarFileSelezionato = null;
+
+
+/* =========================================================
+   MODALE PERSONALIZZATA
+   ========================================================= */
+
+const modalConferma =
+    document.getElementById("modalConferma");
+
+const modalConfermaCard =
+    document.getElementById("modalConfermaCard");
+
+const modalConfermaIcona =
+    document.getElementById("modalConfermaIcona");
+
+const modalConfermaTitolo =
+    document.getElementById("modalConfermaTitolo");
+
+const modalConfermaMessaggio =
+    document.getElementById("modalConfermaMessaggio");
+
+const modalConfermaAnnulla =
+    document.getElementById("modalConfermaAnnulla");
+
+const modalConfermaOk =
+    document.getElementById("modalConfermaOk");
+
+let risolviModalConferma = null;
+
+function chiudiModalConferma(risultato) {
+
+    if (modalConferma.hidden) {
+        return;
+    }
+
+    modalConferma.hidden = true;
+    modalConferma.setAttribute(
+        "aria-hidden",
+        "true"
+    );
+
+    const risolvi =
+        risolviModalConferma;
+
+    risolviModalConferma = null;
+
+    if (risolvi) {
+        risolvi(Boolean(risultato));
+    }
+}
+
+function mostraConferma({
+    titolo = "Conferma",
+    messaggio = "",
+    testoConferma = "Conferma",
+    testoAnnulla = "Annulla",
+    icona = "⚠️",
+    pericoloso = false
+} = {}) {
+
+    if (risolviModalConferma) {
+        chiudiModalConferma(false);
+    }
+
+    modalConfermaTitolo.textContent =
+        titolo;
+
+    modalConfermaMessaggio.textContent =
+        messaggio;
+
+    modalConfermaIcona.textContent =
+        icona;
+
+    modalConfermaAnnulla.textContent =
+        testoAnnulla;
+
+    modalConfermaOk.textContent =
+        testoConferma;
+
+    modalConfermaAnnulla.style.display =
+        "inline-flex";
+
+    modalConfermaCard.classList.toggle(
+        "danger",
+        pericoloso
+    );
+
+    modalConfermaOk.className =
+        "custom-modal-btn " +
+        (pericoloso ? "danger" : "primary");
+
+    modalConferma.hidden = false;
+    modalConferma.setAttribute(
+        "aria-hidden",
+        "false"
+    );
+
+    setTimeout(
+        () => modalConfermaOk.focus(),
+        0
+    );
+
+    return new Promise(resolve => {
+        risolviModalConferma = resolve;
+    });
+}
+
+function mostraMessaggio({
+    titolo = "Messaggio",
+    messaggio = "",
+    icona = "ℹ️"
+} = {}) {
+
+    modalConfermaTitolo.textContent =
+        titolo;
+
+    modalConfermaMessaggio.textContent =
+        messaggio;
+
+    modalConfermaIcona.textContent =
+        icona;
+
+    modalConfermaAnnulla.style.display =
+        "none";
+
+    modalConfermaOk.textContent =
+        "OK";
+
+    modalConfermaCard.classList.remove(
+        "danger"
+    );
+
+    modalConfermaOk.className =
+        "custom-modal-btn primary";
+
+    modalConferma.hidden = false;
+    modalConferma.setAttribute(
+        "aria-hidden",
+        "false"
+    );
+
+    setTimeout(
+        () => modalConfermaOk.focus(),
+        0
+    );
+
+    return new Promise(resolve => {
+        risolviModalConferma = resolve;
+    });
+}
+
+modalConfermaOk.addEventListener(
+    "click",
+    () => chiudiModalConferma(true)
+);
+
+modalConfermaAnnulla.addEventListener(
+    "click",
+    () => chiudiModalConferma(false)
+);
+
+modalConferma.addEventListener(
+    "click",
+    event => {
+        if (event.target === modalConferma) {
+            chiudiModalConferma(false);
+        }
+    }
+);
+
+document.addEventListener(
+    "keydown",
+    event => {
+        if (
+            event.key === "Escape" &&
+            !modalConferma.hidden
+        ) {
+            chiudiModalConferma(false);
+        }
+    }
+);
 
 
 /* =========================================================
@@ -2510,9 +2939,11 @@ async function caricaProfilo() {
             errore
         );
 
-        alert(
-            "Errore durante il caricamento del profilo."
-        );
+        mostraMessaggio({
+            titolo: "Profilo non disponibile",
+            messaggio: "Non è stato possibile caricare i dati del profilo. Riprova tra poco.",
+            icona: "⚠️"
+        });
     }
 
 }
@@ -2715,6 +3146,8 @@ function aggiornaInterfaccia() {
     ).value =
         datiUtente.provincia || "";
 
+
+    aggiornaAnteprimaAvatarSalvato();
 
     creaBadge(
         datiUtente.badge || []
@@ -3500,6 +3933,58 @@ const avatarStatus =
     );
 
 
+const avatarDeleteBtn =
+    document.getElementById(
+        "avatarDeleteBtn"
+    );
+
+
+/* =========================================================
+   STATO AVATAR SALVATO
+   ========================================================= */
+
+function aggiornaPulsanteEliminaAvatar() {
+
+    const avatarPresente =
+        Boolean(
+            datiUtente &&
+            datiUtente.avatar
+        );
+
+    avatarDeleteBtn.classList.toggle(
+        "show",
+        avatarPresente
+    );
+
+    avatarDeleteBtn.disabled =
+        !avatarPresente;
+}
+
+function aggiornaAnteprimaAvatarSalvato() {
+
+    if (avatarFileSelezionato) {
+        return;
+    }
+
+    const nickname =
+        datiUtente && datiUtente.nickname
+            ? datiUtente.nickname
+            : "Utente";
+
+    const avatar =
+        datiUtente && datiUtente.avatar
+            ? datiUtente.avatar
+            : null;
+
+    avatarPreview.innerHTML =
+        avatarMarkup(
+            nickname,
+            avatar
+        );
+
+    aggiornaPulsanteEliminaAvatar();
+}
+
 /* =========================================================
    APERTURA FILE
    ========================================================= */
@@ -3720,6 +4205,108 @@ function formattaDimensione(
 
 
 /* =========================================================
+   ELIMINA AVATAR
+   ========================================================= */
+
+avatarDeleteBtn.addEventListener(
+    "click",
+    async () => {
+
+        if (
+            !datiUtente ||
+            !datiUtente.avatar
+        ) {
+            return;
+        }
+
+        const confermato =
+            await mostraConferma({
+                titolo: "Eliminare l'avatar?",
+                messaggio: "La foto profilo verrà rimossa e tornerà visibile l'iniziale del tuo nickname.",
+                testoConferma: "Elimina avatar",
+                icona: "🗑️",
+                pericoloso: true
+            });
+
+        if (!confermato) {
+            return;
+        }
+
+        avatarDeleteBtn.disabled =
+            true;
+
+        avatarStatus.textContent =
+            "Eliminazione avatar in corso...";
+
+        avatarStatus.className =
+            "avatar-status";
+
+        try {
+
+            const risposta =
+                await fetch(
+                    SERVER +
+                    "/api/elimina-avatar",
+                    {
+                        method: "POST",
+                        credentials: "include",
+                        cache: "no-store"
+                    }
+                );
+
+            const tipoContenuto =
+                risposta.headers.get(
+                    "content-type"
+                ) || "";
+
+            const dati =
+                tipoContenuto.includes(
+                    "application/json"
+                )
+                    ? await risposta.json()
+                    : {};
+
+            if (!risposta.ok) {
+                throw new Error(
+                    dati.errore ||
+                    "Errore durante l'eliminazione dell'avatar."
+                );
+            }
+
+            datiUtente.avatar = null;
+            avatarFileSelezionato = null;
+            avatarInput.value = "";
+            avatarFileInfo.classList.remove(
+                "show"
+            );
+            avatarSaveBtn.disabled = true;
+
+            aggiornaInterfaccia();
+
+            avatarStatus.textContent =
+                "Avatar eliminato correttamente.";
+
+            avatarStatus.className =
+                "avatar-status success";
+
+        } catch (errore) {
+
+            console.error(errore);
+
+            avatarStatus.textContent =
+                errore.message ||
+                "Errore durante l'eliminazione dell'avatar.";
+
+            avatarStatus.className =
+                "avatar-status error";
+
+            aggiornaPulsanteEliminaAvatar();
+        }
+
+    }
+);
+
+/* =========================================================
    UPLOAD AVATAR
    ========================================================= */
 
@@ -3858,21 +4445,26 @@ avatarSaveBtn.addEventListener(
 async function eliminaAccount() {
 
     const conferma =
-        confirm(
-            "Sei sicuro di voler eliminare definitivamente il tuo account?"
-        );
-
+        await mostraConferma({
+            titolo: "Eliminare l'account?",
+            messaggio: "Stai per avviare l'eliminazione definitiva del tuo account e dei dati associati.",
+            testoConferma: "Continua",
+            icona: "⚠️",
+            pericoloso: true
+        });
 
     if (!conferma) {
         return;
     }
 
-
     const conferma2 =
-        confirm(
-            "Questa operazione è permanente. Confermi nuovamente?"
-        );
-
+        await mostraConferma({
+            titolo: "Conferma definitiva",
+            messaggio: "Questa operazione è permanente e non può essere annullata. Vuoi eliminare definitivamente l'account?",
+            testoConferma: "Elimina definitivamente",
+            icona: "🗑️",
+            pericoloso: true
+        });
 
     if (!conferma2) {
         return;
