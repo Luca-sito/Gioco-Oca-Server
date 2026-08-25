@@ -691,6 +691,52 @@ app.post("/api/cambia-password", richiediAuth, async (req, res) => {
 
 });
 
+app.post("/api/elimina-avatar", richiediAuth, async (req, res) => {
+  if (!db) {
+    return res.status(500).json({
+      errore: "Servizio account non disponibile."
+    });
+  }
+
+  try {
+    const riferimentoUtente =
+      db.ref("utenti/" + req.utente.uid);
+
+    const snapshot =
+      await riferimentoUtente.once("value");
+
+    const utente = snapshot.val();
+
+    if (!utente) {
+      return res.status(404).json({
+        errore: "Utente non trovato."
+      });
+    }
+
+    await riferimentoUtente.update({
+      avatar: null,
+      avatarAggiornatoIl: Date.now()
+    });
+
+    return res.json({
+      ok: true,
+      avatar: null,
+      avatarAggiornatoIl: Date.now(),
+      messaggio: "Avatar eliminato correttamente."
+    });
+
+  } catch (errore) {
+    console.error(
+      "Errore /api/elimina-avatar:",
+      errore
+    );
+
+    return res.status(500).json({
+      errore: "Errore durante l'eliminazione dell'avatar."
+    });
+  }
+});
+
 app.post("/api/logout", (req, res) => { res.clearCookie("token", OPZIONI_COOKIE); res.json({ ok: true }); });
 
 app.get("/api/me", richiediAuth, async (req, res) => {
