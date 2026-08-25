@@ -507,6 +507,32 @@ h1 {
     }
 }
 
+/* =========================================================
+   CONFERMA PERSONALIZZATA
+   ========================================================= */
+.conferma-overlay {
+    position: fixed; inset: 0; z-index: 3000;
+    display: flex; align-items: center; justify-content: center;
+    padding: 18px; background: rgba(17,24,39,.38);
+    backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+}
+.conferma-overlay[hidden] { display: none !important; }
+.conferma-box {
+    width: min(420px, 100%); background: #fff; color: #17222b;
+    border: 1px solid #dfe4e8; border-radius: 16px;
+    box-shadow: 0 24px 65px rgba(24,32,40,.22); overflow: hidden;
+}
+.conferma-corpo { padding: 22px 22px 18px; }
+.conferma-titolo { margin: 0; font-size: 18px; font-weight: 900; }
+.conferma-testo { margin-top: 9px; color: #65717c; font-size: 13px; line-height: 1.55; }
+.conferma-azioni {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 9px;
+    padding: 14px 20px 20px; border-top: 1px solid #edf0f2; background: #fbfcfd;
+}
+.conferma-azioni button { min-height: 43px; border-radius: 10px; font-weight: 800; cursor: pointer; }
+.conferma-annulla { background: #fff; border: 1px solid #d6dce1; color: #35414b; }
+.conferma-pericolo { background: #d94a4a; border: 1px solid #d94a4a; color: #fff; }
+
 </style>
 </head>
 
@@ -654,6 +680,19 @@ h1 {
 </div>
 
 <div id="toast"></div>
+<div id="confermaOverlay" class="conferma-overlay" hidden aria-hidden="true">
+  <div class="conferma-box" role="dialog" aria-modal="true" aria-labelledby="confermaTitolo">
+    <div class="conferma-corpo">
+      <h2 class="conferma-titolo" id="confermaTitolo">Conferma</h2>
+      <div class="conferma-testo" id="confermaTesto"></div>
+    </div>
+    <div class="conferma-azioni">
+      <button type="button" class="conferma-annulla" id="confermaAnnulla">Annulla</button>
+      <button type="button" class="conferma-pericolo" id="confermaAzione">Elimina</button>
+    </div>
+  </div>
+</div>
+
 
 
 <script>
@@ -661,7 +700,65 @@ h1 {
 const API_BASE =
     "https://gioco-oca-server.onrender.com";
 
+const CHIAVE_TOKEN_AUTH = "giochiSocietaAuthToken";
 let sonoAdmin = false;
+
+function acquisisciTokenAutenticazioneDaUrl() {
+    try {
+        const parametriHash = new URLSearchParams(
+            window.location.hash.replace(/^#/, "")
+        );
+        const token = parametriHash.get("auth_token");
+
+        if (token) {
+            sessionStorage.setItem(CHIAVE_TOKEN_AUTH, token);
+            parametriHash.delete("auth_token");
+
+            const nuovoHash = parametriHash.toString();
+            const nuovoUrl =
+                window.location.pathname +
+                window.location.search +
+                (nuovoHash ? "#" + nuovoHash : "");
+
+            window.history.replaceState(null, "", nuovoUrl);
+        }
+    } catch (errore) {
+        console.warn("Impossibile acquisire il token di autenticazione:", errore);
+    }
+}
+
+function ottieniTokenAutenticazione() {
+    try {
+        return sessionStorage.getItem(CHIAVE_TOKEN_AUTH) || "";
+    } catch (errore) {
+        return "";
+    }
+}
+
+function headersConAutenticazione(headersIniziali) {
+    const headers = new Headers(headersIniziali || {});
+    const token = ottieniTokenAutenticazione();
+    if (token) headers.set("Authorization", "Bearer " + token);
+    return headers;
+}
+
+function fetchAutenticato(url, opzioni = {}) {
+    return fetch(url, {
+        ...opzioni,
+        credentials: "include",
+        headers: headersConAutenticazione(opzioni.headers)
+    });
+}
+
+async function leggiJsonSicuro(risposta) {
+    const tipo = risposta.headers.get("content-type") || "";
+    if (!tipo.includes("application/json")) return {};
+    try {
+        return await risposta.json();
+    } catch (errore) {
+        return {};
+    }
+}
 
 
 /* =========================================================
@@ -684,6 +781,41 @@ function mostraToast(testo) {
     setTimeout(() => {
         elemento.remove();
     }, 3500);
+}
+
+
+function chiediConferma(testo) {
+    return new Promise(resolve => {
+        const overlay = document.getElementById("confermaOverlay");
+        const testoEl = document.getElementById("confermaTesto");
+        const annulla = document.getElementById("confermaAnnulla");
+        const azione = document.getElementById("confermaAzione");
+
+        testoEl.textContent = testo;
+        overlay.hidden = false;
+        overlay.setAttribute("aria-hidden", "false");
+
+        const chiudi = valore => {
+            overlay.hidden = true;
+            overlay.setAttribute("aria-hidden", "true");
+            annulla.removeEventListener("click", onAnnulla);
+            azione.removeEventListener("click", onAzione);
+            overlay.removeEventListener("click", onOverlay);
+            document.removeEventListener("keydown", onKeydown);
+            resolve(valore);
+        };
+
+        const onAnnulla = () => chiudi(false);
+        const onAzione = () => chiudi(true);
+        const onOverlay = evento => { if (evento.target === overlay) chiudi(false); };
+        const onKeydown = evento => { if (evento.key === "Escape") chiudi(false); };
+
+        annulla.addEventListener("click", onAnnulla);
+        azione.addEventListener("click", onAzione);
+        overlay.addEventListener("click", onOverlay);
+        document.addEventListener("keydown", onKeydown);
+        annulla.focus();
+    });
 }
 
 function formatoData(timestamp) {
@@ -715,7 +847,7 @@ async function avvia() {
     try {
 
         const risposta =
-            await fetch(
+            await fetchAutenticato(
                 API_BASE + "/api/me",
                 {
                     credentials: "include",
@@ -784,7 +916,7 @@ async function caricaAvvisi() {
         }
 
         const dati =
-            await risposta.json();
+            await leggiJsonSicuro(risposta);
 
         renderAvvisi(
             Array.isArray(dati.avvisi)
@@ -1021,7 +1153,7 @@ async function pubblicaAvviso() {
     try {
 
         const risposta =
-            await fetch(
+            await fetchAutenticato(
                 API_BASE +
                 "/api/admin/avvisi",
                 {
@@ -1040,13 +1172,13 @@ async function pubblicaAvviso() {
             );
 
         const dati =
-            await risposta.json();
+            await leggiJsonSicuro(risposta);
 
         if (!risposta.ok) {
 
             mostraToast(
                 dati.errore ||
-                "Impossibile pubblicare l'avviso."
+                `Impossibile pubblicare l'avviso (errore ${risposta.status}).`
             );
 
             return;
@@ -1068,8 +1200,9 @@ async function pubblicaAvviso() {
 
     } catch (errore) {
 
+        console.error("Errore pubblicazione avviso:", errore);
         mostraToast(
-            "Errore di connessione."
+            "Impossibile raggiungere il server. Controlla la connessione e riprova."
         );
 
     } finally {
@@ -1088,18 +1221,16 @@ async function pubblicaAvviso() {
 
 async function eliminaAvviso(id) {
 
-    if (
-        !confirm(
-            "Vuoi davvero eliminare questo avviso?"
-        )
-    ) {
-        return;
-    }
+    const confermato = await chiediConferma(
+        "Vuoi davvero eliminare questo avviso? L'operazione non può essere annullata."
+    );
+
+    if (!confermato) return;
 
     try {
 
         const risposta =
-            await fetch(
+            await fetchAutenticato(
                 API_BASE +
                 "/api/admin/avvisi/" +
                 encodeURIComponent(id),
@@ -1110,13 +1241,13 @@ async function eliminaAvviso(id) {
             );
 
         const dati =
-            await risposta.json();
+            await leggiJsonSicuro(risposta);
 
         if (!risposta.ok) {
 
             mostraToast(
                 dati.errore ||
-                "Impossibile eliminare l'avviso."
+                `Impossibile eliminare l'avviso (errore ${risposta.status}).`
             );
 
             return;
@@ -1136,6 +1267,7 @@ async function eliminaAvviso(id) {
     }
 }
 
+acquisisciTokenAutenticazioneDaUrl();
 avvia();
 
 </script>
