@@ -851,6 +851,7 @@ body.tema-scuro .btn-modalita-partita.attiva{
 }
 /* =========================================================
    CONFERME INTERNE LOBBY / BLOCCO UTENTE
+   STILE CHIARO
 ========================================================= */
 .overlay-conferma-lobby{
     display:none;
@@ -860,24 +861,28 @@ body.tema-scuro .btn-modalita-partita.attiva{
     align-items:center;
     justify-content:center;
     padding:18px;
-    background:rgba(0,0,0,.64);
+    background:rgba(17,24,39,.38);
     backdrop-filter:blur(3px);
+    -webkit-backdrop-filter:blur(3px);
 }
-.overlay-conferma-lobby.aperto{display:flex;}
+.overlay-conferma-lobby.aperto{
+    display:flex;
+}
 .conferma-lobby-box{
     width:min(430px,calc(100vw - 32px));
-    border:1px solid rgba(255,255,255,.14);
+    border:1px solid #dfe4e8;
     border-radius:16px;
     overflow:hidden;
-    background:linear-gradient(155deg,#1a1c21,#0f1115);
-    color:#f7f8fa;
-    box-shadow:0 28px 90px rgba(0,0,0,.58);
+    background:#ffffff;
+    color:#1b2530;
+    box-shadow:0 24px 65px rgba(24,32,40,.22);
 }
 .conferma-lobby-testata{
     display:flex;
     gap:12px;
     align-items:center;
     padding:18px 20px 13px;
+    background:#ffffff;
 }
 .conferma-lobby-icona{
     width:42px;
@@ -886,15 +891,23 @@ body.tema-scuro .btn-modalita-partita.attiva{
     display:flex;
     align-items:center;
     justify-content:center;
+    border:1px solid #f0caca;
     border-radius:12px;
-    background:rgba(238,76,76,.13);
-    color:#ff8f8f;
+    background:#fff3f3;
+    color:#c83f3f;
 }
-.conferma-lobby-icona svg{width:23px;height:23px;}
-.conferma-lobby-titolo{font-size:17px;font-weight:900;}
+.conferma-lobby-icona svg{
+    width:23px;
+    height:23px;
+}
+.conferma-lobby-titolo{
+    color:#17212b;
+    font-size:17px;
+    font-weight:900;
+}
 .conferma-lobby-testo{
     padding:0 20px 18px;
-    color:#b9c0c9;
+    color:#65717c;
     font-size:13px;
     line-height:1.55;
 }
@@ -903,22 +916,34 @@ body.tema-scuro .btn-modalita-partita.attiva{
     grid-template-columns:1fr 1fr;
     gap:9px;
     padding:14px 20px 20px;
-    border-top:1px solid rgba(255,255,255,.08);
+    border-top:1px solid #edf0f2;
+    background:#fbfcfd;
 }
 .conferma-lobby-azioni button{
     min-height:43px;
     margin:0;
     border-radius:10px;
+    box-shadow:none;
 }
 .btn-conferma-annulla{
-    background:rgba(255,255,255,.08)!important;
-    border:1px solid rgba(255,255,255,.12)!important;
-    color:#f1f3f5!important;
+    background:#ffffff!important;
+    border:1px solid #d6dce1!important;
+    color:#35414b!important;
+}
+.btn-conferma-annulla:hover{
+    background:#f3f5f7!important;
+    border-color:#c8d0d6!important;
+    opacity:1!important;
 }
 .btn-conferma-azione{
     background:#d94a4a!important;
-    border:1px solid #ef6666!important;
-    color:#fff!important;
+    border:1px solid #d94a4a!important;
+    color:#ffffff!important;
+}
+.btn-conferma-azione:hover{
+    background:#c93f3f!important;
+    border-color:#c93f3f!important;
+    opacity:1!important;
 }
 .player-card-azione.bloccato{
     background:rgba(238,76,76,.13)!important;
@@ -927,6 +952,9 @@ body.tema-scuro .btn-modalita-partita.attiva{
 }
 @media(max-width:600px){
     .overlay-conferma-lobby{z-index:100500;}
+    .conferma-lobby-box{
+        border-radius:14px;
+    }
 }
 
 /* =========================================================
