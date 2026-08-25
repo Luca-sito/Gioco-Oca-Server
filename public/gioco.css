@@ -766,7 +766,6 @@ body.modalita-ruotata #mondo-ruotato {
 }
 
 .pedina-interno { transition: transform 0.3s ease; }
-body.modalita-ruotata .pedina-interno { transform: rotate(-90deg); }
 .pedina-salta { animation: salto-pedina 0.32s ease; }
 
 @keyframes salto-pedina {
@@ -799,7 +798,7 @@ body.modalita-ruotata #area-tabellone > #area-dadi {
   right: auto;
   bottom: auto;
   left: calc(100% - 52px);
-  transform: translate(-50%, -50%) rotate(-90deg);
+  transform: translate(-50%, -50%);
 }
 
 #area-dadi.dadi-in-popup {
@@ -984,6 +983,17 @@ body.modalita-desktop #backdrop-giocatori { display: none !important; }
 body.modalita-desktop #giocatori-wrapper { display: none; }
 
 /* ===== MENU E COMANDI ===== */
+.icona-pulsante-gioco {
+  display: block;
+  width: 58%;
+  height: 58%;
+  margin: auto;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
 #btn-menu,
 #btn-giocatori,
 #btn-chat {
@@ -1141,6 +1151,38 @@ body:not(.modalita-desktop) #messaggi-gioco {
   border-radius: 8px;
   font-weight: 700;
   cursor: pointer;
+}
+
+.popup-conferma-gioco {
+  width: min(430px, 100%);
+  padding: 26px;
+  background: #f7f7f8;
+  color: #1d2329;
+  border: 1px solid rgba(0, 0, 0, .14);
+  border-radius: 14px;
+  box-shadow: 0 22px 60px rgba(0, 0, 0, .48);
+  text-align: center;
+}
+
+.popup-conferma-gioco h2 { margin: 0 0 9px; font-size: 21px; }
+.popup-conferma-gioco p { margin: 0; color: #555; font-size: 14px; line-height: 1.45; }
+.azioni-conferma-gioco { display: flex; gap: 10px; margin-top: 22px; }
+.azioni-conferma-gioco button {
+  flex: 1;
+  min-height: 44px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #cfd4d8;
+  border-radius: 8px;
+  background: #fff;
+  color: #222;
+  font-weight: 800;
+  cursor: pointer;
+}
+.azioni-conferma-gioco button.pericolo {
+  border-color: #c62828;
+  background: #c62828;
+  color: #fff;
 }
 
 .popup-determinazione {
@@ -1315,6 +1357,55 @@ body:not(.modalita-desktop) .videochiamata-intestazione { justify-content: cente
 }
 
 .video-locale { border-color: rgba(255, 215, 0, 0.65); }
+
+.video-tile-mobile-audio {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(145deg, #101820, #070b0f);
+}
+
+.placeholder-mobile-audio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+  height: 100%;
+  padding: 14px 10px 28px;
+  color: #d7dde3;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.icona-cellulare-barrato {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  color: #ffcc54;
+  vertical-align: middle;
+}
+
+.icona-cellulare-barrato svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.stato-media .icona-cellulare-barrato {
+  width: 20px;
+  height: 20px;
+  color: #c9c9c9;
+}
+
+.stato-media.attivo .icona-cellulare-barrato {
+  color: #66d26d;
+}
 
 #btn-sblocca-media {
   width: 100%;
@@ -1781,6 +1872,31 @@ body.modalita-desktop.media-partita #btn-giocatori {
             ease;
     }
 
+}
+
+/* ===== CELLULARE: CHIAMATA SOLO AUDIO ===== */
+body.client-cellulare-audio-only #btn-toggle-webcam-media,
+body.client-cellulare-audio-only #video-tile-locale,
+body.client-cellulare-audio-only #griglia-video {
+  display: none !important;
+}
+
+body.client-cellulare-audio-only #controlli-media-locale {
+  grid-template-columns: 1fr;
+}
+
+body.client-cellulare-audio-only:not(.modalita-desktop) #videochiamata {
+  top: calc(72px + env(safe-area-inset-top));
+  left: calc(8px + env(safe-area-inset-left));
+  width: min(168px, calc(100vw - 16px));
+  max-height: none;
+}
+
+body.client-cellulare-audio-only:not(.modalita-desktop) #stato-media-connessione {
+  max-width: 145px;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.2;
 }
 
 /* =========================================================
