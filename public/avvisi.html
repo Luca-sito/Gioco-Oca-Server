@@ -895,6 +895,44 @@ async function avvia() {
    CARICAMENTO
    ========================================================= */
 
+async function segnaAvvisiComeLetti(finoA) {
+    try {
+        const risposta = await fetchAutenticato(
+            API_BASE + "/api/avvisi/segna-letti",
+            {
+                method: "POST",
+                cache: "no-store",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"
+                },
+                body: JSON.stringify({
+                    finoA: Math.max(0, Number(finoA) || 0)
+                })
+            }
+        );
+
+        if (!risposta.ok) {
+            const dati = await leggiJsonSicuro(risposta);
+            console.warn(
+                dati.errore ||
+                `Impossibile aggiornare lo stato di lettura degli avvisi (${risposta.status}).`
+            );
+            return false;
+        }
+
+        window.parent.postMessage({
+            tipo: "avvisiLetti",
+            nonLetti: 0
+        }, "*");
+
+        return true;
+    } catch (errore) {
+        console.warn("Impossibile segnare gli avvisi come letti:", errore);
+        return false;
+    }
+}
+
 async function caricaAvvisi() {
 
     try {
@@ -918,10 +956,25 @@ async function caricaAvvisi() {
         const dati =
             await leggiJsonSicuro(risposta);
 
-        renderAvvisi(
+        const avvisiCaricati =
             Array.isArray(dati.avvisi)
                 ? dati.avvisi
-                : []
+                : [];
+
+        renderAvvisi(avvisiCaricati);
+
+        const ultimoAvvisoVisualizzatoIl =
+            avvisiCaricati.reduce(
+                (massimo, avviso) =>
+                    Math.max(
+                        massimo,
+                        Number(avviso && avviso.data) || 0
+                    ),
+                0
+            );
+
+        await segnaAvvisiComeLetti(
+            ultimoAvvisoVisualizzatoIl
         );
 
     } catch (errore) {
