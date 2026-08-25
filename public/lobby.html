@@ -1857,7 +1857,6 @@ let sessioneVerificata = false;
 let paginaInUscita = false;
 const URL_SERVER_WS = "wss://gioco-oca-server.onrender.com";
 const CHIAVE_TOKEN_AUTH = "giochiSocietaAuthToken";
-const CHIAVE_RITORNO_LOBBY_PARTITA = "giochiSocietaRitornoLobbyPartita";
 
 function acquisisciTokenAutenticazioneDaUrl() {
   try {
@@ -2412,21 +2411,9 @@ function apriPartita(id, mediaAttiva) {
   destinazione.searchParams.set("stanza", stanza);
   if (mediaAttiva === true) destinazione.searchParams.set("media", "1");
 
-  try {
-    sessionStorage.setItem(
-      CHIAVE_RITORNO_LOBBY_PARTITA,
-      JSON.stringify({
-        partitaId: String(id || ""),
-        stanza: String(stanza || ""),
-        lobbyUrl: window.location.href,
-        creatoIl: Date.now()
-      })
-    );
-  } catch (e) {
-    console.warn("Impossibile preparare il ritorno alla Lobby:", e);
-  }
-
-  window.location.href = destinazione.href;
+  // La partita sostituisce la Lobby nella cronologia: così la pagina gioco
+  // non diventa mai una voce raggiungibile con la freccia Indietro.
+  window.location.replace(destinazione.href);
 }
 async function riprendiPartita(id, mediaAttiva) {
   if (!(await richiediConsensoMediaSeNecessario(mediaAttiva === true))) return;
@@ -2889,9 +2876,6 @@ window.addEventListener("pagehide", () => {
 
 window.addEventListener("pageshow", () => {
   paginaInUscita = false;
-  try {
-    sessionStorage.removeItem(CHIAVE_RITORNO_LOBBY_PARTITA);
-  } catch (e) {}
   if (sessioneVerificata) connetti();
 });
 // ===== CREAZIONE / LISTA PARTITE =====
