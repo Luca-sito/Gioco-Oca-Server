@@ -1287,6 +1287,70 @@ body.tema-scuro .btn-modalita-partita.attiva{
         text-align:center;
         font-size:16px;
     }
+    /* =====================================================
+       GIOCATORI ONLINE MOBILE
+       Stessa testata nera a tutta larghezza di Chat/Opzioni
+    ===================================================== */
+    #contenutoMobile[data-vista="online"]{
+        padding:0 20px 20px !important;
+        background:#fff;
+    }
+
+    .online-mobile-header{
+        width:calc(100% + 40px);
+        min-height:58px;
+        margin:0 -20px 14px;
+        padding:10px 58px 10px 20px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        gap:14px;
+        background:#111;
+        color:#fff;
+        text-align:center;
+        font-weight:900;
+    }
+
+    .online-mobile-stanza{
+        min-width:0;
+        color:#fff;
+        font-size:16px;
+        font-weight:900;
+        letter-spacing:.02em;
+        white-space:nowrap;
+        overflow:hidden;
+        text-overflow:ellipsis;
+    }
+
+    .online-mobile-contatori{
+        display:inline-flex;
+        align-items:center;
+        gap:12px;
+        flex:0 0 auto;
+    }
+
+    .online-mobile-contatore{
+        display:inline-flex;
+        align-items:center;
+        gap:5px;
+        color:#fff;
+        font-size:19px;
+        font-weight:900;
+        line-height:1;
+    }
+
+    .online-mobile-contatore img{
+        width:24px;
+        height:24px;
+        display:block;
+        object-fit:contain;
+        filter:brightness(0) invert(1);
+    }
+
+    .online-mobile-lista{
+        min-width:0;
+    }
+
 /* =====================================================
        CHAT MOBILE
     ===================================================== */
@@ -2312,6 +2376,8 @@ function aggiornaConteggioOnline(numero) {
   const conteggio = Math.max(0, Number(numero) || 0);
   const contatoreDesktop = document.getElementById("online");
   if (contatoreDesktop) contatoreDesktop.textContent = conteggio;
+  const contatoreMobile = document.getElementById("onlineMobile");
+  if (contatoreMobile) contatoreMobile.textContent = conteggio;
   const badgeMobile = document.getElementById("badgeOnlineMobile");
   if (badgeMobile) {
     badgeMobile.textContent = conteggio > 99 ? "99+" : conteggio;
@@ -2402,16 +2468,42 @@ async function creaPartitaMobile() {
   if (tipo === "privata") aspettaPropriaPartitaPrivata = true;
   chiudiMobile();
 }
+function creaIntestazioneOnlineMobile(){
+  const giocatori = ultimaListaOnlineStanza.length;
+  const amici = ultimaListaOnlineStanza.filter(g => mieiAmiciUid.has(g.uid)).length;
+  return `
+    <div class="online-mobile-header" aria-label="${pulisciTestoHtml(stanza)}, ${giocatori} giocatori, ${amici} amici">
+      <span class="online-mobile-stanza">${pulisciTestoHtml(stanza)}</span>
+      <span class="online-mobile-contatori">
+        <span class="online-mobile-contatore" title="Giocatori nella stanza">
+          <img src="https://gioco-oca-server.onrender.com/Immagini/Giocatori.png" alt="Giocatori online">
+          <span id="onlineMobile">${giocatori}</span>
+        </span>
+        <span class="online-mobile-contatore" title="Amici nella stanza">
+          <img src="https://gioco-oca-server.onrender.com/Immagini/Amici.png" alt="Amici online">
+          <span id="amiciOnlineMobile">${amici}</span>
+        </span>
+      </span>
+    </div>`;
+}
+
+function aggiornaVistaOnlineMobile(){
+  const contenutoMobile = document.getElementById("contenutoMobile");
+  if (!contenutoMobile || contenutoMobile.dataset.vista !== "online") return;
+  const listaOnline = document.getElementById("listaOnline");
+  contenutoMobile.innerHTML = `
+    ${creaIntestazioneOnlineMobile()}
+    <div class="online-mobile-lista">
+      ${listaOnline ? listaOnline.innerHTML : ""}
+    </div>`;
+}
+
 function apriOnlineMobile(){
-const popup = document.getElementById("popupMobile");
-popup.classList.remove("crea-schermo-intero");
-document.getElementById("contenutoMobile").dataset.vista = "online";
-let lista=document.getElementById("listaOnline").innerHTML;
-document.getElementById("contenutoMobile").innerHTML=`
-<h2>GIOCATORI ONLINE</h2>
-${lista}
-`;
-apriMobile();
+  const popup = document.getElementById("popupMobile");
+  popup.classList.remove("crea-schermo-intero");
+  document.getElementById("contenutoMobile").dataset.vista = "online";
+  aggiornaVistaOnlineMobile();
+  apriMobile();
 }
 function apriChatMobile(){
 const popup = document.getElementById("popupMobile");
@@ -2948,10 +3040,7 @@ function mostraGiocatori(lista) {
     }
     contenitore.innerHTML = html;
   }
-  const contenutoMobile = document.getElementById("contenutoMobile");
-  if (contenutoMobile && contenutoMobile.dataset.vista === "online") {
-    contenutoMobile.innerHTML = `<h2>GIOCATORI ONLINE</h2>${contenitore.innerHTML}`;
-  }
+  aggiornaVistaOnlineMobile();
 }
 function creaRigaGiocatore(g) {
     const nicknamePulito = pulisciTestoHtml(g.nickname || "Giocatore");
@@ -3047,6 +3136,8 @@ function aggiornaContatoreAmiciOnline() {
   const conteggio = ultimaListaOnlineStanza.filter(g => mieiAmiciUid.has(g.uid)).length;
   const el = document.getElementById("amiciOnline");
   if (el) el.textContent = conteggio;
+  const elMobile = document.getElementById("amiciOnlineMobile");
+  if (elMobile) elMobile.textContent = conteggio;
 }
 // ===== PLAYER CARD LATERALE GIOCATORE =====
 const RITARDO_HOVER_PLAYER_CARD_MS = 1000;
