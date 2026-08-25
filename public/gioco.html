@@ -132,7 +132,7 @@
       <strong>🎥 Videochiamata</strong>
       <span id="stato-media-connessione" role="status" aria-live="polite">Avvio…</span>
     </div>
-    <div id="controlli-media-locale" aria-label="Controlli webcam e microfono">
+    <div id="controlli-media-locale" aria-label="Controlli della chiamata">
       <button type="button" id="btn-toggle-microfono-media" onclick="toggleMicrofonoMedia()" aria-pressed="false">🎙️ Microfono: On</button>
       <button type="button" id="btn-toggle-webcam-media" onclick="toggleWebcamMedia()" aria-pressed="false">📷 Webcam: On</button>
     </div>
@@ -163,11 +163,11 @@
   </aside>
 
   <div id="giocatori-wrapper">
-    <button type="button" id="btn-giocatori" aria-label="Mostra giocatori" aria-controls="pannello-giocatori" aria-expanded="false">👤</button>
+    <button type="button" id="btn-giocatori" aria-label="Mostra giocatori" aria-controls="pannello-giocatori" aria-expanded="false"><img class="icona-pulsante-gioco" src="https://gioco-oca-server.onrender.com/Immagini/Personemenugioco.png" alt="" aria-hidden="true"></button>
   </div>
 
   <div id="menu-wrapper">
-    <button type="button" id="btn-menu" aria-label="Apri menu" aria-controls="pannello-menu" aria-expanded="false">☰</button>
+    <button type="button" id="btn-menu" aria-label="Apri menu" aria-controls="pannello-menu" aria-expanded="false"><img class="icona-pulsante-gioco" src="https://gioco-oca-server.onrender.com/Immagini/Hamburgerbuttonmenugioco.png" alt="" aria-hidden="true"></button>
     <div id="pannello-menu" class="nascosto">
       <button type="button" onclick="apriProfilo()">👤 Profilo</button>
       <button type="button" onclick="apriImpostazioni()">⚙️ Impostazioni</button>
@@ -187,8 +187,19 @@
     </div>
   </div>
 
+  <div id="overlay-conferma-gioco" class="overlay" role="dialog" aria-modal="true" aria-labelledby="titolo-conferma-gioco" aria-hidden="true">
+    <div class="popup-conferma-gioco">
+      <h2 id="titolo-conferma-gioco">Abbandonare la partita?</h2>
+      <p id="testo-conferma-gioco">Uscirai dalla partita e tornerai alla Lobby.</p>
+      <div class="azioni-conferma-gioco">
+        <button type="button" id="btn-annulla-conferma-gioco">Resta in partita</button>
+        <button type="button" id="btn-conferma-gioco" class="pericolo">Abbandona</button>
+      </div>
+    </div>
+  </div>
+
   <div id="chat-wrapper">
-    <button type="button" id="btn-chat" aria-label="Apri chat" aria-controls="pannello-chat" aria-expanded="false">💬<span id="badge-chat-partita" class="badge-chat-partita" style="display:none;">0</span></button>
+    <button type="button" id="btn-chat" aria-label="Apri chat" aria-controls="pannello-chat" aria-expanded="false"><img class="icona-pulsante-gioco" src="https://gioco-oca-server.onrender.com/Immagini/Chatmenugioco.png" alt="" aria-hidden="true"><span id="badge-chat-partita" class="badge-chat-partita" style="display:none;">0</span></button>
     <section id="pannello-chat" class="nascosto" aria-label="Chat della partita">
       <div id="chat-messaggi" role="log" aria-live="polite" aria-relevant="additions"></div>
       <div id="chat-input-riga">
