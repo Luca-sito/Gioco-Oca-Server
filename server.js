@@ -557,6 +557,140 @@ app.post("/api/login", limiteLogin, async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json({ errore: "Errore del server, riprova." }); }
 });
 
+app.post("/api/cambia-password", richiediAuth, async (req, res) => {
+
+  if (!db) {
+    return res.status(500).json({
+      errore: "Servizio account non disponibile."
+    });
+  }
+
+  try {
+
+    const {
+      vecchiaPassword,
+      nuovaPassword
+    } = req.body || {};
+
+    // =========================================
+    // CONTROLLO CAMPI
+    // =========================================
+
+    if (
+      typeof vecchiaPassword !== "string" ||
+      typeof nuovaPassword !== "string" ||
+      !vecchiaPassword ||
+      !nuovaPassword
+    ) {
+      return res.status(400).json({
+        errore: "Inserisci la password attuale e quella nuova."
+      });
+    }
+
+    // Stessa regola usata nella registrazione
+    if (
+      nuovaPassword.length < 6 ||
+      nuovaPassword.length > 100
+    ) {
+      return res.status(400).json({
+        errore:
+          "La nuova password deve contenere da 6 a 100 caratteri."
+      });
+    }
+
+    if (vecchiaPassword === nuovaPassword) {
+      return res.status(400).json({
+        errore:
+          "La nuova password deve essere diversa da quella attuale."
+      });
+    }
+
+    // =========================================
+    // RECUPERO UTENTE
+    // =========================================
+
+    const riferimentoUtente =
+      db.ref("utenti/" + req.utente.uid);
+
+    const snapshot =
+      await riferimentoUtente.once("value");
+
+    const utente =
+      snapshot.val();
+
+    if (!utente) {
+      return res.status(404).json({
+        errore: "Utente non trovato."
+      });
+    }
+
+    // =========================================
+    // ACCOUNT GOOGLE
+    // =========================================
+
+    if (!utente.passwordHash) {
+      return res.status(400).json({
+        errore:
+          "Questo account non dispone di una password locale. Se hai creato l'account con Google, accedi tramite Google."
+      });
+    }
+
+    // =========================================
+    // VERIFICA PASSWORD ATTUALE
+    // =========================================
+
+    const passwordCorretta =
+      await bcrypt.compare(
+        vecchiaPassword,
+        utente.passwordHash
+      );
+
+    if (!passwordCorretta) {
+      return res.status(400).json({
+        errore: "La password attuale non è corretta."
+      });
+    }
+
+    // =========================================
+    // CREA NUOVO HASH
+    // =========================================
+
+    const nuovoPasswordHash =
+      await bcrypt.hash(
+        nuovaPassword,
+        10
+      );
+
+    // =========================================
+    // SALVATAGGIO
+    // =========================================
+
+    await riferimentoUtente.update({
+      passwordHash: nuovoPasswordHash,
+      passwordAggiornataIl: Date.now()
+    });
+
+    return res.json({
+      ok: true,
+      messaggio: "Password modificata correttamente."
+    });
+
+  } catch (errore) {
+
+    console.error(
+      "Errore /api/cambia-password:",
+      errore
+    );
+
+    return res.status(500).json({
+      errore:
+        "Errore durante la modifica della password."
+    });
+
+  }
+
+});
+
 app.post("/api/logout", (req, res) => { res.clearCookie("token", OPZIONI_COOKIE); res.json({ ok: true }); });
 
 app.get("/api/me", richiediAuth, async (req, res) => {
