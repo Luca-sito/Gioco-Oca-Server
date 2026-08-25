@@ -737,6 +737,468 @@ app.post("/api/elimina-avatar", richiediAuth, async (req, res) => {
   }
 });
 
+// ============================================================
+// ALBUM FOTO PROFILO
+// Massimo 15 foto pubbliche + 15 foto private per utente.
+// Le immagini vengono salvate fuori da /utenti/{uid} per non
+// appesantire /api/me.
+// ============================================================
+
+const MAX_FOTO_ALBUM_PER_TIPO = 15;
+
+const uploadFotoAlbum = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 3 * 1024 * 1024
+  },
+  fileFilter: (req, file, cb) => {
+    const tipiConsentiti = [
+      "image/jpeg",
+      "image/png",
+      "image/webp"
+    ];
+
+    if (!tipiConsentiti.includes(file.mimetype)) {
+      return cb(
+        new Error(
+          "Puoi caricare solo immagini JPG, PNG o WEBP."
+        )
+      );
+    }
+
+    cb(null, true);
+  }
+});
+
+function normalizzaVisibilitaFoto(valore) {
+  return valore === "privata"
+    ? "privata"
+    : valore === "pubblica"
+      ? "pubblica"
+      : null;
+}
+
+function fotoAlbumMetadata(uid, id, foto) {
+  const creataIl = Number(foto.creataIl) || 0;
+
+  return {
+    id,
+    uid,
+    visibilita: foto.visibilita,
+    creataIl,
+    url:
+      `/api/album-foto/immagine/${encodeURIComponent(uid)}/${encodeURIComponent(id)}?v=${creataIl || 1}`
+  };
+}
+
+async function puoVedereFotoAlbum(mioUid, proprietarioUid, visibilita) {
+  if (visibilita === "pubblica") {
+    return true;
+  }
+
+  if (!mioUid) {
+    return false;
+  }
+
+  if (mioUid === proprietarioUid) {
+    return true;
+  }
+
+  return (
+    await statoAmicizia(
+      mioUid,
+      proprietarioUid
+    )
+  ) === "amici";
+}
+
+// ------------------------------------------------------------
+// Album personale completo
+// ------------------------------------------------------------
+app.get(
+  "/api/album-foto/mio",
+  richiediAuth,
+  async (req, res) => {
+    if (!db) {
+      return res.status(503).json({
+        errore: "Servizio album foto non disponibile."
+      });
+    }
+
+    try {
+      const uid = req.utente.uid;
+      const snap = await db
+        .ref(`albumFoto/${uid}`)
+        .once("value");
+
+      const valori = snap.val() || {};
+
+      const foto = Object.entries(valori)
+        .map(([id, item]) =>
+          fotoAlbumMetadata(uid, id, item || {})
+        )
+        .filter(item =>
+          item.visibilita === "pubblica" ||
+          item.visibilita === "privata"
+        )
+        .sort((a, b) => a.creataIl - b.creataIl);
+
+      res.set("Cache-Control", "no-store");
+      return res.json({
+        foto,
+        limiti: {
+          pubbliche: MAX_FOTO_ALBUM_PER_TIPO,
+          private: MAX_FOTO_ALBUM_PER_TIPO
+        }
+      });
+    } catch (errore) {
+      console.error("Errore GET /api/album-foto/mio:", errore);
+      return res.status(500).json({
+        errore: "Errore durante il caricamento dell'album foto."
+      });
+    }
+  }
+);
+
+// ------------------------------------------------------------
+// Album di un altro utente.
+// Pubbliche: tutti.
+// Private: solo proprietario e amici.
+// ------------------------------------------------------------
+app.get(
+  "/api/album-foto/utente/:uid",
+  async (req, res) => {
+    if (!db) {
+      return res.status(503).json({
+        errore: "Servizio album foto non disponibile."
+      });
+    }
+
+    try {
+      const proprietarioUid =
+        String(req.params.uid || "").trim();
+
+      if (!proprietarioUid || proprietarioUid.length > 128) {
+        return res.status(400).json({
+          errore: "Utente non valido."
+        });
+      }
+
+      const token = estraiTokenHeader(req);
+      const autenticato = verificaToken(token);
+      const mioUid = autenticato ? autenticato.uid : null;
+
+      const snap = await db
+        .ref(`albumFoto/${proprietarioUid}`)
+        .once("value");
+
+      const valori = snap.val() || {};
+      const risultato = [];
+
+      let puoVederePrivate =
+        mioUid === proprietarioUid;
+
+      if (
+        !puoVederePrivate &&
+        mioUid
+      ) {
+        puoVederePrivate =
+          (await statoAmicizia(
+            mioUid,
+            proprietarioUid
+          )) === "amici";
+      }
+
+      for (const [id, itemGrezz] of Object.entries(valori)) {
+        const item = itemGrezz || {};
+        const visibilita = normalizzaVisibilitaFoto(
+          item.visibilita
+        );
+
+        if (!visibilita) {
+          continue;
+        }
+
+        if (
+          visibilita === "privata" &&
+          !puoVederePrivate
+        ) {
+          continue;
+        }
+
+        risultato.push(
+          fotoAlbumMetadata(
+            proprietarioUid,
+            id,
+            item
+          )
+        );
+      }
+
+      risultato.sort(
+        (a, b) => a.creataIl - b.creataIl
+      );
+
+      res.set("Cache-Control", "no-store");
+      return res.json({ foto: risultato });
+    } catch (errore) {
+      console.error(
+        "Errore GET /api/album-foto/utente/:uid:",
+        errore
+      );
+
+      return res.status(500).json({
+        errore: "Errore durante il caricamento dell'album foto."
+      });
+    }
+  }
+);
+
+// ------------------------------------------------------------
+// Caricamento foto
+// ------------------------------------------------------------
+app.post(
+  "/api/album-foto/carica",
+  richiediAuth,
+  uploadFotoAlbum.single("foto"),
+  async (req, res) => {
+    if (!db) {
+      return res.status(503).json({
+        errore: "Servizio album foto non disponibile."
+      });
+    }
+
+    try {
+      if (!req.file) {
+        return res.status(400).json({
+          errore: "Nessuna immagine ricevuta."
+        });
+      }
+
+      const visibilita = normalizzaVisibilitaFoto(
+        req.body && req.body.visibilita
+      );
+
+      if (!visibilita) {
+        return res.status(400).json({
+          errore: "Visibilità della foto non valida."
+        });
+      }
+
+      const uid = req.utente.uid;
+      const refAlbum = db.ref(`albumFoto/${uid}`);
+      const snap = await refAlbum.once("value");
+      const album = snap.val() || {};
+
+      const numeroStessoTipo = Object.values(album)
+        .filter(
+          foto =>
+            foto &&
+            foto.visibilita === visibilita
+        )
+        .length;
+
+      if (
+        numeroStessoTipo >=
+        MAX_FOTO_ALBUM_PER_TIPO
+      ) {
+        return res.status(400).json({
+          errore:
+            visibilita === "pubblica"
+              ? "Hai già raggiunto il limite di 15 foto pubbliche."
+              : "Hai già raggiunto il limite di 15 foto private."
+        });
+      }
+
+      const dataUri =
+        `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`;
+
+      const creataIl = Date.now();
+      const nuovaRef = refAlbum.push();
+      const id = nuovaRef.key;
+
+      await nuovaRef.set({
+        immagine: dataUri,
+        visibilita,
+        creataIl
+      });
+
+      return res.status(201).json({
+        ok: true,
+        foto: fotoAlbumMetadata(
+          uid,
+          id,
+          {
+            visibilita,
+            creataIl
+          }
+        )
+      });
+    } catch (errore) {
+      console.error(
+        "Errore POST /api/album-foto/carica:",
+        errore
+      );
+
+      return res.status(400).json({
+        errore:
+          errore.message ||
+          "Errore durante il caricamento della foto."
+      });
+    }
+  }
+);
+
+// ------------------------------------------------------------
+// Eliminazione di una propria foto
+// ------------------------------------------------------------
+app.delete(
+  "/api/album-foto/:fotoId",
+  richiediAuth,
+  async (req, res) => {
+    if (!db) {
+      return res.status(503).json({
+        errore: "Servizio album foto non disponibile."
+      });
+    }
+
+    try {
+      const fotoId = String(
+        req.params.fotoId || ""
+      ).trim();
+
+      if (!fotoId || fotoId.length > 128) {
+        return res.status(400).json({
+          errore: "Foto non valida."
+        });
+      }
+
+      const refFoto = db.ref(
+        `albumFoto/${req.utente.uid}/${fotoId}`
+      );
+
+      const snap = await refFoto.once("value");
+
+      if (!snap.exists()) {
+        return res.status(404).json({
+          errore: "Foto non trovata."
+        });
+      }
+
+      await refFoto.remove();
+
+      return res.json({
+        ok: true,
+        fotoId
+      });
+    } catch (errore) {
+      console.error(
+        "Errore DELETE /api/album-foto/:fotoId:",
+        errore
+      );
+
+      return res.status(500).json({
+        errore: "Errore durante l'eliminazione della foto."
+      });
+    }
+  }
+);
+
+// ------------------------------------------------------------
+// File immagine album con controllo privacy
+// ------------------------------------------------------------
+app.get(
+  "/api/album-foto/immagine/:uid/:fotoId",
+  async (req, res) => {
+    if (!db) {
+      return res.status(503).end();
+    }
+
+    try {
+      const uid = String(req.params.uid || "").trim();
+      const fotoId = String(req.params.fotoId || "").trim();
+
+      if (
+        !uid ||
+        !fotoId ||
+        uid.length > 128 ||
+        fotoId.length > 128
+      ) {
+        return res.status(400).end();
+      }
+
+      const foto = (
+        await db
+          .ref(`albumFoto/${uid}/${fotoId}`)
+          .once("value")
+      ).val();
+
+      if (!foto) {
+        return res.status(404).end();
+      }
+
+      const visibilita = normalizzaVisibilitaFoto(
+        foto.visibilita
+      );
+
+      if (!visibilita) {
+        return res.status(404).end();
+      }
+
+      const token = estraiTokenHeader(req);
+      const autenticato = verificaToken(token);
+      const mioUid = autenticato ? autenticato.uid : null;
+
+      const consentita = await puoVedereFotoAlbum(
+        mioUid,
+        uid,
+        visibilita
+      );
+
+      if (!consentita) {
+        return res.status(403).end();
+      }
+
+      const valore = String(foto.immagine || "").trim();
+      const match = valore.match(
+        /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=\s]+)$/i
+      );
+
+      if (!match) {
+        return res.status(415).end();
+      }
+
+      const mime = match[1].toLowerCase();
+      const base64 = match[2].replace(/\s/g, "");
+      const buffer = Buffer.from(base64, "base64");
+
+      if (!buffer.length) {
+        return res.status(404).end();
+      }
+
+      res.set({
+        "Content-Type": mime,
+        "Content-Length": String(buffer.length),
+        "X-Content-Type-Options": "nosniff",
+        "Cross-Origin-Resource-Policy": "cross-origin",
+        "Cache-Control":
+          visibilita === "pubblica"
+            ? "public, max-age=86400"
+            : "private, max-age=3600"
+      });
+
+      return res.send(buffer);
+    } catch (errore) {
+      console.error(
+        "Errore GET /api/album-foto/immagine/:uid/:fotoId:",
+        errore
+      );
+
+      return res.status(500).end();
+    }
+  }
+);
+
 app.post("/api/logout", (req, res) => { res.clearCookie("token", OPZIONI_COOKIE); res.json({ ok: true }); });
 
 app.get("/api/me", richiediAuth, async (req, res) => {
