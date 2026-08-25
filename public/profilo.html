@@ -792,7 +792,6 @@ body {
 }
 
 .avatar-preview-wrap {
-    position: relative;
     width: 122px;
     height: 122px;
     flex: 0 0 122px;
@@ -803,38 +802,45 @@ body {
     height: 100%;
 }
 
-.avatar-delete-btn {
-    position: absolute;
-    top: -4px;
-    right: -4px;
-    width: 34px;
-    height: 34px;
-    border: 2px solid #fff;
-    border-radius: 50%;
-    background: #c83f3f;
-    color: #fff;
-    display: none;
+.avatar-delete-action {
+    min-height: 42px;
+    margin-top: 10px;
+    padding: 0 16px;
+    border: 1px solid #e7bcbc;
+    border-radius: 10px;
+    background: #fff;
+    color: #b63838;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 0;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 800;
     cursor: pointer;
-    font-size: 16px;
-    line-height: 1;
-    box-shadow: 0 5px 14px rgba(95, 20, 20, .22);
-    z-index: 5;
+    transition: background .18s ease, border-color .18s ease, color .18s ease;
 }
 
-.avatar-delete-btn.show {
-    display: flex;
+.avatar-delete-action[hidden] {
+    display: none !important;
 }
 
-.avatar-delete-btn:hover {
-    background: #ad3030;
+.avatar-delete-action:hover {
+    background: #fff5f5;
+    border-color: #d78383;
+    color: #9f2f2f;
 }
 
-.avatar-delete-btn:disabled {
+.avatar-delete-action:disabled {
     opacity: .55;
     cursor: not-allowed;
+}
+
+.avatar-delete-action img {
+    width: 18px;
+    height: 18px;
+    display: block;
+    object-fit: contain;
+    flex: 0 0 18px;
 }
 
 .avatar-preview-placeholder {
@@ -1120,6 +1126,13 @@ body {
 
 .custom-modal-card.danger .custom-modal-icon {
     background: #fff0f0;
+}
+
+.custom-modal-icon img {
+    width: 26px;
+    height: 26px;
+    display: block;
+    object-fit: contain;
 }
 
 .custom-modal-title {
@@ -2337,16 +2350,6 @@ body {
                                 </div>
                             </div>
 
-                            <button
-                                type="button"
-                                class="avatar-delete-btn"
-                                id="avatarDeleteBtn"
-                                aria-label="Elimina avatar"
-                                title="Elimina avatar"
-                            >
-                                🗑️
-                            </button>
-
                         </div>
 
                         <div class="avatar-select-area">
@@ -2365,6 +2368,20 @@ body {
                                 id="avatarSelectBtn"
                             >
                                 Scegli un'immagine
+                            </button>
+
+                            <button
+                                type="button"
+                                class="avatar-delete-action"
+                                id="avatarDeleteBtn"
+                                hidden
+                            >
+                                <img
+                                    id="avatarDeleteIcon"
+                                    src=""
+                                    alt=""
+                                >
+                                <span>Elimina avatar</span>
                             </button>
 
                         </div>
@@ -2567,7 +2584,7 @@ body {
         <div
             class="custom-modal-icon"
             id="modalConfermaIcona"
-        >⚠️</div>
+        ></div>
 
         <h2
             class="custom-modal-title"
@@ -2607,6 +2624,16 @@ const SERVER =
 
 const HOME_URL =
     "https://solfriniluca1.wixstudio.com/giochisocieta";
+
+// =========================================================
+// ICONE PERSONALIZZATE
+// Cambia solo questi due URL se i tuoi file hanno nomi diversi.
+// =========================================================
+const ICONA_ELIMINA_AVATAR_URL =
+    SERVER + "/Immagini/Eliminaavatar.png";
+
+const ICONA_PROFILO_NON_TROVATO_URL =
+    SERVER + "/Immagini/Profilonontrovato.png";
 
 
 const PALETTE = [
@@ -2674,12 +2701,43 @@ function chiudiModalConferma(risultato) {
     }
 }
 
+function impostaIconaModale({
+    icona = "",
+    iconaUrl = "",
+    iconaAlt = ""
+} = {}) {
+
+    modalConfermaIcona.innerHTML = "";
+    modalConfermaIcona.style.display = "flex";
+
+    if (iconaUrl) {
+        const immagine = document.createElement("img");
+        immagine.src = iconaUrl;
+        immagine.alt = iconaAlt || "";
+        immagine.addEventListener("error", () => {
+            immagine.remove();
+            modalConfermaIcona.style.display = "none";
+        }, { once: true });
+        modalConfermaIcona.appendChild(immagine);
+        return;
+    }
+
+    if (icona) {
+        modalConfermaIcona.textContent = icona;
+        return;
+    }
+
+    modalConfermaIcona.style.display = "none";
+}
+
 function mostraConferma({
     titolo = "Conferma",
     messaggio = "",
     testoConferma = "Conferma",
     testoAnnulla = "Annulla",
     icona = "⚠️",
+    iconaUrl = "",
+    iconaAlt = "",
     pericoloso = false
 } = {}) {
 
@@ -2693,8 +2751,11 @@ function mostraConferma({
     modalConfermaMessaggio.textContent =
         messaggio;
 
-    modalConfermaIcona.textContent =
-        icona;
+    impostaIconaModale({
+        icona,
+        iconaUrl,
+        iconaAlt
+    });
 
     modalConfermaAnnulla.textContent =
         testoAnnulla;
@@ -2733,7 +2794,9 @@ function mostraConferma({
 function mostraMessaggio({
     titolo = "Messaggio",
     messaggio = "",
-    icona = "ℹ️"
+    icona = "ℹ️",
+    iconaUrl = "",
+    iconaAlt = ""
 } = {}) {
 
     modalConfermaTitolo.textContent =
@@ -2742,8 +2805,11 @@ function mostraMessaggio({
     modalConfermaMessaggio.textContent =
         messaggio;
 
-    modalConfermaIcona.textContent =
-        icona;
+    impostaIconaModale({
+        icona,
+        iconaUrl,
+        iconaAlt
+    });
 
     modalConfermaAnnulla.style.display =
         "none";
@@ -2942,7 +3008,9 @@ async function caricaProfilo() {
         mostraMessaggio({
             titolo: "Profilo non disponibile",
             messaggio: "Non è stato possibile caricare i dati del profilo. Riprova tra poco.",
-            icona: "⚠️"
+            icona: "",
+            iconaUrl: ICONA_PROFILO_NON_TROVATO_URL,
+            iconaAlt: "Profilo non disponibile"
         });
     }
 
@@ -3938,6 +4006,24 @@ const avatarDeleteBtn =
         "avatarDeleteBtn"
     );
 
+const avatarDeleteIcon =
+    document.getElementById(
+        "avatarDeleteIcon"
+    );
+
+if (avatarDeleteIcon) {
+    avatarDeleteIcon.src =
+        ICONA_ELIMINA_AVATAR_URL;
+
+    avatarDeleteIcon.addEventListener(
+        "error",
+        () => {
+            avatarDeleteIcon.style.display = "none";
+        },
+        { once: true }
+    );
+}
+
 
 /* =========================================================
    STATO AVATAR SALVATO
@@ -3951,10 +4037,8 @@ function aggiornaPulsanteEliminaAvatar() {
             datiUtente.avatar
         );
 
-    avatarDeleteBtn.classList.toggle(
-        "show",
-        avatarPresente
-    );
+    avatarDeleteBtn.hidden =
+        !avatarPresente;
 
     avatarDeleteBtn.disabled =
         !avatarPresente;
@@ -4224,7 +4308,9 @@ avatarDeleteBtn.addEventListener(
                 titolo: "Eliminare l'avatar?",
                 messaggio: "La foto profilo verrà rimossa e tornerà visibile l'iniziale del tuo nickname.",
                 testoConferma: "Elimina avatar",
-                icona: "🗑️",
+                icona: "",
+                iconaUrl: ICONA_ELIMINA_AVATAR_URL,
+                iconaAlt: "Elimina avatar",
                 pericoloso: true
             });
 
