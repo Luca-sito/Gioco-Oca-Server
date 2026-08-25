@@ -36,7 +36,6 @@ const URL_WEBSOCKET = ORIGINE_SERVER.replace(/^http:/, "ws:").replace(/^https:/,
 const params = new URLSearchParams(window.location.search);
 const partitaId = params.get("partita");
 const stanza = params.get("stanza");
-const CHIAVE_RITORNO_LOBBY_PARTITA = "giochiSocietaRitornoLobbyPartita";
 let mioUid = null;
 
 let socket;
@@ -46,8 +45,11 @@ let turnoAttualeId = null;
 let timerRiconnessione = null;
 let timerRiprovaAvvio = null;
 let timerVerificaDeterminazione = null;
+let timerRecuperoTurno = null;
 let paginaInChiusura = false;
 let versioneAnimazioneStato = 0;
+let animazioneMossaInCorso = false;
+let statoPartitaAccodato = null;
 const animazioniPedineAttive = new Map();
 let chatPartitaAttiva = true;
 
@@ -657,7 +659,27 @@ function htmlGiocatoreMultiPresentazione(profilo, massimi) {
   </article>`;
 }
 
-function disegnaPresentazioneSfida(profili) {
+function configuraPresentazioneSfidaModalita(classificata) {
+  const eClassificata = classificata !== false;
+  const testoModalita = document.getElementById("sfida-modalita-testo");
+  const descrizione = document.getElementById("sfida-descrizione-modalita");
+  const boxVariazione = document.getElementById("sfida-box-variazione-elo");
+
+  if (testoModalita) {
+    testoModalita.textContent = eClassificata
+      ? "Partita classificata · 63 caselle · ELO attivo"
+      : "Partita Divertimento · 63 caselle · ELO invariato";
+  }
+  if (descrizione) {
+    descrizione.textContent = eClassificata
+      ? "Giocatori reali · il risultato modifica il rating ELO"
+      : "Giocatori reali · questa partita non modifica il rating ELO";
+  }
+  if (boxVariazione) boxVariazione.hidden = !eClassificata;
+  return eClassificata;
+}
+
+function disegnaPresentazioneSfida(profili, classificata = true) {
   const contenitore = document.getElementById("sfida-giocatori");
   if (!contenitore) return;
 
@@ -689,15 +711,18 @@ function disegnaPresentazioneSfida(profili) {
   }
 
   const mio = elenco.find(p => p.uid === mioUid) || elenco[0];
+  const eClassificata = classificata !== false;
   const avversari = elenco.filter(p => p.uid !== mio.uid).map(p => p.elo);
-  const variazioni = calcolaVariazioniEloPresentazione(mio.elo, avversari);
+  const variazioni = eClassificata
+    ? calcolaVariazioniEloPresentazione(mio.elo, avversari)
+    : { vittoria: 0, sconfitta: 0 };
 
   const elVittoria = document.getElementById("sfida-elo-vittoria");
   const elSconfitta = document.getElementById("sfida-elo-sconfitta");
   const elStreak = document.getElementById("sfida-streak");
   const elWinRate = document.getElementById("sfida-winrate");
-  if (elVittoria) elVittoria.textContent = (variazioni.vittoria >= 0 ? "+" : "") + variazioni.vittoria;
-  if (elSconfitta) elSconfitta.textContent = String(variazioni.sconfitta);
+  if (elVittoria) elVittoria.textContent = eClassificata ? ((variazioni.vittoria >= 0 ? "+" : "") + variazioni.vittoria) : "";
+  if (elSconfitta) elSconfitta.textContent = eClassificata ? String(variazioni.sconfitta) : "";
   if (elStreak) elStreak.textContent = String(Math.round(mio.streak || 0));
   if (elWinRate) elWinRate.textContent = Math.round(mio.winRate || 0) + "%";
 }
@@ -712,6 +737,8 @@ async function mostraPresentazioneSfida(giocatori, datiDeterminazione) {
   const overlay = document.getElementById("overlay-presentazione-sfida");
   if (!overlay || presentazioneSfidaAperta) return;
 
+  const classificata = datiDeterminazione?.classificata !== false;
+  configuraPresentazioneSfidaModalita(classificata);
   presentazioneSfidaAperta = true;
   faseAttuale = "presentazione";
   possoTirareIoInDeterminazione = false;
@@ -726,7 +753,7 @@ async function mostraPresentazioneSfida(giocatori, datiDeterminazione) {
   overlay.setAttribute("aria-hidden", "false");
   document.getElementById("sfida-giocatori").innerHTML = '<div class="sfida-caricamento">Caricamento confronto…</div>';
   const stato = document.getElementById("sfida-stato");
-  if (stato) stato.textContent = "Recupero ELO e statistiche reali…";
+  if (stato) stato.textContent = classificata ? "Recupero ELO e statistiche reali…" : "Recupero statistiche reali…";
 
   if (timerChiusuraPresentazioneSfida) clearTimeout(timerChiusuraPresentazioneSfida);
   timerChiusuraPresentazioneSfida = setTimeout(
@@ -738,8 +765,12 @@ async function mostraPresentazioneSfida(giocatori, datiDeterminazione) {
   const profili = await Promise.all((Array.isArray(giocatori) ? giocatori : []).map(caricaProfiloPresentazioneSfida));
   if (!presentazioneSfidaAperta || token !== tokenCaricamentoPresentazioneSfida) return;
 
-  disegnaPresentazioneSfida(profili);
-  if (stato) stato.textContent = "Il confronto ELO è calcolato con K = 32.";
+  disegnaPresentazioneSfida(profili, classificata);
+  if (stato) {
+    stato.textContent = classificata
+      ? "Il confronto ELO è calcolato con K = 32."
+      : "Modalità Divertimento: ELO invariato, nessun punto viene aggiunto o sottratto.";
+  }
 
   setTimeout(() => document.getElementById("btn-entra-partita")?.focus(), 0);
 }
@@ -1814,6 +1845,7 @@ function pulisciMediaPagina() {
   paginaInChiusura = true;
   if (timerRiconnessione) clearTimeout(timerRiconnessione);
   if (timerRiprovaAvvio) clearTimeout(timerRiprovaAvvio);
+  annullaRecuperoTurno();
   if (mediaProntoSegnalato) inviaSocket({ tipo: "mediaPronto", partitaId, attivo: false });
   if (flussoMediaLocale) {
     flussoMediaLocale.getTracks().forEach(traccia => {
@@ -1959,6 +1991,10 @@ function animaSaltoPedina(idGiocatore, percorso, callback, tokenAnimazione) {
       return;
     }
     const casella = percorso[passo];
+    // Su alcuni browser mobili riaggiungere subito la stessa classe non
+    // riavvia l'animazione. La rimozione + reflow forza un salto per casella.
+    pedina.classList.remove("pedina-salta");
+    void pedina.offsetWidth;
     pedina.classList.add("pedina-salta");
     posizionaPedina(pedina, casella);
     suonaPassoPedina();
@@ -1972,8 +2008,28 @@ function animaSaltoPedina(idGiocatore, percorso, callback, tokenAnimazione) {
   saltaProssimo();
 }
 
+function annullaRecuperoTurno() {
+  if (timerRecuperoTurno) {
+    clearTimeout(timerRecuperoTurno);
+    timerRecuperoTurno = null;
+  }
+}
+
+function pianificaRecuperoTurno() {
+  annullaRecuperoTurno();
+  if (paginaInChiusura) return;
+  timerRecuperoTurno = setTimeout(() => {
+    timerRecuperoTurno = null;
+    if (paginaInChiusura || faseAttuale !== "normale" || animazioneMossaInCorso) return;
+    inviaSocket({ tipo: "riprendiPartita", partitaId });
+  }, 1600);
+}
+
 function gestisciPreparazionePartita(dati) {
   annullaVerificaDeterminazione();
+  annullaRecuperoTurno();
+  animazioneMossaInCorso = false;
+  statoPartitaAccodato = null;
   ++versioneAnimazioneStato;
   faseAttuale = "preparazione";
   possoTirareIoInDeterminazione = false;
@@ -1997,6 +2053,16 @@ function gestisciPreparazionePartita(dati) {
 
 function gestisciStatoPartita(dati) {
   annullaVerificaDeterminazione();
+
+  // Uno stato del turno successivo non deve troncare l'animazione corrente.
+  // Conserviamo soltanto lo stato più recente e lo applichiamo appena la
+  // pedina ha terminato tutti i salti.
+  if (animazioneMossaInCorso && !dati.vittoria) {
+    statoPartitaAccodato = dati;
+    return;
+  }
+
+  annullaRecuperoTurno();
   ++versioneAnimazioneStato;
   faseAttuale = "normale";
   possoTirareIoInDeterminazione = false;
@@ -2018,7 +2084,8 @@ function gestisciStatoPartita(dati) {
     const turnoPronto = dati.turnoDiId != null && dati.tempoInizioTurno != null && Number(dati.durataMossaMs) > 0;
     aggiornaTurno(turnoPronto ? dati.turnoDiId : null);
     if (!turnoPronto && dati.turnoDiId != null) {
-      document.getElementById("riga-turno").textContent = "⏳ Preparazione del prossimo turno…";
+      document.getElementById("riga-turno").textContent = "🎲 Aggiornamento partita…";
+      pianificaRecuperoTurno();
     }
     disegnaGiocatori();
     if (turnoPronto) {
@@ -2031,6 +2098,9 @@ function gestisciStatoPartita(dati) {
 }
 
 function gestisciAggiornamentoPartita(dati) {
+  annullaRecuperoTurno();
+  animazioneMossaInCorso = true;
+  statoPartitaAccodato = null;
   const tokenAnimazione = ++versioneAnimazioneStato;
   mioTurno = false;
   turnoAttualeId = null;
@@ -2040,30 +2110,54 @@ function gestisciAggiornamentoPartita(dati) {
   document.getElementById("messaggi-gioco").textContent = "🎲 " + dati.dado1 + " + " + dati.dado2 + " = " + dati.valoreDado;
 
   animaLancioDadi(dati.dado1, dati.dado2, () => {
-    if (tokenAnimazione !== versioneAnimazioneStato) return;
+    if (tokenAnimazione !== versioneAnimazioneStato) {
+      animazioneMossaInCorso = false;
+      return;
+    }
     if (Array.isArray(dati.messaggi) && dati.messaggi.length) mostraMessaggioGiocoGrande(dati.messaggi.join(" "));
 
     const completa = () => {
-      if (tokenAnimazione !== versioneAnimazioneStato) return;
+      if (tokenAnimazione !== versioneAnimazioneStato) {
+        animazioneMossaInCorso = false;
+        return;
+      }
+
       ultimoStatoGiocatori = Array.isArray(dati.giocatori) ? dati.giocatori : ultimoStatoGiocatori;
 
       if (dati.vittoria) {
+        animazioneMossaInCorso = false;
+        statoPartitaAccodato = null;
         turnoAttualeId = null;
         mioTurno = false;
         document.getElementById("riga-turno").textContent = "🏆 Partita conclusa";
         impostaDadiAbilitati(false);
         disegnaGiocatori();
         mostraVittoria(dati.vincitore || "un giocatore");
-      } else if (dati.turnoDiId != null) {
+        return;
+      }
+
+      if (dati.turnoDiId != null && dati.tempoInizioTurno != null && Number(dati.durataMossaMs) > 0) {
+        animazioneMossaInCorso = false;
         aggiornaTurno(dati.turnoDiId);
         disegnaGiocatori();
-        if (dati.tempoInizioTurno != null && dati.durataMossaMs != null) {
-          avviaCountdownTurno(dati.tempoInizioTurno, dati.durataMossaMs);
-        }
+        avviaCountdownTurno(dati.tempoInizioTurno, dati.durataMossaMs);
+        return;
+      }
+
+      // Il server invia il turno reale in un secondo messaggio, dopo la durata
+      // completa dell'animazione. Nel frattempo manteniamo la mossa conclusa
+      // senza attribuire prematuramente il turno a un altro giocatore.
+      document.getElementById("riga-turno").textContent = "🎲 Mossa completata…";
+      impostaDadiAbilitati(false);
+      disegnaGiocatori();
+      animazioneMossaInCorso = false;
+
+      const statoAccodato = statoPartitaAccodato;
+      statoPartitaAccodato = null;
+      if (statoAccodato) {
+        gestisciStatoPartita(statoAccodato);
       } else {
-        document.getElementById("riga-turno").textContent = "⏳ Preparazione del prossimo turno…";
-        impostaDadiAbilitati(false);
-        disegnaGiocatori();
+        pianificaRecuperoTurno();
       }
     };
 
@@ -2253,6 +2347,7 @@ function connetti() {
 }
 
 function aggiornaTurno(turnoDiId) {
+  annullaRecuperoTurno();
   const eraIlMioTurno = mioTurno;
   turnoLocalmenteCompletato = false;
   turnoAttualeId = turnoDiId;
@@ -2344,33 +2439,10 @@ function urlLobby() {
   return stanza ? "lobby.html?stanza=" + encodeURIComponent(stanza) : "lobby.html";
 }
 
-function markerRitornoLobbyValido() {
-  try {
-    const grezzo = sessionStorage.getItem(CHIAVE_RITORNO_LOBBY_PARTITA);
-    if (!grezzo) return false;
-    const marker = JSON.parse(grezzo);
-    if (!marker || typeof marker !== "object") return false;
-    if (String(marker.partitaId || "") !== String(partitaId || "")) return false;
-    if (String(marker.stanza || "") !== String(stanza || "")) return false;
-    const creatoIl = Number(marker.creatoIl || 0);
-    if (!Number.isFinite(creatoIl) || Date.now() - creatoIl > 6 * 60 * 60 * 1000) return false;
-    return true;
-  } catch (e) {
-    return false;
-  }
-}
-
 function tornaAllaLobby() {
   paginaInChiusura = true;
-
-  if (markerRitornoLobbyValido() && window.history.length > 1) {
-    window.history.back();
-    return;
-  }
-
-  try {
-    sessionStorage.removeItem(CHIAVE_RITORNO_LOBBY_PARTITA);
-  } catch (e) {}
+  // Anche il ritorno sostituisce la voce corrente: il browser conserva
+  // Stanze -> Lobby, ma non mantiene mai la Partita nella cronologia.
   window.location.replace(urlLobby());
 }
 
