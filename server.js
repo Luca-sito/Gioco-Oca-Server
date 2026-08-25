@@ -462,6 +462,8 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET && GOOGLE_CALLBACK_URL) {
         passwordHash: null,
         googleId, providerGoogle: true,
         avatar: profile.photos?.[0]?.value || null,
+        avatarPresente: Boolean(profile.photos?.[0]?.value),
+        avatarAggiornatoIl: profile.photos?.[0]?.value ? Date.now() : 0,
         ruolo: "utente", stato: "attivo", sospesoFino: null,
         avvisi: [], creatoIl: Date.now(), ultimoAccesso: Date.now()
       });
@@ -526,7 +528,7 @@ app.post("/api/registrati", limiteLogin, async (req, res) => {
     await nuovoRef.set({
       partiteVinte: 0, partiteGiocate: 0, puntiTotali: 0, elo: ELO_INIZIALE, streakVittorieAttuale: 0, streakVittorieMassima: 0, vittoriaPiuVeloceSecondi: null,
       email: emailPulita, emailLower: emailPulita, nickname: nicknamePulito, nicknameLower, passwordHash,
-      avatar: null, ruolo: "utente", stato: "attivo", sospesoFino: null, avvisi: [], creatoIl: Date.now(), ultimoAccesso: Date.now()
+      avatar: null, avatarPresente: false, avatarAggiornatoIl: 0, ruolo: "utente", stato: "attivo", sospesoFino: null, avvisi: [], creatoIl: Date.now(), ultimoAccesso: Date.now()
     });
     const token = creaToken(uid, nicknamePulito, "utente");
     res.cookie("token", token, OPZIONI_COOKIE);
@@ -614,11 +616,61 @@ app.post("/api/carica-avatar", richiediAuth, uploadAvatar.single("avatar"), asyn
   try {
     if (!req.file) return res.status(400).json({ errore: "Nessuna immagine ricevuta." });
     const dataUri = `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`;
-    await db.ref("utenti/" + req.utente.uid).update({ avatar: dataUri });
-    res.json({ avatar: dataUri });
+    const avatarAggiornatoIl = Date.now();
+    await db.ref("utenti/" + req.utente.uid).update({
+      avatar: dataUri,
+      avatarPresente: true,
+      avatarAggiornatoIl
+    });
+    res.json({ avatar: dataUri, avatarAggiornatoIl });
   } catch (err) { console.error(err); res.status(400).json({ errore: err.message || "Errore durante il caricamento." }); }
 });
 
+
+// Dati minimi per l'HTML Embed dell'account.
+// Evita di trasferire il pesante campo avatar base64 ad ogni controllo sessione.
+app.get("/api/me-menu", richiediAuth, async (req, res) => {
+  if (!db) return res.status(503).json({ errore: "Servizio account non disponibile." });
+
+  try {
+    const refUtente = db.ref("utenti/" + req.utente.uid);
+
+    const [snapNickname, snapAvatarPresente, snapAvatarAggiornatoIl] = await Promise.all([
+      refUtente.child("nickname").once("value"),
+      refUtente.child("avatarPresente").once("value"),
+      refUtente.child("avatarAggiornatoIl").once("value")
+    ]);
+
+    const nickname = snapNickname.val() || req.utente.nickname || "Utente";
+    let avatarPresente = snapAvatarPresente.val();
+    let avatarAggiornatoIl = Number(snapAvatarAggiornatoIl.val()) || 0;
+
+    // Compatibilita con gli avatar caricati prima dell'introduzione
+    // dei metadati avatarPresente/avatarAggiornatoIl. Questa lettura pesante
+    // avviene solo una volta per gli account vecchi; poi i flag vengono salvati.
+    if (typeof avatarPresente !== "boolean") {
+      const snapAvatar = await refUtente.child("avatar").once("value");
+      avatarPresente = Boolean(snapAvatar.val());
+      if (avatarPresente && !avatarAggiornatoIl) avatarAggiornatoIl = 1;
+
+      await refUtente.update({
+        avatarPresente,
+        avatarAggiornatoIl
+      });
+    }
+
+    res.set("Cache-Control", "no-store");
+    return res.json({
+      uid: req.utente.uid,
+      nickname,
+      avatarPresente,
+      avatarVersione: avatarAggiornatoIl || 1
+    });
+  } catch (err) {
+    console.error("Errore /api/me-menu:", err);
+    return res.status(500).json({ errore: "Errore del server." });
+  }
+});
 
 // Restituisce l'avatar come una normale immagine HTTPS.
 // Serve a evitare i problemi di data: URI / Blob URL dentro gli HTML Embed Wix.
@@ -637,7 +689,7 @@ app.get("/api/avatar/:uid", async (req, res) => {
     // Avatar Google o altro URL HTTPS già remoto.
     if (/^https:\/\//i.test(valore)) {
       res.set("Cross-Origin-Resource-Policy", "cross-origin");
-      res.set("Cache-Control", "private, max-age=60");
+      res.set("Cache-Control", "private, max-age=86400");
       return res.redirect(302, valore);
     }
 
@@ -654,7 +706,7 @@ app.get("/api/avatar/:uid", async (req, res) => {
     res.set({
       "Content-Type": mime,
       "Content-Length": String(buffer.length),
-      "Cache-Control": "private, max-age=300",
+      "Cache-Control": "private, max-age=86400",
       "X-Content-Type-Options": "nosniff",
       "Cross-Origin-Resource-Policy": "cross-origin"
     });
