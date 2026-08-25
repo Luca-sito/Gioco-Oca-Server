@@ -4547,6 +4547,7 @@ async function ripristinaPartiteDaFirebase() {
       gruppoSpareggioAttuale: Array.isArray(p.gruppoSpareggioAttuale) ? p.gruppoSpareggioAttuale : null,
       coppieAudioApprovate: new Set(),
       partecipantiMediaPronti: new Set(),
+      partecipantiMediaInfo: new Map(),
       fase: p.fase || (p.iniziata === true ? "in_corso" : "attesa_giocatori")
     };
 
@@ -4635,7 +4636,18 @@ function calcolaUidInPartita(nomeStanza) {
 }
 
 function costruisciStatoGiocatori(partita) {
-  return partita.ordineGiocatori.map(id => ({ id, nome: partita.giocatori[id].nome, avatar: partita.giocatori[id].avatar || null, posizione: partita.giocatori[id].posizione }));
+  return partita.ordineGiocatori.map(id => ({
+    id,
+    nome: partita.giocatori[id].nome,
+    avatar: partita.giocatori[id].avatar || null,
+    posizione: partita.giocatori[id].posizione,
+    tipoDispositivo: partita.giocatori[id].tipoDispositivo || "computer"
+  }));
+}
+
+function normalizzaTipoDispositivoMedia(tipo) {
+  if (tipo === "cellulare" || tipo === "tablet" || tipo === "computer") return tipo;
+  return "computer";
 }
 
 function elencoPartecipantiMediaPronti(partita) {
@@ -4646,10 +4658,37 @@ function elencoPartecipantiMediaPronti(partita) {
   });
 }
 
+function elencoPartecipantiMediaInfo(partita) {
+  const pronti = elencoPartecipantiMediaPronti(partita);
+  const infoMap = partita && partita.partecipantiMediaInfo instanceof Map
+    ? partita.partecipantiMediaInfo
+    : new Map();
+
+  return pronti.map(uid => {
+    const giocatore = partita.giocatori[uid] || {};
+    const info = infoMap.get(uid) || {};
+    const tipoDispositivo = normalizzaTipoDispositivoMedia(
+      info.tipoDispositivo || giocatore.tipoDispositivo
+    );
+
+    return {
+      uid,
+      tipoDispositivo,
+      videoDisponibile: tipoDispositivo !== "cellulare" && info.videoDisponibile !== false
+    };
+  });
+}
+
 function inviaStatoMedia(partita) {
   if (!partita || partita.mediaAttiva !== true) return;
-  const partecipanti = elencoPartecipantiMediaPronti(partita);
-  const messaggio = JSON.stringify({ tipo: "statoMedia", mediaAttiva: true, partecipanti });
+  const partecipantiMedia = elencoPartecipantiMediaInfo(partita);
+  const partecipanti = partecipantiMedia.map(partecipante => partecipante.uid);
+  const messaggio = JSON.stringify({
+    tipo: "statoMedia",
+    mediaAttiva: true,
+    partecipanti,
+    partecipantiMedia
+  });
   Object.values(partita.giocatori).forEach(giocatore => {
     if (giocatore.socket && giocatore.socket.readyState === WebSocket.OPEN) giocatore.socket.send(messaggio);
   });
@@ -4669,6 +4708,7 @@ function configurazioneIcePerClient() {
 function rimuoviPartecipanteMedia(partita, uid, notifica = true) {
   if (!partita || !(partita.partecipantiMediaPronti instanceof Set)) return;
   const rimosso = partita.partecipantiMediaPronti.delete(uid);
+  if (partita.partecipantiMediaInfo instanceof Map) partita.partecipantiMediaInfo.delete(uid);
   if (rimosso && notifica) inviaStatoMedia(partita);
 }
 
@@ -5388,8 +5428,22 @@ wss.on("connection", (socket, request) => {
         const giocatore = partita.giocatori[uid];
         if (partita.mediaAttiva !== true || !giocatore || giocatore.socket !== socket) return;
         if (!(partita.partecipantiMediaPronti instanceof Set)) partita.partecipantiMediaPronti = new Set();
-        if (dati.attivo === false) partita.partecipantiMediaPronti.delete(uid);
-        else partita.partecipantiMediaPronti.add(uid);
+        if (!(partita.partecipantiMediaInfo instanceof Map)) partita.partecipantiMediaInfo = new Map();
+
+        if (dati.attivo === false) {
+          partita.partecipantiMediaPronti.delete(uid);
+          partita.partecipantiMediaInfo.delete(uid);
+        } else {
+          const tipoDispositivoMedia = normalizzaTipoDispositivoMedia(
+            giocatore.tipoDispositivo || tipoDispositivo
+          );
+          giocatore.tipoDispositivo = tipoDispositivoMedia;
+          partita.partecipantiMediaPronti.add(uid);
+          partita.partecipantiMediaInfo.set(uid, {
+            tipoDispositivo: tipoDispositivoMedia,
+            videoDisponibile: tipoDispositivoMedia !== "cellulare"
+          });
+        }
         inviaStatoMedia(partita);
         return;
       }
@@ -5539,6 +5593,7 @@ inviaAllaStanza(stanzaAttuale, {
           }
         }
         mioGiocatore.socket = socket;
+        mioGiocatore.tipoDispositivo = tipoDispositivo;
         nickname = mioGiocatore.nome; mioAvatar = mioGiocatore.avatar || null;
 
         if (!stanze[stanzaAttuale]) stanze[stanzaAttuale] = { giocatoriOnline: {}, partite: {} };
@@ -5585,7 +5640,11 @@ inviaAllaStanza(stanzaAttuale, {
         if (!stanzaAttuale || !uid) return;
         if (trovaPartitaAttivaPerUid(uid)) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Fai già parte di una partita attiva." })); return; }
         const mediaAttiva = dati.mediaAttiva === true;
-        if (mediaAttiva && dati.mediaConsenso !== true) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Per creare un tavolo con webcam e microfono devi prima autorizzarli." })); return; }
+        if (mediaAttiva && dati.mediaConsenso !== true) {
+          const requisitoMedia = tipoDispositivo === "cellulare" ? "il microfono" : "webcam e microfono";
+          socket.send(JSON.stringify({ tipo: "errore", messaggio: `Per creare questo tavolo devi prima autorizzare ${requisitoMedia}.` }));
+          return;
+        }
         const partitaId = "p" + Date.now() + Math.floor(Math.random() * 1000);
         const max = parseInt(dati.maxGiocatori);
         const nuovaPartita = {
@@ -5594,12 +5653,13 @@ inviaAllaStanza(stanzaAttuale, {
           chatAttiva: dati.chatAttiva !== false,
           mediaAttiva,
           fase: "attesa_giocatori",
-          giocatori: { [uid]: { nome: nickname, avatar: mioAvatar, posizione: 0, socket, turniSaltati: 0, tentativiAutomaticiConsecutivi: 0 } },
+          giocatori: { [uid]: { nome: nickname, avatar: mioAvatar, posizione: 0, socket, tipoDispositivo, turniSaltati: 0, tentativiAutomaticiConsecutivi: 0 } },
           ordineGiocatori: [uid], turnoAttuale: 0, iniziata: false, elaborandoTiro: false, animazioneTiroInCorso: false,
           tiriEffettuatiNelTurno: 0, tiriConsentitiNelTurno: 1,
           invitati: dati.modalita === "privata" ? { [uid]: true } : null, timerTurno: null, tempoInizioTurno: null,
           coppieAudioApprovate: new Set(),
-          partecipantiMediaPronti: new Set()
+          partecipantiMediaPronti: new Set(),
+          partecipantiMediaInfo: new Map()
         };
         stanze[stanzaAttuale].partite[partitaId] = nuovaPartita;
         try {
@@ -5630,8 +5690,12 @@ inviaAllaStanza(stanzaAttuale, {
         }
         if (Object.keys(partita.giocatori).length >= partita.maxGiocatori) return;
         if (partita.modalita === "privata") { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Questa è una partita privata: puoi entrare solo se il creatore ti invita direttamente." })); return; }
-        if (partita.mediaAttiva === true && dati.mediaConsenso !== true) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Per entrare in questo tavolo devi autorizzare webcam e microfono." })); return; }
-        partita.giocatori[uid] = { nome: nickname, avatar: mioAvatar, posizione: 0, socket, turniSaltati: 0, tentativiAutomaticiConsecutivi: 0 };
+        if (partita.mediaAttiva === true && dati.mediaConsenso !== true) {
+          const requisitoMedia = tipoDispositivo === "cellulare" ? "il microfono" : "webcam e microfono";
+          socket.send(JSON.stringify({ tipo: "errore", messaggio: `Per entrare in questo tavolo devi autorizzare ${requisitoMedia}.` }));
+          return;
+        }
+        partita.giocatori[uid] = { nome: nickname, avatar: mioAvatar, posizione: 0, socket, tipoDispositivo, turniSaltati: 0, tentativiAutomaticiConsecutivi: 0 };
         partita.ordineGiocatori.push(uid);
         try {
           await aggiornaStatoPartita(partita.id, { giocatori: preparaGiocatoriPerFirebase(partita.giocatori), ordineGiocatori: partita.ordineGiocatori });
@@ -5692,7 +5756,11 @@ inviaAllaStanza(stanzaAttuale, {
           return;
         }
         if (partita.fase !== "attesa_giocatori" || partita.iniziata === true) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Questa partita è già iniziata." })); return; }
-        if (partita.mediaAttiva === true && dati.mediaConsenso !== true) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Per accettare questo invito devi autorizzare webcam e microfono." })); return; }
+        if (partita.mediaAttiva === true && dati.mediaConsenso !== true) {
+          const requisitoMedia = tipoDispositivo === "cellulare" ? "il microfono" : "webcam e microfono";
+          socket.send(JSON.stringify({ tipo: "errore", messaggio: `Per accettare questo invito devi autorizzare ${requisitoMedia}.` }));
+          return;
+        }
         if (partita.giocatori[uid]) return;
         if (trovaPartitaAttivaPerUid(uid)) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Fai già parte di un'altra partita." })); return; }
         if (await partitaContieneUtenteBloccato(partita, uid)) {
@@ -5705,7 +5773,7 @@ inviaAllaStanza(stanzaAttuale, {
         }
         if (Object.keys(partita.giocatori).length >= partita.maxGiocatori) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "La partita si è già riempita." })); return; }
         stanzaAttuale = nomeStanza;
-        partita.giocatori[uid] = { nome: nickname, avatar: mioAvatar, posizione: 0, socket, turniSaltati: 0, tentativiAutomaticiConsecutivi: 0 };
+        partita.giocatori[uid] = { nome: nickname, avatar: mioAvatar, posizione: 0, socket, tipoDispositivo, turniSaltati: 0, tentativiAutomaticiConsecutivi: 0 };
         partita.ordineGiocatori.push(uid);
         try {
           await aggiornaStatoPartita(partita.id, { giocatori: preparaGiocatoriPerFirebase(partita.giocatori), ordineGiocatori: partita.ordineGiocatori });
