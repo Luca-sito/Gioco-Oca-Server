@@ -342,6 +342,68 @@ async function statoAmicizia(mioUid, altroUid) {
   return "nessuno";
 }
 
+
+// ===== BLOCCHI / NEMICI =====
+// Il blocco è creato da un utente, ma gli effetti di interazione sono reciproci:
+// se A blocca B, A e B non possono scriversi, invitarsi o stare nella stessa partita.
+const CACHE_BLOCCHI_TTL_MS = 60 * 1000;
+const cacheBlocchi = new Map();
+
+function chiaveCoppiaBlocco(uidA, uidB) {
+  return [String(uidA || ""), String(uidB || "")].sort().join("::");
+}
+
+function invalidaCacheBlocco(uidA, uidB) {
+  cacheBlocchi.delete(chiaveCoppiaBlocco(uidA, uidB));
+}
+
+async function statoBloccoTra(mioUid, altroUid) {
+  if (!db || !mioUid || !altroUid || mioUid === altroUid) return "nessuno";
+
+  const [mioVersoAltro, altroVersoMe] = await Promise.all([
+    db.ref(`blocchi/${mioUid}/${altroUid}`).once("value"),
+    db.ref(`blocchi/${altroUid}/${mioUid}`).once("value")
+  ]);
+
+  if (mioVersoAltro.exists()) return "bloccato_da_me";
+  if (altroVersoMe.exists()) return "mi_ha_bloccato";
+  return "nessuno";
+}
+
+async function sonoBloccatiTraLoro(uidA, uidB) {
+  if (!db || !uidA || !uidB || uidA === uidB) return false;
+
+  const chiave = chiaveCoppiaBlocco(uidA, uidB);
+  const ora = Date.now();
+  const cached = cacheBlocchi.get(chiave);
+
+  if (cached && ora - cached.lettoIl < CACHE_BLOCCHI_TTL_MS) {
+    return cached.bloccati;
+  }
+
+  const [ab, ba] = await Promise.all([
+    db.ref(`blocchi/${uidA}/${uidB}`).once("value"),
+    db.ref(`blocchi/${uidB}/${uidA}`).once("value")
+  ]);
+
+  const bloccati = ab.exists() || ba.exists();
+  cacheBlocchi.set(chiave, { bloccati, lettoIl: ora });
+  return bloccati;
+}
+
+async function partitaContieneUtenteBloccato(partita, uid) {
+  if (!partita || !uid) return false;
+
+  const altriUid = Object.keys(partita.giocatori || {})
+    .filter(altroUid => altroUid !== uid);
+
+  for (const altroUid of altriUid) {
+    if (await sonoBloccatiTraLoro(uid, altroUid)) return true;
+  }
+
+  return false;
+}
+
 function preparaNicknameGoogle(nome, email) {
   let base = pulisciTesto(nome || "", 15).replace(/[^a-zA-Z0-9_ ]/g, "").trim();
   if (!base) base = "Google";
@@ -485,11 +547,11 @@ app.get("/auth/google", (req, res, next) => {
 });
 
 app.get("/auth/google/callback",
-  passport.authenticate("google", { session: false, failureRedirect: "/accedi.html?errore=google" }),
+  passport.authenticate("google", { session: false, failureRedirect: "/login.html?errore=google" }),
   async (req, res) => {
     try {
       const utente = req.user;
-      if (!utente || !utente.uid) return res.redirect("/accedi.html?errore=google");
+      if (!utente || !utente.uid) return res.redirect("/login.html?errore=google");
 
       const token = creaToken(utente.uid, utente.nickname, utente.ruolo || "utente");
       res.cookie("token", token, OPZIONI_COOKIE);
@@ -502,7 +564,7 @@ app.get("/auth/google/callback",
       return res.redirect(URL_HOME_WIX);
     } catch (errore) {
       console.error("Errore callback Google:", errore);
-      return res.redirect("/accedi.html?errore=google");
+      return res.redirect("/login.html?errore=google");
     }
   }
 );
@@ -713,15 +775,19 @@ app.post("/api/elimina-avatar", richiediAuth, async (req, res) => {
       });
     }
 
+    const avatarAggiornatoIl = Date.now();
+
     await riferimentoUtente.update({
       avatar: null,
-      avatarAggiornatoIl: Date.now()
+      avatarPresente: false,
+      avatarAggiornatoIl
     });
 
     return res.json({
       ok: true,
       avatar: null,
-      avatarAggiornatoIl: Date.now(),
+      avatarPresente: false,
+      avatarAggiornatoIl,
       messaggio: "Avatar eliminato correttamente."
     });
 
@@ -802,6 +868,10 @@ async function puoVedereFotoAlbum(mioUid, proprietarioUid, visibilita) {
 
   if (mioUid === proprietarioUid) {
     return true;
+  }
+
+  if (await sonoBloccatiTraLoro(mioUid, proprietarioUid)) {
+    return false;
   }
 
   return (
@@ -903,6 +973,7 @@ app.get(
         mioUid
       ) {
         puoVederePrivate =
+          !(await sonoBloccatiTraLoro(mioUid, proprietarioUid)) &&
           (await statoAmicizia(
             mioUid,
             proprietarioUid
@@ -3789,6 +3860,147 @@ app.post("/api/contatti", limiteContatti, async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json({ errore: "Errore durante l'invio, riprova." }); }
 });
 
+
+// ===== UTENTI BLOCCATI =====
+app.get("/api/blocchi", richiediAuth, async (req, res) => {
+  if (!db) return res.status(503).json({ errore: "Servizio blocchi non disponibile." });
+
+  try {
+    const mioUid = req.utente.uid;
+    const tuttiBlocchi = (await db.ref("blocchi").once("value")).val() || {};
+    const miei = tuttiBlocchi[mioUid] || {};
+    const bloccatiDaMe = [];
+    const interazioniBloccateUid = new Set(Object.keys(miei));
+
+    for (const [uid, datiBlocco] of Object.entries(miei)) {
+      const utente = (await db.ref(`utenti/${uid}`).once("value")).val();
+
+      bloccatiDaMe.push({
+        uid,
+        nickname:
+          utente && utente.nickname
+            ? utente.nickname
+            : (datiBlocco && datiBlocco.nickname) || "Utente",
+        avatar: utente && utente.avatar ? utente.avatar : null,
+        bloccatoIl: Number(datiBlocco && datiBlocco.bloccatoIl) || 0
+      });
+    }
+
+    for (const [bloccanteUid, mappa] of Object.entries(tuttiBlocchi)) {
+      if (
+        bloccanteUid !== mioUid &&
+        mappa &&
+        mappa[mioUid]
+      ) {
+        interazioniBloccateUid.add(bloccanteUid);
+      }
+    }
+
+    bloccatiDaMe.sort((a, b) => b.bloccatoIl - a.bloccatoIl);
+
+    res.set("Cache-Control", "no-store");
+    return res.json({
+      bloccatiDaMe,
+      interazioniBloccateUid: Array.from(interazioniBloccateUid)
+    });
+  } catch (err) {
+    console.error("Errore GET /api/blocchi:", err);
+    return res.status(500).json({
+      errore: "Errore durante il caricamento degli utenti bloccati."
+    });
+  }
+});
+
+app.post("/api/blocchi", richiediAuth, async (req, res) => {
+  if (!db) return res.status(503).json({ errore: "Servizio blocchi non disponibile." });
+
+  try {
+    const mioUid = req.utente.uid;
+    const utenteUid = pulisciTesto(
+      String((req.body || {}).utenteUid || ""),
+      128
+    );
+
+    if (!utenteUid) {
+      return res.status(400).json({ errore: "Utente non valido." });
+    }
+
+    if (utenteUid === mioUid) {
+      return res.status(400).json({ errore: "Non puoi bloccare te stesso." });
+    }
+
+    const altroUtente = (
+      await db.ref(`utenti/${utenteUid}`).once("value")
+    ).val();
+
+    if (!altroUtente) {
+      return res.status(404).json({ errore: "Utente non trovato." });
+    }
+
+    const ora = Date.now();
+
+    await db.ref().update({
+      [`blocchi/${mioUid}/${utenteUid}`]: {
+        bloccatoIl: ora,
+        nickname: altroUtente.nickname || "Utente"
+      },
+
+      // Il blocco interrompe sempre amicizia e richieste pendenti.
+      [`utenti/${mioUid}/amici/${utenteUid}`]: null,
+      [`utenti/${utenteUid}/amici/${mioUid}`]: null,
+      [`utenti/${mioUid}/richiesteInviate/${utenteUid}`]: null,
+      [`utenti/${mioUid}/richiesteRicevute/${utenteUid}`]: null,
+      [`utenti/${utenteUid}/richiesteInviate/${mioUid}`]: null,
+      [`utenti/${utenteUid}/richiesteRicevute/${mioUid}`]: null
+    });
+
+    invalidaCacheBlocco(mioUid, utenteUid);
+
+    return res.json({
+      ok: true,
+      statoBlocco: "bloccato_da_me",
+      bloccatoIl: ora
+    });
+  } catch (err) {
+    console.error("Errore POST /api/blocchi:", err);
+    return res.status(500).json({
+      errore: "Errore durante il blocco dell'utente."
+    });
+  }
+});
+
+app.delete("/api/blocchi/:utenteUid", richiediAuth, async (req, res) => {
+  if (!db) return res.status(503).json({ errore: "Servizio blocchi non disponibile." });
+
+  try {
+    const mioUid = req.utente.uid;
+    const utenteUid = pulisciTesto(String(req.params.utenteUid || ""), 128);
+
+    if (!utenteUid || utenteUid === mioUid) {
+      return res.status(400).json({ errore: "Utente non valido." });
+    }
+
+    const mioBlocco = db.ref(`blocchi/${mioUid}/${utenteUid}`);
+    const snap = await mioBlocco.once("value");
+
+    if (!snap.exists()) {
+      return res.status(404).json({
+        errore: "Non hai bloccato questo utente."
+      });
+    }
+
+    await mioBlocco.remove();
+    invalidaCacheBlocco(mioUid, utenteUid);
+
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error("Errore DELETE /api/blocchi/:utenteUid:", err);
+    return res.status(500).json({
+      errore: "Errore durante lo sblocco dell'utente."
+    });
+  }
+});
+
 // ===== PROFILO PUBBLICO, STORICO =====
 app.get("/api/profilo-pubblico/:nickname", richiediAuth, async (req, res) => {
   if (!db) return res.status(500).json({ errore: "Servizio non disponibile." });
@@ -3803,6 +4015,11 @@ app.get("/api/profilo-pubblico/:nickname", richiediAuth, async (req, res) => {
 
     const giocate = utente.partiteGiocate || 0;
     const vinte = utente.partiteVinte || 0;
+    const statoBlocco = await statoBloccoTra(req.utente.uid, utente.uid);
+    const statoAmiciziaCorrente =
+      statoBlocco === "nessuno"
+        ? await statoAmicizia(req.utente.uid, utente.uid)
+        : "nessuno";
 
     res.json({
       uid: utente.uid,
@@ -3817,7 +4034,8 @@ app.get("/api/profilo-pubblico/:nickname", richiediAuth, async (req, res) => {
       streakVittorieMassima: utente.streakVittorieMassima || 0,
       vittoriaPiuVeloceSecondi: utente.vittoriaPiuVeloceSecondi ?? null,
       badge: calcolaBadge(utente),
-      statoAmicizia: await statoAmicizia(req.utente.uid, utente.uid)
+      statoAmicizia: statoAmiciziaCorrente,
+      statoBlocco
     });
   } catch (err) {
     console.error(err);
@@ -3844,6 +4062,12 @@ app.get("/api/storico", richiediAuth, async (req, res) => {
 app.get("/api/messaggi-privati/:altroUid", richiediAuth, async (req, res) => {
   if (!db) return res.status(500).json({ errore: "Servizio non disponibile." });
   try {
+    if (await sonoBloccatiTraLoro(req.utente.uid, req.params.altroUid)) {
+      return res.status(403).json({
+        errore: "Non puoi scambiare messaggi privati con questo utente."
+      });
+    }
+
     const idConv = idConversazione(req.utente.uid, req.params.altroUid);
     const messaggi = (await db.ref("messaggiPrivati/" + idConv).once("value")).val() || {};
     const lista = Object.entries(messaggi).map(([id, m]) => ({ id, ...m })).sort((a, b) => a.data - b.data);
@@ -3860,6 +4084,11 @@ app.post("/api/messaggi-privati", limiteMessaggiPrivati, richiediAuth, async (re
     const { destinatarioUid, testo } = req.body;
     if (!destinatarioUid || !testo || !testo.trim()) return res.status(400).json({ errore: "Dati mancanti." });
     if (destinatarioUid === req.utente.uid) return res.status(400).json({ errore: "Non puoi scrivere a te stesso." });
+    if (await sonoBloccatiTraLoro(req.utente.uid, destinatarioUid)) {
+      return res.status(403).json({
+        errore: "Non puoi scambiare messaggi privati con questo utente."
+      });
+    }
     const testoPulito = pulisciTesto(testo, 500);
     if (!testoPulito) return res.status(400).json({ errore: "Messaggio vuoto." });
     const mittente = (await db.ref("utenti/" + req.utente.uid).once("value")).val();
@@ -3875,21 +4104,53 @@ app.post("/api/messaggi-privati", limiteMessaggiPrivati, richiediAuth, async (re
 
 app.get("/api/conversazioni", richiediAuth, async (req, res) => {
   if (!db) return res.status(500).json({ errore: "Servizio non disponibile." });
+
   try {
-    const tutte = (await db.ref("messaggiPrivati").once("value")).val() || {};
-    const mieUid = req.utente.uid;
+    const [snapMessaggi, snapBlocchi] = await Promise.all([
+      db.ref("messaggiPrivati").once("value"),
+      db.ref("blocchi").once("value")
+    ]);
+
+    const tutte = snapMessaggi.val() || {};
+    const blocchi = snapBlocchi.val() || {};
+    const mioUid = req.utente.uid;
     const conversazioni = {};
+
+    const coppiaBloccata = altroUid => Boolean(
+      (blocchi[mioUid] && blocchi[mioUid][altroUid]) ||
+      (blocchi[altroUid] && blocchi[altroUid][mioUid])
+    );
+
     Object.entries(tutte).forEach(([idConv, messaggi]) => {
-      if (!idConv.split("_").includes(mieUid)) return;
-      const lista = Object.values(messaggi);
+      if (!idConv.split("_").includes(mioUid)) return;
+
+      const lista = Object.values(messaggi || {});
       if (!lista.length) return;
-      const ultimo = lista.sort((a, b) => b.data - a.data)[0];
-      const altroUid = ultimo.daUid === mieUid ? ultimo.aUid : ultimo.daUid;
-      const altroNome = ultimo.daUid === mieUid ? ultimo.aNome : ultimo.daNome;
-      conversazioni[altroUid] = { altroUid, altroNome, ultimoTesto: ultimo.testo, ultimaData: ultimo.data, nonLetti: lista.filter(m => m.aUid === mieUid && !m.letto).length };
+
+      const ultimo = [...lista].sort((a, b) => b.data - a.data)[0];
+      const altroUid = ultimo.daUid === mioUid ? ultimo.aUid : ultimo.daUid;
+
+      if (coppiaBloccata(altroUid)) return;
+
+      const altroNome = ultimo.daUid === mioUid ? ultimo.aNome : ultimo.daNome;
+
+      conversazioni[altroUid] = {
+        altroUid,
+        altroNome,
+        ultimoTesto: ultimo.testo,
+        ultimaData: ultimo.data,
+        nonLetti: lista.filter(m => m.aUid === mioUid && !m.letto).length
+      };
     });
-    res.json({ conversazioni: Object.values(conversazioni).sort((a, b) => b.ultimaData - a.ultimaData) });
-  } catch (err) { console.error(err); res.status(500).json({ errore: "Errore del server." }); }
+
+    return res.json({
+      conversazioni: Object.values(conversazioni)
+        .sort((a, b) => b.ultimaData - a.ultimaData)
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ errore: "Errore del server." });
+  }
 });
 
 // ===== AMICI =====
@@ -3899,6 +4160,11 @@ app.post("/api/amici/richiedi", limiteAmici, richiediAuth, async (req, res) => {
     const { destinatarioUid } = req.body;
     if (!destinatarioUid) return res.status(400).json({ errore: "Dati mancanti." });
     if (destinatarioUid === req.utente.uid) return res.status(400).json({ errore: "Non puoi inviare una richiesta a te stesso." });
+    if (await sonoBloccatiTraLoro(req.utente.uid, destinatarioUid)) {
+      return res.status(403).json({
+        errore: "Non puoi inviare una richiesta di amicizia a un utente bloccato."
+      });
+    }
     const destinatario = (await db.ref("utenti/" + destinatarioUid).once("value")).val();
     if (!destinatario) return res.status(404).json({ errore: "Utente non trovato." });
     const stato = await statoAmicizia(req.utente.uid, destinatarioUid);
@@ -3920,6 +4186,11 @@ app.post("/api/amici/accetta", richiediAuth, async (req, res) => {
   try {
     const { daUid } = req.body;
     if (!daUid) return res.status(400).json({ errore: "Dati mancanti." });
+    if (await sonoBloccatiTraLoro(req.utente.uid, daUid)) {
+      return res.status(403).json({
+        errore: "Non puoi accettare l'amicizia con un utente bloccato."
+      });
+    }
     if (!(await db.ref("utenti/" + req.utente.uid + "/richiesteRicevute/" + daUid).once("value")).exists()) return res.status(400).json({ errore: "Nessuna richiesta da questo utente." });
     const mioNickname = req.utente.nickname;
     await db.ref().update({
@@ -4228,6 +4499,52 @@ function inviaAllaStanza(nomeStanza, messaggio) {
     const s = socketsPerId[id];
     if (s && s.readyState === WebSocket.OPEN) s.send(JSON.stringify(messaggio));
   });
+}
+
+
+async function inviaChatLobbyFiltrata(nomeStanza, mittenteUid, messaggio) {
+  if (!stanze[nomeStanza]) return;
+
+  const entries = Object.entries(stanze[nomeStanza].giocatoriOnline || {});
+
+  for (const [socketId, giocatore] of entries) {
+    if (!giocatore || !giocatore.uid) continue;
+
+    if (
+      giocatore.uid !== mittenteUid &&
+      await sonoBloccatiTraLoro(mittenteUid, giocatore.uid)
+    ) {
+      continue;
+    }
+
+    const destinatarioSocket = socketsPerId[socketId];
+    if (
+      destinatarioSocket &&
+      destinatarioSocket.readyState === WebSocket.OPEN
+    ) {
+      destinatarioSocket.send(JSON.stringify(messaggio));
+    }
+  }
+}
+
+async function inviaChatPartitaFiltrata(partita, mittenteUid, messaggio) {
+  if (!partita) return;
+
+  for (const [destinatarioUid, giocatore] of Object.entries(partita.giocatori || {})) {
+    if (
+      destinatarioUid !== mittenteUid &&
+      await sonoBloccatiTraLoro(mittenteUid, destinatarioUid)
+    ) {
+      continue;
+    }
+
+    if (
+      giocatore.socket &&
+      giocatore.socket.readyState === WebSocket.OPEN
+    ) {
+      giocatore.socket.send(JSON.stringify(messaggio));
+    }
+  }
 }
 
 function inviaListaPartite(nomeStanza) {
@@ -5125,6 +5442,13 @@ inviaAllaStanza(stanzaAttuale, {
         if (partita.fase !== "attesa_giocatori" || partita.iniziata === true) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Questa partita è già iniziata." })); return; }
         if (partita.giocatori[uid]) return;
         if (trovaPartitaAttivaPerUid(uid)) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Fai già parte di un'altra partita." })); return; }
+        if (await partitaContieneUtenteBloccato(partita, uid)) {
+          socket.send(JSON.stringify({
+            tipo: "errore",
+            messaggio: "Non puoi entrare in una partita che contiene un giocatore con cui è attivo un blocco."
+          }));
+          return;
+        }
         if (Object.keys(partita.giocatori).length >= partita.maxGiocatori) return;
         if (partita.modalita === "privata") { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Questa è una partita privata: puoi entrare solo se il creatore ti invita direttamente." })); return; }
         if (partita.mediaAttiva === true && dati.mediaConsenso !== true) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Per entrare in questo tavolo devi autorizzare webcam e microfono." })); return; }
@@ -5155,6 +5479,13 @@ inviaAllaStanza(stanzaAttuale, {
         if (Object.keys(partita.giocatori).length >= partita.maxGiocatori) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "La partita è già al completo." })); return; }
         const destinatarioUid = dati.destinatarioUid;
         if (!destinatarioUid || destinatarioUid === uid || partita.giocatori[destinatarioUid]) return;
+        if (await sonoBloccatiTraLoro(uid, destinatarioUid)) {
+          socket.send(JSON.stringify({
+            tipo: "errore",
+            messaggio: "Non puoi invitare questo giocatore perché tra voi è attivo un blocco."
+          }));
+          return;
+        }
         const stanzaOggetto = stanze[nomeStanza];
         if (!stanzaOggetto) return;
         const socketIdDestinatario = Object.keys(stanzaOggetto.giocatoriOnline).find(sid => stanzaOggetto.giocatoriOnline[sid].uid === destinatarioUid);
@@ -5185,6 +5516,14 @@ inviaAllaStanza(stanzaAttuale, {
         if (partita.mediaAttiva === true && dati.mediaConsenso !== true) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Per accettare questo invito devi autorizzare webcam e microfono." })); return; }
         if (partita.giocatori[uid]) return;
         if (trovaPartitaAttivaPerUid(uid)) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Fai già parte di un'altra partita." })); return; }
+        if (await partitaContieneUtenteBloccato(partita, uid)) {
+          delete partita.invitati[uid];
+          socket.send(JSON.stringify({
+            tipo: "errore",
+            messaggio: "Non puoi entrare: nella partita è presente un giocatore con cui è attivo un blocco."
+          }));
+          return;
+        }
         if (Object.keys(partita.giocatori).length >= partita.maxGiocatori) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "La partita si è già riempita." })); return; }
         stanzaAttuale = nomeStanza;
         partita.giocatori[uid] = { nome: nickname, avatar: mioAvatar, posizione: 0, socket, turniSaltati: 0, tentativiAutomaticiConsecutivi: 0 };
@@ -5218,7 +5557,11 @@ inviaAllaStanza(stanzaAttuale, {
         if (typeof dati.testo !== "string") return;
         const testo = pulisciTesto(dati.testo, 300);
         if (testo.length === 0) return;
-        inviaAllaStanza(stanzaAttuale, { tipo: "chat", uid, nome: nickname, testo });
+        await inviaChatLobbyFiltrata(
+          stanzaAttuale,
+          uid,
+          { tipo: "chat", uid, nome: nickname, testo }
+        );
         return;
       }
 
@@ -5233,9 +5576,11 @@ inviaAllaStanza(stanzaAttuale, {
         if (partita.chatAttiva === false) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "La chat è disattivata in questa partita." })); return; }
         const mittente = partita.giocatori[uid];
         if (!mittente || mittente.socket !== socket) return;
-        Object.values(partita.giocatori).forEach(g => {
-          if (g.socket && g.socket.readyState === WebSocket.OPEN) g.socket.send(JSON.stringify({ tipo: "chatPartita", nome: mittente.nome, testo }));
-        });
+        await inviaChatPartitaFiltrata(
+          partita,
+          uid,
+          { tipo: "chatPartita", nome: mittente.nome, testo }
+        );
         return;
       }
 
