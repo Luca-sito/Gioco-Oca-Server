@@ -4280,6 +4280,88 @@ app.get("/api/avvisi", async (req, res) => {
   }
 });
 
+function contaAvvisiNonLetti(valoreAvvisi, ultimoLettoIl) {
+  const ultimoLetto = Math.max(0, Number(ultimoLettoIl) || 0);
+  return Object.values(valoreAvvisi || {}).reduce((totale, avviso) => {
+    const data = Number(avviso && avviso.data) || 0;
+    return totale + (data > ultimoLetto ? 1 : 0);
+  }, 0);
+}
+
+app.get("/api/avvisi/non-letti", richiediAuth, async (req, res) => {
+  if (!db) return res.status(503).json({ errore: "Servizio avvisi non disponibile." });
+
+  try {
+    const [snapAvvisi, snapUltimoLetto] = await Promise.all([
+      db.ref("avvisiPiattaforma").once("value"),
+      db.ref(`utenti/${req.utente.uid}/ultimoAvvisoPiattaformaLettoIl`).once("value")
+    ]);
+
+    const valoreAvvisi = snapAvvisi.val() || {};
+    const ultimoLettoIl = Math.max(0, Number(snapUltimoLetto.val()) || 0);
+    const ultimoAvvisoIl = Object.values(valoreAvvisi).reduce(
+      (massimo, avviso) => Math.max(massimo, Number(avviso && avviso.data) || 0),
+      0
+    );
+
+    res.set("Cache-Control", "no-store");
+    return res.json({
+      nonLetti: contaAvvisiNonLetti(valoreAvvisi, ultimoLettoIl),
+      ultimoLettoIl,
+      ultimoAvvisoIl
+    });
+  } catch (errore) {
+    console.error("Errore GET /api/avvisi/non-letti:", errore);
+    return res.status(500).json({ errore: "Errore durante il conteggio degli avvisi non letti." });
+  }
+});
+
+app.post("/api/avvisi/segna-letti", richiediAuth, async (req, res) => {
+  if (!db) return res.status(503).json({ errore: "Servizio avvisi non disponibile." });
+
+  try {
+    const [snapAvvisi, snapUltimoLetto] = await Promise.all([
+      db.ref("avvisiPiattaforma").once("value"),
+      db.ref(`utenti/${req.utente.uid}/ultimoAvvisoPiattaformaLettoIl`).once("value")
+    ]);
+
+    const valoreAvvisi = snapAvvisi.val() || {};
+    const ultimoDisponibileIl = Object.values(valoreAvvisi).reduce(
+      (massimo, avviso) => Math.max(massimo, Number(avviso && avviso.data) || 0),
+      0
+    );
+
+    const finoARichiesto = Number(req.body && req.body.finoA);
+    let nuovoUltimoLettoIl;
+
+    if (ultimoDisponibileIl > 0) {
+      nuovoUltimoLettoIl = Number.isFinite(finoARichiesto) && finoARichiesto > 0
+        ? Math.min(Math.floor(finoARichiesto), ultimoDisponibileIl)
+        : ultimoDisponibileIl;
+    } else {
+      // Se non esistono ancora avvisi, inizializziamo il marcatore a ora:
+      // il primo avviso futuro risulterà comunque non letto.
+      nuovoUltimoLettoIl = Date.now();
+    }
+
+    const ultimoGiaLettoIl = Math.max(0, Number(snapUltimoLetto.val()) || 0);
+    nuovoUltimoLettoIl = Math.max(ultimoGiaLettoIl, nuovoUltimoLettoIl);
+
+    await db
+      .ref(`utenti/${req.utente.uid}/ultimoAvvisoPiattaformaLettoIl`)
+      .set(nuovoUltimoLettoIl);
+
+    return res.json({
+      ok: true,
+      ultimoLettoIl: nuovoUltimoLettoIl,
+      nonLetti: contaAvvisiNonLetti(valoreAvvisi, nuovoUltimoLettoIl)
+    });
+  } catch (errore) {
+    console.error("Errore POST /api/avvisi/segna-letti:", errore);
+    return res.status(500).json({ errore: "Errore durante l'aggiornamento degli avvisi letti." });
+  }
+});
+
 app.post("/api/admin/avvisi", richiediAdmin, async (req, res) => {
   if (!db) return res.status(503).json({ errore: "Servizio avvisi non disponibile." });
 
