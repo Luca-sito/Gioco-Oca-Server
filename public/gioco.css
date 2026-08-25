@@ -766,7 +766,7 @@ body.modalita-ruotata #mondo-ruotato {
 }
 
 .pedina-interno { transition: transform 0.3s ease; }
-.pedina-salta { animation: salto-pedina 0.32s ease; }
+.pedina-salta { animation: salto-pedina 0.22s ease; }
 
 @keyframes salto-pedina {
   0% { transform: translate(-50%, -100%) scale(1); }
@@ -1870,7 +1870,7 @@ body.modalita-desktop.media-partita #btn-giocatori {
 
         animation:
             salto-pedina-mobile
-            0.32s
+            0.22s
             ease;
     }
 
