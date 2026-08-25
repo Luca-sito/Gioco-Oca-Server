@@ -979,6 +979,256 @@ body {
 }
 
 /* =========================================================
+   ALBUM FOTO
+   ========================================================= */
+
+.album-card {
+    background: #fff;
+    border: 1px solid #e1e6ea;
+    border-radius: 18px;
+    padding: 26px;
+    margin-bottom: 18px;
+    box-shadow: 0 8px 24px rgba(18, 28, 38, .045);
+}
+
+.album-intro {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 24px;
+}
+
+.album-intro h2 {
+    margin: 0;
+    color: #1b2530;
+    font-size: 22px;
+    font-weight: 900;
+}
+
+.album-intro p {
+    margin: 7px 0 0;
+    color: #7d8790;
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+.album-section {
+    padding-top: 22px;
+    border-top: 1px solid #edf0f2;
+}
+
+.album-section + .album-section {
+    margin-top: 28px;
+}
+
+.album-section-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 14px;
+}
+
+.album-section-title-wrap {
+    min-width: 0;
+}
+
+.album-section-title {
+    margin: 0;
+    color: #27323c;
+    font-size: 16px;
+    font-weight: 900;
+}
+
+.album-section-description {
+    margin: 5px 0 0;
+    color: #818b94;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.album-counter {
+    flex: 0 0 auto;
+    min-width: 62px;
+    padding: 7px 10px;
+    border-radius: 999px;
+    background: #f5f7f8;
+    border: 1px solid #e5e9ec;
+    color: #68737c;
+    font-size: 11px;
+    font-weight: 900;
+    text-align: center;
+}
+
+.album-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.album-photo-card,
+.album-add-card {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    min-width: 0;
+    overflow: hidden;
+    border-radius: 14px;
+}
+
+.album-photo-card {
+    background: #edf1f4;
+    border: 1px solid #e0e5e9;
+}
+
+.album-photo-card img.album-photo-image {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+}
+
+.album-photo-overlay {
+    position: absolute;
+    inset: auto 0 0 0;
+    padding: 22px 8px 8px;
+    display: flex;
+    justify-content: flex-end;
+    background: linear-gradient(to top, rgba(15, 22, 28, .62), rgba(15, 22, 28, 0));
+    opacity: 0;
+    transition: opacity .18s ease;
+}
+
+.album-photo-card:hover .album-photo-overlay,
+.album-photo-card:focus-within .album-photo-overlay {
+    opacity: 1;
+}
+
+.album-delete-photo {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: 0;
+    border-radius: 10px;
+    background: rgba(255,255,255,.95);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,.16);
+}
+
+.album-delete-photo:hover {
+    background: #fff1f1;
+}
+
+.album-delete-photo img {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+}
+
+.album-add-card {
+    border: 2px dashed #d7dde2;
+    background: #fafbfc;
+    color: #68737c;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px;
+    text-align: center;
+    transition: .18s ease;
+}
+
+.album-add-card:hover {
+    border-color: #ffd700;
+    background: #fffdf2;
+    transform: translateY(-1px);
+}
+
+.album-add-card[hidden] {
+    display: none !important;
+}
+
+.album-add-icon {
+    width: 30px;
+    height: 30px;
+    object-fit: contain;
+}
+
+.album-add-fallback {
+    font-size: 27px;
+    font-weight: 300;
+    line-height: 1;
+}
+
+.album-add-text {
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.album-empty {
+    grid-column: 1 / -1;
+    min-height: 88px;
+    border: 1px dashed #dfe4e8;
+    border-radius: 13px;
+    background: #fafbfc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 15px;
+    color: #929ba3;
+    font-size: 12px;
+    text-align: center;
+}
+
+.album-status {
+    min-height: 18px;
+    margin-top: 13px;
+    color: #7a858e;
+    font-size: 11px;
+}
+
+.album-status.success {
+    color: #2f8c58;
+}
+
+.album-status.error {
+    color: #c44242;
+}
+
+@media (max-width: 920px) {
+    .album-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 650px) {
+    .album-card {
+        padding: 18px;
+        border-radius: 14px;
+    }
+
+    .album-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 9px;
+    }
+
+    .album-photo-overlay {
+        opacity: 1;
+    }
+}
+
+@media (max-width: 390px) {
+    .album-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+/* =========================================================
    BADGE
    ========================================================= */
 
@@ -2463,20 +2713,79 @@ body {
                 id="panel-foto"
             >
 
-                <div class="card">
+                <div class="album-card">
 
-                    <h2 class="card-title">
-                        Foto
-                    </h2>
-
-                    <p class="card-subtitle">
-                        Gestione delle fotografie del profilo.
-                    </p>
-
-                    <div class="empty-state">
-                        La sezione Foto può essere collegata in seguito
-                        all'eventuale sistema di galleria del profilo.
+                    <div class="album-intro">
+                        <div>
+                            <h2>Album foto</h2>
+                            <p>
+                                Puoi inserire fino a <strong>15 immagini pubbliche</strong>
+                                e fino a <strong>15 immagini private</strong> nel tuo album.
+                            </p>
+                        </div>
                     </div>
+
+                    <div class="album-section">
+
+                        <div class="album-section-head">
+                            <div class="album-section-title-wrap">
+                                <h3 class="album-section-title">
+                                    Foto pubbliche
+                                </h3>
+                                <p class="album-section-description">
+                                    Queste foto sono visibili da <strong>tutti gli utenti</strong>.
+                                </p>
+                            </div>
+
+                            <div
+                                class="album-counter"
+                                id="albumPubblicheCounter"
+                            >0 / 15</div>
+                        </div>
+
+                        <div
+                            class="album-grid"
+                            id="albumPubblicheGrid"
+                        ></div>
+
+                    </div>
+
+                    <div class="album-section">
+
+                        <div class="album-section-head">
+                            <div class="album-section-title-wrap">
+                                <h3 class="album-section-title">
+                                    Foto private
+                                </h3>
+                                <p class="album-section-description">
+                                    Queste foto sono visibili <strong>solo dai tuoi amici</strong>.
+                                </p>
+                            </div>
+
+                            <div
+                                class="album-counter"
+                                id="albumPrivateCounter"
+                            >0 / 15</div>
+                        </div>
+
+                        <div
+                            class="album-grid"
+                            id="albumPrivateGrid"
+                        ></div>
+
+                    </div>
+
+                    <div
+                        class="album-status"
+                        id="albumFotoStatus"
+                    ></div>
+
+                    <input
+                        id="albumFotoInput"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        hidden
+                    >
 
                 </div>
 
@@ -2635,6 +2944,12 @@ const ICONA_ELIMINA_AVATAR_URL =
 const ICONA_PROFILO_NON_TROVATO_URL =
     SERVER + "/Immagini/Profilonontrovato.png";
 
+const ICONA_AGGIUNGI_FOTO_URL =
+    SERVER + "/Immagini/Aggiungifoto.png";
+
+const ICONA_ELIMINA_FOTO_URL =
+    SERVER + "/Immagini/Eliminafoto.png";
+
 
 const PALETTE = [
     "#6a2c70",
@@ -2650,6 +2965,9 @@ const PALETTE = [
 
 let datiUtente = null;
 let avatarFileSelezionato = null;
+let albumFoto = [];
+let albumVisibilitaDaCaricare = null;
+const MAX_FOTO_ALBUM_PER_TIPO = 15;
 
 
 /* =========================================================
@@ -2996,6 +3314,8 @@ async function caricaProfilo() {
 
 
         aggiornaInterfaccia();
+
+        await caricaAlbumFoto();
 
 
     } catch (errore) {
@@ -4522,6 +4842,408 @@ avatarSaveBtn.addEventListener(
 
     }
 );
+
+
+/* =========================================================
+   ALBUM FOTO
+   ========================================================= */
+
+const albumPubblicheGrid =
+    document.getElementById("albumPubblicheGrid");
+
+const albumPrivateGrid =
+    document.getElementById("albumPrivateGrid");
+
+const albumPubblicheCounter =
+    document.getElementById("albumPubblicheCounter");
+
+const albumPrivateCounter =
+    document.getElementById("albumPrivateCounter");
+
+const albumFotoStatus =
+    document.getElementById("albumFotoStatus");
+
+const albumFotoInput =
+    document.getElementById("albumFotoInput");
+
+
+async function leggiJsonSicuro(risposta) {
+    const tipo =
+        risposta.headers.get("content-type") || "";
+
+    if (!tipo.includes("application/json")) {
+        return {};
+    }
+
+    try {
+        return await risposta.json();
+    } catch (errore) {
+        return {};
+    }
+}
+
+
+function fotoPerVisibilita(visibilita) {
+    return albumFoto.filter(
+        foto => foto.visibilita === visibilita
+    );
+}
+
+
+function creaPulsanteAggiungiFoto(visibilita) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "album-add-card";
+    button.setAttribute(
+        "aria-label",
+        visibilita === "pubblica"
+            ? "Aggiungi foto pubblica"
+            : "Aggiungi foto privata"
+    );
+
+    const img = document.createElement("img");
+    img.className = "album-add-icon";
+    img.src = ICONA_AGGIUNGI_FOTO_URL;
+    img.alt = "";
+
+    const fallback = document.createElement("span");
+    fallback.className = "album-add-fallback";
+    fallback.textContent = "+";
+    fallback.hidden = true;
+
+    img.addEventListener(
+        "error",
+        () => {
+            img.hidden = true;
+            fallback.hidden = false;
+        },
+        { once: true }
+    );
+
+    const text = document.createElement("span");
+    text.className = "album-add-text";
+    text.textContent = "Aggiungi foto";
+
+    button.appendChild(img);
+    button.appendChild(fallback);
+    button.appendChild(text);
+
+    button.addEventListener("click", () => {
+        albumVisibilitaDaCaricare = visibilita;
+        albumFotoInput.value = "";
+        albumFotoInput.click();
+    });
+
+    return button;
+}
+
+
+function creaCardFotoAlbum(foto) {
+    const card = document.createElement("div");
+    card.className = "album-photo-card";
+
+    const img = document.createElement("img");
+    img.className = "album-photo-image";
+    img.src = /^https?:\/\//i.test(foto.url || "")
+        ? foto.url
+        : SERVER + String(foto.url || "");
+    img.alt = "Foto album";
+    img.loading = "lazy";
+
+    const overlay = document.createElement("div");
+    overlay.className = "album-photo-overlay";
+
+    const elimina = document.createElement("button");
+    elimina.type = "button";
+    elimina.className = "album-delete-photo";
+    elimina.setAttribute("aria-label", "Elimina foto");
+
+    const eliminaIcona = document.createElement("img");
+    eliminaIcona.src = ICONA_ELIMINA_FOTO_URL;
+    eliminaIcona.alt = "";
+    eliminaIcona.addEventListener(
+        "error",
+        () => {
+            elimina.textContent = "×";
+        },
+        { once: true }
+    );
+
+    elimina.appendChild(eliminaIcona);
+    elimina.addEventListener("click", () => {
+        eliminaFotoAlbum(foto);
+    });
+
+    overlay.appendChild(elimina);
+    card.appendChild(img);
+    card.appendChild(overlay);
+
+    return card;
+}
+
+
+function renderSezioneAlbum(
+    visibilita,
+    grid,
+    counter
+) {
+    const foto = fotoPerVisibilita(visibilita);
+
+    counter.textContent =
+        `${foto.length} / ${MAX_FOTO_ALBUM_PER_TIPO}`;
+
+    grid.innerHTML = "";
+
+    foto.forEach(item => {
+        grid.appendChild(
+            creaCardFotoAlbum(item)
+        );
+    });
+
+    if (foto.length < MAX_FOTO_ALBUM_PER_TIPO) {
+        grid.appendChild(
+            creaPulsanteAggiungiFoto(visibilita)
+        );
+    }
+
+    if (foto.length === 0) {
+        const vuoto = document.createElement("div");
+        vuoto.className = "album-empty";
+        vuoto.textContent =
+            visibilita === "pubblica"
+                ? "Non hai ancora aggiunto foto pubbliche."
+                : "Non hai ancora aggiunto foto private.";
+
+        // Il messaggio vuoto viene mostrato dopo il pulsante di aggiunta.
+        grid.appendChild(vuoto);
+    }
+}
+
+
+function renderAlbumFoto() {
+    renderSezioneAlbum(
+        "pubblica",
+        albumPubblicheGrid,
+        albumPubblicheCounter
+    );
+
+    renderSezioneAlbum(
+        "privata",
+        albumPrivateGrid,
+        albumPrivateCounter
+    );
+}
+
+
+async function caricaAlbumFoto() {
+    if (!datiUtente) {
+        return;
+    }
+
+    try {
+        const risposta = await fetch(
+            SERVER + "/api/album-foto/mio",
+            {
+                credentials: "include",
+                cache: "no-store"
+            }
+        );
+
+        const dati = await leggiJsonSicuro(risposta);
+
+        if (!risposta.ok) {
+            throw new Error(
+                dati.errore ||
+                "Impossibile caricare l'album foto."
+            );
+        }
+
+        albumFoto = Array.isArray(dati.foto)
+            ? dati.foto
+            : [];
+
+        renderAlbumFoto();
+
+    } catch (errore) {
+        console.error("Errore album foto:", errore);
+        albumFotoStatus.textContent =
+            errore.message ||
+            "Errore durante il caricamento dell'album.";
+        albumFotoStatus.className =
+            "album-status error";
+        renderAlbumFoto();
+    }
+}
+
+
+albumFotoInput.addEventListener(
+    "change",
+    async () => {
+        const file = albumFotoInput.files[0];
+        const visibilita = albumVisibilitaDaCaricare;
+
+        if (!file || !visibilita) {
+            return;
+        }
+
+        if (
+            ![
+                "image/jpeg",
+                "image/png",
+                "image/webp"
+            ].includes(file.type)
+        ) {
+            albumFotoStatus.textContent =
+                "Puoi caricare solo immagini JPG, PNG o WEBP.";
+            albumFotoStatus.className =
+                "album-status error";
+            return;
+        }
+
+        if (file.size > 3 * 1024 * 1024) {
+            albumFotoStatus.textContent =
+                "L'immagine supera il limite di 3 MB.";
+            albumFotoStatus.className =
+                "album-status error";
+            return;
+        }
+
+        const giaPresenti =
+            fotoPerVisibilita(visibilita).length;
+
+        if (giaPresenti >= MAX_FOTO_ALBUM_PER_TIPO) {
+            albumFotoStatus.textContent =
+                `Hai già raggiunto il limite di ${MAX_FOTO_ALBUM_PER_TIPO} foto ${visibilita === "pubblica" ? "pubbliche" : "private"}.`;
+            albumFotoStatus.className =
+                "album-status error";
+            return;
+        }
+
+        albumFotoStatus.textContent =
+            "Caricamento foto in corso...";
+        albumFotoStatus.className =
+            "album-status";
+
+        try {
+            const form = new FormData();
+            form.append("foto", file);
+            form.append("visibilita", visibilita);
+
+            const risposta = await fetch(
+                SERVER + "/api/album-foto/carica",
+                {
+                    method: "POST",
+                    credentials: "include",
+                    body: form
+                }
+            );
+
+            const dati = await leggiJsonSicuro(risposta);
+
+            if (!risposta.ok) {
+                throw new Error(
+                    dati.errore ||
+                    "Errore durante il caricamento della foto."
+                );
+            }
+
+            if (dati.foto) {
+                albumFoto.push(dati.foto);
+            }
+
+            renderAlbumFoto();
+
+            albumFotoStatus.textContent =
+                "Foto aggiunta correttamente.";
+            albumFotoStatus.className =
+                "album-status success";
+
+        } catch (errore) {
+            console.error(errore);
+            albumFotoStatus.textContent =
+                errore.message ||
+                "Errore durante il caricamento della foto.";
+            albumFotoStatus.className =
+                "album-status error";
+        } finally {
+            albumFotoInput.value = "";
+            albumVisibilitaDaCaricare = null;
+        }
+    }
+);
+
+
+async function eliminaFotoAlbum(foto) {
+    if (!foto || !foto.id) {
+        return;
+    }
+
+    const tipoTesto =
+        foto.visibilita === "privata"
+            ? "privata"
+            : "pubblica";
+
+    const confermato = await mostraConferma({
+        titolo: "Eliminare questa foto?",
+        messaggio:
+            `La foto ${tipoTesto} verrà rimossa definitivamente dal tuo album.`,
+        testoConferma: "Elimina foto",
+        icona: "",
+        iconaUrl: ICONA_ELIMINA_FOTO_URL,
+        iconaAlt: "Elimina foto",
+        pericoloso: true
+    });
+
+    if (!confermato) {
+        return;
+    }
+
+    albumFotoStatus.textContent =
+        "Eliminazione foto in corso...";
+    albumFotoStatus.className =
+        "album-status";
+
+    try {
+        const risposta = await fetch(
+            SERVER +
+            "/api/album-foto/" +
+            encodeURIComponent(foto.id),
+            {
+                method: "DELETE",
+                credentials: "include",
+                cache: "no-store"
+            }
+        );
+
+        const dati = await leggiJsonSicuro(risposta);
+
+        if (!risposta.ok) {
+            throw new Error(
+                dati.errore ||
+                "Errore durante l'eliminazione della foto."
+            );
+        }
+
+        albumFoto = albumFoto.filter(
+            item => item.id !== foto.id
+        );
+
+        renderAlbumFoto();
+
+        albumFotoStatus.textContent =
+            "Foto eliminata correttamente.";
+        albumFotoStatus.className =
+            "album-status success";
+
+    } catch (errore) {
+        console.error(errore);
+        albumFotoStatus.textContent =
+            errore.message ||
+            "Errore durante l'eliminazione della foto.";
+        albumFotoStatus.className =
+            "album-status error";
+    }
+}
 
 
 /* =========================================================
