@@ -4709,39 +4709,120 @@ app.post("/api/admin/riattiva", richiediAdmin, async (req, res) => {
   res.json({ ok: true });
 });
 
-// ===== DADO DA RANDOM.ORG, con ripiego locale SOLO se davvero irraggiungibile =====
+// ===== DADI: SOLO RANDOM.ORG =====
 const randomOrgAgent = new https.Agent({
   keepAlive: true,
   keepAliveMsecs: 30000,
   maxSockets: 4
 });
 
-function tiraDadoRandomOrg() {
+function attendiRandomOrg(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function tiraDadoRandomOrg(timeoutMs = 2500) {
   return new Promise((resolve) => {
-    const url = "https://www.random.org/integers/?num=2&min=1&max=6&col=1&base=10&format=plain&rnd=new";
-    const richiesta = https.get(url, { timeout: 1500, agent: randomOrgAgent }, (res) => {
-      let dati = "";
-      res.on("data", chunk => dati += chunk);
-      res.on("end", () => {
-        try {
-          const numeri = dati.trim().split("\n").map(n => parseInt(n.trim(), 10)).filter(n => !isNaN(n) && n >= 1 && n <= 6);
-          resolve(numeri.length === 2 ? { dado1: numeri[0], dado2: numeri[1] } : null);
-        } catch (e) { resolve(null); }
-      });
+    const url =
+      "https://www.random.org/integers/" +
+      "?num=2&min=1&max=6&col=1&base=10&format=plain&rnd=new";
+
+    let conclusa = false;
+
+    const termina = valore => {
+      if (conclusa) return;
+      conclusa = true;
+      resolve(valore);
+    };
+
+    const richiesta = https.get(
+      url,
+      {
+        timeout: timeoutMs,
+        agent: randomOrgAgent,
+        headers: {
+          "Accept": "text/plain",
+          "Cache-Control": "no-cache",
+          "User-Agent": "Giochi-Societa/1.0"
+        }
+      },
+      res => {
+        let dati = "";
+
+        if (res.statusCode !== 200) {
+          res.resume();
+          termina(null);
+          return;
+        }
+
+        res.setEncoding("utf8");
+
+        res.on("data", chunk => {
+          // La risposta attesa contiene solo due numeri: limitiamo comunque
+          // quanto accumuliamo per evitare risposte anomale.
+          if (dati.length < 128) dati += chunk;
+        });
+
+        res.on("end", () => {
+          const numeri = dati
+            .trim()
+            .split(/\s+/)
+            .map(valore => Number.parseInt(valore, 10))
+            .filter(valore => Number.isInteger(valore) && valore >= 1 && valore <= 6);
+
+          if (numeri.length !== 2) {
+            termina(null);
+            return;
+          }
+
+          termina({
+            dado1: numeri[0],
+            dado2: numeri[1]
+          });
+        });
+
+        res.on("error", () => termina(null));
+      }
+    );
+
+    richiesta.on("timeout", () => {
+      richiesta.destroy();
+      termina(null);
     });
-    richiesta.on("timeout", () => { richiesta.destroy(); resolve(null); });
-    richiesta.on("error", () => resolve(null));
+
+    richiesta.on("error", () => termina(null));
   });
 }
-// FIX: prima, se random.org falliva anche una volta, la funzione lanciava
-// un'eccezione e il turno restava bloccato in silenzio (da cui "a volte non
-// prende"). random.org resta la fonte usata quasi sempre; il ripiego locale
-// scatta solo se davvero irraggiungibile, così il turno non si blocca mai.
+
+// RANDOM.ORG è l'unica fonte dei risultati.
+// Se per un problema di rete non risponde, NON viene generato nessun numero
+// locale: si ritenta RANDOM.ORG e, se continua a non rispondere, il tiro fallisce
+// e il giocatore può riprovare senza che venga alterata la posizione.
 async function lanciaDueDadiSicuri() {
-  const risultato = await tiraDadoRandomOrg();
-  if (risultato) return risultato;
-  console.warn("random.org non ha risposto: uso il ripiego locale per questo tiro.");
-  return { dado1: Math.floor(Math.random() * 6) + 1, dado2: Math.floor(Math.random() * 6) + 1 };
+  const NUMERO_TENTATIVI = 3;
+
+  for (let tentativo = 1; tentativo <= NUMERO_TENTATIVI; tentativo++) {
+    const risultato = await tiraDadoRandomOrg(2500);
+
+    if (
+      risultato &&
+      Number.isInteger(risultato.dado1) &&
+      Number.isInteger(risultato.dado2) &&
+      risultato.dado1 >= 1 &&
+      risultato.dado1 <= 6 &&
+      risultato.dado2 >= 1 &&
+      risultato.dado2 <= 6
+    ) {
+      return risultato;
+    }
+
+    if (tentativo < NUMERO_TENTATIVI) {
+      await attendiRandomOrg(120 * tentativo);
+    }
+  }
+
+  throw new Error(
+    "RANDOM.ORG non raggiungibile: nessun risultato dei dadi è stato generato."
+  );
 }
 
 // ===== LOGICA DI GIOCO =====
@@ -4808,25 +4889,118 @@ let contatoreId = 0;
 const socketsPerId = {};
 
 function calcolaMovimento(posizioneAttuale, valoreDado) {
-  let percorso = [], nuovaPosizione = posizioneAttuale + valoreDado, messaggi = [], turniDaSaltare = 0, vittoria = false, tiraAncora = false;
+  // Converte esplicitamente i valori in numeri: in questo modo anche una
+  // posizione ripristinata da Firebase come stringa non può causare
+  // concatenazioni o spostamenti errati.
+  const posizioneBase = Number(posizioneAttuale);
+  const passiDado = Number(valoreDado);
+
+  if (
+    !Number.isInteger(posizioneBase) ||
+    posizioneBase < 0 ||
+    posizioneBase > CASELLA_VITTORIA
+  ) {
+    throw new Error("Posizione giocatore non valida: " + posizioneAttuale);
+  }
+
+  if (
+    !Number.isInteger(passiDado) ||
+    passiDado < 1 ||
+    passiDado > 12
+  ) {
+    throw new Error("Valore dei dadi non valido: " + valoreDado);
+  }
+
+  const percorso = [];
+  const messaggi = [];
+  let nuovaPosizione = posizioneBase + passiDado;
+  let turniDaSaltare = 0;
+  let vittoria = false;
+  let tiraAncora = false;
+
+  // Movimento normale: parte SEMPRE dalla casella successiva.
+  // Quindi, per esempio, da 0 con totale 3 il percorso è [1, 2, 3]:
+  // esattamente tre caselle, mai quattro.
   if (nuovaPosizione > CASELLA_VITTORIA) {
-    for (let p = posizioneAttuale + 1; p <= CASELLA_VITTORIA; p++) percorso.push(p);
+    for (let p = posizioneBase + 1; p <= CASELLA_VITTORIA; p++) {
+      percorso.push(p);
+    }
+
     const eccesso = nuovaPosizione - CASELLA_VITTORIA;
     nuovaPosizione = CASELLA_VITTORIA - eccesso;
-    for (let p = CASELLA_VITTORIA - 1; p >= nuovaPosizione; p--) percorso.push(p);
+
+    for (let p = CASELLA_VITTORIA - 1; p >= nuovaPosizione; p--) {
+      percorso.push(p);
+    }
+
     messaggi.push("Hai superato il traguardo, rimbalzi indietro!");
-  } else { for (let p = posizioneAttuale + 1; p <= nuovaPosizione; p++) percorso.push(p); }
-  if (nuovaPosizione === CASELLA_VITTORIA) { vittoria = true; messaggi.push("🎉 Hai vinto!"); return { nuovaPosizione, percorso, messaggi, turniDaSaltare, vittoria, tiraAncora }; }
-  if (nuovaPosizione === CASELLA_TIRA_ANCORA) { tiraAncora = true; messaggi.push("Sali sul ponte! Tira ancora i dadi."); }
+  } else {
+    for (let p = posizioneBase + 1; p <= nuovaPosizione; p++) {
+      percorso.push(p);
+    }
+  }
+
+  if (nuovaPosizione === CASELLA_VITTORIA) {
+    vittoria = true;
+    messaggi.push("🎉 Hai vinto!");
+    return {
+      nuovaPosizione,
+      percorso,
+      messaggi,
+      turniDaSaltare,
+      vittoria,
+      tiraAncora
+    };
+  }
+
+  if (nuovaPosizione === CASELLA_TIRA_ANCORA) {
+    tiraAncora = true;
+    messaggi.push("Sali sul ponte! Tira ancora i dadi.");
+  }
+
+  // Regola speciale del Gioco dell'Oca: sulle caselle dell'Oca si avanza
+  // nuovamente dello STESSO totale. Questo è l'unico caso in cui il percorso
+  // può contenere più passi del totale dei dadi, oltre ai teletrasporti/rimbalzi.
   if (CASELLE_AVANZA_ANCORA.includes(nuovaPosizione)) {
     messaggi.push("Avanzi dello stesso numero di caselle!");
-    const r = calcolaMovimento(nuovaPosizione, valoreDado);
-    return { nuovaPosizione: r.nuovaPosizione, percorso: percorso.concat(r.percorso), messaggi: messaggi.concat(r.messaggi), turniDaSaltare: r.turniDaSaltare, vittoria: r.vittoria, tiraAncora: r.tiraAncora };
+
+    const seguito = calcolaMovimento(nuovaPosizione, passiDado);
+
+    return {
+      nuovaPosizione: seguito.nuovaPosizione,
+      percorso: percorso.concat(seguito.percorso),
+      messaggi: messaggi.concat(seguito.messaggi),
+      turniDaSaltare: seguito.turniDaSaltare,
+      vittoria: seguito.vittoria,
+      tiraAncora: seguito.tiraAncora
+    };
   }
-  if (CASELLE_SALTA_TRE_TURNI.includes(nuovaPosizione)) { turniDaSaltare = 3; messaggi.push("Rimani fermo per 3 turni!"); }
-  if (CASELLE_SALTA_UN_TURNO.includes(nuovaPosizione)) { turniDaSaltare = 1; messaggi.push("Salti un turno!"); }
-  if (CASELLE_TORNA_A[nuovaPosizione] !== undefined) { const cf = CASELLE_TORNA_A[nuovaPosizione]; messaggi.push(`Torni alla casella ${cf}!`); percorso.push(cf); nuovaPosizione = cf; }
-  return { nuovaPosizione, percorso, messaggi, turniDaSaltare, vittoria, tiraAncora };
+
+  if (CASELLE_SALTA_TRE_TURNI.includes(nuovaPosizione)) {
+    turniDaSaltare = 3;
+    messaggi.push("Rimani fermo per 3 turni!");
+  }
+
+  if (CASELLE_SALTA_UN_TURNO.includes(nuovaPosizione)) {
+    turniDaSaltare = 1;
+    messaggi.push("Salti un turno!");
+  }
+
+  if (CASELLE_TORNA_A[nuovaPosizione] !== undefined) {
+    const destinazione = CASELLE_TORNA_A[nuovaPosizione];
+    messaggi.push(`Torni alla casella ${destinazione}!`);
+    percorso.push(destinazione);
+    nuovaPosizione = destinazione;
+  }
+
+  return {
+    nuovaPosizione,
+    percorso,
+    messaggi,
+    turniDaSaltare,
+    vittoria,
+    tiraAncora
+  };
 }
 
 function passaAlProssimoTurno(partita) {
@@ -4870,7 +5044,23 @@ function trovaPartitaAttivaPerUid(uid) {
 function calcolaUidInPartita(nomeStanza) {
   const uidInPartita = new Set();
   if (!stanze[nomeStanza]) return uidInPartita;
-  Object.values(stanze[nomeStanza].partite).forEach(p => { if (p.iniziata) Object.keys(p.giocatori).forEach(uid => uidInPartita.add(uid)); });
+
+  // Partite ancora presenti sul server.
+  Object.values(stanze[nomeStanza].partite || {}).forEach(partita => {
+    if (!partita || partita.iniziata !== true) return;
+    Object.keys(partita.giocatori || {}).forEach(uid => uidInPartita.add(uid));
+  });
+
+  // Se la partita è appena terminata, il tavolo può essere già stato rimosso.
+  // Finché però il WebSocket della pagina gioco è ancora aperto, l'utente deve
+  // continuare a risultare "In partita". Passerà a "In Lobby" solo quando
+  // lascia davvero gioco.html (ad esempio premendo "Torna alla Lobby").
+  Object.values(stanze[nomeStanza].giocatoriOnline || {}).forEach(presenza => {
+    if (presenza && presenza.uid && presenza.schermataPartita === true) {
+      uidInPartita.add(presenza.uid);
+    }
+  });
+
   return uidInPartita;
 }
 
@@ -5274,7 +5464,7 @@ async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, auto
       if (g.socket && g.socket.readyState === WebSocket.OPEN) {
         g.socket.send(JSON.stringify({
           tipo: "statoPartita", giocatori: statoGiocatori, turnoDiId: idAttuale,
-          messaggi: ["Errore nel tiro dei dadi, riprova."],
+          messaggi: ["RANDOM.ORG non ha restituito i dadi. Riprova il tiro."],
           tempoInizioTurno: partita.tempoInizioTurno, durataMossaMs: millisecondiMossa(partita),
           chatAttiva: partita.chatAttiva !== false,
           mediaAttiva: partita.mediaAttiva === true
@@ -5842,6 +6032,8 @@ wss.on("connection", (socket, request) => {
   nickname,
   avatar: mioAvatar,
   tipoDispositivo,
+  schermataPartita: false,
+  partitaIdAttiva: null
 };
         inviaConteggioStanze();
         const numeroOnlineUnici = new Set(
@@ -5891,6 +6083,8 @@ inviaAllaStanza(stanzaAttuale, {
   nickname,
   avatar: mioAvatar,
   tipoDispositivo,
+  schermataPartita: true,
+  partitaIdAttiva: partita.id
 };
         inviaConteggioStanze();
 
