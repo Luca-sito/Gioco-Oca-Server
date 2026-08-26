@@ -777,7 +777,7 @@ body.modalita-ruotata #mondo-ruotato {
 /* ===== DADI ===== */
 #area-dadi {
   position: absolute;
-  bottom: 4%;
+  bottom: 0;
   left: 50%;
   z-index: 20;
   display: flex;
@@ -797,7 +797,7 @@ body.modalita-ruotata #area-tabellone > #area-dadi {
   /* Dopo la rotazione del tabellone questo lato diventa il bordo inferiore
      visivo del telefono in orizzontale. Il box resta interamente dentro. */
   top: 50%;
-  right: max(18px, 2.5%);
+  right: 0;
   bottom: auto;
   left: auto;
   transform: translateY(-50%);
@@ -1987,4 +1987,23 @@ body.modalita-desktop.media-partita #btn-sblocca-media {
     padding: 5px;
     font-size: 9px;
   }
+}
+
+/* ===== PULSANTI MENU E CHAT BIANCHI ===== */
+#btn-menu,
+#btn-chat {
+  background: #ffffff;
+  color: #111111;
+  border-color: rgba(0, 0, 0, 0.18);
+  box-shadow: 0 5px 18px rgba(0, 0, 0, 0.28);
+}
+
+#btn-menu:hover,
+#btn-chat:hover {
+  background: #f4f4f4;
+}
+
+#btn-menu .icona-pulsante-gioco,
+#btn-chat .icona-pulsante-gioco {
+  filter: none;
 }
