@@ -2147,3 +2147,30 @@ body.client-cellulare-audio-only #controlli-media-locale {
   grid-template-columns: none;
 }
 
+/* =========================================================
+   CELLULARE — DADI DAVVERO SUL BORDO INFERIORE DEL TABELLONE
+   Il tabellone è ruotato di 90°. Per questo il suo lato "right"
+   nel sistema di coordinate originale corrisponde al bordo
+   inferiore che il giocatore vede sul telefono.
+   ========================================================= */
+@media (max-width: 600px) {
+  body.modalita-ruotata #area-tabellone > #area-dadi:not(.dadi-in-popup) {
+    /* Centro lungo il bordo inferiore visibile. */
+    top: 50%;
+    right: 2px;
+    bottom: auto;
+    left: auto;
+    transform: translateY(-50%);
+
+    /*
+     * Il vecchio padding destro era 20px: dopo la rotazione
+     * lasciava i dadi troppo lontani dal bordo inferiore.
+     * Ora la faccia dei dadi resta circa 6px sopra il bordo,
+     * completamente DENTRO il tabellone.
+     */
+    padding-top: 14px;
+    padding-right: 4px;
+    padding-bottom: 14px;
+    padding-left: 12px;
+  }
+}
