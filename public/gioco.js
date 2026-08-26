@@ -1195,8 +1195,10 @@ function aggiornaControlliMediaLocale() {
   if (btnMic) {
     const acceso = !!(tracciaAudio && tracciaAudio.enabled);
     btnMic.disabled = !tracciaAudio;
-    btnMic.textContent = acceso ? "🎙️ Microfono: On" : "🔇 Microfono: Muto";
+    btnMic.textContent = acceso ? "🎙️" : "🔇";
     btnMic.setAttribute("aria-pressed", acceso ? "false" : "true");
+    btnMic.setAttribute("aria-label", acceso ? "Disattiva microfono" : "Attiva microfono");
+    btnMic.title = acceso ? "Disattiva microfono" : "Attiva microfono";
     btnMic.classList.toggle("media-spento", !!tracciaAudio && !acceso);
   }
 
@@ -1206,8 +1208,10 @@ function aggiornaControlliMediaLocale() {
     if (!clientCellulareAudioOnly) {
       const acceso = !!(tracciaVideo && tracciaVideo.enabled);
       btnCam.disabled = !tracciaVideo;
-      btnCam.textContent = acceso ? "📷 Webcam: On" : "🚫 Webcam: Off";
+      btnCam.textContent = acceso ? "📷" : "🚫";
       btnCam.setAttribute("aria-pressed", acceso ? "false" : "true");
+      btnCam.setAttribute("aria-label", acceso ? "Disattiva webcam" : "Attiva webcam");
+      btnCam.title = acceso ? "Disattiva webcam" : "Attiva webcam";
       btnCam.classList.toggle("media-spento", !!tracciaVideo && !acceso);
     }
   }
