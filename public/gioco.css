@@ -2158,3 +2158,10 @@ body.client-cellulare-audio-only #controlli-media-locale {
 #risultato-dadi {
     display: none !important;
 }
+
+@media (min-width: 1000px) {
+  #area-tabellone {
+    transform: scale(1.10);
+    transform-origin: center center;
+  }
+}
