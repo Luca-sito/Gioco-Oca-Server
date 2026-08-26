@@ -3923,57 +3923,109 @@ function chiudiSegnalazioneGiocatore() {
   categoriaSegnalazione = "";
 }
 
-document.querySelectorAll(".segnalazione-opzione").forEach(bottone => {
-  bottone.addEventListener("click", () => {
-    categoriaSegnalazione = bottone.dataset.categoria || "";
-    document.querySelectorAll(".segnalazione-opzione").forEach(b => b.classList.toggle("selezionata", b === bottone));
-    document.getElementById("inviaSegnalazione").disabled = !categoriaSegnalazione;
-  });
-});
+function inizializzaSegnalazioniLobby() {
+  const overlay = document.getElementById("overlaySegnalazione");
+  const annulla = document.getElementById("annullaSegnalazione");
+  const invia = document.getElementById("inviaSegnalazione");
 
-document.getElementById("annullaSegnalazione").addEventListener("click", chiudiSegnalazioneGiocatore);
-document.getElementById("overlaySegnalazione").addEventListener("click", e => {
-  if (e.target.id === "overlaySegnalazione") chiudiSegnalazioneGiocatore();
-});
+  if (!overlay || !annulla || !invia) {
+    console.error("Interfaccia segnalazioni non trovata nel DOM.");
+    return;
+  }
 
-document.getElementById("inviaSegnalazione").addEventListener("click", async () => {
-  if (!segnalazioneTarget || !categoriaSegnalazione) return;
-  const bottone = document.getElementById("inviaSegnalazione");
-  bottone.disabled = true;
-  bottone.textContent = "Invio…";
-  try {
-    const risposta = await fetchAutenticato("https://gioco-oca-server.onrender.com/api/segnalazioni", {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        uidSegnalato: segnalazioneTarget.uid,
-        categoria: categoriaSegnalazione,
-        descrizione: document.getElementById("segnalazioneNote").value.trim()
-      })
+  document.querySelectorAll(".segnalazione-opzione").forEach(bottone => {
+    bottone.addEventListener("click", () => {
+      categoriaSegnalazione = bottone.dataset.categoria || "";
+
+      document.querySelectorAll(".segnalazione-opzione").forEach(b => {
+        b.classList.toggle("selezionata", b === bottone);
+      });
+
+      invia.disabled = !categoriaSegnalazione;
     });
-    const dati = await risposta.json().catch(() => ({}));
-    if (!risposta.ok) {
-      mostraNotifica(dati.errore || "Non è stato possibile inviare la segnalazione.");
-      return;
-    }
-    chiudiSegnalazioneGiocatore();
-    mostraNotifica("Segnalazione inviata correttamente.");
-  } catch (e) {
-    mostraNotifica("Errore di connessione durante l'invio della segnalazione.");
-  } finally {
-    bottone.textContent = "Invia segnalazione";
-    if (document.getElementById("overlaySegnalazione").classList.contains("aperto")) {
-      bottone.disabled = !categoriaSegnalazione;
-    }
-  }
-});
+  });
 
-document.addEventListener("keydown", e => {
-  if (e.key === "Escape" && document.getElementById("overlaySegnalazione").classList.contains("aperto")) {
+  annulla.addEventListener("click", () => {
     chiudiSegnalazioneGiocatore();
-  }
-});
+  });
+
+  overlay.addEventListener("click", e => {
+    if (e.target === overlay) {
+      chiudiSegnalazioneGiocatore();
+    }
+  });
+
+  invia.addEventListener("click", async () => {
+    if (!segnalazioneTarget || !categoriaSegnalazione) return;
+
+    invia.disabled = true;
+    invia.textContent = "Invio…";
+
+    try {
+      const risposta = await fetchAutenticato(
+        "https://gioco-oca-server.onrender.com/api/segnalazioni",
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            uidSegnalato: segnalazioneTarget.uid,
+            categoria: categoriaSegnalazione,
+            descrizione: document
+              .getElementById("segnalazioneNote")
+              .value
+              .trim()
+          })
+        }
+      );
+
+      const dati = await risposta.json().catch(() => ({}));
+
+      if (!risposta.ok) {
+        mostraNotifica(
+          dati.errore ||
+          "Non è stato possibile inviare la segnalazione."
+        );
+        return;
+      }
+
+      chiudiSegnalazioneGiocatore();
+      mostraNotifica("Segnalazione inviata correttamente.");
+
+    } catch (e) {
+      console.error("Errore invio segnalazione:", e);
+      mostraNotifica(
+        "Errore di connessione durante l'invio della segnalazione."
+      );
+
+    } finally {
+      invia.textContent = "Invia segnalazione";
+
+      if (overlay.classList.contains("aperto")) {
+        invia.disabled = !categoriaSegnalazione;
+      }
+    }
+  });
+
+  document.addEventListener("keydown", e => {
+    if (
+      e.key === "Escape" &&
+      overlay.classList.contains("aperto")
+    ) {
+      chiudiSegnalazioneGiocatore();
+    }
+  });
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener(
+    "DOMContentLoaded",
+    inizializzaSegnalazioniLobby,
+    { once: true }
+  );
+} else {
+  inizializzaSegnalazioniLobby();
+}
 
 </script>
 <!-- MENU MOBILE -->
