@@ -442,12 +442,31 @@ function pianificaVerificaDeterminazioneTra(ritardoMs) {
   }, ritardo);
 }
 
-function pianificaVerificaDeterminazione(tempoInizio, durataMs) {
-  const inizio = Number(tempoInizio);
+function pianificaVerificaDeterminazione(tempoInizio, durataMs, tempoResiduoMs) {
   const durata = Number(durataMs);
-  const tempoResiduo = Number.isFinite(inizio) && Number.isFinite(durata) && durata > 0
-    ? Math.min(durata, Math.max(0, inizio + durata - Date.now()))
-    : 0;
+  const residuoServer = Number(tempoResiduoMs);
+
+  let tempoResiduo = 0;
+
+  if (
+    Number.isFinite(residuoServer) &&
+    Number.isFinite(durata) &&
+    durata > 0
+  ) {
+    tempoResiduo = Math.max(0, Math.min(durata, residuoServer));
+  } else {
+    const inizio = Number(tempoInizio);
+    tempoResiduo =
+      Number.isFinite(inizio) &&
+      Number.isFinite(durata) &&
+      durata > 0
+        ? Math.min(
+            durata,
+            Math.max(0, inizio + durata - Date.now())
+          )
+        : 0;
+  }
+
   pianificaVerificaDeterminazioneTra(tempoResiduo + 5000);
 }
 
@@ -860,8 +879,8 @@ function gestisciStatoDeterminazione(dati) {
     sottotitolo.textContent = inAttesaDi ? ("In attesa che " + inAttesaDi.nome + " tiri...") : "I giocatori tirano i dadi uno alla volta.";
   }
 
-  if (dati.tempoInizioTurno != null && dati.durataMossaMs != null) avviaCountdownTurno(dati.tempoInizioTurno, dati.durataMossaMs);
-  pianificaVerificaDeterminazione(dati.tempoInizioTurno, dati.durataMossaMs);
+  if (dati.tempoInizioTurno != null && dati.durataMossaMs != null) avviaCountdownTurno(dati.tempoInizioTurno, dati.durataMossaMs, dati.tempoResiduoMs);
+  pianificaVerificaDeterminazione(dati.tempoInizioTurno, dati.durataMossaMs, dati.tempoResiduoMs);
 }
 
 function gestisciRisultatoDeterminazione(dati) {
@@ -924,7 +943,7 @@ function gestisciDeterminazioneCompletata(dati) {
 
   animaSaltoPedina(primoMovimento.idGiocatore, primoMovimento.percorso, () => {
     if (primoMovimento.messaggi && primoMovimento.messaggi.length) mostraMessaggioGiocoGrande(primoMovimento.messaggi.join(" "));
-    if (dati.tempoInizioTurno != null && dati.durataMossaMs != null) avviaCountdownTurno(dati.tempoInizioTurno, dati.durataMossaMs);
+    if (dati.tempoInizioTurno != null && dati.durataMossaMs != null) avviaCountdownTurno(dati.tempoInizioTurno, dati.durataMossaMs, dati.tempoResiduoMs);
 
     if (dati.vittoria) {
       turnoAttualeId = null;
@@ -939,59 +958,162 @@ function gestisciDeterminazioneCompletata(dati) {
 }
 
 // ===== COUNTDOWN DI TURNO =====
-let tempoInizioTurnoAttuale = null, durataMossaMsAttuale = null, intervalCountdown = null, ultimoSecondoAvviso = null;
+// Il server invia il tempo visibile residuo. Il client lo anima localmente,
+// ma non usa più il confronto diretto fra orologio Render e orologio dispositivo.
+let durataMossaMsAttuale = null;
+let tempoResiduoCountdownInizialeMs = null;
+let tempoRicezioneCountdownMs = null;
+let intervalCountdown = null;
+let ultimoSecondoAvviso = null;
 let turnoLocalmenteCompletato = false;
 
-function avviaCountdownTurno(tempoInizio, durataMs) {
-  if (!Number.isFinite(Number(tempoInizio)) || !Number.isFinite(Number(durataMs)) || Number(durataMs) <= 0) {
+function avviaCountdownTurno(tempoInizio, durataMs, tempoResiduoMs) {
+  const durata = Number(durataMs);
+
+  if (!Number.isFinite(durata) || durata <= 0) {
     fermaCountdown(false);
     return;
   }
-  tempoInizioTurnoAttuale = tempoInizio;
-  durataMossaMsAttuale = durataMs;
+
+  const residuoServer = Number(tempoResiduoMs);
+  let residuo;
+
+  if (Number.isFinite(residuoServer)) {
+    // Via principale: è il SERVER a dirci quanti millisecondi VISIBILI restano.
+    residuo = Math.max(0, Math.min(durata, residuoServer));
+  } else {
+    // Compatibilità con eventuali vecchi messaggi:
+    // anche se gli orologi server/client differiscono, il valore è SEMPRE
+    // limitato alla durata massima e quindi 15 secondi non possono diventare 16.
+    const inizio = Number(tempoInizio);
+
+    if (!Number.isFinite(inizio)) {
+      fermaCountdown(false);
+      return;
+    }
+
+    residuo = Math.max(
+      0,
+      Math.min(durata, durata - (Date.now() - inizio))
+    );
+  }
+
+  durataMossaMsAttuale = durata;
+  tempoResiduoCountdownInizialeMs = residuo;
+  tempoRicezioneCountdownMs = Date.now();
   ultimoSecondoAvviso = null;
   turnoLocalmenteCompletato = false;
+
   if (intervalCountdown) clearInterval(intervalCountdown);
-  intervalCountdown = setInterval(aggiornaCountdownTurno, 250);
+
+  intervalCountdown = setInterval(
+    aggiornaCountdownTurno,
+    100
+  );
+
   aggiornaCountdownTurno();
 }
+
 function elementiCountdown() {
-  return [document.getElementById("countdown-turno"), document.getElementById("countdown-determinazione")].filter(Boolean);
+  return [
+    document.getElementById("countdown-turno"),
+    document.getElementById("countdown-determinazione")
+  ].filter(Boolean);
 }
+
 function fermaCountdown(mostraCompletato) {
   if (intervalCountdown) {
     clearInterval(intervalCountdown);
     intervalCountdown = null;
   }
-  tempoInizioTurnoAttuale = null;
+
   durataMossaMsAttuale = null;
+  tempoResiduoCountdownInizialeMs = null;
+  tempoRicezioneCountdownMs = null;
   ultimoSecondoAvviso = null;
+
   elementiCountdown().forEach(el => {
-    el.classList.remove("countdown-scaduto", "countdown-fermo");
-    el.textContent = mostraCompletato ? "✓" : "⏱ --s";
-    if (mostraCompletato) el.classList.add("countdown-fermo");
+    el.classList.remove(
+      "countdown-scaduto",
+      "countdown-fermo"
+    );
+
+    el.textContent =
+      mostraCompletato ? "✓" : "⏱ --s";
+
+    if (mostraCompletato) {
+      el.classList.add("countdown-fermo");
+    }
   });
 }
+
 function fermaCountdownPerAzioneLocale() {
   turnoLocalmenteCompletato = true;
-  if (intervalCountdown) { clearInterval(intervalCountdown); intervalCountdown = null; }
+
+  if (intervalCountdown) {
+    clearInterval(intervalCountdown);
+    intervalCountdown = null;
+  }
+
   elementiCountdown().forEach(el => {
     el.textContent = "✓";
     el.classList.remove("countdown-scaduto");
     el.classList.add("countdown-fermo");
   });
 }
+
 function aggiornaCountdownTurno() {
   const elementi = elementiCountdown();
-  if (!elementi.length || tempoInizioTurnoAttuale == null || durataMossaMsAttuale == null) return;
+
+  if (
+    !elementi.length ||
+    durataMossaMsAttuale == null ||
+    tempoResiduoCountdownInizialeMs == null ||
+    tempoRicezioneCountdownMs == null
+  ) {
+    return;
+  }
+
   if (turnoLocalmenteCompletato) return;
-  const sec = Math.max(0, Math.ceil((durataMossaMsAttuale - (Date.now() - tempoInizioTurnoAttuale)) / 1000));
+
+  const trascorsoLocale =
+    Math.max(0, Date.now() - tempoRicezioneCountdownMs);
+
+  const residuo =
+    Math.max(
+      0,
+      tempoResiduoCountdownInizialeMs - trascorsoLocale
+    );
+
+  const massimoSecondi =
+    Math.ceil(durataMossaMsAttuale / 1000);
+
+  const sec =
+    Math.max(
+      0,
+      Math.min(
+        massimoSecondi,
+        Math.ceil(residuo / 1000)
+      )
+    );
+
   elementi.forEach(el => {
     el.textContent = "⏱ " + sec + "s";
-    el.classList.toggle("countdown-scaduto", sec <= 0);
+    el.classList.toggle(
+      "countdown-scaduto",
+      sec <= 0
+    );
     el.classList.remove("countdown-fermo");
   });
-  if (sec <= 3 && sec >= 1 && sec !== ultimoSecondoAvviso) { ultimoSecondoAvviso = sec; suonaAvvisoTempo(); }
+
+  if (
+    sec <= 3 &&
+    sec >= 1 &&
+    sec !== ultimoSecondoAvviso
+  ) {
+    ultimoSecondoAvviso = sec;
+    suonaAvvisoTempo();
+  }
 }
 
 // ===== VIDEOCHIAMATA DI TAVOLO: consenso in lobby, collegamento automatico =====
@@ -2093,7 +2215,7 @@ function gestisciStatoPartita(dati) {
     }
     disegnaGiocatori();
     if (turnoPronto) {
-      avviaCountdownTurno(dati.tempoInizioTurno, dati.durataMossaMs);
+      avviaCountdownTurno(dati.tempoInizioTurno, dati.durataMossaMs, dati.tempoResiduoMs);
     }
   }
 
@@ -2144,7 +2266,7 @@ function gestisciAggiornamentoPartita(dati) {
         animazioneMossaInCorso = false;
         aggiornaTurno(dati.turnoDiId);
         disegnaGiocatori();
-        avviaCountdownTurno(dati.tempoInizioTurno, dati.durataMossaMs);
+        avviaCountdownTurno(dati.tempoInizioTurno, dati.durataMossaMs, dati.tempoResiduoMs);
         return;
       }
 
