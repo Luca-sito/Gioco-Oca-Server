@@ -1863,10 +1863,8 @@ body.tema-scuro .giocatore-online{
         <option value="8">8 giocatori</option>
       </select>
       <p>Tempo di mossa</p>
-      <select id="tempo">
-        <option value="15">15 secondi</option>
-        <option value="30">30 secondi</option>
-        <option value="60">60 secondi</option>
+      <select id="tempo" disabled aria-label="Tempo di mossa fisso">
+        <option value="15" selected>15 secondi</option>
       </select>
 <p>Tipo partita</p>
       <select id="tipoPartita">
@@ -2595,10 +2593,8 @@ CREA TAVOLO
 <option value="8">8 giocatori</option>
 </select>
 <p>Tempo di mossa</p>
-<select id="tempoMobile">
-<option value="15">15 secondi</option>
-<option value="30">30 secondi</option>
-<option value="60">60 secondi</option>
+<select id="tempoMobile" disabled aria-label="Tempo di mossa fisso">
+<option value="15" selected>15 secondi</option>
 </select>
 <p>Tipo partita</p>
 <select id="tipoPartitaMobile">
@@ -2633,7 +2629,7 @@ async function creaPartitaMobile() {
   if (!(await richiediConsensoMediaSeNecessario(mediaAttiva))) return;
   const inviato = inviaMessaggioSocket({
     tipo: "creaPartita",
-    tempo: document.getElementById("tempoMobile").value,
+    tempo: "15",
     classificata: modalitaPartitaSelezionata === "classificata",
     modalita: tipo,
     maxGiocatori: document.getElementById("numeroGiocatoriMobile").value,
@@ -2995,7 +2991,7 @@ async function creaPartita() {
   if (!(await richiediConsensoMediaSeNecessario(mediaAttiva))) return;
   const inviato = inviaMessaggioSocket({
     tipo: "creaPartita",
-    tempo: document.getElementById("tempo").value,
+    tempo: "15",
     classificata: modalitaPartitaSelezionata === "classificata",
     modalita: tipo,
     maxGiocatori: document.getElementById("numeroGiocatori").value,
