@@ -5269,29 +5269,58 @@ function rilevaTipoDispositivo(userAgent) {
 }
 
 // ===== TIMER DI TURNO =====
+const TOLLERANZA_RETE_MS = 2000;
+
 function millisecondiMossa(partita) {
   const secondi = parseInt(partita.tempo, 10);
-  return (Number.isFinite(secondi) && secondi > 0 ? secondi : 30) * 1000;
+  return (Number.isFinite(secondi) && secondi > 0 ? secondi : 15) * 1000;
+}
+
+function millisecondiTimerServer(partita) {
+  return millisecondiMossa(partita) + TOLLERANZA_RETE_MS;
+}
+
+function tempoResiduoVisibileMs(partita, adesso = Date.now()) {
+  if (!partita || !Number.isFinite(Number(partita.tempoInizioTurno))) return 0;
+
+  const durataVisibile = millisecondiMossa(partita);
+  const scadenzaVisibile = Number(partita.tempoInizioTurno) + durataVisibile;
+
+  return Math.max(
+    0,
+    Math.min(durataVisibile, scadenzaVisibile - Number(adesso))
+  );
 }
 
 function fermaTimerTurno(partita) {
   if (!partita) return;
-  if (partita.timerTurno) { clearTimeout(partita.timerTurno); partita.timerTurno = null; }
+  if (partita.timerTurno) {
+    clearTimeout(partita.timerTurno);
+    partita.timerTurno = null;
+  }
   partita.tokenTimerTurno = (partita.tokenTimerTurno || 0) + 1;
 }
 
 function avviaTimerTurno(partita, nomeStanza) {
   if (!partita || !partita.iniziata) return;
+
   fermaTimerTurno(partita);
-  const durata = millisecondiMossa(partita);
+
+  const durataServer = millisecondiTimerServer(partita);
   const token = partita.tokenTimerTurno;
+
   partita.tempoInizioTurno = Date.now();
-  partita.scadenzaTurno = partita.tempoInizioTurno + durata;
+
+  // scadenzaTurno è la scadenza AUTOREVOLE del server:
+  // 15 secondi visibili + 2 secondi di tolleranza rete.
+  partita.scadenzaTurno = partita.tempoInizioTurno + durataServer;
+
   partita.timerTurno = setTimeout(async () => {
     if (token !== partita.tokenTimerTurno) return;
+
     partita.timerTurno = null;
     await gestisciScadenzaTurno(partita, nomeStanza);
-  }, durata);
+  }, durataServer);
 }
 
 function durataAnimazioneMossaMs(percorso) {
@@ -5301,14 +5330,31 @@ function durataAnimazioneMossaMs(percorso) {
 
 function ripristinaTimerTurno(partita, nomeStanza) {
   if (!partita || !partita.iniziata) return;
+
   partita.animazioneTiroInCorso = false;
-  if (!partita.scadenzaTurno) { avviaTimerTurno(partita, nomeStanza); return; }
+
+  if (!partita.scadenzaTurno) {
+    avviaTimerTurno(partita, nomeStanza);
+    return;
+  }
+
+  if (!Number.isFinite(Number(partita.tempoInizioTurno))) {
+    partita.tempoInizioTurno =
+      Number(partita.scadenzaTurno) - millisecondiTimerServer(partita);
+  }
+
   fermaTimerTurno(partita);
+
   const token = partita.tokenTimerTurno;
-  const tempoRimanente = partita.scadenzaTurno - Date.now();
-  const ritardo = tempoRimanente <= 0 ? 0 : tempoRimanente;
+  const tempoRimanenteServer =
+    Number(partita.scadenzaTurno) - Date.now();
+
+  const ritardo =
+    tempoRimanenteServer <= 0 ? 0 : tempoRimanenteServer;
+
   partita.timerTurno = setTimeout(async () => {
     if (token !== partita.tokenTimerTurno) return;
+
     partita.timerTurno = null;
     partita.animazioneTiroInCorso = false;
     await gestisciScadenzaTurno(partita, nomeStanza);
@@ -5366,7 +5412,7 @@ async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, auto
           g.socket.send(JSON.stringify({
             tipo: "aggiornamentoPartita", giocatori: statoGiocatori, dado1, dado2, valoreDado,
             percorso: risultato.percorso, idGiocatoreCheHaTirato: idGiocatore, automatico: !!automatico,
-            messaggi: messaggiFinali, turnoDiId: null, tempoInizioTurno: null, durataMossaMs: 0,
+            messaggi: messaggiFinali, turnoDiId: null, tempoInizioTurno: null, durataMossaMs: 0, tempoResiduoMs: 0,
             vittoria: true, vincitore: giocatore.nome
           }));
         }
@@ -5389,7 +5435,7 @@ async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, auto
           messaggi: messaggiFinali,
           turnoDiId: null,
           tempoInizioTurno: null,
-          durataMossaMs: 0,
+          durataMossaMs: 0, tempoResiduoMs: 0,
           vittoria: false, vincitore: null
         }));
       }
@@ -5433,7 +5479,7 @@ async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, auto
             turnoDiId: idTurnoAttuale,
             punteggiOrdineIniziale: partita.punteggiOrdineIniziale || null,
             tempoInizioTurno: partita.tempoInizioTurno,
-            durataMossaMs: millisecondiMossa(partita),
+            durataMossaMs: millisecondiMossa(partita), tempoResiduoMs: tempoResiduoVisibileMs(partita),
             chatAttiva: partita.chatAttiva !== false,
             mediaAttiva: partita.mediaAttiva === true
           }));
@@ -5465,7 +5511,7 @@ async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, auto
         g.socket.send(JSON.stringify({
           tipo: "statoPartita", giocatori: statoGiocatori, turnoDiId: idAttuale,
           messaggi: ["RANDOM.ORG non ha restituito i dadi. Riprova il tiro."],
-          tempoInizioTurno: partita.tempoInizioTurno, durataMossaMs: millisecondiMossa(partita),
+          tempoInizioTurno: partita.tempoInizioTurno, durataMossaMs: millisecondiMossa(partita), tempoResiduoMs: tempoResiduoVisibileMs(partita),
           chatAttiva: partita.chatAttiva !== false,
           mediaAttiva: partita.mediaAttiva === true
         }));
@@ -5517,7 +5563,7 @@ async function forzaAbbandonoPerInattivita(partita, nomeStanza, idGiocatore) {
         g.socket.send(JSON.stringify({
           tipo: "statoPartita", giocatori: statoGiocatori, turnoDiId: idAttuale,
           messaggi: [nomeUscente + " è stato rimosso per inattività prolungata."],
-          tempoInizioTurno: partita.tempoInizioTurno, durataMossaMs: millisecondiMossa(partita)
+          tempoInizioTurno: partita.tempoInizioTurno, durataMossaMs: millisecondiMossa(partita), tempoResiduoMs: tempoResiduoVisibileMs(partita)
         }));
       }
     });
@@ -5559,7 +5605,7 @@ function inviaStatoDeterminazione(partita, nomeStanza) {
     turnoInCorsoUid: partita.turnoInCorsoDeterminazione || null,
     gruppoSpareggioAttuale: partita.gruppoSpareggioAttuale || null,
     tempoInizioTurno: partita.tempoInizioTurno || null,
-    durataMossaMs: millisecondiMossa(partita),
+    durataMossaMs: millisecondiMossa(partita), tempoResiduoMs: tempoResiduoVisibileMs(partita),
     classificata: partita.classificata !== false,
     chatAttiva: partita.chatAttiva !== false,
     mediaAttiva: partita.mediaAttiva === true
@@ -5568,9 +5614,49 @@ function inviaStatoDeterminazione(partita, nomeStanza) {
 }
 
 function avviaTimerDeterminazione(partita, nomeStanza) {
+  if (!partita) return;
+
   fermaTimerTurno(partita);
+
+  const token = partita.tokenTimerTurno;
+  const durataServer = millisecondiTimerServer(partita);
+
   partita.tempoInizioTurno = Date.now();
-  partita.timerTurno = setTimeout(() => { gestisciScadenzaDeterminazione(partita, nomeStanza); }, millisecondiMossa(partita));
+  partita.scadenzaTurno = partita.tempoInizioTurno + durataServer;
+
+  partita.timerTurno = setTimeout(async () => {
+    if (token !== partita.tokenTimerTurno) return;
+
+    partita.timerTurno = null;
+    await gestisciScadenzaDeterminazione(partita, nomeStanza);
+  }, durataServer);
+}
+
+function ripristinaTimerDeterminazione(partita, nomeStanza) {
+  if (!partita) return;
+
+  if (!partita.scadenzaTurno) {
+    avviaTimerDeterminazione(partita, nomeStanza);
+    return;
+  }
+
+  if (!Number.isFinite(Number(partita.tempoInizioTurno))) {
+    partita.tempoInizioTurno =
+      Number(partita.scadenzaTurno) - millisecondiTimerServer(partita);
+  }
+
+  fermaTimerTurno(partita);
+
+  const token = partita.tokenTimerTurno;
+  const tempoRimanenteServer =
+    Number(partita.scadenzaTurno) - Date.now();
+
+  partita.timerTurno = setTimeout(async () => {
+    if (token !== partita.tokenTimerTurno) return;
+
+    partita.timerTurno = null;
+    await gestisciScadenzaDeterminazione(partita, nomeStanza);
+  }, Math.max(0, tempoRimanenteServer));
 }
 
 async function gestisciScadenzaDeterminazione(partita, nomeStanza) {
@@ -5640,7 +5726,7 @@ async function riprendiFaseDeterminazioneRipristinata(partita, nomeStanza) {
     : null;
 
   if (uidValidi.has(partita.turnoInCorsoDeterminazione)) {
-    avviaTimerDeterminazione(partita, nomeStanza);
+    ripristinaTimerDeterminazione(partita, nomeStanza);
     inviaStatoDeterminazione(partita, nomeStanza);
     return;
   }
@@ -5735,7 +5821,7 @@ async function completaDeterminazione(partita, nomeStanza, ordineFinale) {
           messaggi: ["Ordine deciso!", primoGiocatore.nome + " inizia la partita: tira i dadi!"]
         },
         giocatori: statoGiocatori, turnoDiId: idPrimoTurno,
-        tempoInizioTurno: partita.tempoInizioTurno, durataMossaMs: millisecondiMossa(partita),
+        tempoInizioTurno: partita.tempoInizioTurno, durataMossaMs: millisecondiMossa(partita), tempoResiduoMs: tempoResiduoVisibileMs(partita),
         vittoria: false, vincitore: null,
         classificata: partita.classificata !== false,
         chatAttiva: partita.chatAttiva !== false,
@@ -6097,7 +6183,7 @@ inviaAllaStanza(stanzaAttuale, {
             turnoInCorsoUid: partita.turnoInCorsoDeterminazione || null,
             gruppoSpareggioAttuale: partita.gruppoSpareggioAttuale || null,
             tempoInizioTurno: partita.tempoInizioTurno || Date.now(),
-            durataMossaMs: millisecondiMossa(partita),
+            durataMossaMs: millisecondiMossa(partita), tempoResiduoMs: tempoResiduoVisibileMs(partita),
             classificata: partita.classificata !== false,
             chatAttiva: partita.chatAttiva !== false,
             mediaAttiva: partita.mediaAttiva === true
@@ -6109,7 +6195,7 @@ inviaAllaStanza(stanzaAttuale, {
             turnoDiId: partita.ordineGiocatori[partita.turnoAttuale],
             punteggiOrdineIniziale: partita.punteggiOrdineIniziale || null,
             tempoInizioTurno: partita.tempoInizioTurno || null,
-            durataMossaMs: millisecondiMossa(partita),
+            durataMossaMs: millisecondiMossa(partita), tempoResiduoMs: tempoResiduoVisibileMs(partita),
             scadenzaTurno: partita.scadenzaTurno || null,
             tiriEffettuatiNelTurno: Number(partita.tiriEffettuatiNelTurno || 0),
             tiriConsentitiNelTurno: Number(partita.tiriConsentitiNelTurno || 1),
@@ -6381,6 +6467,7 @@ inviaAllaStanza(stanzaAttuale, {
         if (partita.fase !== "determinazione_ordine") return;
         if (!partita.giocatori[uid] || partita.giocatori[uid].socket !== socket) return;
         if (partita.turnoInCorsoDeterminazione !== uid) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "Non è il tuo turno per tirare." })); return; }
+        if (partita.scadenzaTurno && Date.now() >= partita.scadenzaTurno) return;
         if (partita.giocatori[uid]) partita.giocatori[uid].tentativiAutomaticiConsecutivi = 0;
         await eseguiTiroDeterminazionePerGiocatore(partita, nomeStanza, uid, false);
         return;
@@ -6481,7 +6568,7 @@ inviaAllaStanza(stanzaAttuale, {
                 messaggi: [nomeUscente + " ha abbandonato la partita."],
                 tempoInizioTurno: partita.tempoInizioTurno || null,
                 scadenzaTurno: partita.scadenzaTurno || null,
-                durataMossaMs: millisecondiMossa(partita),
+                durataMossaMs: millisecondiMossa(partita), tempoResiduoMs: tempoResiduoVisibileMs(partita),
                 tiriEffettuatiNelTurno: partita.tiriEffettuatiNelTurno,
                 tiriConsentitiNelTurno: partita.tiriConsentitiNelTurno
               }));
