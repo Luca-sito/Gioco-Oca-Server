@@ -794,13 +794,21 @@ body.modalita-ruotata #mondo-ruotato {
 }
 
 body.modalita-ruotata #area-tabellone > #area-dadi {
-  /* Dopo la rotazione del tabellone questo lato diventa il bordo inferiore
-     visivo del telefono in orizzontale. Il box resta interamente dentro. */
-  top: 50%;
-  right: 0;
-  bottom: auto;
-  left: auto;
-  transform: translateY(-50%);
+  /*
+   * Sul cellulare il tabellone viene ruotato di 90°.
+   * Per far apparire i dadi nella zona evidenziata in rosso,
+   * cioè sul LATO SINISTRO VISIBILE del tabellone e centrati
+   * verticalmente, dobbiamo ancorarli al BORDO INFERIORE
+   * del tabellone prima della rotazione.
+   *
+   * Restano quindi dentro al tabellone, a pochi pixel dal bordo,
+   * e mantengono la stessa rotazione di 90° che hanno già ora.
+   */
+  top: auto;
+  right: auto;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 #area-dadi.dadi-in-popup {
@@ -2145,32 +2153,4 @@ body:not(.modalita-desktop) #controlli-media-locale .videochiamata-intestazione 
 body.client-cellulare-audio-only #controlli-media-locale {
   display: flex;
   grid-template-columns: none;
-}
-
-/* =========================================================
-   CELLULARE — DADI DAVVERO SUL BORDO INFERIORE DEL TABELLONE
-   Il tabellone è ruotato di 90°. Per questo il suo lato "right"
-   nel sistema di coordinate originale corrisponde al bordo
-   inferiore che il giocatore vede sul telefono.
-   ========================================================= */
-@media (max-width: 600px) {
-  body.modalita-ruotata #area-tabellone > #area-dadi:not(.dadi-in-popup) {
-    /* Centro lungo il bordo inferiore visibile. */
-    top: 50%;
-    right: 2px;
-    bottom: auto;
-    left: auto;
-    transform: translateY(-50%);
-
-    /*
-     * Il vecchio padding destro era 20px: dopo la rotazione
-     * lasciava i dadi troppo lontani dal bordo inferiore.
-     * Ora la faccia dei dadi resta circa 6px sopra il bordo,
-     * completamente DENTRO il tabellone.
-     */
-    padding-top: 14px;
-    padding-right: 4px;
-    padding-bottom: 14px;
-    padding-left: 12px;
-  }
 }
