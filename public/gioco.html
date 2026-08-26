@@ -128,13 +128,13 @@
   <div id="flash-messaggio-gioco" role="status" aria-live="assertive"><span></span></div>
 
   <section id="videochiamata" class="nascosto" aria-label="Videochiamata della partita">
-    <div class="videochiamata-intestazione">
-      <strong>🎥 Videochiamata</strong>
-      <span id="stato-media-connessione" role="status" aria-live="polite">Avvio…</span>
-    </div>
     <div id="controlli-media-locale" aria-label="Controlli della chiamata">
-      <button type="button" id="btn-toggle-microfono-media" onclick="toggleMicrofonoMedia()" aria-pressed="false">🎙️ Microfono: On</button>
-      <button type="button" id="btn-toggle-webcam-media" onclick="toggleWebcamMedia()" aria-pressed="false">📷 Webcam: On</button>
+      <button type="button" id="btn-toggle-microfono-media" class="controllo-media-tondo" onclick="toggleMicrofonoMedia()" aria-pressed="false" aria-label="Disattiva microfono" title="Disattiva microfono">🎙️</button>
+      <div class="videochiamata-intestazione">
+        <strong>🎥 Videochiamata</strong>
+        <span id="stato-media-connessione" role="status" aria-live="polite">Avvio…</span>
+      </div>
+      <button type="button" id="btn-toggle-webcam-media" class="controllo-media-tondo" onclick="toggleWebcamMedia()" aria-pressed="false" aria-label="Disattiva webcam" title="Disattiva webcam">📷</button>
     </div>
     <div id="griglia-video">
       <figure id="video-tile-locale" class="video-tile video-locale">
