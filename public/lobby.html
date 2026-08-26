@@ -1681,6 +1681,116 @@ body.tema-scuro .giocatore-online{
         display:none !important;
     }
 }
+
+/* ===== SEGNALAZIONE GIOCATORE ===== */
+.player-card-azione.segnala{
+    background:rgba(255,170,0,.10) !important;
+    border-color:rgba(255,170,0,.34) !important;
+    color:#ffd27a !important;
+}
+.overlay-segnalazione{
+    display:none;
+    position:fixed;
+    inset:0;
+    z-index:3200;
+    align-items:center;
+    justify-content:center;
+    padding:18px;
+    background:rgba(17,24,39,.42);
+    backdrop-filter:blur(3px);
+    -webkit-backdrop-filter:blur(3px);
+}
+.overlay-segnalazione.aperto{display:flex;}
+.segnalazione-box{
+    width:min(460px,calc(100vw - 32px));
+    background:#fff;
+    color:#17212b;
+    border:1px solid #dfe4e8;
+    border-radius:18px;
+    box-shadow:0 26px 70px rgba(24,32,40,.25);
+    overflow:hidden;
+}
+.segnalazione-header{
+    padding:22px 22px 14px;
+    border-bottom:1px solid #edf0f2;
+}
+.segnalazione-header h3{
+    margin:0 0 5px;
+    font-size:20px;
+    color:#17212b;
+}
+.segnalazione-header p{
+    margin:0;
+    color:#6b7580;
+    font-size:13px;
+}
+.segnalazione-corpo{padding:18px 22px;}
+.segnalazione-domanda{
+    margin:0 0 13px;
+    font-size:16px;
+    font-weight:900;
+}
+.segnalazione-opzioni{
+    display:grid;
+    gap:9px;
+}
+.segnalazione-opzione{
+    width:100%;
+    margin:0 !important;
+    padding:13px 14px !important;
+    display:flex;
+    align-items:center;
+    gap:11px;
+    text-align:left;
+    background:#f7f8fa !important;
+    color:#202a34 !important;
+    border:1px solid #dfe4e8 !important;
+    border-radius:11px !important;
+}
+.segnalazione-opzione:hover{
+    opacity:1 !important;
+    background:#fff5eb !important;
+    border-color:#ff9b52 !important;
+}
+.segnalazione-opzione.selezionata{
+    background:#fff1e6 !important;
+    border-color:#ff6600 !important;
+    box-shadow:0 0 0 2px rgba(255,102,0,.10);
+}
+.segnalazione-radio{
+    width:18px;height:18px;flex:0 0 18px;
+    border:2px solid #a8b0b8;border-radius:50%;
+    position:relative;
+}
+.segnalazione-opzione.selezionata .segnalazione-radio{border-color:#ff6600;}
+.segnalazione-opzione.selezionata .segnalazione-radio::after{
+    content:"";position:absolute;inset:3px;border-radius:50%;background:#ff6600;
+}
+.segnalazione-note{
+    width:100%;
+    min-height:82px;
+    margin-top:14px;
+    padding:11px 12px;
+    resize:vertical;
+    border:1px solid #dfe4e8;
+    border-radius:10px;
+    font:inherit;
+    color:#17212b;
+    background:#fff;
+}
+.segnalazione-note:focus{outline:2px solid rgba(255,102,0,.18);border-color:#ff8a3d;}
+.segnalazione-azioni{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:9px;
+    padding:14px 22px 20px;
+    border-top:1px solid #edf0f2;
+}
+.segnalazione-azioni button{margin:0 !important;}
+.segnalazione-annulla{background:#eef1f4 !important;color:#27313a !important;border:1px solid #d9dfe4 !important;}
+.segnalazione-invia{background:#ff6600 !important;color:#fff !important;border:1px solid #ff6600 !important;}
+.segnalazione-invia:disabled{background:#cfd4d9 !important;border-color:#cfd4d9 !important;color:#fff !important;}
+
 </style>
 </head>
 <body>
@@ -3491,6 +3601,7 @@ function disegnaPlayerCardGiocatore(dati) {
     </div>
     <div class="player-card-azioni">
       <a class="player-card-azione" href="profilo-pubblico.html?nickname=${encodeURIComponent(dati.nickname)}">${iconaPlayerCard("profilo")}<span>Profilo</span></a>
+      <button class="player-card-azione segnala" type="button" onclick="apriSegnalazioneGiocatore(\'${dati.uid}\', \'${nicknamePulito.replace(/\'/g, "\\\'")}\')"><span aria-hidden="true">⚑</span><span>Segnala</span></button>
       ${amiciziaHtml}
       ${dati.statoBlocco === "bloccato_da_me"
         ? `<button class="player-card-azione bloccato" type="button" onclick="sbloccaGiocatore('${dati.uid}')">${iconaPlayerCard("sblocca")}<span>Sblocca</span></button>`
@@ -3784,6 +3895,86 @@ document.body.classList.add("tema-scuro");
 }
 caricaTopGiocatori();
 verificaSessione();
+
+
+// ===== SEGNALAZIONI GIOCATORI =====
+let segnalazioneTarget = null;
+let categoriaSegnalazione = "";
+
+function apriSegnalazioneGiocatore(uid, nickname) {
+  if (!uid || uid === mioUid) return;
+  segnalazioneTarget = { uid: String(uid), nickname: String(nickname || "Giocatore") };
+  categoriaSegnalazione = "";
+  const overlay = document.getElementById("overlaySegnalazione");
+  document.getElementById("sottotitoloSegnalazione").textContent =
+    "Stai segnalando " + segnalazioneTarget.nickname + ". La segnalazione verrà inviata allo staff.";
+  document.getElementById("segnalazioneNote").value = "";
+  document.querySelectorAll(".segnalazione-opzione").forEach(b => b.classList.remove("selezionata"));
+  document.getElementById("inviaSegnalazione").disabled = true;
+  overlay.classList.add("aperto");
+  overlay.setAttribute("aria-hidden", "false");
+}
+
+function chiudiSegnalazioneGiocatore() {
+  const overlay = document.getElementById("overlaySegnalazione");
+  overlay.classList.remove("aperto");
+  overlay.setAttribute("aria-hidden", "true");
+  segnalazioneTarget = null;
+  categoriaSegnalazione = "";
+}
+
+document.querySelectorAll(".segnalazione-opzione").forEach(bottone => {
+  bottone.addEventListener("click", () => {
+    categoriaSegnalazione = bottone.dataset.categoria || "";
+    document.querySelectorAll(".segnalazione-opzione").forEach(b => b.classList.toggle("selezionata", b === bottone));
+    document.getElementById("inviaSegnalazione").disabled = !categoriaSegnalazione;
+  });
+});
+
+document.getElementById("annullaSegnalazione").addEventListener("click", chiudiSegnalazioneGiocatore);
+document.getElementById("overlaySegnalazione").addEventListener("click", e => {
+  if (e.target.id === "overlaySegnalazione") chiudiSegnalazioneGiocatore();
+});
+
+document.getElementById("inviaSegnalazione").addEventListener("click", async () => {
+  if (!segnalazioneTarget || !categoriaSegnalazione) return;
+  const bottone = document.getElementById("inviaSegnalazione");
+  bottone.disabled = true;
+  bottone.textContent = "Invio…";
+  try {
+    const risposta = await fetchAutenticato("https://gioco-oca-server.onrender.com/api/segnalazioni", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        uidSegnalato: segnalazioneTarget.uid,
+        categoria: categoriaSegnalazione,
+        descrizione: document.getElementById("segnalazioneNote").value.trim()
+      })
+    });
+    const dati = await risposta.json().catch(() => ({}));
+    if (!risposta.ok) {
+      mostraNotifica(dati.errore || "Non è stato possibile inviare la segnalazione.");
+      return;
+    }
+    chiudiSegnalazioneGiocatore();
+    mostraNotifica("Segnalazione inviata correttamente.");
+  } catch (e) {
+    mostraNotifica("Errore di connessione durante l'invio della segnalazione.");
+  } finally {
+    bottone.textContent = "Invia segnalazione";
+    if (document.getElementById("overlaySegnalazione").classList.contains("aperto")) {
+      bottone.disabled = !categoriaSegnalazione;
+    }
+  }
+});
+
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && document.getElementById("overlaySegnalazione").classList.contains("aperto")) {
+    chiudiSegnalazioneGiocatore();
+  }
+});
+
 </script>
 <!-- MENU MOBILE -->
 <div id="menuMobile">
@@ -3864,5 +4055,28 @@ verificaSessione();
     </button>
     <div id="contenutoMobile"></div>
 </div>
+
+<div id="overlaySegnalazione" class="overlay-segnalazione" aria-hidden="true">
+  <div class="segnalazione-box" role="dialog" aria-modal="true" aria-labelledby="titoloSegnalazione">
+    <div class="segnalazione-header">
+      <h3 id="titoloSegnalazione">Segnala giocatore</h3>
+      <p id="sottotitoloSegnalazione">La segnalazione verrà inviata allo staff.</p>
+    </div>
+    <div class="segnalazione-corpo">
+      <div class="segnalazione-domanda">Cosa vuoi segnalare?</div>
+      <div class="segnalazione-opzioni">
+        <button type="button" class="segnalazione-opzione" data-categoria="Chat"><span class="segnalazione-radio"></span><span>Chat</span></button>
+        <button type="button" class="segnalazione-opzione" data-categoria="Avatar"><span class="segnalazione-radio"></span><span>Avatar</span></button>
+        <button type="button" class="segnalazione-opzione" data-categoria="Nickname"><span class="segnalazione-radio"></span><span>Nickname</span></button>
+      </div>
+      <textarea id="segnalazioneNote" class="segnalazione-note" maxlength="500" placeholder="Dettagli aggiuntivi (facoltativi)"></textarea>
+    </div>
+    <div class="segnalazione-azioni">
+      <button id="annullaSegnalazione" type="button" class="segnalazione-annulla">Annulla</button>
+      <button id="inviaSegnalazione" type="button" class="segnalazione-invia" disabled>Invia segnalazione</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
