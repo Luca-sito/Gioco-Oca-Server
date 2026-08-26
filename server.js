@@ -70,6 +70,13 @@ const limiteLogin = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { er
 const limiteContatti = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, message: { errore: "Hai inviato troppe richieste, riprova più tardi." } });
 const limiteMessaggiPrivati = rateLimit({ windowMs: 60 * 1000, max: 20, message: { errore: "Stai inviando messaggi troppo velocemente, rallenta un po'." } });
 const limiteAmici = rateLimit({ windowMs: 10 * 60 * 1000, max: 30, message: { errore: "Troppe richieste di amicizia in poco tempo, rallenta un po'." } });
+const limiteSegnalazioni = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 10,
+  message: { errore: "Troppe segnalazioni in poco tempo. Riprova più tardi." },
+  standardHeaders: true,
+  legacyHeaders: false
+});
 
 // ===== FIREBASE ADMIN =====
 let db = null;
@@ -81,6 +88,77 @@ try {
 } catch (e) {
   console.error("ATTENZIONE: Firebase Admin NON inizializzato:", e.message);
 }
+
+// ===== LOG CHAT MODERAZIONE — CONSERVAZIONE MASSIMA 90 GIORNI =====
+const DURATA_LOG_CHAT_MS = 90 * 24 * 60 * 60 * 1000;
+const INTERVALLO_PULIZIA_LOG_CHAT_MS = 24 * 60 * 60 * 1000;
+
+async function registraLogChat({ uid, nome, testo, ambito, stanza = null, partitaId = null }) {
+  if (!db || !uid || !testo) return;
+
+  const ref = db.ref(`logChat/${uid}`).push();
+  await ref.set({
+    id: ref.key,
+    uid: String(uid),
+    nome: pulisciTesto(String(nome || "Utente"), 30),
+    testo: pulisciTesto(String(testo), 300),
+    ambito: ambito === "partita" ? "partita" : "lobby",
+    stanza: stanza ? pulisciTesto(String(stanza), 40) : null,
+    partitaId: partitaId ? pulisciTesto(String(partitaId), 128) : null,
+    data: Date.now()
+  });
+}
+
+async function leggiLogChatUltimi90Giorni(uid) {
+  if (!db || !uid) return [];
+  const limite = Date.now() - DURATA_LOG_CHAT_MS;
+  const snap = await db.ref(`logChat/${uid}`)
+    .orderByChild("data")
+    .startAt(limite)
+    .once("value");
+
+  const valore = snap.val() || {};
+  return Object.values(valore)
+    .filter(r => r && Number(r.data) >= limite)
+    .sort((a, b) => Number(a.data || 0) - Number(b.data || 0));
+}
+
+async function pulisciLogChatScaduti() {
+  if (!db) return;
+  const limite = Date.now() - DURATA_LOG_CHAT_MS;
+
+  try {
+    const utentiSnap = await db.ref("logChat").once("value");
+    const utenti = utentiSnap.val() || {};
+    const aggiornamenti = {};
+
+    for (const [uid, registri] of Object.entries(utenti)) {
+      if (!registri || typeof registri !== "object") continue;
+      for (const [id, registro] of Object.entries(registri)) {
+        if (!registro || !Number.isFinite(Number(registro.data)) || Number(registro.data) < limite) {
+          aggiornamenti[`logChat/${uid}/${id}`] = null;
+        }
+      }
+    }
+
+    if (Object.keys(aggiornamenti).length) {
+      await db.ref().update(aggiornamenti);
+      console.log(`Pulizia log chat: rimossi ${Object.keys(aggiornamenti).length} record scaduti.`);
+    }
+  } catch (errore) {
+    console.error("Errore pulizia log chat 90 giorni:", errore.message);
+  }
+}
+
+if (db) {
+  setTimeout(() => pulisciLogChatScaduti().catch(() => {}), 15 * 1000);
+  const timerPuliziaLogChat = setInterval(
+    () => pulisciLogChatScaduti().catch(() => {}),
+    INTERVALLO_PULIZIA_LOG_CHAT_MS
+  );
+  if (typeof timerPuliziaLogChat.unref === "function") timerPuliziaLogChat.unref();
+}
+
 
 function preparaGiocatoriPerFirebase(giocatori) {
   const risultato = {};
@@ -4078,6 +4156,84 @@ app.delete("/api/blocchi/:utenteUid", richiediAuth, async (req, res) => {
   }
 });
 
+
+// ===== SEGNALAZIONI GIOCATORI =====
+app.post("/api/segnalazioni", limiteSegnalazioni, richiediAuth, async (req, res) => {
+  if (!db) return res.status(503).json({ errore: "Servizio segnalazioni non disponibile." });
+
+  try {
+    const uidSegnalante = String(req.utente.uid || "");
+    const uidSegnalato = pulisciTesto(String(req.body?.uidSegnalato || ""), 128);
+    const categoria = pulisciTesto(String(req.body?.categoria || ""), 20);
+    const descrizione = pulisciTesto(String(req.body?.descrizione || ""), 500);
+    const categorieConsentite = new Set(["Chat", "Avatar", "Nickname"]);
+
+    if (!uidSegnalato) return res.status(400).json({ errore: "Giocatore da segnalare non valido." });
+    if (uidSegnalato === uidSegnalante) return res.status(400).json({ errore: "Non puoi segnalare il tuo stesso profilo." });
+    if (!categorieConsentite.has(categoria)) return res.status(400).json({ errore: "Categoria di segnalazione non valida." });
+
+    const [snapSegnalato, snapSegnalante] = await Promise.all([
+      db.ref(`utenti/${uidSegnalato}`).once("value"),
+      db.ref(`utenti/${uidSegnalante}`).once("value")
+    ]);
+
+    if (!snapSegnalato.exists()) return res.status(404).json({ errore: "Giocatore non trovato." });
+
+    const utenteSegnalato = snapSegnalato.val() || {};
+    const utenteSegnalante = snapSegnalante.val() || {};
+    const ora = Date.now();
+
+    // Per una segnalazione Chat viene congelata una copia dei log ancora
+    // disponibili nel periodo di conservazione di 90 giorni.
+    const logChat = categoria === "Chat"
+      ? await leggiLogChatUltimi90Giorni(uidSegnalato)
+      : [];
+
+    const nuovaSegnalazione = db.ref("segnalazioni").push();
+    await nuovaSegnalazione.set({
+      id: nuovaSegnalazione.key,
+      uidSegnalante,
+      nicknameSegnalante: utenteSegnalante.nickname || req.utente.nickname || "Utente",
+      uidSegnalato,
+      nicknameSegnalato: utenteSegnalato.nickname || "Utente",
+      avatarSegnalato: utenteSegnalato.avatar || null,
+      categoria,
+      descrizione,
+      stato: "da_esaminare",
+      data: ora,
+      periodoLogGiorni: categoria === "Chat" ? 90 : null,
+      numeroLogChat: logChat.length,
+      logChat: categoria === "Chat" ? logChat : null
+    });
+
+    return res.json({
+      ok: true,
+      id: nuovaSegnalazione.key,
+      logChatAllegati: categoria === "Chat" ? logChat.length : 0
+    });
+  } catch (errore) {
+    console.error("Errore invio segnalazione giocatore:", errore);
+    return res.status(500).json({ errore: "Errore durante l'invio della segnalazione." });
+  }
+});
+
+// Consultazione staff delle segnalazioni giocatori.
+app.get("/api/admin/segnalazioni", richiediAuth, richiediAdmin, async (req, res) => {
+  if (!db) return res.status(503).json({ errore: "Servizio segnalazioni non disponibile." });
+
+  try {
+    const snap = await db.ref("segnalazioni").once("value");
+    const elenco = Object.values(snap.val() || {})
+      .filter(Boolean)
+      .sort((a, b) => Number(b.data || 0) - Number(a.data || 0));
+
+    return res.json({ segnalazioni: elenco });
+  } catch (errore) {
+    console.error("Errore lettura segnalazioni admin:", errore);
+    return res.status(500).json({ errore: "Errore durante il caricamento delle segnalazioni." });
+  }
+});
+
 // ===== PROFILO PUBBLICO, STORICO =====
 app.get("/api/profilo-pubblico/:nickname", richiediAuth, async (req, res) => {
   if (!db) return res.status(500).json({ errore: "Servizio non disponibile." });
@@ -5782,7 +5938,7 @@ inviaAllaStanza(stanzaAttuale, {
         const partitaId = "p" + Date.now() + Math.floor(Math.random() * 1000);
         const max = parseInt(dati.maxGiocatori);
         const nuovaPartita = {
-          id: partitaId, creatore: nickname, creatoDa: uid, tempo: dati.tempo, modalita: dati.modalita, classificata: dati.classificata !== false,
+          id: partitaId, creatore: nickname, creatoDa: uid, tempo: "15", modalita: dati.modalita, classificata: dati.classificata !== false,
           maxGiocatori: (!max || max < 2 || max > 8 ? 2 : max),
           chatAttiva: dati.chatAttiva !== false,
           mediaAttiva,
@@ -5971,6 +6127,18 @@ inviaAllaStanza(stanzaAttuale, {
         if (typeof dati.testo !== "string") return;
         const testo = pulisciTesto(dati.testo, 300);
         if (testo.length === 0) return;
+        try {
+          await registraLogChat({
+            uid,
+            nome: nickname,
+            testo,
+            ambito: "lobby",
+            stanza: stanzaAttuale
+          });
+        } catch (erroreLog) {
+          console.error("Errore salvataggio log chat Lobby:", erroreLog.message);
+        }
+
         await inviaChatLobbyFiltrata(
           stanzaAttuale,
           uid,
@@ -5990,6 +6158,19 @@ inviaAllaStanza(stanzaAttuale, {
         if (partita.chatAttiva === false) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "La chat è disattivata in questa partita." })); return; }
         const mittente = partita.giocatori[uid];
         if (!mittente || mittente.socket !== socket) return;
+        try {
+          await registraLogChat({
+            uid,
+            nome: mittente.nome,
+            testo,
+            ambito: "partita",
+            stanza: trovato.nomeStanza,
+            partitaId: partita.id
+          });
+        } catch (erroreLog) {
+          console.error("Errore salvataggio log chat Partita:", erroreLog.message);
+        }
+
         await inviaChatPartitaFiltrata(
           partita,
           uid,
