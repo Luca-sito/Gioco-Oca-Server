@@ -1507,15 +1507,6 @@ function creaElementiVideoRemoto(altroUid) {
   const audio = document.createElement("audio");
   audio.autoplay = true;
   audio.preload = "auto";
-  audio.playsInline = true;
-
-  // L'audio remoto deve essere esplicitamente udibile.
-  // Il video remoto rimane muto perché l'audio viene riprodotto
-  // da questo elemento separato.
-  audio.muted = false;
-  audio.defaultMuted = false;
-  audio.volume = 1;
-
   figura.appendChild(audio);
 
   const didascalia = document.createElement("figcaption");
@@ -1603,30 +1594,11 @@ function creaConnessionePeer(altroUid) {
       if (!elementi.streamAudioRemoto.getTracks().some(t => t.id === evento.track.id)) {
         elementi.streamAudioRemoto.addTrack(evento.track);
       }
-      // Assicura che la traccia ricevuta non rimanga disabilitata
-      // e che l'elemento audio remoto non sia accidentalmente in mute.
-      evento.track.enabled = true;
-      elementi.audio.muted = false;
-      elementi.audio.defaultMuted = false;
-      elementi.audio.volume = 1;
       elementi.audio.srcObject = elementi.streamAudioRemoto;
-
       evento.track.onended = () => {
         try { elementi.streamAudioRemoto.removeTrack(evento.track); } catch (e) {}
       };
-
-      // Prova subito e riprova quando il browser considera il media riproducibile.
       tentaRiproduzioneElementoMedia(elementi.audio);
-      elementi.audio.onloadedmetadata = () => {
-        elementi.audio.muted = false;
-        elementi.audio.volume = 1;
-        tentaRiproduzioneElementoMedia(elementi.audio);
-      };
-      elementi.audio.oncanplay = () => {
-        elementi.audio.muted = false;
-        elementi.audio.volume = 1;
-        tentaRiproduzioneElementoMedia(elementi.audio);
-      };
       return;
     }
 
@@ -1850,14 +1822,6 @@ async function sbloccaRiproduzioneMedia() {
   const elementiDaRiprodurre = Object.values(elementiVideoRemoti)
     .flatMap(elementi => [elementi.audio, elementi.video])
     .filter(Boolean);
-  elementiDaRiprodurre.forEach(elemento => {
-    if (elemento.tagName === "AUDIO") {
-      elemento.muted = false;
-      elemento.defaultMuted = false;
-      elemento.volume = 1;
-    }
-  });
-
   const risultati = await Promise.allSettled(elementiDaRiprodurre.map(elemento => elemento.play()));
   const fallita = risultati.some(risultato => risultato.status === "rejected");
   const pulsante = document.getElementById("btn-sblocca-media");
