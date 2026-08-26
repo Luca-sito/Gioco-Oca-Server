@@ -2161,7 +2161,7 @@ body.client-cellulare-audio-only #controlli-media-locale {
 
 @media (min-width: 1000px) {
   #area-tabellone {
-    transform: scale(1.10);
+    transform: scale(1.03);
     transform-origin: center center;
   }
 }
