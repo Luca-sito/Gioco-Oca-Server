@@ -2155,9 +2155,6 @@ body.client-cellulare-audio-only #controlli-media-locale {
   grid-template-columns: none;
 }
 
-@media (max-width: 600px) {
-  body.modalita-ruotata #area-tabellone {
-    transform: scale(1.12);
-    transform-origin: center center;
-  }
+#risultato-dadi {
+    display: none !important;
 }
