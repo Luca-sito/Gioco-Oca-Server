@@ -70,6 +70,7 @@ const limiteLogin = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { er
 const limiteContatti = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, message: { errore: "Hai inviato troppe richieste, riprova più tardi." } });
 const limiteMessaggiPrivati = rateLimit({ windowMs: 60 * 1000, max: 20, message: { errore: "Stai inviando messaggi troppo velocemente, rallenta un po'." } });
 const limiteAmici = rateLimit({ windowMs: 10 * 60 * 1000, max: 30, message: { errore: "Troppe richieste di amicizia in poco tempo, rallenta un po'." } });
+const limiteSegnalazioni = rateLimit({ windowMs: 10 * 60 * 1000, max: 10, message: { errore: "Hai inviato troppe segnalazioni. Riprova più tardi." }, standardHeaders: true, legacyHeaders: false });
 
 // ===== FIREBASE ADMIN =====
 let db = null;
@@ -4075,6 +4076,52 @@ app.delete("/api/blocchi/:utenteUid", richiediAuth, async (req, res) => {
     return res.status(500).json({
       errore: "Errore durante lo sblocco dell'utente."
     });
+  }
+});
+
+
+// ===== SEGNALAZIONI GIOCATORI =====
+app.post("/api/segnalazioni", limiteSegnalazioni, richiediAuth, async (req, res) => {
+  if (!db) return res.status(500).json({ errore: "Servizio non disponibile." });
+
+  try {
+    const uidSegnalante = String(req.utente.uid || "");
+    const uidSegnalato = pulisciTesto(String(req.body?.uidSegnalato || ""), 128);
+    const categoria = pulisciTesto(String(req.body?.categoria || ""), 20);
+    const descrizione = pulisciTesto(String(req.body?.descrizione || ""), 500);
+    const categorieConsentite = new Set(["Chat", "Avatar", "Nickname"]);
+
+    if (!uidSegnalato) return res.status(400).json({ errore: "Giocatore da segnalare non valido." });
+    if (uidSegnalato === uidSegnalante) return res.status(400).json({ errore: "Non puoi segnalare il tuo stesso profilo." });
+    if (!categorieConsentite.has(categoria)) return res.status(400).json({ errore: "Categoria di segnalazione non valida." });
+
+    const [snapSegnalato, snapSegnalante] = await Promise.all([
+      db.ref("utenti/" + uidSegnalato).once("value"),
+      db.ref("utenti/" + uidSegnalante).once("value")
+    ]);
+
+    if (!snapSegnalato.exists()) return res.status(404).json({ errore: "Giocatore non trovato." });
+
+    const utenteSegnalato = snapSegnalato.val() || {};
+    const utenteSegnalante = snapSegnalante.val() || {};
+
+    const nuovaSegnalazione = db.ref("segnalazioni").push();
+    await nuovaSegnalazione.set({
+      id: nuovaSegnalazione.key,
+      uidSegnalante,
+      nicknameSegnalante: utenteSegnalante.nickname || req.utente.nickname || "Utente",
+      uidSegnalato,
+      nicknameSegnalato: utenteSegnalato.nickname || "Utente",
+      categoria,
+      descrizione,
+      stato: "da_esaminare",
+      data: Date.now()
+    });
+
+    return res.json({ ok: true, id: nuovaSegnalazione.key });
+  } catch (errore) {
+    console.error("Errore invio segnalazione:", errore);
+    return res.status(500).json({ errore: "Errore durante l'invio della segnalazione." });
   }
 });
 
