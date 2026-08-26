@@ -1022,175 +1022,6 @@ let timerDisconnessionePeer = {};
 let partecipantiMediaPronti = new Set();
 let partecipantiMediaInfo = new Map();
 const nomiPartecipantiMedia = new Map();
-
-// ===== DIAGNOSTICA TEMPORANEA WEBRTC =====
-// Questo pannello NON cambia il comportamento di webcam/microfono.
-// Legge soltanto gli stati reali della connessione per individuare il punto di rottura.
-const diagnosticaWebRtc = {
-  offerInviate: 0,
-  offerRicevute: 0,
-  answerInviate: 0,
-  answerRicevute: 0,
-  iceInviati: 0,
-  iceRicevuti: 0,
-  tracceAudioRemote: 0,
-  tracceVideoRemote: 0,
-  ultimoErrore: "",
-  ultimoEvento: "Avvio diagnostica",
-  turnConfigurato: false,
-  stunConfigurati: 0,
-  turnConfigurati: 0
-};
-
-function testoStatoDiagnostica(valore, fallback = "—") {
-  return valore == null || valore === "" ? fallback : String(valore);
-}
-
-function creaPannelloDiagnosticaWebRtc() {
-  if (document.getElementById("diagnostica-webrtc")) return;
-
-  const stile = document.createElement("style");
-  stile.id = "diagnostica-webrtc-stile";
-  stile.textContent = `
-    #diagnostica-webrtc{
-      position:fixed; left:10px; bottom:10px; z-index:2147483646;
-      width:min(390px,calc(100vw - 20px)); max-height:min(72vh,620px);
-      overflow:auto; padding:12px 13px; border-radius:12px;
-      background:rgba(8,12,18,.94); color:#f5f7fa;
-      border:2px solid #ffd54f; box-shadow:0 12px 35px rgba(0,0,0,.48);
-      font:12px/1.35 Arial,sans-serif; text-align:left;
-      backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
-    }
-    #diagnostica-webrtc *{box-sizing:border-box}
-    #diagnostica-webrtc .diag-titolo{
-      display:flex;align-items:center;justify-content:space-between;gap:8px;
-      margin-bottom:8px;font-weight:900;color:#ffd54f;font-size:13px;
-    }
-    #diagnostica-webrtc .diag-badge{
-      padding:2px 6px;border-radius:999px;background:#263238;color:#fff;font-size:10px
-    }
-    #diagnostica-webrtc .diag-riga{
-      display:grid;grid-template-columns:145px 1fr;gap:8px;
-      padding:4px 0;border-top:1px solid rgba(255,255,255,.08);
-    }
-    #diagnostica-webrtc .diag-riga:first-of-type{border-top:0}
-    #diagnostica-webrtc .diag-k{color:#aeb8c2}
-    #diagnostica-webrtc .diag-v{font-weight:700;word-break:break-word}
-    #diagnostica-webrtc .ok{color:#69f0ae}
-    #diagnostica-webrtc .warn{color:#ffd54f}
-    #diagnostica-webrtc .bad{color:#ff8a80}
-    #diagnostica-webrtc .diag-errore{
-      margin-top:7px;padding:7px;border-radius:7px;background:rgba(255,82,82,.10);
-      color:#ffb4ae;white-space:pre-wrap;word-break:break-word
-    }
-    @media(max-width:700px){
-      #diagnostica-webrtc{left:6px;bottom:6px;width:calc(100vw - 12px);font-size:10px;padding:9px}
-      #diagnostica-webrtc .diag-riga{grid-template-columns:112px 1fr;gap:5px}
-      #diagnostica-webrtc .diag-titolo{font-size:11px}
-    }
-  `;
-  document.head.appendChild(stile);
-
-  const pannello = document.createElement("div");
-  pannello.id = "diagnostica-webrtc";
-  pannello.innerHTML = `
-    <div class="diag-titolo">
-      <span>DIAGNOSTICA AUDIO / WEBRTC</span>
-      <span class="diag-badge" id="diag-dispositivo">—</span>
-    </div>
-    <div id="diag-contenuto"></div>
-    <div class="diag-errore" id="diag-errore" hidden></div>
-  `;
-  document.body.appendChild(pannello);
-}
-
-function classeDiagnostica(valore, tipo = "") {
-  if (tipo === "booleano") return valore ? "ok" : "bad";
-  const t = String(valore || "").toLowerCase();
-  if (["connected","completed","live","ricevuto","creato","sì","si","2"].includes(t)) return "ok";
-  if (["failed","closed","non ricevuto","nessuno","0"].includes(t)) return "bad";
-  if (["checking","connecting","new","in attesa","—"].includes(t)) return "warn";
-  return "";
-}
-
-function aggiornaPannelloDiagnosticaWebRtc() {
-  creaPannelloDiagnosticaWebRtc();
-
-  const badge = document.getElementById("diag-dispositivo");
-  const contenuto = document.getElementById("diag-contenuto");
-  const erroreBox = document.getElementById("diag-errore");
-  if (!contenuto) return;
-
-  if (badge) badge.textContent = clientCellulareAudioOnly ? "CELLULARE · AUDIO" : tipoDispositivoMediaLocale.toUpperCase();
-
-  const tracciaAudioLocale = flussoMediaLocale?.getAudioTracks?.().find(t => t.readyState === "live") || null;
-  const tracciaVideoLocale = flussoMediaLocale?.getVideoTracks?.().find(t => t.readyState === "live") || null;
-  const peerIds = Object.keys(connessioniPeer);
-  const pc = peerIds.length ? connessioniPeer[peerIds[0]] : null;
-  const audioRemoti = Object.values(elementiVideoRemoti)
-    .reduce((n, e) => n + (e?.streamAudioRemoto?.getAudioTracks?.().filter(t => t.readyState === "live").length || 0), 0);
-  const videoRemoti = Object.values(elementiVideoRemoti)
-    .reduce((n, e) => n + (e?.streamVideoRemoto?.getVideoTracks?.().filter(t => t.readyState === "live").length || 0), 0);
-
-  const righe = [
-    ["UID locale", mioUid ? String(mioUid).slice(0,18) + (String(mioUid).length > 18 ? "…" : "") : "—"],
-    ["Media partita", mediaPartitaAttiva ? "SÌ" : "NO"],
-    ["Audio locale", tracciaAudioLocale ? `LIVE · enabled=${tracciaAudioLocale.enabled}` : "NON LIVE"],
-    ["Video locale", clientCellulareAudioOnly ? "N/A · solo audio" : (tracciaVideoLocale ? `LIVE · enabled=${tracciaVideoLocale.enabled}` : "NON LIVE")],
-    ["Media pronti", String(partecipantiMediaPronti.size)],
-    ["Peer remoti", String(peerIds.length)],
-    ["Peer UID", peerIds.length ? peerIds[0].slice(0,18) + (peerIds[0].length > 18 ? "…" : "") : "NESSUNO"],
-    ["Signaling", pc ? pc.signalingState : "—"],
-    ["Connection", pc ? pc.connectionState : "—"],
-    ["ICE", pc ? pc.iceConnectionState : "—"],
-    ["Gathering ICE", pc ? pc.iceGatheringState : "—"],
-    ["Offer", `inviate ${diagnosticaWebRtc.offerInviate} · ricevute ${diagnosticaWebRtc.offerRicevute}`],
-    ["Answer", `inviate ${diagnosticaWebRtc.answerInviate} · ricevute ${diagnosticaWebRtc.answerRicevute}`],
-    ["Candidati ICE", `↑ ${diagnosticaWebRtc.iceInviati} · ↓ ${diagnosticaWebRtc.iceRicevuti}`],
-    ["Audio remoto", audioRemoti > 0 ? `RICEVUTO (${audioRemoti})` : "NON RICEVUTO"],
-    ["Video remoto", clientCellulareAudioOnly ? "N/A sul cellulare" : (videoRemoti > 0 ? `RICEVUTO (${videoRemoti})` : "NON RICEVUTO")],
-    ["STUN / TURN", `${diagnosticaWebRtc.stunConfigurati} STUN · ${diagnosticaWebRtc.turnConfigurati} TURN`],
-    ["Ultimo evento", diagnosticaWebRtc.ultimoEvento || "—"]
-  ];
-
-  contenuto.innerHTML = righe.map(([k,v]) => {
-    const classe = classeDiagnostica(
-      k === "Media partita" ? (v === "SÌ" ? "sì" : "no")
-      : k === "Audio remoto" ? (v.startsWith("RICEVUTO") ? "ricevuto" : "non ricevuto")
-      : k === "Video remoto" ? (v.startsWith("RICEVUTO") ? "ricevuto" : (v.startsWith("N/A") ? "" : "non ricevuto"))
-      : k === "Peer remoti" ? (Number(v) > 0 ? "creato" : "nessuno")
-      : v
-    );
-    return `<div class="diag-riga"><span class="diag-k">${k}</span><span class="diag-v ${classe}">${testoStatoDiagnostica(v)}</span></div>`;
-  }).join("");
-
-  if (erroreBox) {
-    erroreBox.hidden = !diagnosticaWebRtc.ultimoErrore;
-    erroreBox.textContent = diagnosticaWebRtc.ultimoErrore ? "ERRORE: " + diagnosticaWebRtc.ultimoErrore : "";
-  }
-}
-
-function eventoDiagnosticaWebRtc(testo) {
-  diagnosticaWebRtc.ultimoEvento = String(testo || "");
-  aggiornaPannelloDiagnosticaWebRtc();
-}
-
-function erroreDiagnosticaWebRtc(errore, prefisso = "") {
-  const dettaglio = errore && (errore.message || errore.name)
-    ? `${errore.name || "Errore"}: ${errore.message || ""}`.trim()
-    : String(errore || "Errore sconosciuto");
-  diagnosticaWebRtc.ultimoErrore = (prefisso ? prefisso + " · " : "") + dettaglio;
-  diagnosticaWebRtc.ultimoEvento = prefisso || "Errore WebRTC";
-  aggiornaPannelloDiagnosticaWebRtc();
-}
-
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", creaPannelloDiagnosticaWebRtc, { once: true });
-} else {
-  creaPannelloDiagnosticaWebRtc();
-}
-setInterval(aggiornaPannelloDiagnosticaWebRtc, 600);
-
 let CONFIGURAZIONE_ICE = {
   iceServers: [
     { urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302", "stun:stun2.l.google.com:19302"] }
@@ -1324,12 +1155,6 @@ function aggiornaConfigurazioneIce(configurazione) {
       iceCandidatePoolSize: 4,
       bundlePolicy: "max-bundle"
     };
-
-    const urlsTutti = iceServers.flatMap(server => Array.isArray(server.urls) ? server.urls : [server.urls]);
-    diagnosticaWebRtc.stunConfigurati = urlsTutti.filter(url => /^stuns?:/i.test(String(url))).length;
-    diagnosticaWebRtc.turnConfigurati = urlsTutti.filter(url => /^turns?:/i.test(String(url))).length;
-    diagnosticaWebRtc.turnConfigurato = diagnosticaWebRtc.turnConfigurati > 0;
-    eventoDiagnosticaWebRtc("Configurazione ICE ricevuta");
   }
 }
 
@@ -1469,7 +1294,6 @@ function segnalaMediaPronto() {
     videoDisponibile
   })) {
     mediaProntoSegnalato = true;
-    eventoDiagnosticaWebRtc("mediaPronto inviato al server");
   }
 }
 
@@ -1587,11 +1411,6 @@ async function inizializzaMediaPartita() {
 
       flussoMediaLocale = stream;
       mediaRichiedeRiprovaManuale = false;
-      eventoDiagnosticaWebRtc(
-        "Stream locale aperto: " +
-        stream.getAudioTracks().length + " audio, " +
-        stream.getVideoTracks().length + " video"
-      );
       stream.getTracks().forEach(traccia => {
         traccia.onended = gestisciInterruzioneMediaLocale;
       });
@@ -1616,7 +1435,6 @@ async function inizializzaMediaPartita() {
       return true;
     } catch (errore) {
       console.warn(clientCellulareAudioOnly ? "Avvio microfono non riuscito:" : "Avvio webcam/microfono non riuscito:", errore);
-      erroreDiagnosticaWebRtc(errore, clientCellulareAudioOnly ? "Avvio microfono" : "Avvio webcam/microfono");
       mediaRichiedeRiprovaManuale = true;
       mediaProntoSegnalato = false;
       inviaSocket({ tipo: "mediaPronto", partitaId, attivo: false });
@@ -1743,7 +1561,6 @@ function creaConnessionePeer(altroUid) {
 
   const pc = new RTCPeerConnection(CONFIGURAZIONE_ICE);
   const peerAccettaVideo = peerSupportaVideo(altroUid);
-  eventoDiagnosticaWebRtc("Peer creato verso " + String(altroUid).slice(0, 12));
 
   flussoMediaLocale.getTracks().forEach(traccia => {
     if (traccia.kind === "video" && !peerAccettaVideo) return;
@@ -1760,16 +1577,12 @@ function creaConnessionePeer(altroUid) {
 
   pc.onicecandidate = evento => {
     if (evento.candidate) {
-      diagnosticaWebRtc.iceInviati++;
-      eventoDiagnosticaWebRtc("Candidato ICE locale inviato");
       inviaSocket({
         tipo: "webrtc-ice-candidate",
         partitaId,
         destinatarioUid: altroUid,
         candidate: evento.candidate.toJSON ? evento.candidate.toJSON() : evento.candidate
       });
-    } else {
-      eventoDiagnosticaWebRtc("Raccolta candidati ICE completata");
     }
   };
 
@@ -1778,9 +1591,6 @@ function creaConnessionePeer(altroUid) {
     const elementi = creaElementiVideoRemoto(altroUid);
 
     if (evento.track.kind === "audio") {
-      diagnosticaWebRtc.tracceAudioRemote++;
-      eventoDiagnosticaWebRtc("Traccia AUDIO remota ricevuta");
-
       if (!elementi.streamAudioRemoto.getTracks().some(t => t.id === evento.track.id)) {
         elementi.streamAudioRemoto.addTrack(evento.track);
       }
@@ -1793,8 +1603,6 @@ function creaConnessionePeer(altroUid) {
     }
 
     if (evento.track.kind === "video") {
-      diagnosticaWebRtc.tracceVideoRemote++;
-      eventoDiagnosticaWebRtc("Traccia VIDEO remota ricevuta");
       if (clientCellulareAudioOnly || !elementi.video || !peerSupportaVideo(altroUid)) return;
       if (!elementi.streamVideoRemoto.getTracks().some(t => t.id === evento.track.id)) {
         elementi.streamVideoRemoto.addTrack(evento.track);
@@ -1810,7 +1618,6 @@ function creaConnessionePeer(altroUid) {
   const gestisciStatoConnessione = () => {
     const stato = pc.connectionState;
     const statoIce = pc.iceConnectionState;
-    eventoDiagnosticaWebRtc("Peer: " + stato + " · ICE: " + statoIce);
     if (stato === "connected" || statoIce === "connected" || statoIce === "completed") {
       if (timerDisconnessionePeer[altroUid]) clearTimeout(timerDisconnessionePeer[altroUid]);
       delete timerDisconnessionePeer[altroUid];
@@ -1839,13 +1646,7 @@ function creaConnessionePeer(altroUid) {
   };
   pc.onconnectionstatechange = gestisciStatoConnessione;
   pc.oniceconnectionstatechange = gestisciStatoConnessione;
-  pc.onicecandidateerror = evento => {
-    console.warn("ICE candidate error:", evento && evento.errorText ? evento.errorText : evento);
-    erroreDiagnosticaWebRtc(
-      evento && evento.errorText ? evento.errorText : "ICE candidate error",
-      "Errore candidato ICE"
-    );
-  };
+  pc.onicecandidateerror = evento => console.warn("ICE candidate error:", evento && evento.errorText ? evento.errorText : evento);
 
   connessioniPeer[altroUid] = pc;
   return pc;
@@ -1863,8 +1664,6 @@ async function avviaConnessioneMedia(altroUid, riavvioIce = false) {
   const offerta = await pc.createOffer(riavvioIce ? { iceRestart: true } : undefined);
   if (pc.signalingState !== "stable") return;
   await pc.setLocalDescription(offerta);
-  diagnosticaWebRtc.offerInviate++;
-  eventoDiagnosticaWebRtc("Offer WebRTC inviata");
   inviaSocket({ tipo: "webrtc-offer", partitaId, destinatarioUid: altroUid, sdp: pc.localDescription });
 }
 
@@ -1882,8 +1681,6 @@ async function applicaCandidatiIceInAttesa(altroUid) {
 async function gestisciOffertaRicevuta(mittenteUid, sdp) {
   if (!mediaPartitaAttiva || !flussoMediaLocale || !partecipantiMediaPronti.has(mittenteUid) || !sdp) return;
   if (sdp.type !== "offer") return;
-  diagnosticaWebRtc.offerRicevute++;
-  eventoDiagnosticaWebRtc("Offer WebRTC ricevuta");
 
   let pc = connessioniPeer[mittenteUid];
   if (pc && pc.signalingState !== "stable") {
@@ -1896,16 +1693,12 @@ async function gestisciOffertaRicevuta(mittenteUid, sdp) {
   await applicaCandidatiIceInAttesa(mittenteUid);
   const risposta = await pc.createAnswer();
   await pc.setLocalDescription(risposta);
-  diagnosticaWebRtc.answerInviate++;
-  eventoDiagnosticaWebRtc("Answer WebRTC inviata");
   inviaSocket({ tipo: "webrtc-answer", partitaId, destinatarioUid: mittenteUid, sdp: pc.localDescription });
 }
 
 async function gestisciRispostaRicevuta(mittenteUid, sdp) {
   const pc = connessioniPeer[mittenteUid];
   if (!pc || !sdp || sdp.type !== "answer") return;
-  diagnosticaWebRtc.answerRicevute++;
-  eventoDiagnosticaWebRtc("Answer WebRTC ricevuta");
   if (pc.signalingState !== "have-local-offer") return;
   await pc.setRemoteDescription(new RTCSessionDescription(sdp));
   await applicaCandidatiIceInAttesa(mittenteUid);
@@ -1913,8 +1706,6 @@ async function gestisciRispostaRicevuta(mittenteUid, sdp) {
 
 async function gestisciCandidatoRicevuto(mittenteUid, candidate) {
   if (!candidate || typeof candidate !== "object") return;
-  diagnosticaWebRtc.iceRicevuti++;
-  eventoDiagnosticaWebRtc("Candidato ICE remoto ricevuto");
   const pc = connessioniPeer[mittenteUid];
   if (!pc || !pc.remoteDescription) {
     if (!candidatiIceInAttesa[mittenteUid]) candidatiIceInAttesa[mittenteUid] = [];
@@ -2005,7 +1796,6 @@ function gestisciStatoMedia(dati) {
   });
 
   const quanti = partecipantiMediaPronti.size;
-  eventoDiagnosticaWebRtc("Stato media ricevuto: " + quanti + " partecipanti pronti");
   aggiornaInterfacciaMedia(quanti > 1 ? `${quanti} partecipanti collegati` : "In attesa degli altri giocatori…", false);
 
   if (flussoMediaLocale && mioUid && !partecipantiMediaPronti.has(mioUid)) {
@@ -2382,7 +2172,6 @@ function gestisciAggiornamentoPartita(dati) {
 function gestisciPromessaWebRtc(promessa) {
   Promise.resolve(promessa).catch(errore => {
     console.error("Errore WebRTC:", errore);
-    erroreDiagnosticaWebRtc(errore, "Errore WebRTC");
     mostraNotificaGioco("La connessione audio/video non è riuscita.");
   });
 }
