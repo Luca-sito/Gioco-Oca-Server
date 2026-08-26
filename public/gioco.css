@@ -2007,3 +2007,142 @@ body.modalita-desktop.media-partita #btn-sblocca-media {
 #btn-chat .icona-pulsante-gioco {
   filter: none;
 }
+
+/* =========================================================
+   CONTROLLI VIDEOCHIAMATA COMPATTI + PULSANTE GIOCATORI BIANCO
+   ========================================================= */
+
+/* Persone bianco, coerente con Menu e Chat. */
+#btn-giocatori {
+  background: #ffffff;
+  color: #111111;
+  border-color: rgba(0, 0, 0, 0.18);
+  box-shadow: 0 5px 18px rgba(0, 0, 0, 0.28);
+}
+#btn-giocatori:hover { background: #f4f4f4; }
+#btn-giocatori .icona-pulsante-gioco { filter: none; }
+
+/* Barra unica: microfono | Videochiamata / stato | webcam */
+#controlli-media-locale {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin: 0 0 7px;
+}
+
+#controlli-media-locale .videochiamata-intestazione {
+  min-width: 0;
+}
+
+#controlli-media-locale .controllo-media-tondo {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  min-height: 38px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+  background: rgba(10, 16, 22, 0.94);
+  border: 1px solid rgba(255, 215, 0, 0.32);
+  border-radius: 50%;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.32);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+#controlli-media-locale .controllo-media-tondo:hover {
+  background: rgba(30, 38, 46, 0.98);
+}
+
+#controlli-media-locale .controllo-media-tondo.media-spento {
+  color: #ffffff;
+  background: rgba(105, 24, 24, 0.96);
+  border-color: rgba(255, 110, 110, 0.55);
+}
+
+#controlli-media-locale .controllo-media-tondo:disabled {
+  opacity: .48;
+  cursor: default;
+}
+
+/* Desktop: tutta la barra resta sotto ai dadi, senza due pulsanti larghi. */
+body.modalita-desktop.media-partita #controlli-media-locale {
+  position: absolute;
+  right: auto;
+  bottom: calc(9px + env(safe-area-inset-bottom));
+  left: 50%;
+  z-index: 4;
+  display: flex;
+  width: max-content;
+  max-width: min(520px, 58vw);
+  margin: 0;
+  transform: translateX(-50%);
+  pointer-events: auto;
+}
+
+body.modalita-desktop.media-partita #controlli-media-locale .videochiamata-intestazione {
+  position: static;
+  left: auto;
+  bottom: auto;
+  transform: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 38px;
+  max-width: min(310px, 38vw);
+  padding: 6px 12px;
+  background: rgba(10, 16, 22, 0.90);
+  border: 1px solid rgba(255, 215, 0, 0.30);
+  border-radius: 999px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.32);
+  white-space: nowrap;
+}
+
+body.modalita-desktop.media-partita #controlli-media-locale .controllo-media-tondo {
+  min-width: 38px;
+  min-height: 38px;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  font-size: 17px;
+}
+
+/* Annulla la vecchia posizione autonoma dell'intestazione. */
+body.modalita-desktop.media-partita > #videochiamata > .videochiamata-intestazione {
+  position: static;
+}
+
+/* Mobile: controlli compatti, senza pulsanti testuali grandi. */
+body:not(.modalita-desktop) #controlli-media-locale {
+  display: flex;
+  grid-template-columns: none;
+  gap: 4px;
+  margin-bottom: 5px;
+}
+
+body:not(.modalita-desktop) #controlli-media-locale .controllo-media-tondo {
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  min-height: 30px;
+  padding: 0;
+  font-size: 13px;
+}
+
+body:not(.modalita-desktop) #controlli-media-locale .videochiamata-intestazione {
+  flex: 1 1 auto;
+  justify-content: center;
+  min-width: 0;
+  padding: 3px 4px;
+}
+
+/* Sul cellulare audio-only resta solo il microfono, come previsto dal gioco. */
+body.client-cellulare-audio-only #controlli-media-locale {
+  display: flex;
+  grid-template-columns: none;
+}
