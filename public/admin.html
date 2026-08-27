@@ -1,226 +1,109 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Pannello Admin - Giochi Società</title>
-<style>
-*{ margin:0; padding:0; box-sizing:border-box; font-family:Arial,sans-serif; }
-body{ background:#111827; color:white; padding:25px; }
-h1{ margin-bottom:20px; color:#ffd700; }
-.topBar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:25px; flex-wrap:wrap; gap:10px; }
-button{ cursor:pointer; border:none; padding:10px 16px; border-radius:8px; font-weight:bold; }
-#logout{ background:#d32f2f; color:white; }
-#aggiorna{ background:#2196f3; color:white; }
-.statistiche{ display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:15px; margin-bottom:25px; }
-.card{ background:#1f2937; padding:18px; border-radius:12px; text-align:center; }
-.card h2{ font-size:34px; color:#ffd700; }
-.card p{ margin-top:8px; color:#ddd; }
-.ricerca{ margin-bottom:20px; }
-input{ width:100%; padding:12px; border-radius:8px; border:none; font-size:15px; }
-table{ width:100%; border-collapse:collapse; background:#1f2937; overflow:hidden; border-radius:10px; }
-th{ background:#374151; padding:12px; }
-td{ padding:10px; border-bottom:1px solid #333; font-size:14px; }
-.badge{ padding:5px 10px; border-radius:12px; font-size:12px; font-weight:bold; }
-.attivo{ background:#2e7d32; }
-.sospeso{ background:#ff9800; color:black; }
-.bannato{ background:#c62828; }
-.azioni button{ margin:2px; font-size:12px; padding:7px 10px; }
-.avviso{ background:#ffc107; }
-.sospendi{ background:#fb8c00; }
-.banna{ background:#d32f2f; color:white; }
-.riattiva{ background:#4caf50; color:white; }
-.rimuovi{ background:#2196f3; color:white; }
-.info{ font-size:12px; color:#bbb; margin-top:4px; }
-#accessoNegato{ display:none; font-size:20px; text-align:center; margin-top:80px; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <title>Gestione utenti | Giochi Società</title>
+  <link rel="stylesheet" href="/admin.css?v=20260826">
 </head>
 <body>
+  <a class="skip-link" href="#adminMain">Passa al contenuto principale</a>
 
-<h1>🛡️ Pannello di Amministrazione</h1>
-
-<div id="accessoNegato">
-    <h2>Accesso negato</h2>
-    <br>
-    Questo pannello è riservato agli amministratori.
-    <br><br>
-    <a href="login.html?redirect=admin.html">
-        <button>Vai al Login</button>
+  <header class="admin-header">
+    <a class="admin-brand" href="https://solfriniluca1.wixstudio.com/giochisocieta" target="_top" aria-label="Giochi Società, torna alla Home">
+      <span class="brand-mark" aria-hidden="true">GS</span>
+      <span><strong>Giochi Società</strong><small>Area riservata</small></span>
     </a>
-</div>
-
-<div id="contenutoAdmin" style="display:none;">
-
-    <div class="topBar">
-        <div><button id="aggiorna" onclick="carica()">🔄 Aggiorna</button></div>
-        <div><button id="logout" onclick="logout()">🚪 Logout</button></div>
+    <div class="header-actions">
+      <p id="lastUpdated" class="last-updated" aria-live="polite">Dati non ancora aggiornati</p>
+      <button id="refreshButton" class="button button-secondary" type="button" data-action="refresh">Aggiorna dati</button>
+      <button id="logoutButton" class="button button-danger-quiet" type="button" data-action="logout">Esci</button>
     </div>
+  </header>
 
-    <div class="statistiche">
-        <div class="card"><h2 id="totUtenti">0</h2><p>Utenti Registrati</p></div>
-        <div class="card"><h2 id="totAttivi">0</h2><p>Attivi</p></div>
-        <div class="card"><h2 id="totSospesi">0</h2><p>Sospesi</p></div>
-        <div class="card"><h2 id="totBannati">0</h2><p>Bannati</p></div>
+  <main id="adminMain" class="admin-shell" tabindex="-1">
+    <section id="adminLoading" class="state-panel loading-panel" aria-live="polite">
+      <div class="loading-skeleton-grid" aria-hidden="true">
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+      </div>
+      <div class="loading-copy">
+        <div class="state-icon" aria-hidden="true"></div>
+        <h2>Caricamento pannello</h2>
+        <p>Verifica dell’accesso amministrativo in corso.</p>
+      </div>
+    </section>
+
+    <section id="adminDenied" class="state-panel" hidden>
+      <p class="eyebrow">Area riservata</p>
+      <h2>Accesso non autorizzato</h2>
+      <p>Questo pannello è disponibile soltanto per gli amministratori.</p>
+      <a class="button button-primary" href="/login.html?redirect=admin.html">Vai al login</a>
+    </section>
+
+    <section id="adminError" class="state-panel" hidden>
+      <p class="eyebrow">Connessione non disponibile</p>
+      <h2>Impossibile caricare il pannello</h2>
+      <p id="adminErrorMessage">Controlla la connessione e riprova.</p>
+      <button class="button button-primary" type="button" data-action="refresh">Riprova</button>
+    </section>
+
+    <div id="adminApp" hidden>
+      <section class="page-heading" aria-labelledby="adminTitle">
+        <div>
+          <p class="eyebrow">Amministrazione</p>
+          <h1 id="adminTitle">Gestione utenti</h1>
+          <p>Controlla lo stato degli account e applica le azioni amministrative disponibili.</p>
+        </div>
+        <p id="resultsCount" class="results-count" aria-live="polite">0 utenti visualizzati</p>
+      </section>
+
+      <section class="stats-grid" aria-label="Riepilogo utenti">
+        <article class="stat-card stat-total"><span>Registrati</span><strong id="registeredCount">0</strong></article>
+        <article class="stat-card stat-active"><span>Attivi</span><strong id="activeCount">0</strong></article>
+        <article class="stat-card stat-suspended"><span>Sospesi</span><strong id="suspendedCount">0</strong></article>
+        <article class="stat-card stat-banned"><span>Bannati</span><strong id="bannedCount">0</strong></article>
+      </section>
+
+      <section class="users-panel" aria-labelledby="usersTitle">
+        <div class="users-toolbar">
+          <div>
+            <h2 id="usersTitle">Utenti registrati</h2>
+            <p>Cerca per nickname o indirizzo email.</p>
+          </div>
+          <div class="search-field">
+            <label for="searchInput">Cerca utenti</label>
+            <div class="search-control">
+              <input id="searchInput" type="search" autocomplete="off" placeholder="Nickname o email">
+              <button id="clearSearchButton" type="button" data-action="clear-search" aria-label="Cancella ricerca" hidden>×</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table class="users-table">
+            <caption class="sr-only">Elenco degli utenti registrati e relative azioni amministrative</caption>
+            <thead>
+              <tr><th>Utente</th><th>Statistiche</th><th>Stato</th><th>Avvisi</th><th>Azioni</th></tr>
+            </thead>
+            <tbody id="usersTableBody"></tbody>
+          </table>
+        </div>
+        <div id="usersCards" class="users-cards"></div>
+        <div id="emptyState" class="empty-state" hidden>
+          <h3 id="emptyStateTitle">Nessun utente corrisponde alla ricerca</h3>
+          <p id="emptyStateMessage">Modifica il testo oppure visualizza nuovamente tutti gli utenti.</p>
+          <button class="button button-secondary" type="button" data-action="clear-search">Cancella ricerca</button>
+        </div>
+      </section>
     </div>
+  </main>
 
-    <div class="ricerca">
-        <input id="ricerca" type="text" placeholder="🔍 Cerca per nickname o email..." onkeyup="filtraUtenti()">
-    </div>
-
-    <table>
-        <thead>
-        <tr>
-            <th>Nickname</th>
-            <th>Email</th>
-            <th>Statistiche</th>
-            <th>Stato</th>
-            <th>Avvisi</th>
-            <th>Azioni</th>
-        </tr>
-        </thead>
-        <tbody id="corpoTabella"></tbody>
-    </table>
-
-</div>
-
-<script>
-let tuttiUtenti = [];
-
-async function carica(){
-    try{
-        const risposta = await fetch("/api/admin/utenti", { credentials: "include" });
-
-        if(risposta.status===401 || risposta.status===403){
-            mostraAccessoNegato();
-            return;
-        }
-
-        const dati = await risposta.json();
-        tuttiUtenti = dati.utenti;
-
-        aggiornaStatistiche();
-        disegnaTabella(tuttiUtenti);
-
-        document.getElementById("contenutoAdmin").style.display="block";
-        document.getElementById("accessoNegato").style.display="none";
-    }
-    catch(e){
-        console.error(e);
-        mostraAccessoNegato();
-    }
-}
-
-function mostraAccessoNegato(){
-    document.getElementById("contenutoAdmin").style.display="none";
-    document.getElementById("accessoNegato").style.display="block";
-}
-
-async function logout(){
-    try { await fetch("/api/logout", { method: "POST", credentials: "include" }); } catch (e) {}
-    window.location="login.html";
-}
-
-function aggiornaStatistiche(){
-    document.getElementById("totUtenti").innerText = tuttiUtenti.length;
-    document.getElementById("totAttivi").innerText = tuttiUtenti.filter(u=>u.stato==="attivo").length;
-    document.getElementById("totSospesi").innerText = tuttiUtenti.filter(u=>u.stato==="sospeso").length;
-    document.getElementById("totBannati").innerText = tuttiUtenti.filter(u=>u.stato==="bannato").length;
-}
-
-function badge(stato){
-    if(stato==="attivo") return '<span class="badge attivo">ATTIVO</span>';
-    if(stato==="sospeso") return '<span class="badge sospeso">SOSPESO</span>';
-    if(stato==="bannato") return '<span class="badge bannato">BANNATO</span>';
-    return stato;
-}
-
-function disegnaTabella(lista){
-    const corpo = document.getElementById("corpoTabella");
-    corpo.innerHTML = "";
-
-    lista.forEach(u=>{
-        let avvisi = "";
-        if(u.avvisi && u.avvisi.length){
-            avvisi = u.avvisi.map(a=>"• "+a.motivo).join("<br>");
-        }
-
-        const giocate = u.partiteGiocate || 0;
-        const vinte = u.partiteVinte || 0;
-        const percentuale = giocate>0 ? Math.round((vinte/giocate)*100) : 0;
-
-        corpo.innerHTML += `
-<tr>
-<td><b>${u.nickname}</b></td>
-<td>${u.email}</td>
-<td>Giocate: ${giocate}<br>Vinte: ${vinte}<br>Win Rate: ${percentuale}%</td>
-<td>${badge(u.stato)}${u.sospesoFino ? "<div class='info'>Fino al "+new Date(u.sospesoFino).toLocaleString("it-IT")+"</div>" : ""}</td>
-<td>${avvisi || "-"}</td>
-<td class="azioni">
-<button class="avviso" onclick="daiAvviso('${u.uid}')">Avviso</button>
-<button class="sospendi" onclick="sospendi('${u.uid}')">Sospendi</button>
-<button class="rimuovi" onclick="rimuoviSospensione('${u.uid}')">Fine</button>
-<button class="banna" onclick="banna('${u.uid}')">Banna</button>
-<button class="riattiva" onclick="riattiva('${u.uid}')">Riattiva</button>
-</td>
-</tr>
-`;
-    });
-}
-
-function filtraUtenti(){
-    const testo = document.getElementById("ricerca").value.toLowerCase();
-    const filtrati = tuttiUtenti.filter(u=>
-        u.nickname.toLowerCase().includes(testo) || u.email.toLowerCase().includes(testo)
-    );
-    disegnaTabella(filtrati);
-}
-
-async function chiamataAdmin(url, dati){
-    const risposta = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(dati)
-    });
-
-    const json = await risposta.json();
-
-    if(!risposta.ok){
-        alert(json.errore || "Errore");
-        return false;
-    }
-    return true;
-}
-
-async function daiAvviso(uid){
-    const motivo = prompt("Motivo dell'avviso:");
-    if(!motivo) return;
-    if(await chiamataAdmin("/api/admin/avviso", { uid, motivo })) carica();
-}
-
-async function sospendi(uid){
-    const giorni = prompt("Numero giorni", "3");
-    if(!giorni) return;
-    const motivo = prompt("Motivo sospensione") || "";
-    if(await chiamataAdmin("/api/admin/sospendi", { uid, giorni, motivo })) carica();
-}
-
-async function rimuoviSospensione(uid){
-    if(await chiamataAdmin("/api/admin/rimuovi-sospensione", { uid })) carica();
-}
-
-async function banna(uid){
-    if(!confirm("Confermi il BAN definitivo?")) return;
-    const motivo = prompt("Motivo del ban") || "";
-    if(await chiamataAdmin("/api/admin/banna", { uid, motivo })) carica();
-}
-
-async function riattiva(uid){
-    if(await chiamataAdmin("/api/admin/riattiva", { uid })) carica();
-}
-
-carica();
-</script>
-
+  <div id="adminDialogRoot"></div>
+  <div id="adminToast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+  <script src="/admin.js?v=20260826" defer></script>
 </body>
 </html>
