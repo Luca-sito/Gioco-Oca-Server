@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="it">
 <head>
 <meta charset="UTF-8">
@@ -123,1673 +124,1666 @@ button:disabled{
     color:white;
 }
 
-
 /* =========================================================
-   MODALITÀ PARTITA
-========================================================= */
+MODALITÀ PARTITA
+========================================================= /
 .modalita-partita-box{
-    margin-bottom:18px;
+margin-bottom:18px;
 }
 .modalita-partita-titolo{
-    margin:0 0 8px;
-    font-weight:bold;
-    color:#111;
+margin:0 0 8px;
+font-weight;
+color:#111;
 }
 .modalita-partita-scelte{
-    display:flex;
-    gap:8px;
+display;
+gap:8px;
 }
 .btn-modalita-partita{
-    flex:1;
-    min-height:0;
-    margin:0 !important;
-    padding:10px !important;
-    border:1px solid #ccc !important;
-    border-radius:6px !important;
-    background:#f5f5f5 !important;
-    color:#222 !important;
-    font-size:14px;
-    font-weight:bold;
-    box-shadow:none !important;
-    transform:none !important;
+flex:1;
+min-height:0;
+margin:0 !important;
+padding:10px !important;
+border:1px solid #ccc !important;
+border-radius:6px !important;
+background:#f5f5f5 !important;
+color:#222 !important;
+font-size:14px;
+font-weight;
+box-shadow !important;
+transform !important;
 }
-.btn-modalita-partita:hover{
-    background:#eee !important;
-    opacity:1 !important;
+.btn-modalita-partita{
+background:#eee !important;
+opacity:1 !important;
 }
 .btn-modalita-partita.attiva{
-    background:#333 !important;
-    border-color:#333 !important;
-    color:#fff !important;
+background:#333 !important;
+border-color:#333 !important;
+color:#fff !important;
 }
 .modalita-partita-icona,
 .modalita-partita-check{
-    display:none !important;
+display !important;
 }
 body.tema-scuro .modalita-partita-titolo{
-    color:#fff;
+color:#fff;
 }
 body.tema-scuro .btn-modalita-partita{
-    background:#333 !important;
-    color:#fff !important;
-    border-color:#555 !important;
+background:#333 !important;
+color:#fff !important;
+border-color:#555 !important;
 }
 body.tema-scuro .btn-modalita-partita.attiva{
-    background:#111 !important;
-    border-color:#777 !important;
+background:#111 !important;
+border-color:#777 !important;
 }
-/* =========================================================
-   ELENCO PARTITE
-========================================================= */
+/ =========================================================
+ELENCO PARTITE
+========================================================= /
 #partite{
-    height:45%;
-    overflow-y:auto;
-    padding:10px;
+height:45%;
+overflow-y;
+padding:10px;
 }
 .partita{
-    border:1px solid #ddd;
-    padding:12px;
-    margin-bottom:10px;
-    border-radius:8px;
-    background:#fafafa;
+border:1px solid #ddd;
+padding:12px;
+margin-bottom:10px;
+border-radius:8px;
+background:#fafafa;
 }
 .scheda-partita{
-    display:flex;
-    gap:20px;
-    padding:12px;
-    border:1px solid #ddd;
-    border-radius:10px;
-    background:#fafafa;
-    margin-bottom:10px;
-    align-items:flex-start;
+display;
+gap:20px;
+padding:12px;
+border:1px solid #ddd;
+border-radius:10px;
+background:#fafafa;
+margin-bottom:10px;
+align-items;
 }
 .info-partita{
-    width:180px;
-    font-weight:bold;
-    line-height:1.8;
-    flex-shrink:0;
+width:180px;
+font-weight;
+line-height:1.8;
+flex-shrink:0;
 }
 .giocatori-mini{
-    flex:1;
-    display:grid;
-    grid-template-columns:repeat(2,1fr);
-    gap:8px;
-    align-content:start;
+flex:1;
+display;
+grid-template-columns(2,1fr);
+gap:8px;
+align-content;
 }
 .mini-giocatore{
-    display:flex;
-    align-items:center;
-    gap:6px;
-    background:white;
-    border-radius:8px;
-    padding:6px;
-    border:1px solid #eee;
-    font-size:13px;
+display;
+align-items;
+gap:6px;
+background;
+border-radius:8px;
+padding:6px;
+border:1px solid #eee;
+font-size:13px;
 }
 .avatar-partita-mini{
-    width:30px;
-    height:30px;
-    border-radius:50%;
-    object-fit:cover;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    color:white;
-    font-weight:bold;
-    flex-shrink:0;
+width:30px;
+height:30px;
+border-radius:50%;
+object-fit;
+display;
+align-items;
+justify-content;
+color;
+font-weight;
+flex-shrink:0;
 }
 .stato-partita-online{
-    color:#43a047;
-    font-size:12px;
+color:#43a047;
+font-size:12px;
 }
 .partita button{
-    background:#ff6600;
-    color:#fff;
-    margin-top:8px;
+background:#ff6600;
+color:#fff;
+margin-top:8px;
 }
-.partita button:disabled{
-    background:#ccc;
-}
-/* =========================================================
-   AZIONI SULLA CARD (Elimina / Alzati / Riprendi / Entra)
-========================================================= */
+.partita button
+/ =========================================================
+AZIONI SULLA CARD (Elimina / Alzati / Riprendi / Entra)
+========================================================= /
 .azioni-scheda{
-    display:flex;
-    flex-direction:column;
-    gap:6px;
-    min-width:120px;
-    flex-shrink:0;
+display;
+flex-direction;
+gap:6px;
+min-width:120px;
+flex-shrink:0;
 }
 .azioni-scheda button{
-    margin:0;
-    text-align:center;
+margin:0;
+text-align;
 }
 .btn-elimina-scheda{
-    background:#dc3545 !important;
-    color:white !important;
+background:#dc3545 !important;
+color !important;
 }
 .btn-alzati-scheda{
-    background:#e67e22 !important;
-    color:white !important;
+background:#e67e22 !important;
+color !important;
 }
 .btn-riprendi-scheda{
-    background:#43a047 !important;
-    color:white !important;
+background:#43a047 !important;
+color !important;
 }
-/* =========================================================
-   CHAT DESKTOP
-========================================================= */
+/ =========================================================
+CHAT DESKTOP
+========================================================= /
 #chat{
-    height:39%;
-    margin-left:10px;
-    border-top:1px solid #ddd;
-    padding:10px;
-    overflow-y:auto;
-    background:#fff;
+height:39%;
+margin-left:10px;
+border-top:1px solid #ddd;
+padding:10px;
+overflow-y;
+background:#fff;
 }
 .messaggio{
-    padding:5px;
-    border-bottom:1px dashed #ddd;
-    word-break:break-word;
-    overflow-wrap:anywhere;
+padding:5px;
+border-bottom:1px dashed #ddd;
+word-break;
+overflow-wrap;
 }
 #messaggio{
-    width:75%;
-    display:inline-block;
+width:75%;
+display;
 }
 #messaggio+button{
-    width:23%;
-    display:inline-block;
+width:23%;
+display;
 }
-/* =========================================================
-   PANNELLO EMOJI DESKTOP
-========================================================= */
+/ =========================================================
+PANNELLO EMOJI DESKTOP
+========================================================= /
 #pannelloEmoji{
-    display:none;
-    position:absolute;
-    bottom:55px;
-    left:0;
-    width:100%;
-    padding:10px;
-    background:white;
-    border:1px solid #ccc;
-    border-radius:10px;
-    box-shadow:0 4px 12px rgba(0,0,0,.2);
-    z-index:100;
-    font-size:22px;
+display;
+position;
+bottom:55px;
+left:0;
+width:100%;
+padding:10px;
+background;
+border:1px solid #ccc;
+border-radius:10px;
+box-shadow:0 4px 12px rgba(0,0,0,.2);
+z-index:100;
+font-size:22px;
 }
 #pannelloEmoji span{
-    cursor:pointer;
-    display:inline-block;
-    padding:3px;
+cursor;
+display;
+padding:3px;
 }
-/* =========================================================
-   PANNELLO DESTRO
-========================================================= */
+/ =========================================================
+PANNELLO DESTRO
+========================================================= /
 #top{
-    padding:10px;
+padding:10px;
 }
 #online{
-    color:#00a000;
-    font-size:25px;
-    font-weight:bold;
+color:#00a000;
+font-size:25px;
+font-weight;
 }
 .nickname{
-    font-weight:bold;
-    margin-top:10px;
+font-weight;
+margin-top:10px;
 }
 .nickname-riga{
-    font-weight:bold;
+font-weight;
 }
-/* =========================================================
-   LISTA ONLINE
-========================================================= */
+/ =========================================================
+LISTA ONLINE
+========================================================= /
 #listaOnline{
-    flex:1;
-    min-height:0;
-    overflow-y:auto;
-    padding:10px;
+flex:1;
+min-height:0;
+overflow-y;
+padding:10px;
 }
 .giocatore-online{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    padding:10px;
-    border-bottom:1px solid #ddd;
+display;
+align-items;
+gap:10px;
+padding:10px;
+border-bottom:1px solid #ddd;
 }
 .avatar-mini{
-    width:40px;
-    height:40px;
-    border-radius:50%;
-    object-fit:cover;
-    flex-shrink:0;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    background:#43a047;
-    color:white;
-    font-weight:bold;
-    font-size:16px;
+width:40px;
+height:40px;
+border-radius:50%;
+object-fit;
+flex-shrink:0;
+display;
+align-items;
+justify-content;
+background:#43a047;
+color;
+font-weight;
+font-size:16px;
 }
 .avatar{
-    width:70px;
-    height:70px;
-    border-radius:50%;
-    object-fit:cover;
-    border:3px solid #222;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    color:white;
-    font-weight:bold;
-    font-size:25px;
+width:70px;
+height:70px;
+border-radius:50%;
+object-fit;
+border:3px solid #222;
+display;
+align-items;
+justify-content;
+color;
+font-weight;
+font-size:25px;
 }
-/* =========================================================
-   NOTIFICHE TOAST
-========================================================= */
+/ =========================================================
+NOTIFICHE TOAST
+========================================================= /
 #contenitoreNotifiche{
-    position:fixed;
-    top:16px;
-    right:16px;
-    z-index:5000;
-    display:flex;
-    flex-direction:column;
-    gap:8px;
-    max-width:320px;
+position;
+top:16px;
+right:16px;
+z-index:5000;
+display;
+flex-direction;
+gap:8px;
+max-width:320px;
 }
 .notifica-toast{
-    background:#2b1414;
-    border:2px solid #e53935;
-    color:#fff;
-    padding:12px 16px;
-    border-radius:10px;
-    font-size:14px;
-    box-shadow:0 8px 24px rgba(0,0,0,.4);
-    animation:
-        notifica-entra .3s ease,
-        notifica-esci .3s ease 4.7s forwards;
+background:#2b1414;
+border:2px solid #e53935;
+color:#fff;
+padding:12px 16px;
+border-radius:10px;
+font-size:14px;
+box-shadow:0 8px 24px rgba(0,0,0,.4);
+animation:
+notifica-entra .3s ease,
+notifica-esci .3s ease 4.7s forwards;
 }
 @keyframes notifica-entra{
-    from{
-        opacity:0;
-        transform:translateX(30px);
-    }
-    to{
-        opacity:1;
-        transform:translateX(0);
-    }
+from{
+opacity:0;
+transform(30px);
+}
+to{
+opacity:1;
+transform(0);
+}
 }
 @keyframes notifica-esci{
-    to{
-        opacity:0;
-        transform:translateX(30px);
-    }
+to{
+opacity:0;
+transform(30px);
 }
-/* =========================================================
-   INVITO RICEVUTO
-========================================================= */
+}
+/ =========================================================
+INVITO RICEVUTO
+========================================================= /
 #cardInvitoRicevuto{
-    position:fixed;
-    top:66px;
-    right:14px;
-    z-index:510;
-    width:260px;
-    max-width:calc(100vw - 28px);
-    background:white;
-    border:2px solid #ffd700;
-    border-radius:10px;
-    padding:14px;
-    box-shadow:0 8px 24px rgba(0,0,0,.3);
-    font-size:14px;
+position;
+top:66px;
+right:14px;
+z-index:510;
+width:260px;
+max-width(100vw - 28px);
+background;
+border:2px solid #ffd700;
+border-radius:10px;
+padding:14px;
+box-shadow:0 8px 24px rgba(0,0,0,.3);
+font-size:14px;
 }
 #cardInvitoRicevuto.nascosto{
-    display:none;
+display;
 }
 .invito-bottoni{
-    display:flex;
-    gap:8px;
-    margin-top:10px;
+display;
+gap:8px;
+margin-top:10px;
 }
 .invito-bottoni button{
-    flex:1;
-    padding:9px;
-    border:none;
-    border-radius:6px;
-    font-weight:bold;
-    cursor:pointer;
-    margin:0;
+flex:1;
+padding:9px;
+border;
+border-radius:6px;
+font-weight;
+cursor;
+margin:0;
 }
 .btn-rifiuta-invito{
-    background:#e53935;
-    color:white;
+background:#e53935;
+color;
 }
 .btn-accetta-invito{
-    background:#43a047;
-    color:white;
+background:#43a047;
+color;
 }
-/* =========================================================
-   PLAYER CARD GIOCATORE
+/ =========================================================
+PLAYER CARD GIOCATORE
 ========================================================= */
 .overlay-modal-invito{
-    display:none;
-    position:fixed;
-    inset:0;
-    width:100%;
-    height:100%;
-    background:rgba(0,0,0,.55);
-    z-index:700;
-    align-items:center;
-    justify-content:center;
+display;
+position;
+inset:0;
+width:100%;
+height:100%;
+background(0,0,0,.55);
+z-index:700;
+align-items;
+justify-content;
 }
 .overlay-modal-invito.aperto{
-    display:flex;
+display;
 }
 .player-card-trigger{
-    cursor:pointer;
+cursor;
 }
-.player-card-trigger:focus-visible{
-    outline:3px solid rgba(255,102,0,.45);
-    outline-offset:3px;
+.player-card-trigger{
+outline:3px solid rgba(255,102,0,.45);
+outline-offset:3px;
 }
 .player-card-trigger-inline{
-    color:#ff6600;
-    font-weight:800;
-    border-radius:4px;
+color:#ff6600;
+font-weight:800;
+border-radius:4px;
 }
 .player-card-giocatore{
-    position:fixed;
-    display:none;
-    width:360px;
-    max-width:calc(100vw - 24px);
-    max-height:calc(100vh - 24px);
-    overflow:auto;
-    z-index:1800;
-    color:#f7f8fa;
-    background:
-        radial-gradient(circle at 8% 0%, rgba(255,102,0,.16), transparent 34%),
-        linear-gradient(155deg,#181a1f 0%,#101216 58%,#0b0d10 100%);
-    border:1px solid rgba(255,255,255,.13);
-    border-radius:16px;
-    box-shadow:0 24px 70px rgba(0,0,0,.48),0 6px 18px rgba(0,0,0,.28);
-    opacity:0;
-    transform:translateY(5px) scale(.985);
-    transform-origin:top left;
-    transition:opacity .16s ease,transform .16s ease;
-    isolation:isolate;
+position;
+display;
+width:360px;
+max-width(100vw - 24px);
+max-height(100vh - 24px);
+overflow;
+z-index:1800;
+color:#f7f8fa;
+background:
+radial-gradient(circle at 8% 0%, rgba(255,102,0,.16), transparent 34%),
+linear-gradient(155deg,#181a1f 0%,#101216 58%,#0b0d10 100%);
+border:1px solid rgba(255,255,255,.13);
+border-radius:16px;
+box-shadow:0 24px 70px rgba(0,0,0,.48),0 6px 18px rgba(0,0,0,.28);
+opacity:0;
+transform(5px) scale(.985);
+transform-origin left;
+transition .16s ease,transform .16s ease;
+isolation;
 }
 .player-card-giocatore.aperta{
-    display:block;
+display;
 }
 .player-card-giocatore.visibile{
-    opacity:1;
-    transform:translateY(0) scale(1);
+opacity:1;
+transform(0) scale(1);
 }
 .player-card-giocatore[data-lato="sinistra"]{
-    transform-origin:top right;
+transform-origin right;
 }
 .player-card-giocatore::before{
-    content:"";
-    position:fixed;
-    width:12px;
-    height:12px;
-    background:#17191d;
-    border-left:1px solid rgba(255,255,255,.13);
-    border-bottom:1px solid rgba(255,255,255,.13);
-    transform:rotate(45deg);
-    pointer-events:none;
-    display:none;
+content:"";
+position;
+width:12px;
+height:12px;
+background:#17191d;
+border-left:1px solid rgba(255,255,255,.13);
+border-bottom:1px solid rgba(255,255,255,.13);
+transform(45deg);
+pointer-events;
+display;
 }
 .player-card-chiudi{
-    position:absolute;
-    top:10px;
-    right:10px;
-    width:32px !important;
-    height:32px;
-    margin:0 !important;
-    padding:0 !important;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    border:1px solid rgba(255,255,255,.12) !important;
-    border-radius:9px !important;
-    background:rgba(255,255,255,.06) !important;
-    color:#d8dbe0 !important;
-    z-index:2;
+position;
+top:10px;
+right:10px;
+width:32px !important;
+height:32px;
+margin:0 !important;
+padding:0 !important;
+display;
+align-items;
+justify-content;
+border:1px solid rgba(255,255,255,.12) !important;
+border-radius:9px !important;
+background(255,255,255,.06) !important;
+color:#d8dbe0 !important;
+z-index:2;
 }
-.player-card-chiudi:hover{
-    background:rgba(255,255,255,.12) !important;
-    opacity:1;
+.player-card-chiudi{
+background(255,255,255,.12) !important;
+opacity:1;
 }
 .player-card-chiudi svg{
-    width:15px;
-    height:15px;
+width:15px;
+height:15px;
 }
 .player-card-caricamento{
-    min-height:280px;
-    padding:22px;
+min-height:280px;
+padding:22px;
 }
 .player-card-skeleton-riga{
-    height:12px;
-    margin:12px 0;
-    border-radius:999px;
-    background:linear-gradient(90deg,rgba(255,255,255,.06),rgba(255,255,255,.13),rgba(255,255,255,.06));
-    background-size:200% 100%;
-    animation:player-card-skeleton 1.15s linear infinite;
+height:12px;
+margin:12px 0;
+border-radius:999px;
+background(90deg,rgba(255,255,255,.06),rgba(255,255,255,.13),rgba(255,255,255,.06));
+background-size:200% 100%;
+animation 1.15s linear infinite;
 }
-.player-card-skeleton-riga:nth-child(1){width:64px;height:64px;border-radius:14px;}
-.player-card-skeleton-riga:nth-child(2){width:58%;}
-.player-card-skeleton-riga:nth-child(3){width:38%;}
-.player-card-skeleton-riga:nth-child(4){width:100%;margin-top:28px;}
-.player-card-skeleton-riga:nth-child(5){width:82%;}
+.player-card-skeleton-riga(1){width:64px;height:64px;border-radius:14px;}
+.player-card-skeleton-riga(2){width:58%;}
+.player-card-skeleton-riga(3){width:38%;}
+.player-card-skeleton-riga(4){width:100%;margin-top:28px;}
+.player-card-skeleton-riga(5){width:82%;}
 @keyframes player-card-skeleton{
-    from{background-position:200% 0;}
-    to{background-position:-200% 0;}
+from{background-position:200% 0;}
+to{background-position:-200% 0;}
 }
 .player-card-header{
-    position:relative;
-    display:grid;
-    grid-template-columns:68px minmax(0,1fr);
-    gap:14px;
-    align-items:center;
-    padding:20px 48px 17px 18px;
-    border-bottom:1px solid rgba(255,255,255,.09);
+position;
+display;
+grid-template-columns:68px minmax(0,1fr);
+gap:14px;
+align-items;
+padding:20px 48px 17px 18px;
+border-bottom:1px solid rgba(255,255,255,.09);
 }
 .player-card-avatar-wrap{
-    position:relative;
-    width:68px;
-    height:68px;
+position;
+width:68px;
+height:68px;
 }
 .player-card-avatar{
-    width:68px;
-    height:68px;
-    border-radius:14px;
-    object-fit:cover;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    color:#fff;
-    font-size:26px;
-    font-weight:900;
-    border:1px solid rgba(255,255,255,.16);
-    box-shadow:inset 0 0 0 1px rgba(0,0,0,.18),0 7px 18px rgba(0,0,0,.28);
+width:68px;
+height:68px;
+border-radius:14px;
+object-fit;
+display;
+align-items;
+justify-content;
+color:#fff;
+font-size:26px;
+font-weight:900;
+border:1px solid rgba(255,255,255,.16);
+box-shadow 0 0 0 1px rgba(0,0,0,.18),0 7px 18px rgba(0,0,0,.28);
 }
 .player-card-presenza-dot{
-    position:absolute;
-    right:-2px;
-    bottom:-2px;
-    width:16px;
-    height:16px;
-    border-radius:50%;
-    background:#7f8792;
-    border:3px solid #15171b;
+position;
+right:-2px;
+bottom:-2px;
+width:16px;
+height:16px;
+border-radius:50%;
+background:#7f8792;
+border:3px solid #15171b;
 }
 .player-card-presenza-dot.online{background:#32c766;}
 .player-card-presenza-dot.partita{background:#ff7b22;}
 .player-card-identita{
-    min-width:0;
+min-width:0;
 }
 .player-card-nickname{
-    margin:0 0 3px;
-    font-size:20px;
-    line-height:1.15;
-    font-weight:900;
-    letter-spacing:.1px;
-    white-space:nowrap;
-    overflow:hidden;
-    text-overflow:ellipsis;
+margin:0 0 3px;
+font-size:20px;
+line-height:1.15;
+font-weight:900;
+letter-spacing:.1px;
+white-space;
+overflow;
+text-overflow;
 }
 .player-card-stato{
-    display:flex;
-    align-items:center;
-    gap:7px;
-    color:#adb3bc;
-    font-size:12px;
-    font-weight:700;
-    line-height:1.25;
+display;
+align-items;
+gap:7px;
+color:#adb3bc;
+font-size:12px;
+font-weight:700;
+line-height:1.25;
 }
 .player-card-stato .player-card-stato-punto{
-    width:7px;
-    height:7px;
-    border-radius:50%;
-    background:#7f8792;
-    flex:0 0 auto;
+width:7px;
+height:7px;
+border-radius:50%;
+background:#7f8792;
+flex:0 0 auto;
 }
 .player-card-stato.online .player-card-stato-punto{background:#32c766;box-shadow:0 0 0 4px rgba(50,199,102,.1);}
 .player-card-stato.partita .player-card-stato-punto{background:#ff7b22;box-shadow:0 0 0 4px rgba(255,123,34,.11);}
 .player-card-corpo{
-    padding:14px 16px 16px;
+padding:14px 16px 16px;
 }
 .player-card-sezione{
-    padding:12px 0 13px;
-    border-bottom:1px solid rgba(255,255,255,.075);
+padding:12px 0 13px;
+border-bottom:1px solid rgba(255,255,255,.075);
 }
-.player-card-sezione:first-child{padding-top:4px;}
-.player-card-sezione:last-of-type{border-bottom:0;}
+.player-card-sezione{padding-top:4px;}
+.player-card-sezione{border-bottom:0;}
 .player-card-sezione-titolo{
-    margin-bottom:10px;
-    color:#8f98a5;
-    font-size:10px;
-    line-height:1;
-    font-weight:900;
-    letter-spacing:1.35px;
-    text-transform:uppercase;
+margin-bottom:10px;
+color:#8f98a5;
+font-size:10px;
+line-height:1;
+font-weight:900;
+letter-spacing:1.35px;
+text-transform;
 }
 .player-card-griglia{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:8px;
+display;
+grid-template-columns:1fr 1fr;
+gap:8px;
 }
 .player-card-stat{
-    min-width:0;
-    display:grid;
-    grid-template-columns:34px minmax(0,1fr);
-    gap:9px;
-    align-items:center;
-    padding:10px;
-    background:rgba(255,255,255,.045);
-    border:1px solid rgba(255,255,255,.07);
-    border-radius:11px;
+min-width:0;
+display;
+grid-template-columns:34px minmax(0,1fr);
+gap:9px;
+align-items;
+padding:10px;
+background(255,255,255,.045);
+border:1px solid rgba(255,255,255,.07);
+border-radius:11px;
 }
 .player-card-stat-icona{
-    width:34px;
-    height:34px;
-    border-radius:9px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    background:rgba(255,102,0,.12);
-    color:#ff944d;
+width:34px;
+height:34px;
+border-radius:9px;
+display;
+align-items;
+justify-content;
+background(255,102,0,.12);
+color:#ff944d;
 }
 .player-card-stat-icona svg{
-    width:18px;
-    height:18px;
+width:18px;
+height:18px;
 }
 .player-card-stat-testo{
-    min-width:0;
+min-width:0;
 }
 .player-card-stat-label{
-    display:block;
-    margin-bottom:2px;
-    color:#8f98a5;
-    font-size:10px;
-    font-weight:800;
-    text-transform:uppercase;
-    letter-spacing:.55px;
+display;
+margin-bottom:2px;
+color:#8f98a5;
+font-size:10px;
+font-weight:800;
+text-transform;
+letter-spacing:.55px;
 }
 .player-card-stat-valore{
-    display:block;
-    color:#fff;
-    font-size:16px;
-    font-weight:900;
-    white-space:nowrap;
-    overflow:hidden;
-    text-overflow:ellipsis;
+display;
+color:#fff;
+font-size:16px;
+font-weight:900;
+white-space;
+overflow;
+text-overflow;
 }
 .player-card-stat.player-card-elo .player-card-stat-valore{color:#ffd166;font-size:19px;}
 .player-card-stat.player-card-winrate .player-card-stat-valore{color:#61d58b;}
 .player-card-badge-lista{
-    display:flex;
-    flex-wrap:wrap;
-    gap:6px;
+display;
+flex-wrap;
+gap:6px;
 }
 .player-card-badge{
-    display:inline-flex;
-    align-items:center;
-    min-height:28px;
-    padding:5px 9px;
-    border-radius:999px;
-    color:#d7dbe1;
-    background:rgba(255,255,255,.055);
-    border:1px solid rgba(255,255,255,.08);
-    font-size:11px;
-    font-weight:800;
+display;
+align-items;
+min-height:28px;
+padding:5px 9px;
+border-radius:999px;
+color:#d7dbe1;
+background(255,255,255,.055);
+border:1px solid rgba(255,255,255,.08);
+font-size:11px;
+font-weight:800;
 }
 .player-card-badge-vuoto{
-    color:#7f8792;
-    font-size:12px;
+color:#7f8792;
+font-size:12px;
 }
 .player-card-azioni{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:8px;
-    padding:12px 16px 16px;
-    border-top:1px solid rgba(255,255,255,.08);
-    background:rgba(0,0,0,.12);
+display;
+grid-template-columns:1fr 1fr;
+gap:8px;
+padding:12px 16px 16px;
+border-top:1px solid rgba(255,255,255,.08);
+background(0,0,0,.12);
 }
 .player-card-azione{
-    min-height:42px;
-    margin:0 !important;
-    padding:9px 10px !important;
-    display:flex !important;
-    align-items:center;
-    justify-content:center;
-    gap:7px;
-    border-radius:10px !important;
-    border:1px solid rgba(255,255,255,.12) !important;
-    background:rgba(255,255,255,.06) !important;
-    color:#f5f6f8 !important;
-    text-decoration:none;
-    font-size:12px !important;
-    font-weight:900 !important;
-    line-height:1.1;
+min-height:42px;
+margin:0 !important;
+padding:9px 10px !important;
+display !important;
+align-items;
+justify-content;
+gap:7px;
+border-radius:10px !important;
+border:1px solid rgba(255,255,255,.12) !important;
+background(255,255,255,.06) !important;
+color:#f5f6f8 !important;
+text-decoration;
+font-size:12px !important;
+font-weight:900 !important;
+line-height:1.1;
 }
-.player-card-azione:hover{
-    opacity:1 !important;
-    background:rgba(255,255,255,.11) !important;
-    transform:translateY(-1px);
+.player-card-azione{
+opacity:1 !important;
+background(255,255,255,.11) !important;
+transform(-1px);
 }
 .player-card-azione svg{
-    width:16px;
-    height:16px;
-    flex:0 0 auto;
+width:16px;
+height:16px;
+flex:0 0 auto;
 }
 .player-card-azione.primaria{
-    background:linear-gradient(135deg,#ff7a1a,#ff5b00) !important;
-    border-color:#ff7a1a !important;
-    color:#fff !important;
+background(135deg,#ff7a1a,#ff5b00) !important;
+border-color:#ff7a1a !important;
+color:#fff !important;
 }
 .player-card-azione.successo{
-    background:rgba(50,199,102,.13) !important;
-    border-color:rgba(50,199,102,.38) !important;
-    color:#8ce4aa !important;
+background(50,199,102,.13) !important;
+border-color(50,199,102,.38) !important;
+color:#8ce4aa !important;
 }
 .player-card-azione.pericolo{
-    background:rgba(238,76,76,.10) !important;
-    border-color:rgba(238,76,76,.30) !important;
-    color:#ff9d9d !important;
+background(238,76,76,.10) !important;
+border-color(238,76,76,.30) !important;
+color:#ff9d9d !important;
 }
-.player-card-azione:disabled{
-    opacity:.55 !important;
-    cursor:not-allowed;
-    transform:none !important;
+.player-card-azione{
+opacity:.55 !important;
+cursor;
+transform !important;
 }
 .player-card-errore{
-    padding:30px 22px;
-    text-align:center;
-    color:#d7dbe1;
-    font-size:13px;
+padding:30px 22px;
+text-align;
+color:#d7dbe1;
+font-size:13px;
 }
 @media(max-width:600px){
-    .player-card-giocatore{
-        left:8px !important;
-        right:8px !important;
-        bottom:72px !important;
-        top:auto !important;
-        width:auto !important;
-        max-width:none !important;
-        max-height:calc(100dvh - 92px) !important;
-        border-radius:18px 18px 12px 12px;
-        z-index:100150;
-        transform-origin:bottom center !important;
-    }
-    .player-card-griglia{grid-template-columns:1fr 1fr;}
-    .player-card-header{padding-left:16px;}
+.player-card-giocatore{
+left:8px !important;
+right:8px !important;
+bottom:72px !important;
+top !important;
+width !important;
+max-width !important;
+max-height(100dvh - 92px) !important;
+border-radius:18px 18px 12px 12px;
+z-index:100150;
+transform-origin center !important;
+}
+.player-card-griglia{grid-template-columns:1fr 1fr;}
+.player-card-header{padding-left:16px;}
 }
 .conteggio-stanza{
-    display:inline-flex;
-    align-items:center;
-    gap:14px;
-    margin-left:10px;
-    vertical-align:middle;
+display;
+align-items;
+gap:14px;
+margin-left:10px;
+vertical-align;
 }
 
 .contatore-icona{
-    display:inline-flex;
-    align-items:center;
-    gap:4px;
-    font-size:25px;
-    font-weight:700;
-    color:#fff;
+display;
+align-items;
+gap:4px;
+font-size:25px;
+font-weight:700;
+color:#fff;
 }
 
 .contatore-icona img{
-    width:27px;
-    height:27px;
-    object-fit:contain;
-    display:block;
-    filter: brightness(0) invert(1);
+width:27px;
+height:27px;
+object-fit;
+display;
+filter: brightness(0) invert(1);
 }
 /* =========================================================
-   CONFERME INTERNE LOBBY / BLOCCO UTENTE
-   STILE CHIARO
+CONFERME INTERNE LOBBY / BLOCCO UTENTE
+STILE CHIARO
 ========================================================= */
 .overlay-conferma-lobby{
-    display:none;
-    position:fixed;
-    inset:0;
-    z-index:2100;
-    align-items:center;
-    justify-content:center;
-    padding:18px;
-    background:rgba(17,24,39,.38);
-    backdrop-filter:blur(3px);
-    -webkit-backdrop-filter:blur(3px);
+display;
+position;
+inset:0;
+z-index:2100;
+align-items;
+justify-content;
+padding:18px;
+background(17,24,39,.38);
+backdrop-filter(3px);
+-webkit-backdrop-filter(3px);
 }
 .overlay-conferma-lobby.aperto{
-    display:flex;
+display;
 }
 .conferma-lobby-box{
-    width:min(430px,calc(100vw - 32px));
-    border:1px solid #dfe4e8;
-    border-radius:16px;
-    overflow:hidden;
-    background:#ffffff;
-    color:#1b2530;
-    box-shadow:0 24px 65px rgba(24,32,40,.22);
+width(430px,calc(100vw - 32px));
+border:1px solid #dfe4e8;
+border-radius:16px;
+overflow;
+background:#ffffff;
+color:#1b2530;
+box-shadow:0 24px 65px rgba(24,32,40,.22);
 }
 .conferma-lobby-testata{
-    display:flex;
-    gap:12px;
-    align-items:center;
-    padding:18px 20px 13px;
-    background:#ffffff;
+display;
+gap:12px;
+align-items;
+padding:18px 20px 13px;
+background:#ffffff;
 }
 .conferma-lobby-icona{
-    width:42px;
-    height:42px;
-    flex:0 0 42px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    border:1px solid #f0caca;
-    border-radius:12px;
-    background:#fff3f3;
-    color:#c83f3f;
+width:42px;
+height:42px;
+flex:0 0 42px;
+display;
+align-items;
+justify-content;
+border:1px solid #f0caca;
+border-radius:12px;
+background:#fff3f3;
+color:#c83f3f;
 }
 .conferma-lobby-icona svg{
-    width:23px;
-    height:23px;
+width:23px;
+height:23px;
 }
 .conferma-lobby-titolo{
-    color:#17212b;
-    font-size:17px;
-    font-weight:900;
+color:#17212b;
+font-size:17px;
+font-weight:900;
 }
 .conferma-lobby-testo{
-    padding:0 20px 18px;
-    color:#65717c;
-    font-size:13px;
-    line-height:1.55;
+padding:0 20px 18px;
+color:#65717c;
+font-size:13px;
+line-height:1.55;
 }
 .conferma-lobby-azioni{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:9px;
-    padding:14px 20px 20px;
-    border-top:1px solid #edf0f2;
-    background:#fbfcfd;
+display;
+grid-template-columns:1fr 1fr;
+gap:9px;
+padding:14px 20px 20px;
+border-top:1px solid #edf0f2;
+background:#fbfcfd;
 }
 .conferma-lobby-azioni button{
-    min-height:43px;
-    margin:0;
-    border-radius:10px;
-    box-shadow:none;
+min-height:43px;
+margin:0;
+border-radius:10px;
+box-shadow;
 }
 .btn-conferma-annulla{
-    background:#ffffff!important;
-    border:1px solid #d6dce1!important;
-    color:#35414b!important;
+background:#ffffff!important;
+border:1px solid #d6dce1!important;
+color:#35414b!important;
 }
-.btn-conferma-annulla:hover{
-    background:#f3f5f7!important;
-    border-color:#c8d0d6!important;
-    opacity:1!important;
+.btn-conferma-annulla{
+background:#f3f5f7!important;
+border-color:#c8d0d6!important;
+opacity:1!important;
 }
 .btn-conferma-azione{
-    background:#d94a4a!important;
-    border:1px solid #d94a4a!important;
-    color:#ffffff!important;
+background:#d94a4a!important;
+border:1px solid #d94a4a!important;
+color:#ffffff!important;
 }
-.btn-conferma-azione:hover{
-    background:#c93f3f!important;
-    border-color:#c93f3f!important;
-    opacity:1!important;
+.btn-conferma-azione{
+background:#c93f3f!important;
+border-color:#c93f3f!important;
+opacity:1!important;
 }
 .player-card-azione.bloccato{
-    background:rgba(238,76,76,.13)!important;
-    border-color:rgba(238,76,76,.35)!important;
-    color:#ffabab!important;
+background(238,76,76,.13)!important;
+border-color(238,76,76,.35)!important;
+color:#ffabab!important;
 }
 @media(max-width:600px){
-    .overlay-conferma-lobby{z-index:100500;}
-    .conferma-lobby-box{
-        border-radius:14px;
-    }
+.overlay-conferma-lobby{z-index:100500;}
+.conferma-lobby-box{
+border-radius:14px;
+}
 }
 
 /* =========================================================
-   MODAL INVITA GIOCATORI
-========================================================= */
+MODAL INVITA GIOCATORI
+========================================================= /
 .modal-invito-box{
-    background:white;
-    border-radius:12px;
-    width:380px;
-    max-width:calc(100vw - 32px);
-    max-height:75vh;
-    display:flex;
-    flex-direction:column;
-    overflow:hidden;
+background;
+border-radius:12px;
+width:380px;
+max-width(100vw - 32px);
+max-height:75vh;
+display;
+flex-direction;
+overflow;
 }
 .modal-invito-titolo{
-    padding:14px 16px;
-    background:#111;
-    color:#ffd700;
-    font-weight:bold;
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
+padding:14px 16px;
+background:#111;
+color:#ffd700;
+font-weight;
+display;
+justify-content;
+align-items;
 }
 .modal-invito-titolo button{
-    background:none;
-    border:none;
-    color:#ffd700;
-    font-size:16px;
-    cursor:pointer;
-    width:auto;
-    padding:0;
-    margin:0;
+background;
+border;
+color:#ffd700;
+font-size:16px;
+cursor;
+width;
+padding:0;
+margin:0;
 }
 #listaModalInvito{
-    overflow-y:auto;
-    padding:10px;
+overflow-y;
+padding:10px;
 }
 .modal-invito-riga{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    padding:10px;
-    border-radius:8px;
-    cursor:pointer;
+display;
+align-items;
+gap:10px;
+padding:10px;
+border-radius:8px;
+cursor;
 }
-.modal-invito-riga:hover{
-    background:#f4f4f4;
-}
+.modal-invito-riga
 .modal-invito-riga-invitato{
-    opacity:.55;
-    cursor:default;
+opacity:.55;
+cursor;
 }
 .modal-invito-avatar{
-    width:38px;
-    height:38px;
-    border-radius:50%;
-    object-fit:cover;
+width:38px;
+height:38px;
+border-radius:50%;
+object-fit;
+display;
+align-items;
+justify-content;
+color;
+font-weight;
+flex-shrink:0;
+}
+.modal-invito-check{
+margin-left;
+font-size:12px;
+color:#43a047;
+font-weight;
+}
+/ =========================================================
+MENU MOBILE
+========================================================= /
+#menuMobile{
+display;
+}
+.popup-mobile{
+display;
+}
+.popup-mobile.aperto{
+display;
+}
+/ =========================================================
+TABLET / SCHERMI MEDI
+========================================================= /
+@media(max-width:900px){
+.contenitore{
+flex-direction;
+height;
+}
+.sinistra,
+.centro,
+.destra{
+width:100%;
+}
+#partite{
+height:260px;
+}
+#chat{
+height:200px;
+width;
+margin-left:0;
+}
+#listaOnline{
+max-height:260px;
+}
+}
+/ =========================================================
+MOBILE GENERALE
+========================================================= /
+@media(max-width:600px){
+body{
+overflow;
+}
+/ Nascondiamo i pannelli laterali /
+.sinistra,
+.destra{
+display;
+}
+.contenitore{
+display;
+height:100vh;
+height:100dvh;
+padding:0;
+}
+.centro{
+width:100%;
+height:100vh;
+height:100dvh;
+border;
+border-radius:0;
+}
+/ =====================================================
+TITOLO PRINCIPALE
+===================================================== /
+.centro h2{
+font-size:16px;
+padding:8px;
+}
+/ =====================================================
+PARTITE
+===================================================== /
+.scheda-partita{
+display;
+flex-direction;
+gap:8px;
+}
+.info-partita{
+width:100%;
+font-size:14px;
+}
+.giocatori-mini{
+grid-template-columns:1fr 1fr;
+}
+.azioni-scheda{
+width:100%;
+}
+#partite{
+height(100vh - 90px);
+height(100dvh - 90px);
+overflow-y;
+padding:8px;
+}
+/ =====================================================
+NASCONDI CHAT DESKTOP
+===================================================== /
+.centro h2(2),
+#chat,
+#messaggio,
+#messaggio+button,
+#pannelloEmoji{
+display;
+}
+/ =====================================================
+MENU MOBILE
+===================================================== /
+#menuMobile{
+position;
+display;
+bottom:0;
+left:0;
+width:100%;
+height:75px;
+background:#000;
+border-top:2px solid #ff6600;
+justify-content;
+align-items;
+z-index:1000;
+padding:5px;
+}
+.btn-mobile{
+position;
+width:58px;
+height:58px;
+border-radius:50%;
+background:#fff !important;
+color:#111 !important;
+border:2px solid #000 !important;
+font-size:22px;
+display;
+flex-direction;
+align-items;
+justify-content;
+padding:0;
+margin:0;
+gap:2px;
+}
+.btn-mobile{
+opacity:1;
+}
+.btn-mobile img{
+width:24px;
+height:24px;
+object-fit;
+display;
+}
+.btn-mobile span{
+color:#111 !important;
+font-size:9px;
+line-height:1;
+}
+/ =====================================================
+BADGE MENU MOBILE
+===================================================== /
+.badge-mobile{
+position;
+top:-6px;
+right:-6px;
+min-width:18px;
+height:18px;
+background:#e53935;
+color !important;
+border-radius:50%;
+font-size:11px !important;
+font-weight;
+display;
+align-items;
+justify-content;
+padding:0 4px;
+border:2px solid white;
+}
+/ =====================================================
+POPUP MOBILE FULLSCREEN
+===================================================== /
+.popup-mobile{
+position !important;
+inset:0 !important;
+width:100vw !important;
+height:100vh !important;
+height:100dvh !important;
+max-width !important;
+max-height !important;
+margin:0 !important;
+padding:0 !important;
+background:#fff !important;
+border !important;
+border-radius:0 !important;
+box-shadow !important;
+z-index:99999 !important;
+overflow-y;
+overflow-x;
+display;
+}
+.popup-mobile.aperto{
+display;
+}
+.popup-mobile.crea-schermo-intero{
+position !important;
+inset:0 !important;
+width:100vw !important;
+height:100vh !important;
+height:100dvh !important;
+max-width !important;
+max-height !important;
+margin:0 !important;
+padding:0 !important;
+border-radius:0 !important;
+border !important;
+box-shadow !important;
+z-index:99999 !important;
+}
+.overlay-modal-invito{
+z-index:100100;
+}
+#cardInvitoRicevuto{
+z-index:100200;
+}
+#contenitoreNotifiche{
+z-index:100300;
+}
+/ =====================================================
+CONTENUTO POPUP
+===================================================== /
+#contenutoMobile{
+min-height:100%;
+min-height:100dvh;
+padding:20px;
+box-sizing;
+}
+/ =====================================================
+CREA TAVOLO
+===================================================== /
+#contenutoMobile[data-vista="crea"]{
+padding:0 20px 20px;
+}
+#contenutoMobile[data-vista="crea"] > h2{
+margin:0 -20px 20px !important;
+padding:16px 20px !important;
+width(100% + 40px);
+background:#111 !important;
+color:#fff !important;
+text-align;
+font-size:16px;
+}
+/ =====================================================
+OPZIONI
+STESSA GRAFICA DI CREA TAVOLO
+===================================================== /
+#contenutoMobile[data-vista="opzioni"]{
+padding:0 20px 20px !important;
+background:#fff;
+}
+#contenutoMobile[data-vista="opzioni"] > h2{
+margin:0 -20px 20px !important;
+padding:16px 20px !important;
+width(100% + 40px);
+background:#111 !important;
+color:#fff !important;
+text-align;
+font-size:16px;
+}
+/ =====================================================
+GIOCATORI ONLINE MOBILE
+Stessa testata nera a tutta larghezza di Chat/Opzioni
+===================================================== */
+#contenutoMobile[data-vista="online"]{
+padding:0 20px 20px !important;
+background:#fff;
+}
+
+.online-mobile-header{
+    width:calc(100% + 40px);
+    min-height:50px;
+    margin:0 -20px 14px;
+    padding:11px 5px 10px 20px;
     display:flex;
     align-items:center;
     justify-content:center;
-    color:white;
-    font-weight:bold;
-    flex-shrink:0;
-}
-.modal-invito-check{
-    margin-left:auto;
-    font-size:12px;
-    color:#43a047;
-    font-weight:bold;
-}
-/* =========================================================
-   MENU MOBILE
-========================================================= */
-#menuMobile{
-    display:none;
-}
-.popup-mobile{
-    display:none;
-}
-.popup-mobile.aperto{
-    display:block;
-}
-/* =========================================================
-   TABLET / SCHERMI MEDI
-========================================================= */
-@media(max-width:900px){
-    .contenitore{
-        flex-direction:column;
-        height:auto;
-    }
-    .sinistra,
-    .centro,
-    .destra{
-        width:100%;
-    }
-    #partite{
-        height:260px;
-    }
-    #chat{
-        height:200px;
-        width:auto;
-        margin-left:0;
-    }
-    #listaOnline{
-        max-height:260px;
-    }
-}
-/* =========================================================
-   MOBILE GENERALE
-========================================================= */
-@media(max-width:600px){
-    body{
-        overflow:hidden;
-    }
-    /* Nascondiamo i pannelli laterali */
-    .sinistra,
-    .destra{
-        display:none;
-    }
-    .contenitore{
-        display:block;
-        height:100vh;
-        height:100dvh;
-        padding:0;
-    }
-    .centro{
-        width:100%;
-        height:100vh;
-        height:100dvh;
-        border:none;
-        border-radius:0;
-    }
-    /* =====================================================
-       TITOLO PRINCIPALE
-    ===================================================== */
-    .centro h2:first-child{
-        font-size:16px;
-        padding:8px;
-    }
-    /* =====================================================
-       PARTITE
-    ===================================================== */
-    .scheda-partita{
-        display:flex;
-        flex-direction:column;
-        gap:8px;
-    }
-    .info-partita{
-        width:100%;
-        font-size:14px;
-    }
-    .giocatori-mini{
-        grid-template-columns:1fr 1fr;
-    }
-    .azioni-scheda{
-        width:100%;
-    }
-    #partite{
-        height:calc(100vh - 90px);
-        height:calc(100dvh - 90px);
-        overflow-y:auto;
-        padding:8px;
-    }
-/* =====================================================
-       NASCONDI CHAT DESKTOP
-    ===================================================== */
-    .centro h2:nth-of-type(2),
-    #chat,
-    #messaggio,
-    #messaggio+button,
-    #pannelloEmoji{
-        display:none;
-    }
-    /* =====================================================
-       MENU MOBILE
-    ===================================================== */
-    #menuMobile{
-        position:fixed;
-        display:flex;
-        bottom:0;
-        left:0;
-        width:100%;
-        height:75px;
-        background:#000;
-        border-top:2px solid #ff6600;
-        justify-content:space-around;
-        align-items:center;
-        z-index:1000;
-        padding:5px;
-    }
-    .btn-mobile{
-        position:relative;
-        width:58px;
-        height:58px;
-        border-radius:50%;
-        background:#fff !important;
-        color:#111 !important;
-        border:2px solid #000 !important;
-        font-size:22px;
-        display:flex;
-        flex-direction:column;
-        align-items:center;
-        justify-content:center;
-        padding:0;
-        margin:0;
-        gap:2px;
-    }
-    .btn-mobile:hover{
-        opacity:1;
-    }
-    .btn-mobile img{
-        width:24px;
-        height:24px;
-        object-fit:contain;
-        display:block;
-    }
-    .btn-mobile span{
-        color:#111 !important;
-        font-size:9px;
-        line-height:1;
-    }
-    /* =====================================================
-       BADGE MENU MOBILE
-    ===================================================== */
-    .badge-mobile{
-        position:absolute;
-        top:-6px;
-        right:-6px;
-        min-width:18px;
-        height:18px;
-        background:#e53935;
-        color:white !important;
-        border-radius:50%;
-        font-size:11px !important;
-        font-weight:bold;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        padding:0 4px;
-        border:2px solid white;
-    }
-/* =====================================================
-       POPUP MOBILE FULLSCREEN
-    ===================================================== */
-    .popup-mobile{
-        position:fixed !important;
-        inset:0 !important;
-        width:100vw !important;
-        height:100vh !important;
-        height:100dvh !important;
-        max-width:none !important;
-        max-height:none !important;
-        margin:0 !important;
-        padding:0 !important;
-        background:#fff !important;
-        border:none !important;
-        border-radius:0 !important;
-        box-shadow:none !important;
-        z-index:99999 !important;
-        overflow-y:auto;
-        overflow-x:hidden;
-        display:none;
-    }
-    .popup-mobile.aperto{
-        display:block;
-    }
-    .popup-mobile.crea-schermo-intero{
-        position:fixed !important;
-        inset:0 !important;
-        width:100vw !important;
-        height:100vh !important;
-        height:100dvh !important;
-        max-width:none !important;
-        max-height:none !important;
-        margin:0 !important;
-        padding:0 !important;
-        border-radius:0 !important;
-        border:none !important;
-        box-shadow:none !important;
-        z-index:99999 !important;
-    }
-    .overlay-modal-invito{
-        z-index:100100;
-    }
-    #cardInvitoRicevuto{
-        z-index:100200;
-    }
-    #contenitoreNotifiche{
-        z-index:100300;
-    }
-    /* =====================================================
-       CONTENUTO POPUP
-    ===================================================== */
-    #contenutoMobile{
-        min-height:100%;
-        min-height:100dvh;
-        padding:20px;
-        box-sizing:border-box;
-    }
-    /* =====================================================
-       CREA TAVOLO
-    ===================================================== */
-    #contenutoMobile[data-vista="crea"]{
-        padding:0 20px 20px;
-    }
-    #contenutoMobile[data-vista="crea"] > h2{
-        margin:0 -20px 20px !important;
-        padding:16px 20px !important;
-        width:calc(100% + 40px);
-        background:#111 !important;
-        color:#fff !important;
-        text-align:center;
-        font-size:16px;
-    }
-    /* =====================================================
-       OPZIONI
-       STESSA GRAFICA DI CREA TAVOLO
-    ===================================================== */
-    #contenutoMobile[data-vista="opzioni"]{
-        padding:0 20px 20px !important;
-        background:#fff;
-    }
-    #contenutoMobile[data-vista="opzioni"] > h2{
-        margin:0 -20px 20px !important;
-        padding:16px 20px !important;
-        width:calc(100% + 40px);
-        background:#111 !important;
-        color:#fff !important;
-        text-align:center;
-        font-size:16px;
-    }
-    /* =====================================================
-       GIOCATORI ONLINE MOBILE
-       Stessa testata nera a tutta larghezza di Chat/Opzioni
-    ===================================================== */
-    #contenutoMobile[data-vista="online"]{
-        padding:0 20px 20px !important;
-        background:#fff;
-    }
-
-    .online-mobile-header{
-        width:calc(100% + 40px);
-        min-height:50px;
-        margin:0 -20px 14px;
-        padding:11px 5px 10px 20px;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        gap:14px;
-        background:#111;
-        color:#fff;
-        text-align:center;
-        font-weight:900;
-    }
-
-    .online-mobile-stanza{
-        min-width:0;
-        color:#fff;
-        font-size:16px;
-        font-weight:900;
-        letter-spacing:.02em;
-        white-space:nowrap;
-        overflow:hidden;
-        text-overflow:ellipsis;
-    }
-
-    .online-mobile-contatori{
-        display:inline-flex;
-        align-items:center;
-        gap:12px;
-        flex:0 0 auto;
-    }
-
-    .online-mobile-contatore{
-        display:inline-flex;
-        align-items:center;
-        gap:5px;
-        color:#fff;
-        font-size:19px;
-        font-weight:900;
-        line-height:1;
-    }
-
-    .online-mobile-contatore img{
-        width:24px;
-        height:24px;
-        display:block;
-        object-fit:contain;
-        filter:brightness(0) invert(1);
-    }
-
-    .online-mobile-lista{
-        min-width:0;
-    }
-
-/* =====================================================
-       CHAT MOBILE
-    ===================================================== */
-    #contenutoMobile[data-vista="chat"]{
-        padding:0 !important;
-        height:100%;
-        min-height:100dvh;
-        background:#f4f4f4;
-    }
-    .chat-mobile-schermata{
-        height:100%;
-        min-height:100dvh;
-        display:flex;
-        flex-direction:column;
-        background:#f4f4f4;
-    }
-    .chat-mobile-titolo{
-        flex-shrink:0;
-        background:#111;
-        color:white;
-        text-align:center;
-        font-size:16px;
-        font-weight:bold;
-        padding:16px 20px;
-    }
-    .chat-mobile-messaggi{
-        flex:1;
-        min-height:0;
-        overflow-y:auto;
-        padding:14px 10px 20px;
-        background:#f5f5f5;
-        -webkit-overflow-scrolling:touch;
-    }
-    .chat-mobile-messaggi .messaggio{
-        background:white;
-        border:1px solid #e1e1e1;
-        border-radius:10px;
-        padding:9px 11px;
-        margin-bottom:7px;
-        box-shadow:0 1px 3px rgba(0,0,0,.06);
-        word-break:break-word;
-        overflow-wrap:anywhere;
-    }
-    .chat-mobile-input{
-        flex-shrink:0;
-        display:flex;
-        align-items:center;
-        gap:7px;
-        padding:9px;
-        background:white;
-        border-top:1px solid #ddd;
-        box-shadow:0 -2px 8px rgba(0,0,0,.08);
-    }
-    .chat-mobile-input input{
-        flex:1;
-        width:auto;
-        height:44px;
-        margin:0;
-        padding:10px;
-        background:#fff;
-        color:#222;
-        border:1px solid #ccc;
-        border-radius:4px;
-        font-size:15px;
-        outline:none;
-    }
-    .chat-mobile-input input:focus{
-        border-color:#999;
-    }
-    .chat-mobile-invia{
-        flex-shrink:0;
-        width:90px !important;
-        height:44px !important;
-        margin:0 !important;
-        padding:0 14px !important;
-        background:#333 !important;
-        color:#fff !important;
-        border:1px solid #444 !important;
-        border-radius:4px !important;
-        font-size:14px !important;
-        font-weight:bold !important;
-        box-shadow:none !important;
-    }
-    .chat-mobile-invia:hover{
-        background:#222 !important;
-        opacity:1 !important;
-    }
-    /* =====================================================
-       PULSANTE CHIUDI MOBILE
-    ===================================================== */
-    .chiudi-mobile{
-        position:absolute;
-        right:8px;
-        top:4px;
-        width:42px;
-        height:42px;
-        border-radius:50%;
-        background:white;
-        color:black;
-        border:2px solid #000;
-        font-size:26px;
-        font-weight:bold;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        padding:0;
-        line-height:1;
-        z-index:100000;
-        margin:0;
-    }
-}
-/* =========================================================
-   MOBILE PICCOLO
-========================================================= */
-@media(max-width:480px){
-    body{
-        font-size:15px;
-    }
-    .contenitore{
-        padding:0;
-        gap:0;
-    }
-    .box{
-        padding:10px;
-    }
-    h2{
-        font-size:15px;
-        padding:9px;
-    }
-    select,
-    button,
-    input{
-        padding:11px;
-        font-size:15px;
-    }
-    .utente-box{
-        padding:10px;
-    }
-    .avatar{
-        width:56px;
-        height:56px;
-        font-size:20px;
-    }
-    /* MENU */
-    #menuMobile{
-        height:64px;
-    }
-    .btn-mobile{
-        width:50px;
-        height:50px;
-        font-size:19px;
-    }
-    .btn-mobile img{
-        width:22px;
-        height:22px;
-    }
-    .btn-mobile span{
-        font-size:8px;
-    }
-    /* POPUP */
-.popup-mobile,
-    .popup-mobile.crea-schermo-intero{
-        top:0 !important;
-        left:0 !important;
-        right:0 !important;
-        bottom:0 !important;
-        width:100vw !important;
-        height:100vh !important;
-        height:100dvh !important;
-        padding:0 !important;
-    }
-    /* PARTITE */
-    .scheda-partita{
-        padding:10px;
-    }
-    .info-partita{
-        font-size:13px;
-        line-height:1.6;
-    }
-    .mini-giocatore{
-        font-size:12px;
-        padding:5px;
-    }
-    .avatar-partita-mini{
-        width:26px;
-        height:26px;
-    }
-    /* CHAT */
-    .chat-mobile-titolo{
-        padding:15px 20px;
-    }
-    .chat-mobile-messaggi{
-        padding:10px 8px 15px;
-    }
-    .chat-mobile-input{
-        padding:8px;
-    }
-    .chat-mobile-input input{
-        height:43px;
-        font-size:15px;
-    }
-    .chat-mobile-invia{
-        width:65px !important;
-        height:43px !important;
-    }
-    /* NOTIFICHE */
-    #contenitoreNotifiche{
-        left:16px;
-        right:16px;
-        max-width:none;
-        top:10px;
-    }
-    #cardInvitoRicevuto{
-        top:58px;
-        right:8px;
-        left:8px;
-        width:auto;
-        max-width:none;
-    }
-    .modal-invito-box{
-        width:calc(100vw - 24px);
-    }
-}
-/* =========================================================
-   TELEFONI MOLTO PICCOLI
-========================================================= */
-@media(max-width:360px){
-    .btn-mobile{
-        width:46px;
-        height:46px;
-        font-size:17px;
-    }
-    .btn-mobile span{
-        display:none;
-    }
-    #menuMobile{
-        height:58px;
-        gap:2px;
-    }
-    .popup-mobile,
-    .popup-mobile.crea-schermo-intero{
-        top:0 !important;
-        left:0 !important;
-        right:0 !important;
-        bottom:0 !important;
-        width:100vw !important;
-        height:100vh !important;
-        height:100dvh !important;
-        padding:0 !important;
-    }
-    h2{
-        font-size:14px;
-        padding:7px;
-    }
-    .chat-mobile-input input{
-        font-size:14px;
-    }
-    .chat-mobile-invia{
-        width:60px !important;
-    }
-}
-/* =========================================================
-   TEMA SCURO
-   Compatibile con il tuo cambiaTema()
-========================================================= */
-body.tema-scuro{
+    gap:14px;
     background:#111;
-    color:white;
+    color:#fff;
+    text-align:center;
+    font-weight:900;
+}
+
+.online-mobile-stanza{
+    min-width:0;
+    color:#fff;
+    font-size:16px;
+    font-weight:900;
+    letter-spacing:.02em;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+
+.online-mobile-contatori{
+    display:inline-flex;
+    align-items:center;
+    gap:12px;
+    flex:0 0 auto;
+}
+
+.online-mobile-contatore{
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    color:#fff;
+    font-size:19px;
+    font-weight:900;
+    line-height:1;
+}
+
+.online-mobile-contatore img{
+    width:24px;
+    height:24px;
+    display:block;
+    object-fit:contain;
+    filter:brightness(0) invert(1);
+}
+
+.online-mobile-lista{
+    min-width:0;
+}
+
+/* =====================================================
+CHAT MOBILE
+===================================================== /
+#contenutoMobile[data-vista="chat"]{
+padding:0 !important;
+height:100%;
+min-height:100dvh;
+background:#f4f4f4;
+}
+.chat-mobile-schermata{
+height:100%;
+min-height:100dvh;
+display;
+flex-direction;
+background:#f4f4f4;
+}
+.chat-mobile-titolo{
+flex-shrink:0;
+background:#111;
+color;
+text-align;
+font-size:16px;
+font-weight;
+padding:16px 20px;
+}
+.chat-mobile-messaggi{
+flex:1;
+min-height:0;
+overflow-y;
+padding:14px 10px 20px;
+background:#f5f5f5;
+-webkit-overflow-scrolling;
+}
+.chat-mobile-messaggi .messaggio{
+background;
+border:1px solid #e1e1e1;
+border-radius:10px;
+padding:9px 11px;
+margin-bottom:7px;
+box-shadow:0 1px 3px rgba(0,0,0,.06);
+word-break;
+overflow-wrap;
+}
+.chat-mobile-input{
+flex-shrink:0;
+display;
+align-items;
+gap:7px;
+padding:9px;
+background;
+border-top:1px solid #ddd;
+box-shadow:0 -2px 8px rgba(0,0,0,.08);
+}
+.chat-mobile-input input{
+flex:1;
+width;
+height:44px;
+margin:0;
+padding:10px;
+background:#fff;
+color:#222;
+border:1px solid #ccc;
+border-radius:4px;
+font-size:15px;
+outline;
+}
+.chat-mobile-input input
+.chat-mobile-invia{
+flex-shrink:0;
+width:90px !important;
+height:44px !important;
+margin:0 !important;
+padding:0 14px !important;
+background:#333 !important;
+color:#fff !important;
+border:1px solid #444 !important;
+border-radius:4px !important;
+font-size:14px !important;
+font-weight !important;
+box-shadow !important;
+}
+.chat-mobile-invia{
+background:#222 !important;
+opacity:1 !important;
+}
+/ =====================================================
+PULSANTE CHIUDI MOBILE
+===================================================== /
+.chiudi-mobile{
+position;
+right:8px;
+top:4px;
+width:42px;
+height:42px;
+border-radius:50%;
+background;
+color;
+border:2px solid #000;
+font-size:26px;
+font-weight;
+display;
+align-items;
+justify-content;
+padding:0;
+line-height:1;
+z-index:100000;
+margin:0;
+}
+}
+/ =========================================================
+MOBILE PICCOLO
+========================================================= /
+@media(max-width:480px){
+body{
+font-size:15px;
+}
+.contenitore{
+padding:0;
+gap:0;
+}
+.box{
+padding:10px;
+}
+h2{
+font-size:15px;
+padding:9px;
+}
+select,
+button,
+input{
+padding:11px;
+font-size:15px;
+}
+.utente-box{
+padding:10px;
+}
+.avatar{
+width:56px;
+height:56px;
+font-size:20px;
+}
+/ MENU /
+#menuMobile{
+height:64px;
+}
+.btn-mobile{
+width:50px;
+height:50px;
+font-size:19px;
+}
+.btn-mobile img{
+width:22px;
+height:22px;
+}
+.btn-mobile span{
+font-size:8px;
+}
+/ POPUP /
+.popup-mobile,
+.popup-mobile.crea-schermo-intero{
+top:0 !important;
+left:0 !important;
+right:0 !important;
+bottom:0 !important;
+width:100vw !important;
+height:100vh !important;
+height:100dvh !important;
+padding:0 !important;
+}
+/ PARTITE /
+.scheda-partita{
+padding:10px;
+}
+.info-partita{
+font-size:13px;
+line-height:1.6;
+}
+.mini-giocatore{
+font-size:12px;
+padding:5px;
+}
+.avatar-partita-mini{
+width:26px;
+height:26px;
+}
+/ CHAT /
+.chat-mobile-titolo{
+padding:15px 20px;
+}
+.chat-mobile-messaggi{
+padding:10px 8px 15px;
+}
+.chat-mobile-input{
+padding:8px;
+}
+.chat-mobile-input input{
+height:43px;
+font-size:15px;
+}
+.chat-mobile-invia{
+width:65px !important;
+height:43px !important;
+}
+/ NOTIFICHE /
+#contenitoreNotifiche{
+left:16px;
+right:16px;
+max-width;
+top:10px;
+}
+#cardInvitoRicevuto{
+top:58px;
+right:8px;
+left:8px;
+width;
+max-width;
+}
+.modal-invito-box{
+width(100vw - 24px);
+}
+}
+/ =========================================================
+TELEFONI MOLTO PICCOLI
+========================================================= /
+@media(max-width:360px){
+.btn-mobile{
+width:46px;
+height:46px;
+font-size:17px;
+}
+.btn-mobile span{
+display;
+}
+#menuMobile{
+height:58px;
+gap:2px;
+}
+.popup-mobile,
+.popup-mobile.crea-schermo-intero{
+top:0 !important;
+left:0 !important;
+right:0 !important;
+bottom:0 !important;
+width:100vw !important;
+height:100vh !important;
+height:100dvh !important;
+padding:0 !important;
+}
+h2{
+font-size:14px;
+padding:7px;
+}
+.chat-mobile-input input{
+font-size:14px;
+}
+.chat-mobile-invia{
+width:60px !important;
+}
+}
+/ =========================================================
+TEMA SCURO
+Compatibile con il tuo cambiaTema()
+========================================================= /
+body.tema-scuro{
+background:#111;
+color;
 }
 body.tema-scuro .centro,
 body.tema-scuro .sinistra,
 body.tema-scuro .destra{
-    background:#222;
-    color:white;
+background:#222;
+color;
 }
 body.tema-scuro .popup-mobile{
-    background:#222 !important;
-    color:white;
+background:#222 !important;
+color;
 }
 body.tema-scuro .scheda-partita,
 body.tema-scuro .partita{
-    background:#2b2b2b;
-    border-color:#444;
+background:#2b2b2b;
+border-color:#444;
 }
 body.tema-scuro .mini-giocatore{
-    background:#333;
-    border-color:#444;
+background:#333;
+border-color:#444;
 }
 body.tema-scuro #chat{
-    background:#222;
+background:#222;
 }
 body.tema-scuro .messaggio{
-    border-color:#444;
+border-color:#444;
 }
 body.tema-scuro .chat-mobile-schermata{
-    background:#222;
+background:#222;
 }
 body.tema-scuro .chat-mobile-messaggi{
-    background:#222;
+background:#222;
 }
 body.tema-scuro .chat-mobile-messaggi .messaggio{
-    background:#333;
-    border-color:#444;
-    color:white;
+background:#333;
+border-color:#444;
+color;
 }
 body.tema-scuro .chat-mobile-input{
-    background:#222;
-    border-color:#444;
+background:#222;
+border-color:#444;
 }
 body.tema-scuro .chat-mobile-input input{
-    background:#333;
-    color:white;
-    border-color:#555;
+background:#333;
+color;
+border-color:#555;
 }
 body.tema-scuro #contenutoMobile[data-vista="opzioni"]{
-    background:#222;
+background:#222;
 }
 body.tema-scuro .giocatore-online{
-    border-color:#444;
+border-color:#444;
 }
-/* =========================================================
-   NASCONDI PULSANTE EMOJI SOLO SU CELLULARE
-========================================================= */
+/ =========================================================
+NASCONDI PULSANTE EMOJI SOLO SU CELLULARE
+========================================================= /
 @media (max-width:600px){
-    /* Nasconde i pulsanti emoji soltanto su telefono */
-    button[onclick="apriEmoji()"],
-    button[onclick="mostraEmojiMobile()"]{
-        display:none !important;
-    }
+/ Nasconde i pulsanti emoji soltanto su telefono */
+button[onclick="apriEmoji()"],
+button[onclick="mostraEmojiMobile()"]{
+display !important;
+}
 }
 
 /* ===== SEGNALAZIONE GIOCATORE ===== */
 .player-card-azione.segnala{
-    background:rgba(255,170,0,.10) !important;
-    border-color:rgba(255,170,0,.34) !important;
-    color:#ffd27a !important;
+background(255,170,0,.10) !important;
+border-color(255,170,0,.34) !important;
+color:#ffd27a !important;
 }
 .overlay-segnalazione{
-    display:none;
-    position:fixed;
-    inset:0;
-    z-index:3200;
-    align-items:center;
-    justify-content:center;
-    padding:18px;
-    background:rgba(17,24,39,.42);
-    backdrop-filter:blur(3px);
-    -webkit-backdrop-filter:blur(3px);
+display;
+position;
+inset:0;
+z-index:3200;
+align-items;
+justify-content;
+padding:18px;
+background(17,24,39,.42);
+backdrop-filter(3px);
+-webkit-backdrop-filter(3px);
 }
-.overlay-segnalazione.aperto{display:flex;}
+.overlay-segnalazione.aperto{display;}
 .segnalazione-box{
-    width:min(460px,calc(100vw - 32px));
-    background:#fff;
-    color:#17212b;
-    border:1px solid #dfe4e8;
-    border-radius:18px;
-    box-shadow:0 26px 70px rgba(24,32,40,.25);
-    overflow:hidden;
+width(460px,calc(100vw - 32px));
+background:#fff;
+color:#17212b;
+border:1px solid #dfe4e8;
+border-radius:18px;
+box-shadow:0 26px 70px rgba(24,32,40,.25);
+overflow;
 }
 .segnalazione-header{
-    padding:22px 22px 14px;
-    border-bottom:1px solid #edf0f2;
+padding:22px 22px 14px;
+border-bottom:1px solid #edf0f2;
 }
 .segnalazione-header h3{
-    margin:0 0 5px;
-    font-size:20px;
-    color:#17212b;
+margin:0 0 5px;
+font-size:20px;
+color:#17212b;
 }
 .segnalazione-header p{
-    margin:0;
-    color:#6b7580;
-    font-size:13px;
+margin:0;
+color:#6b7580;
+font-size:13px;
 }
 .segnalazione-corpo{padding:18px 22px;}
 .segnalazione-domanda{
-    margin:0 0 13px;
-    font-size:16px;
-    font-weight:900;
+margin:0 0 13px;
+font-size:16px;
+font-weight:900;
 }
 .segnalazione-opzioni{
-    display:grid;
-    gap:9px;
+display;
+gap:9px;
 }
 .segnalazione-opzione{
-    width:100%;
-    margin:0 !important;
-    padding:13px 14px !important;
-    display:flex;
-    align-items:center;
-    gap:11px;
-    text-align:left;
-    background:#f7f8fa !important;
-    color:#202a34 !important;
-    border:1px solid #dfe4e8 !important;
-    border-radius:11px !important;
+width:100%;
+margin:0 !important;
+padding:13px 14px !important;
+display;
+align-items;
+gap:11px;
+text-align;
+background:#f7f8fa !important;
+color:#202a34 !important;
+border:1px solid #dfe4e8 !important;
+border-radius:11px !important;
 }
-.segnalazione-opzione:hover{
-    opacity:1 !important;
-    background:#fff5eb !important;
-    border-color:#ff9b52 !important;
+.segnalazione-opzione{
+opacity:1 !important;
+background:#fff5eb !important;
+border-color:#ff9b52 !important;
 }
 .segnalazione-opzione.selezionata{
-    background:#fff1e6 !important;
-    border-color:#ff6600 !important;
-    box-shadow:0 0 0 2px rgba(255,102,0,.10);
+background:#fff1e6 !important;
+border-color:#ff6600 !important;
+box-shadow:0 0 0 2px rgba(255,102,0,.10);
 }
 .segnalazione-radio{
-    width:18px;height:18px;flex:0 0 18px;
-    border:2px solid #a8b0b8;border-radius:50%;
-    position:relative;
+width:18px;height:18px;flex:0 0 18px;
+border:2px solid #a8b0b8;border-radius:50%;
+position;
 }
 .segnalazione-opzione.selezionata .segnalazione-radio{border-color:#ff6600;}
 .segnalazione-opzione.selezionata .segnalazione-radio::after{
-    content:"";position:absolute;inset:3px;border-radius:50%;background:#ff6600;
+content:"";position;inset:3px;border-radius:50%;background:#ff6600;
 }
 .segnalazione-note{
-    width:100%;
-    min-height:82px;
-    margin-top:14px;
-    padding:11px 12px;
-    resize:vertical;
-    border:1px solid #dfe4e8;
-    border-radius:10px;
-    font:inherit;
-    color:#17212b;
-    background:#fff;
+width:100%;
+min-height:82px;
+margin-top:14px;
+padding:11px 12px;
+resize;
+border:1px solid #dfe4e8;
+border-radius:10px;
+font;
+color:#17212b;
+background:#fff;
 }
-.segnalazione-note:focus{outline:2px solid rgba(255,102,0,.18);border-color:#ff8a3d;}
+.segnalazione-note{outline:2px solid rgba(255,102,0,.18);border-color:#ff8a3d;}
 .segnalazione-azioni{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:9px;
-    padding:14px 22px 20px;
-    border-top:1px solid #edf0f2;
+display;
+grid-template-columns:1fr 1fr;
+gap:9px;
+padding:14px 22px 20px;
+border-top:1px solid #edf0f2;
 }
 .segnalazione-azioni button{margin:0 !important;}
 .segnalazione-annulla{background:#eef1f4 !important;color:#27313a !important;border:1px solid #d9dfe4 !important;}
 .segnalazione-invia{background:#ff6600 !important;color:#fff !important;border:1px solid #ff6600 !important;}
-.segnalazione-invia:disabled{background:#cfd4d9 !important;border-color:#cfd4d9 !important;color:#fff !important;}
+.segnalazione-invia{background:#cfd4d9 !important;border-color:#cfd4d9 !important;color:#fff !important;}
 
 </style>
 </head>
@@ -1852,20 +1846,21 @@ body.tema-scuro .giocatore-online{
         </div>
       </div>
 
-      <p>Numero giocatori</p>
-      <select id="numeroGiocatori">
-        <option value="2">2 giocatori</option>
-        <option value="3">3 giocatori</option>
-        <option value="4">4 giocatori</option>
-        <option value="5">5 giocatori</option>
-        <option value="6">6 giocatori</option>
-        <option value="7">7 giocatori</option>
-        <option value="8">8 giocatori</option>
-      </select>
-      <p>Tempo di mossa</p>
-      <select id="tempo" disabled aria-label="Tempo di mossa fisso">
-        <option value="15" selected>15 secondi</option>
-      </select>
+  <p>Numero giocatori</p>
+  <select id="numeroGiocatori">
+    <option value="2">2 giocatori</option>
+    <option value="3">3 giocatori</option>
+    <option value="4">4 giocatori</option>
+    <option value="5">5 giocatori</option>
+    <option value="6">6 giocatori</option>
+    <option value="7">7 giocatori</option>
+    <option value="8">8 giocatori</option>
+  </select>
+  <p>Tempo di mossa</p>
+  <select id="tempo" disabled aria-label="Tempo di mossa fisso">
+    <option value="15" selected>15 secondi</option>
+  </select>
+
 <p>Tipo partita</p>
       <select id="tipoPartita">
         <option value="pubblica">🔓 Pubblica</option>
@@ -1936,23 +1931,24 @@ body.tema-scuro .giocatore-online{
     STANZA
     <span class="conteggio-stanza">
 
-        <span class="contatore-icona">
-            <img
-                src="https://gioco-oca-server.onrender.com/Immagini/Giocatori.png"
-                alt="Giocatori online"
-            >
-            <span id="online">0</span>
-        </span>
-
-        <span class="contatore-icona">
-            <img
-                src="https://gioco-oca-server.onrender.com/Immagini/Amici.png"
-                alt="Amici online"
-            >
-            <span id="amiciOnline">0</span>
-        </span>
-
+    <span class="contatore-icona">
+        <img
+            src="https://gioco-oca-server.onrender.com/Immagini/Giocatori.png"
+            alt="Giocatori online"
+        >
+        <span id="online">0</span>
     </span>
+
+    <span class="contatore-icona">
+        <img
+            src="https://gioco-oca-server.onrender.com/Immagini/Amici.png"
+            alt="Amici online"
+        >
+        <span id="amiciOnline">0</span>
+    </span>
+
+</span>
+
 </h2>
     <div id="areaUtente"></div>
     <div id="listaOnline"></div>
@@ -1967,58 +1963,59 @@ const URL_SERVER_WS = "wss://gioco-oca-server.onrender.com";
 const CHIAVE_TOKEN_AUTH = "giochiSocietaAuthToken";
 
 function acquisisciTokenAutenticazioneDaUrl() {
-  try {
-    const parametriHash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
-    const token = parametriHash.get("auth_token");
+try {
+const parametriHash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+const token = parametriHash.get("auth_token");
 
-    if (token) {
-      sessionStorage.setItem(CHIAVE_TOKEN_AUTH, token);
-      parametriHash.delete("auth_token");
+if (token) {
+  sessionStorage.setItem(CHIAVE_TOKEN_AUTH, token);
+  parametriHash.delete("auth_token");
 
-      const nuovoHash = parametriHash.toString();
-      const nuovoUrl =
-        window.location.pathname +
-        window.location.search +
-        (nuovoHash ? "#" + nuovoHash : "");
+  const nuovoHash = parametriHash.toString();
+  const nuovoUrl =
+    window.location.pathname +
+    window.location.search +
+    (nuovoHash ? "#" + nuovoHash : "");
 
-      window.history.replaceState(null, "", nuovoUrl);
-    }
-  } catch (e) {
-    console.warn("Impossibile acquisire il token di autenticazione:", e);
-  }
+  window.history.replaceState(null, "", nuovoUrl);
+}
+
+} catch (e) {
+console.warn("Impossibile acquisire il token di autenticazione:", e);
+}
 }
 
 function ottieniTokenAutenticazione() {
-  try {
-    return sessionStorage.getItem(CHIAVE_TOKEN_AUTH) || "";
-  } catch (e) {
-    return "";
-  }
+try {
+return sessionStorage.getItem(CHIAVE_TOKEN_AUTH) || "";
+} catch (e) {
+return "";
+}
 }
 
 function cancellaTokenAutenticazione() {
-  try {
-    sessionStorage.removeItem(CHIAVE_TOKEN_AUTH);
-  } catch (e) {}
+try {
+sessionStorage.removeItem(CHIAVE_TOKEN_AUTH);
+} catch (e) {}
 }
 
 function headersConAutenticazione(headersIniziali) {
-  const headers = new Headers(headersIniziali || {});
-  const token = ottieniTokenAutenticazione();
+const headers = new Headers(headersIniziali || {});
+const token = ottieniTokenAutenticazione();
 
-  if (token) {
-    headers.set("Authorization", "Bearer " + token);
-  }
+if (token) {
+headers.set("Authorization", "Bearer " + token);
+}
 
-  return headers;
+return headers;
 }
 
 function fetchAutenticato(url, opzioni = {}) {
-  return fetch(url, {
-    ...opzioni,
-    credentials: "include",
-    headers: headersConAutenticazione(opzioni.headers)
-  });
+return fetch(url, {
+...opzioni,
+credentials: "include",
+headers: headersConAutenticazione(opzioni.headers)
+});
 }
 
 acquisisciTokenAutenticazioneDaUrl();
@@ -2042,38 +2039,38 @@ let richiestaProfiloCorrente = 0;
 let modalitaPartitaSelezionata = "classificata";
 
 function selezionaModalitaPartita(modalita) {
-  if (modalita !== "classificata" && modalita !== "divertimento") return;
-  modalitaPartitaSelezionata = modalita;
+if (modalita !== "classificata" && modalita !== "divertimento") return;
+modalitaPartitaSelezionata = modalita;
 
-  document.querySelectorAll(".btn-modalita-partita[data-modalita]").forEach(bottone => {
-    const attivo = bottone.dataset.modalita === modalita;
-    bottone.classList.toggle("attiva", attivo);
-    bottone.setAttribute("aria-pressed", attivo ? "true" : "false");
-  });
+document.querySelectorAll(".btn-modalita-partita[data-modalita]").forEach(bottone => {
+const attivo = bottone.dataset.modalita === modalita;
+bottone.classList.toggle("attiva", attivo);
+bottone.setAttribute("aria-pressed", attivo ? "true" : "false");
+});
 }
 
 // ===== NOTIFICHE INTERNE =====
 function mostraNotifica(testo) {
-  const contenitore = document.getElementById("contenitoreNotifiche");
-  if (!contenitore) return;
-  const toast = document.createElement("div");
-  toast.className = "notifica-toast";
-  toast.textContent = testo;
-  contenitore.appendChild(toast);
-  setTimeout(() => toast.remove(), 5000);
+const contenitore = document.getElementById("contenitoreNotifiche");
+if (!contenitore) return;
+const toast = document.createElement("div");
+toast.className = "notifica-toast";
+toast.textContent = testo;
+contenitore.appendChild(toast);
+setTimeout(() => toast.remove(), 5000);
 }
 function pulisciTestoHtml(valore) {
-  return String(valore ?? "").replace(/[&<>"']/g, carattere => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
-  })[carattere]);
+return String(valore ?? "").replace(/[&<>"']/g, carattere => ({
+"&": "&", "<": "<", ">": ">", '"': """, "'": "'"
+})[carattere]);
 }
 function inviaMessaggioSocket(dati) {
-  if (!socket || socket.readyState !== WebSocket.OPEN) {
-    mostraNotifica("Connessione al server non disponibile. Riprova tra qualche secondo.");
-    return false;
-  }
-  socket.send(JSON.stringify(dati));
-  return true;
+if (!socket || socket.readyState !== WebSocket.OPEN) {
+mostraNotifica("Connessione al server non disponibile. Riprova tra qualche secondo.");
+return false;
+}
+socket.send(JSON.stringify(dati));
+return true;
 }
 
 // ===== VERIFICA WEBCAM PRIMA DI CREARE/ENTRARE =====
@@ -2084,479 +2081,480 @@ let mediaLobbyVerificatiFino = 0;
 const DURATA_VALIDITA_MEDIA_LOBBY_MS = 5 * 60 * 1000;
 
 function attendiMediaLobby(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 function fermaStreamMediaLobby(stream) {
-  if (!stream) return;
-  stream.getTracks().forEach(traccia => {
-    try {
-      traccia.onended = null;
-      if (traccia.readyState === "live") traccia.stop();
-    } catch (e) {}
-  });
+if (!stream) return;
+stream.getTracks().forEach(traccia => {
+try {
+traccia.onended = null;
+if (traccia.readyState === "live") traccia.stop();
+} catch (e) {}
+});
 }
 
 function nomeErroreMediaLobby(errore) {
-  return String(errore && errore.name ? errore.name : "");
+return String(errore && errore.name ? errore.name : "");
 }
 
 function messaggioErroreMediaLobby(errore) {
-  const nome = nomeErroreMediaLobby(errore);
+const nome = nomeErroreMediaLobby(errore);
 
-  if (nome === "NotAllowedError" || nome === "SecurityError" || nome === "PermissionDeniedError") {
-    return "Webcam o microfono non autorizzati. Consenti entrambi nelle impostazioni del browser e riprova.";
-  }
+if (nome === "NotAllowedError" || nome === "SecurityError" || nome === "PermissionDeniedError") {
+return "Webcam o microfono non autorizzati. Consenti entrambi nelle impostazioni del browser e riprova.";
+}
 
-  if (nome === "NotFoundError" || nome === "DevicesNotFoundError") {
-    return "Non trovo sia una webcam sia un microfono disponibili su questo dispositivo.";
-  }
+if (nome === "NotFoundError" || nome === "DevicesNotFoundError") {
+return "Non trovo sia una webcam sia un microfono disponibili su questo dispositivo.";
+}
 
-  if (nome === "NotReadableError" || nome === "TrackStartError") {
-    return "Webcam o microfono risultano occupati da un'altra app o scheda. Chiudila e riprova.";
-  }
+if (nome === "NotReadableError" || nome === "TrackStartError") {
+return "Webcam o microfono risultano occupati da un'altra app o scheda. Chiudila e riprova.";
+}
 
-  if (nome === "OverconstrainedError" || nome === "ConstraintNotSatisfiedError") {
-    return "La webcam non supporta le impostazioni richieste. Riprova.";
-  }
+if (nome === "OverconstrainedError" || nome === "ConstraintNotSatisfiedError") {
+return "La webcam non supporta le impostazioni richieste. Riprova.";
+}
 
-  if (nome === "AbortError") {
-    return "Il browser non ha completato l'apertura di webcam e microfono. Riprova.";
-  }
+if (nome === "AbortError") {
+return "Il browser non ha completato l'apertura di webcam e microfono. Riprova.";
+}
 
-  return "Non è stato possibile aprire contemporaneamente webcam e microfono. Controlla i dispositivi e riprova.";
+return "Non è stato possibile aprire contemporaneamente webcam e microfono. Controlla i dispositivi e riprova.";
 }
 
 function getUserMediaConTimeout(vincoli, timeoutMs) {
-  return new Promise((resolve, reject) => {
-    let conclusa = false;
+return new Promise((resolve, reject) => {
+let conclusa = false;
 
-    const timer = setTimeout(() => {
-      if (conclusa) return;
-      conclusa = true;
-      reject(new DOMException("Tempo scaduto durante l'apertura dei dispositivi.", "AbortError"));
-    }, timeoutMs);
+const timer = setTimeout(() => {
+  if (conclusa) return;
+  conclusa = true;
+  reject(new DOMException("Tempo scaduto durante l'apertura dei dispositivi.", "AbortError"));
+}, timeoutMs);
 
-    navigator.mediaDevices.getUserMedia(vincoli).then(stream => {
-      if (conclusa) {
-        fermaStreamMediaLobby(stream);
-        return;
-      }
+navigator.mediaDevices.getUserMedia(vincoli).then(stream => {
+  if (conclusa) {
+    fermaStreamMediaLobby(stream);
+    return;
+  }
 
-      conclusa = true;
-      clearTimeout(timer);
-      resolve(stream);
-    }).catch(errore => {
-      if (conclusa) return;
-      conclusa = true;
-      clearTimeout(timer);
-      reject(errore);
-    });
-  });
+  conclusa = true;
+  clearTimeout(timer);
+  resolve(stream);
+}).catch(errore => {
+  if (conclusa) return;
+  conclusa = true;
+  clearTimeout(timer);
+  reject(errore);
+});
+
+});
 }
 
 async function richiediConsensoMediaSeNecessario(mediaAttiva) {
 
-  if (!mediaAttiva) {
-    return true;
-  }
+if (!mediaAttiva) {
+return true;
+}
 
-  if (
-    !socket ||
-    socket.readyState !== WebSocket.OPEN
-  ) {
-    mostraNotifica(
-      "Connessione al server non disponibile. Riprova tra qualche secondo."
-    );
+if (
+!socket ||
+socket.readyState !== WebSocket.OPEN
+) {
+mostraNotifica(
+"Connessione al server non disponibile. Riprova tra qualche secondo."
+);
+return false;
+}
+
+if (
+typeof RTCPeerConnection !== "function"
+) {
+mostraNotifica(
+"Questo browser non supporta la videochiamata del tavolo."
+);
+return false;
+}
+
+const clientCellulareAudioOnly =
+rilevaTipoDispositivoClient() === "cellulare";
+
+if (
+!window.isSecureContext ||
+!navigator.mediaDevices ||
+typeof navigator.mediaDevices.getUserMedia !== "function"
+) {
+mostraNotifica(
+clientCellulareAudioOnly
+? "Il microfono richiede HTTPS e un browser compatibile."
+: "Webcam e microfono richiedono HTTPS e un browser compatibile."
+);
+return false;
+}
+
+if (clientCellulareAudioOnly) {
+let streamAudioOnly = null;
+
+try {
+  mostraNotifica("Verifica microfono in corso…");
+
+  streamAudioOnly = await getUserMediaConTimeout({
+    video: false,
+    audio: {
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true
+    }
+  }, 12000);
+
+  const tracciaAudioOnly = streamAudioOnly
+    .getAudioTracks()
+    .find(traccia => traccia.readyState === "live");
+
+  if (!tracciaAudioOnly) {
+    mostraNotifica("Il microfono non ha prodotto una traccia audio valida.");
     return false;
   }
 
-  if (
-    typeof RTCPeerConnection !== "function"
-  ) {
-    mostraNotifica(
-      "Questo browser non supporta la videochiamata del tavolo."
-    );
-    return false;
-  }
+  console.log("[MEDIA] Cellulare audio-only, microfono verificato:", tracciaAudioOnly.label);
+  mostraNotifica("Microfono verificato. Su cellulare parteciperai solo con l'audio.");
+  return true;
 
-  const clientCellulareAudioOnly =
-    rilevaTipoDispositivoClient() === "cellulare";
+} catch (erroreMicrofono) {
+  console.error("Errore apertura microfono su cellulare:", erroreMicrofono);
 
   if (
-    !window.isSecureContext ||
-    !navigator.mediaDevices ||
-    typeof navigator.mediaDevices.getUserMedia !== "function"
+    erroreMicrofono.name === "NotAllowedError" ||
+    erroreMicrofono.name === "SecurityError"
   ) {
-    mostraNotifica(
-      clientCellulareAudioOnly
-        ? "Il microfono richiede HTTPS e un browser compatibile."
-        : "Webcam e microfono richiedono HTTPS e un browser compatibile."
-    );
-    return false;
+    mostraNotifica("Devi consentire l'accesso al microfono per partecipare a questo tavolo.");
+  } else if (
+    erroreMicrofono.name === "NotFoundError" ||
+    erroreMicrofono.name === "DevicesNotFoundError"
+  ) {
+    mostraNotifica("Nessun microfono disponibile. Il microfono è obbligatorio per questo tavolo.");
+  } else if (
+    erroreMicrofono.name === "NotReadableError" ||
+    erroreMicrofono.name === "TrackStartError" ||
+    erroreMicrofono.name === "AbortError"
+  ) {
+    mostraNotifica("Il microfono non può essere avviato. Controlla che non sia utilizzato da altre applicazioni.");
+  } else {
+    mostraNotifica("Impossibile utilizzare il microfono. Riprova.");
   }
 
-  if (clientCellulareAudioOnly) {
-    let streamAudioOnly = null;
+  return false;
 
-    try {
-      mostraNotifica("Verifica microfono in corso…");
+} finally {
+  fermaStreamMediaLobby(streamAudioOnly);
+}
 
-      streamAudioOnly = await getUserMediaConTimeout({
-        video: false,
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
+}
+
+let streamVideo = null;
+let streamAudio = null;
+
+try {
+
+/* =====================================================
+   1. WEBCAM OBBLIGATORIA
+===================================================== */
+
+mostraNotifica(
+  "Verifica webcam in corso…"
+);
+
+try {
+
+  streamVideo =
+    await navigator.mediaDevices.getUserMedia({
+
+      audio: false,
+
+      video: {
+        width: {
+          ideal: 320,
+          max: 640
+        },
+
+        height: {
+          ideal: 240,
+          max: 480
+        },
+
+        frameRate: {
+          ideal: 15,
+          max: 20
+        },
+
+        facingMode: {
+          ideal: "user"
         }
-      }, 12000);
-
-      const tracciaAudioOnly = streamAudioOnly
-        .getAudioTracks()
-        .find(traccia => traccia.readyState === "live");
-
-      if (!tracciaAudioOnly) {
-        mostraNotifica("Il microfono non ha prodotto una traccia audio valida.");
-        return false;
       }
 
-      console.log("[MEDIA] Cellulare audio-only, microfono verificato:", tracciaAudioOnly.label);
-      mostraNotifica("Microfono verificato. Su cellulare parteciperai solo con l'audio.");
-      return true;
+    });
 
-    } catch (erroreMicrofono) {
-      console.error("Errore apertura microfono su cellulare:", erroreMicrofono);
+} catch (erroreWebcam) {
 
-      if (
-        erroreMicrofono.name === "NotAllowedError" ||
-        erroreMicrofono.name === "SecurityError"
-      ) {
-        mostraNotifica("Devi consentire l'accesso al microfono per partecipare a questo tavolo.");
-      } else if (
-        erroreMicrofono.name === "NotFoundError" ||
-        erroreMicrofono.name === "DevicesNotFoundError"
-      ) {
-        mostraNotifica("Nessun microfono disponibile. Il microfono è obbligatorio per questo tavolo.");
-      } else if (
-        erroreMicrofono.name === "NotReadableError" ||
-        erroreMicrofono.name === "TrackStartError" ||
-        erroreMicrofono.name === "AbortError"
-      ) {
-        mostraNotifica("Il microfono non può essere avviato. Controlla che non sia utilizzato da altre applicazioni.");
-      } else {
-        mostraNotifica("Impossibile utilizzare il microfono. Riprova.");
-      }
+  console.error(
+    "Errore apertura webcam:",
+    erroreWebcam
+  );
 
-      return false;
-
-    } finally {
-      fermaStreamMediaLobby(streamAudioOnly);
-    }
+  if (
+    erroreWebcam.name === "NotAllowedError" ||
+    erroreWebcam.name === "SecurityError"
+  ) {
+    mostraNotifica(
+      "Devi consentire l'accesso alla webcam per partecipare a questo tavolo."
+    );
   }
 
-  let streamVideo = null;
-  let streamAudio = null;
-
-  try {
-
-    /* =====================================================
-       1. WEBCAM OBBLIGATORIA
-    ===================================================== */
-
+  else if (
+    erroreWebcam.name === "NotFoundError" ||
+    erroreWebcam.name === "DevicesNotFoundError"
+  ) {
     mostraNotifica(
-      "Verifica webcam in corso…"
+      "Nessuna webcam disponibile. La webcam è obbligatoria per questo tavolo."
     );
-
-    try {
-
-      streamVideo =
-        await navigator.mediaDevices.getUserMedia({
-
-          audio: false,
-
-          video: {
-            width: {
-              ideal: 320,
-              max: 640
-            },
-
-            height: {
-              ideal: 240,
-              max: 480
-            },
-
-            frameRate: {
-              ideal: 15,
-              max: 20
-            },
-
-            facingMode: {
-              ideal: "user"
-            }
-          }
-
-        });
-
-    } catch (erroreWebcam) {
-
-      console.error(
-        "Errore apertura webcam:",
-        erroreWebcam
-      );
-
-      if (
-        erroreWebcam.name === "NotAllowedError" ||
-        erroreWebcam.name === "SecurityError"
-      ) {
-        mostraNotifica(
-          "Devi consentire l'accesso alla webcam per partecipare a questo tavolo."
-        );
-      }
-
-      else if (
-        erroreWebcam.name === "NotFoundError" ||
-        erroreWebcam.name === "DevicesNotFoundError"
-      ) {
-        mostraNotifica(
-          "Nessuna webcam disponibile. La webcam è obbligatoria per questo tavolo."
-        );
-      }
-
-      else if (
-        erroreWebcam.name === "NotReadableError" ||
-        erroreWebcam.name === "TrackStartError" ||
-        erroreWebcam.name === "AbortError"
-      ) {
-        mostraNotifica(
-          "La webcam non può essere avviata. Controlla che sia collegata e non utilizzata da altre applicazioni."
-        );
-      }
-
-      else {
-        mostraNotifica(
-          "Impossibile utilizzare la webcam. La webcam è obbligatoria per questo tavolo."
-        );
-      }
-
-      return false;
-    }
-
-
-    const tracciaVideo =
-      streamVideo
-        .getVideoTracks()
-        .find(
-          traccia =>
-            traccia.readyState === "live"
-        );
-
-
-    if (!tracciaVideo) {
-
-      mostraNotifica(
-        "La webcam non ha prodotto una traccia video valida."
-      );
-
-      return false;
-    }
-
-
-    /* =====================================================
-       2. MICROFONO OBBLIGATORIO
-    ===================================================== */
-
-    mostraNotifica(
-      "Webcam verificata. Verifica microfono in corso…"
-    );
-
-
-    try {
-
-      streamAudio =
-        await navigator.mediaDevices.getUserMedia({
-
-          video: false,
-
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true
-          }
-
-        });
-
-    } catch (erroreMicrofono) {
-
-      console.error(
-        "Errore apertura microfono:",
-        erroreMicrofono
-      );
-
-
-      if (
-        erroreMicrofono.name === "NotAllowedError" ||
-        erroreMicrofono.name === "SecurityError"
-      ) {
-        mostraNotifica(
-          "Devi consentire l'accesso al microfono per partecipare a questo tavolo."
-        );
-      }
-
-      else if (
-        erroreMicrofono.name === "NotFoundError" ||
-        erroreMicrofono.name === "DevicesNotFoundError"
-      ) {
-        mostraNotifica(
-          "Nessun microfono disponibile. Il microfono è obbligatorio per questo tavolo."
-        );
-      }
-
-      else if (
-        erroreMicrofono.name === "NotReadableError" ||
-        erroreMicrofono.name === "TrackStartError" ||
-        erroreMicrofono.name === "AbortError"
-      ) {
-        mostraNotifica(
-          "Il microfono non può essere avviato. Controlla che non sia utilizzato da altre applicazioni."
-        );
-      }
-
-      else {
-        mostraNotifica(
-          "Impossibile utilizzare il microfono. Il microfono è obbligatorio per questo tavolo."
-        );
-      }
-
-      return false;
-    }
-
-
-    const tracciaAudio =
-      streamAudio
-        .getAudioTracks()
-        .find(
-          traccia =>
-            traccia.readyState === "live"
-        );
-
-
-    if (!tracciaAudio) {
-
-      mostraNotifica(
-        "Il microfono non ha prodotto una traccia audio valida."
-      );
-
-      return false;
-    }
-
-
-    /* =====================================================
-       ENTRAMBI FUNZIONANO
-    ===================================================== */
-
-    console.log(
-      "[MEDIA] Webcam verificata:",
-      tracciaVideo.label
-    );
-
-    console.log(
-      "[MEDIA] Microfono verificato:",
-      tracciaAudio.label
-    );
-
-
-    mostraNotifica(
-      "Webcam e microfono verificati correttamente."
-    );
-
-
-    return true;
-
-
-  } finally {
-
-    /*
-     * In Lobby servono soltanto per la verifica.
-     * gioco.js li riaprirà quando inizierà la partita.
-     */
-
-    if (streamVideo) {
-
-      streamVideo
-        .getTracks()
-        .forEach(
-          traccia => {
-            try {
-              traccia.stop();
-            } catch (e) {}
-          }
-        );
-
-    }
-
-
-    if (streamAudio) {
-
-      streamAudio
-        .getTracks()
-        .forEach(
-          traccia => {
-            try {
-              traccia.stop();
-            } catch (e) {}
-          }
-        );
-
-    }
-
   }
+
+  else if (
+    erroreWebcam.name === "NotReadableError" ||
+    erroreWebcam.name === "TrackStartError" ||
+    erroreWebcam.name === "AbortError"
+  ) {
+    mostraNotifica(
+      "La webcam non può essere avviata. Controlla che sia collegata e non utilizzata da altre applicazioni."
+    );
+  }
+
+  else {
+    mostraNotifica(
+      "Impossibile utilizzare la webcam. La webcam è obbligatoria per questo tavolo."
+    );
+  }
+
+  return false;
+}
+
+
+const tracciaVideo =
+  streamVideo
+    .getVideoTracks()
+    .find(
+      traccia =>
+        traccia.readyState === "live"
+    );
+
+
+if (!tracciaVideo) {
+
+  mostraNotifica(
+    "La webcam non ha prodotto una traccia video valida."
+  );
+
+  return false;
+}
+
+
+/* =====================================================
+   2. MICROFONO OBBLIGATORIO
+===================================================== */
+
+mostraNotifica(
+  "Webcam verificata. Verifica microfono in corso…"
+);
+
+
+try {
+
+  streamAudio =
+    await navigator.mediaDevices.getUserMedia({
+
+      video: false,
+
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true
+      }
+
+    });
+
+} catch (erroreMicrofono) {
+
+  console.error(
+    "Errore apertura microfono:",
+    erroreMicrofono
+  );
+
+
+  if (
+    erroreMicrofono.name === "NotAllowedError" ||
+    erroreMicrofono.name === "SecurityError"
+  ) {
+    mostraNotifica(
+      "Devi consentire l'accesso al microfono per partecipare a questo tavolo."
+    );
+  }
+
+  else if (
+    erroreMicrofono.name === "NotFoundError" ||
+    erroreMicrofono.name === "DevicesNotFoundError"
+  ) {
+    mostraNotifica(
+      "Nessun microfono disponibile. Il microfono è obbligatorio per questo tavolo."
+    );
+  }
+
+  else if (
+    erroreMicrofono.name === "NotReadableError" ||
+    erroreMicrofono.name === "TrackStartError" ||
+    erroreMicrofono.name === "AbortError"
+  ) {
+    mostraNotifica(
+      "Il microfono non può essere avviato. Controlla che non sia utilizzato da altre applicazioni."
+    );
+  }
+
+  else {
+    mostraNotifica(
+      "Impossibile utilizzare il microfono. Il microfono è obbligatorio per questo tavolo."
+    );
+  }
+
+  return false;
+}
+
+
+const tracciaAudio =
+  streamAudio
+    .getAudioTracks()
+    .find(
+      traccia =>
+        traccia.readyState === "live"
+    );
+
+
+if (!tracciaAudio) {
+
+  mostraNotifica(
+    "Il microfono non ha prodotto una traccia audio valida."
+  );
+
+  return false;
+}
+
+
+/* =====================================================
+   ENTRAMBI FUNZIONANO
+===================================================== */
+
+console.log(
+  "[MEDIA] Webcam verificata:",
+  tracciaVideo.label
+);
+
+console.log(
+  "[MEDIA] Microfono verificato:",
+  tracciaAudio.label
+);
+
+
+mostraNotifica(
+  "Webcam e microfono verificati correttamente."
+);
+
+
+return true;
+
+} finally {
+
+/*
+ * In Lobby servono soltanto per la verifica.
+ * gioco.js li riaprirà quando inizierà la partita.
+ */
+
+if (streamVideo) {
+
+  streamVideo
+    .getTracks()
+    .forEach(
+      traccia => {
+        try {
+          traccia.stop();
+        } catch (e) {}
+      }
+    );
+
+}
+
+
+if (streamAudio) {
+
+  streamAudio
+    .getTracks()
+    .forEach(
+      traccia => {
+        try {
+          traccia.stop();
+        } catch (e) {}
+      }
+    );
+
+}
+
+}
 
 }
 
 function apriPartita(id, mediaAttiva) {
-  const destinazione = new URL("gioco.html", window.location.href);
-  destinazione.searchParams.set("partita", id);
-  destinazione.searchParams.set("stanza", stanza);
-  if (mediaAttiva === true) destinazione.searchParams.set("media", "1");
+const destinazione = new URL("gioco.html", window.location.href);
+destinazione.searchParams.set("partita", id);
+destinazione.searchParams.set("stanza", stanza);
+if (mediaAttiva === true) destinazione.searchParams.set("media", "1");
 
-  // La partita sostituisce la Lobby nella cronologia: così la pagina gioco
-  // non diventa mai una voce raggiungibile con la freccia Indietro.
-  window.location.replace(destinazione.href);
+// La partita sostituisce la Lobby nella cronologia: così la pagina gioco
+// non diventa mai una voce raggiungibile con la freccia Indietro.
+window.location.replace(destinazione.href);
 }
 async function riprendiPartita(id, mediaAttiva) {
-  if (!(await richiediConsensoMediaSeNecessario(mediaAttiva === true))) return;
-  apriPartita(id, mediaAttiva === true);
+if (!(await richiediConsensoMediaSeNecessario(mediaAttiva === true))) return;
+apriPartita(id, mediaAttiva === true);
 }
 function iniziale(nome) { return (nome || "?").trim().charAt(0).toUpperCase(); }
 function coloreDaNome(nome) {
-  const colori = ["#6a2c70", "#1e40af", "#43a047", "#f57c00", "#c0ca33", "#e53935", "#00838f", "#8d6e63"];
-  const testo = String(nome || "?");
-  let somma = 0;
-  for (let i = 0; i < testo.length; i++) somma += testo.charCodeAt(i);
-  return colori[somma % colori.length];
+const colori = ["#6a2c70", "#1e40af", "#43a047", "#f57c00", "#c0ca33", "#e53935", "#00838f", "#8d6e63"];
+const testo = String(nome || "?");
+let somma = 0;
+for (let i = 0; i < testo.length; i++) somma += testo.charCodeAt(i);
+return colori[somma % colori.length];
 }
 function iconaDispositivo(tipo) {
-  if (tipo === "cellulare") return "📱 Cellulare";
-  if (tipo === "tablet") return "📲 Tablet";
-  return "🖥️ Computer";
+if (tipo === "cellulare") return "📱 Cellulare";
+if (tipo === "tablet") return "📲 Tablet";
+return "🖥️ Computer";
 }
 function rilevaTipoDispositivoClient() {
-  const ua = navigator.userAgent;
-  if (/iPad/i.test(ua) || (/Android/i.test(ua) && !/Mobile/i.test(ua))) return "tablet";
-  if (/iPhone|iPod/i.test(ua) || (/Android/i.test(ua) && /Mobile/i.test(ua))) return "cellulare";
-  return "computer";
+const ua = navigator.userAgent;
+if (/iPad/i.test(ua) || (/Android/i.test(ua) && !/Mobile/i.test(ua))) return "tablet";
+if (/iPhone|iPod/i.test(ua) || (/Android/i.test(ua) && /Mobile/i.test(ua))) return "cellulare";
+return "computer";
 }
 function aggiornaConteggioOnline(numero) {
-  const conteggio = Math.max(0, Number(numero) || 0);
-  const contatoreDesktop = document.getElementById("online");
-  if (contatoreDesktop) contatoreDesktop.textContent = conteggio;
-  const contatoreMobile = document.getElementById("onlineMobile");
-  if (contatoreMobile) contatoreMobile.textContent = conteggio;
-  const badgeMobile = document.getElementById("badgeOnlineMobile");
-  if (badgeMobile) {
-    badgeMobile.textContent = conteggio > 99 ? "99+" : conteggio;
-    badgeMobile.style.display = conteggio > 0 ? "flex" : "none";
-  }
+const conteggio = Math.max(0, Number(numero) || 0);
+const contatoreDesktop = document.getElementById("online");
+if (contatoreDesktop) contatoreDesktop.textContent = conteggio;
+const contatoreMobile = document.getElementById("onlineMobile");
+if (contatoreMobile) contatoreMobile.textContent = conteggio;
+const badgeMobile = document.getElementById("badgeOnlineMobile");
+if (badgeMobile) {
+badgeMobile.textContent = conteggio > 99 ? "99+" : conteggio;
+badgeMobile.style.display = conteggio > 0 ? "flex" : "none";
+}
 }
 // ===== MENU MOBILE =====
 function apriCreaMobile(){
@@ -2564,6 +2562,7 @@ const popup = document.getElementById("popupMobile");
 popup.classList.add("crea-schermo-intero");
 document.getElementById("contenutoMobile").dataset.vista = "crea";
 document.getElementById("contenutoMobile").innerHTML=`
+
 <h2 style="margin-bottom:15px;">
 CREA TAVOLO
 </h2>
@@ -2660,22 +2659,22 @@ function creaIntestazioneOnlineMobile(){
 }
 
 function aggiornaVistaOnlineMobile(){
-  const contenutoMobile = document.getElementById("contenutoMobile");
-  if (!contenutoMobile || contenutoMobile.dataset.vista !== "online") return;
-  const listaOnline = document.getElementById("listaOnline");
-  contenutoMobile.innerHTML = `
+const contenutoMobile = document.getElementById("contenutoMobile");
+if (!contenutoMobile || contenutoMobile.dataset.vista !== "online") return;
+const listaOnline = document.getElementById("listaOnline");
+contenutoMobile.innerHTML = 
     ${creaIntestazioneOnlineMobile()}
     <div class="online-mobile-lista">
       ${listaOnline ? listaOnline.innerHTML : ""}
-    </div>`;
+    </div>;
 }
 
 function apriOnlineMobile(){
-  const popup = document.getElementById("popupMobile");
-  popup.classList.remove("crea-schermo-intero");
-  document.getElementById("contenutoMobile").dataset.vista = "online";
-  aggiornaVistaOnlineMobile();
-  apriMobile();
+const popup = document.getElementById("popupMobile");
+popup.classList.remove("crea-schermo-intero");
+document.getElementById("contenutoMobile").dataset.vista = "online";
+aggiornaVistaOnlineMobile();
+apriMobile();
 }
 function apriChatMobile(){
 const popup = document.getElementById("popupMobile");
@@ -2684,6 +2683,7 @@ document.getElementById("contenutoMobile").dataset.vista = "chat";
 nuoviMessaggiMobile = 0;
 aggiornaBadgeChatMobile();
 document.getElementById("contenutoMobile").innerHTML=`
+
 <div class="chat-mobile-schermata" style="
 height:100%;
 display:flex;
@@ -2845,313 +2845,316 @@ async function verificaSessione() {
       "https://gioco-oca-server.onrender.com/api/me"
     );
 
-    if (!risposta.ok) {
-      if (risposta.status === 401) cancellaTokenAutenticazione();
-      window.location.href =
-        "login.html?redirect=" + encodeURIComponent(window.location.href);
-      return;
-    }
+if (!risposta.ok) {
+  if (risposta.status === 401) cancellaTokenAutenticazione();
+  window.location.href =
+    "login.html?redirect=" + encodeURIComponent(window.location.href);
+  return;
+}
 
-    const dati = await risposta.json();
-    mioUid = dati.uid;
-    sessioneVerificata = true;
-    connetti();
-    caricaAmici();
-    caricaBlocchiLobby();
-  } catch (e) {
-    sessioneVerificata = false;
-    window.location.href =
-      "login.html?redirect=" + encodeURIComponent(window.location.href);
-  }
+const dati = await risposta.json();
+mioUid = dati.uid;
+sessioneVerificata = true;
+connetti();
+caricaAmici();
+caricaBlocchiLobby();
+
+} catch (e) {
+sessioneVerificata = false;
+window.location.href =
+"login.html?redirect=" + encodeURIComponent(window.location.href);
+}
 }
 function vaiAccount() { window.location.href = "account.html"; }
 async function esci() {
-  paginaInUscita = true;
-  try {
-    await fetchAutenticato(
-      "https://gioco-oca-server.onrender.com/api/logout",
-      { method: "POST" }
-    );
-  } catch (e) {}
+paginaInUscita = true;
+try {
+await fetchAutenticato(
+"https://gioco-oca-server.onrender.com/api/logout",
+{ method: "POST" }
+);
+} catch (e) {}
 
-  cancellaTokenAutenticazione();
-  window.location.href = "login.html";
+cancellaTokenAutenticazione();
+window.location.href = "login.html";
 }
 function connetti() {
-  if (!sessioneVerificata || paginaInUscita) return;
-  if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) return;
+if (!sessioneVerificata || paginaInUscita) return;
+if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) return;
 
-  const connessione = new WebSocket(URL_SERVER_WS);
-  socket = connessione;
+const connessione = new WebSocket(URL_SERVER_WS);
+socket = connessione;
 
-  connessione.onopen = () => {
-    if (socket !== connessione) return;
-    if (timerRiconnessione) {
-      clearTimeout(timerRiconnessione);
-      timerRiconnessione = null;
-    }
-    connessione.send(JSON.stringify({
-      tipo: "entraLobby",
-      stanza: stanza,
-      token: ottieniTokenAutenticazione() || undefined
-    }));
-  };
+connessione.onopen = () => {
+if (socket !== connessione) return;
+if (timerRiconnessione) {
+clearTimeout(timerRiconnessione);
+timerRiconnessione = null;
+}
+connessione.send(JSON.stringify({
+tipo: "entraLobby",
+stanza: stanza,
+token: ottieniTokenAutenticazione() || undefined
+}));
+};
 
-  connessione.onclose = () => {
-    if (socket === connessione) socket = null;
-    if (paginaInUscita || !sessioneVerificata) return;
-    clearTimeout(timerRiconnessione);
-    timerRiconnessione = setTimeout(connetti, 3000);
-  };
+connessione.onclose = () => {
+if (socket === connessione) socket = null;
+if (paginaInUscita || !sessioneVerificata) return;
+clearTimeout(timerRiconnessione);
+timerRiconnessione = setTimeout(connetti, 3000);
+};
 
-  connessione.onmessage = (msg) => {
-    if (socket !== connessione) return;
-    let dati;
-    try {
-      dati = JSON.parse(msg.data);
-    } catch (e) {
-      console.error("Messaggio WebSocket non valido:", e);
-      return;
-    }
+connessione.onmessage = (msg) => {
+if (socket !== connessione) return;
+let dati;
+try {
+dati = JSON.parse(msg.data);
+} catch (e) {
+console.error("Messaggio WebSocket non valido:", e);
+return;
+}
 
-    if (dati.tipo === "sessioneScaduta") {
-      cancellaTokenAutenticazione();
-      window.location.href =
-        "login.html?redirect=" + encodeURIComponent(window.location.href);
-      return;
-    }
+if (dati.tipo === "sessioneScaduta") {
+  cancellaTokenAutenticazione();
+  window.location.href =
+    "login.html?redirect=" + encodeURIComponent(window.location.href);
+  return;
+}
 
-    if (dati.tipo === "online") {
-      aggiornaConteggioOnline(dati.numero);
-    }
+if (dati.tipo === "online") {
+  aggiornaConteggioOnline(dati.numero);
+}
 
-    if (dati.tipo === "conteggioStanze" && dati.giocatori) {
-      const giocatoriStanza = dati.giocatori[stanza] || [];
-      mostraGiocatori(giocatoriStanza);
-      aggiornaConteggioOnline(dati.stanze && dati.stanze[stanza] != null ? dati.stanze[stanza] : giocatoriStanza.length);
-    }
+if (dati.tipo === "conteggioStanze" && dati.giocatori) {
+  const giocatoriStanza = dati.giocatori[stanza] || [];
+  mostraGiocatori(giocatoriStanza);
+  aggiornaConteggioOnline(dati.stanze && dati.stanze[stanza] != null ? dati.stanze[stanza] : giocatoriStanza.length);
+}
 
-    if (dati.tipo === "chat") {
-      aggiungiMessaggio(dati.uid, dati.nome, dati.testo);
-    }
+if (dati.tipo === "chat") {
+  aggiungiMessaggio(dati.uid, dati.nome, dati.testo);
+}
 
-    if (dati.tipo === "listaPartite") {
-      mostraPartite(dati.partite);
-    }
+if (dati.tipo === "listaPartite") {
+  mostraPartite(dati.partite);
+}
 
-    if (dati.tipo === "errore") {
-      mostraNotifica(dati.messaggio);
-    }
+if (dati.tipo === "errore") {
+  mostraNotifica(dati.messaggio);
+}
 
-    if (dati.tipo === "partitaAvviata") {
-      riprendiPartita(dati.partitaId, dati.mediaAttiva === true);
-    }
+if (dati.tipo === "partitaAvviata") {
+  riprendiPartita(dati.partitaId, dati.mediaAttiva === true);
+}
 
-    if (dati.tipo === "invitoRicevuto") {
-      mostraInvitoRicevuto(dati);
-    }
+if (dati.tipo === "invitoRicevuto") {
+  mostraInvitoRicevuto(dati);
+}
 
-    if (dati.tipo === "invitoInviato") {
-      segnaInvitatoNelModal(dati.destinatarioUid);
-    }
+if (dati.tipo === "invitoInviato") {
+  segnaInvitatoNelModal(dati.destinatarioUid);
+}
 
-    if (dati.tipo === "invitoRifiutato") {
-      mostraNotifica(
-        (dati.destinatarioNome || "Il giocatore") +
-        " ha rifiutato l'invito."
-      );
-    }
-  };
+if (dati.tipo === "invitoRifiutato") {
+  mostraNotifica(
+    (dati.destinatarioNome || "Il giocatore") +
+    " ha rifiutato l'invito."
+  );
+}
+
+};
 }
 
 window.addEventListener("pagehide", () => {
-  paginaInUscita = true;
-  clearTimeout(timerRiconnessione);
-  timerRiconnessione = null;
-  const connessione = socket;
-  socket = null;
-  try {
-    if (connessione && connessione.readyState === WebSocket.OPEN) {
-      connessione.send(JSON.stringify({
-        tipo: "lasciaLobby"
-      }));
-    }
-    if (connessione && connessione.readyState < WebSocket.CLOSING) connessione.close();
-  } catch (e) {}
+paginaInUscita = true;
+clearTimeout(timerRiconnessione);
+timerRiconnessione = null;
+const connessione = socket;
+socket = null;
+try {
+if (connessione && connessione.readyState === WebSocket.OPEN) {
+connessione.send(JSON.stringify({
+tipo: "lasciaLobby"
+}));
+}
+if (connessione && connessione.readyState < WebSocket.CLOSING) connessione.close();
+} catch (e) {}
 });
 
 window.addEventListener("pageshow", () => {
-  paginaInUscita = false;
-  if (sessioneVerificata) connetti();
+paginaInUscita = false;
+if (sessioneVerificata) connetti();
 });
 // ===== CREAZIONE / LISTA PARTITE =====
 async function creaPartita() {
-  const tipo = document.getElementById("tipoPartita").value;
-  const mediaAttiva = document.getElementById("mediaPartita").value === "on";
-  if (!(await richiediConsensoMediaSeNecessario(mediaAttiva))) return;
-  const inviato = inviaMessaggioSocket({
-    tipo: "creaPartita",
-    tempo: "15",
-    classificata: modalitaPartitaSelezionata === "classificata",
-    modalita: tipo,
-    maxGiocatori: document.getElementById("numeroGiocatori").value,
-    mediaAttiva,
-    mediaConsenso: mediaAttiva
-  });
-  if (!inviato) return;
-  if (tipo === "privata") aspettaPropriaPartitaPrivata = true;
+const tipo = document.getElementById("tipoPartita").value;
+const mediaAttiva = document.getElementById("mediaPartita").value === "on";
+if (!(await richiediConsensoMediaSeNecessario(mediaAttiva))) return;
+const inviato = inviaMessaggioSocket({
+tipo: "creaPartita",
+tempo: "15",
+classificata: modalitaPartitaSelezionata === "classificata",
+modalita: tipo,
+maxGiocatori: document.getElementById("numeroGiocatori").value,
+mediaAttiva,
+mediaConsenso: mediaAttiva
+});
+if (!inviato) return;
+if (tipo === "privata") aspettaPropriaPartitaPrivata = true;
 }
 async function eliminaPartita() {
-  const confermato = await chiediConfermaLobby({
-    titolo: "Eliminare la partita?",
-    messaggio: "La partita creata verrà eliminata e non sarà più disponibile per gli altri giocatori.",
-    testoConferma: "Elimina partita"
-  });
-  if (!confermato) return;
-  inviaMessaggioSocket({ tipo: "eliminaPartita" });
+const confermato = await chiediConfermaLobby({
+titolo: "Eliminare la partita?",
+messaggio: "La partita creata verrà eliminata e non sarà più disponibile per gli altri giocatori.",
+testoConferma: "Elimina partita"
+});
+if (!confermato) return;
+inviaMessaggioSocket({ tipo: "eliminaPartita" });
 }
 // NUOVO: il creatore (o un giocatore già dentro) lascia un tavolo non ancora
 // avviato senza distruggerlo per gli altri
 async function alzatiDaPartita(id) {
-  const confermato = await chiediConfermaLobby({
-    titolo: "Lasciare il tavolo?",
-    messaggio: "Uscirai da questo tavolo. Gli altri giocatori resteranno nella partita.",
-    testoConferma: "Alzati"
-  });
-  if (!confermato) return;
-  inviaMessaggioSocket({ tipo: "abbandonaPartita", partitaId: id });
+const confermato = await chiediConfermaLobby({
+titolo: "Lasciare il tavolo?",
+messaggio: "Uscirai da questo tavolo. Gli altri giocatori resteranno nella partita.",
+testoConferma: "Alzati"
+});
+if (!confermato) return;
+inviaMessaggioSocket({ tipo: "abbandonaPartita", partitaId: id });
 }
 function mostraPartite(lista) {
-  let html = "";
-  if (lista.length === 0) html = "<p>Nessuna partita disponibile</p>";
-  lista.forEach(partita => {
-    const piena = partita.numGiocatoriAttuali >= partita.maxGiocatori;
-    const eMia = partita.creatoDa === mioUid;
-    const cePartecipo = partita.giocatori && partita.giocatori.some(g => g.uid === mioUid);
-    const creatorePulito = pulisciTestoHtml(partita.creatore || "Giocatore");
-    const tempoPulito = pulisciTestoHtml(partita.tempo);
-    const testoModalitaSfida = partita.classificata === false
-      ? "🎲 Divertimento · ELO invariato"
-      : "🏆 Classifica · ELO attivo";
-    let azioniHtml;
+let html = "";
+if (lista.length === 0) html = "<p>Nessuna partita disponibile</p>";
+lista.forEach(partita => {
+const piena = partita.numGiocatoriAttuali >= partita.maxGiocatori;
+const eMia = partita.creatoDa === mioUid;
+const cePartecipo = partita.giocatori && partita.giocatori.some(g => g.uid === mioUid);
+const creatorePulito = pulisciTestoHtml(partita.creatore || "Giocatore");
+const tempoPulito = pulisciTestoHtml(partita.tempo);
+const testoModalitaSfida = partita.classificata === false
+? "🎲 Divertimento · ELO invariato"
+: "🏆 Classifica · ELO attivo";
+let azioniHtml;
 
-    if (partita.iniziata) {
-      // Partita già avviata: chi ne fa parte può rientrare, gli altri la vedono solo "in corso"
-      if (cePartecipo) {
-        azioniHtml = `<button class="btn-riprendi-scheda" onclick="riprendiPartita('${partita.id}', ${partita.mediaAttiva === true})">Riprendi</button>`;
-      } else {
-        azioniHtml = `<button disabled>🎲 In corso</button>`;
-      }
-    } else if (eMia) {
-      // Sei il creatore, partita ancora in attesa di giocatori
-      let invito = "";
-      if (partita.modalita === "privata" && !piena) invito = `<button onclick="apriModalInvito('${partita.id}')">➕ Invita</button>`;
-      if (partita.numGiocatoriAttuali <= 1) {
-        // Nessuno si è ancora unito: puoi eliminare senza disturbare nessuno
-        azioniHtml = invito + `<button class="btn-elimina-scheda" onclick="eliminaPartita()">Elimina</button>`;
-      } else {
-        // Qualcuno è già dentro: non è giusto cancellare tutto, solo alzarsi
-        azioniHtml = invito + `<button class="btn-alzati-scheda" onclick="alzatiDaPartita('${partita.id}')">Alzati</button>`;
-      }
-    } else if (cePartecipo) {
-      // Ti sei unito ma non sei il creatore, partita non ancora avviata
-      azioniHtml = `<button class="btn-alzati-scheda" onclick="alzatiDaPartita('${partita.id}')">Alzati</button>`;
-    } else if (partita.modalita === "privata") {
-      azioniHtml = `<button disabled>🔒 Solo su invito</button>`;
-    } else {
-      azioniHtml = `<button onclick="entraPartita('${partita.id}', ${partita.mediaAttiva === true})" ${piena ? 'disabled' : ''}>${piena ? 'Piena' : 'Entra'}</button>`;
-    }
-
-    html += `
-      <div class="scheda-partita">
-      <div class="info-partita">
-        🎲 ${creatorePulito}<br>
-        ${partita.modalita === "privata" ? "🔒 Privata" : "🔓 Pubblica"}<br>
-        ${partita.mediaAttiva === true
-          ? (rilevaTipoDispositivoClient() === "cellulare"
-              ? "🎙️ Chiamata attiva · solo audio su cellulare"
-              : "🎥 Webcam e microfono attivi")
-          : "🔇 Chiamata disattiva"}<br>
-        ${testoModalitaSfida}<br>
-        ⏱ ${tempoPulito} secondi
-        <div style="margin-top:8px;">👥 ${partita.numGiocatoriAttuali} su ${partita.maxGiocatori}</div>
-      </div>
-      <div class="giocatori-mini">${creaGiocatoriPartita(partita)}</div>
-      <div class="azioni-scheda">${azioniHtml}</div>
-    </div>`;
-  });
-  document.getElementById("partite").innerHTML = html;
-  if (aspettaPropriaPartitaPrivata) {
-    const mia = lista.find(p => p.creatoDa === mioUid && p.modalita === "privata");
-    if (mia) { aspettaPropriaPartitaPrivata = false; apriModalInvito(mia.id); }
+if (partita.iniziata) {
+  // Partita già avviata: chi ne fa parte può rientrare, gli altri la vedono solo "in corso"
+  if (cePartecipo) {
+    azioniHtml = `<button class="btn-riprendi-scheda" onclick="riprendiPartita('${partita.id}', ${partita.mediaAttiva === true})">Riprendi</button>`;
+  } else {
+    azioniHtml = `<button disabled>🎲 In corso</button>`;
   }
+} else if (eMia) {
+  // Sei il creatore, partita ancora in attesa di giocatori
+  let invito = "";
+  if (partita.modalita === "privata" && !piena) invito = `<button onclick="apriModalInvito('${partita.id}')">➕ Invita</button>`;
+  if (partita.numGiocatoriAttuali <= 1) {
+    // Nessuno si è ancora unito: puoi eliminare senza disturbare nessuno
+    azioniHtml = invito + `<button class="btn-elimina-scheda" onclick="eliminaPartita()">Elimina</button>`;
+  } else {
+    // Qualcuno è già dentro: non è giusto cancellare tutto, solo alzarsi
+    azioniHtml = invito + `<button class="btn-alzati-scheda" onclick="alzatiDaPartita('${partita.id}')">Alzati</button>`;
+  }
+} else if (cePartecipo) {
+  // Ti sei unito ma non sei il creatore, partita non ancora avviata
+  azioniHtml = `<button class="btn-alzati-scheda" onclick="alzatiDaPartita('${partita.id}')">Alzati</button>`;
+} else if (partita.modalita === "privata") {
+  azioniHtml = `<button disabled>🔒 Solo su invito</button>`;
+} else {
+  azioniHtml = `<button onclick="entraPartita('${partita.id}', ${partita.mediaAttiva === true})" ${piena ? 'disabled' : ''}>${piena ? 'Piena' : 'Entra'}</button>`;
+}
+
+html += `
+  <div class="scheda-partita">
+  <div class="info-partita">
+    🎲 ${creatorePulito}<br>
+    ${partita.modalita === "privata" ? "🔒 Privata" : "🔓 Pubblica"}<br>
+    ${partita.mediaAttiva === true
+      ? (rilevaTipoDispositivoClient() === "cellulare"
+          ? "🎙️ Chiamata attiva · solo audio su cellulare"
+          : "🎥 Webcam e microfono attivi")
+      : "🔇 Chiamata disattiva"}<br>
+    ${testoModalitaSfida}<br>
+    ⏱ ${tempoPulito} secondi
+    <div style="margin-top:8px;">👥 ${partita.numGiocatoriAttuali} su ${partita.maxGiocatori}</div>
+  </div>
+  <div class="giocatori-mini">${creaGiocatoriPartita(partita)}</div>
+  <div class="azioni-scheda">${azioniHtml}</div>
+</div>`;
+
+});
+document.getElementById("partite").innerHTML = html;
+if (aspettaPropriaPartitaPrivata) {
+const mia = lista.find(p => p.creatoDa === mioUid && p.modalita === "privata");
+if (mia) { aspettaPropriaPartitaPrivata = false; apriModalInvito(mia.id); }
+}
 }
 async function entraPartita(id, mediaAttiva) {
-  const richiedeMedia = mediaAttiva === true;
-  if (!(await richiediConsensoMediaSeNecessario(richiedeMedia))) return;
-  inviaMessaggioSocket({ tipo: "entraPartita", id: id, mediaConsenso: richiedeMedia });
+const richiedeMedia = mediaAttiva === true;
+if (!(await richiediConsensoMediaSeNecessario(richiedeMedia))) return;
+inviaMessaggioSocket({ tipo: "entraPartita", id: id, mediaConsenso: richiedeMedia });
 }
 // ===== CHAT =====
 function inviaChat() {
-  let testo = document.getElementById("messaggio").value.trim();
-  if (testo === "") return;
-  if (testo.length > 300) {
-    mostraNotifica("Massimo 300 caratteri.");
-    return;
-  }
-  if (!inviaMessaggioSocket({ tipo: "chat", testo: testo })) return;
-  document.getElementById("messaggio").value = "";
+let testo = document.getElementById("messaggio").value.trim();
+if (testo === "") return;
+if (testo.length > 300) {
+mostraNotifica("Massimo 300 caratteri.");
+return;
+}
+if (!inviaMessaggioSocket({ tipo: "chat", testo: testo })) return;
+document.getElementById("messaggio").value = "";
 }
 document.getElementById("messaggio").addEventListener("keydown", function(e) {
-  if (e.key === "Enter") {
-    e.preventDefault();
-    inviaChat();
-  }
+if (e.key === "Enter") {
+e.preventDefault();
+inviaChat();
+}
 });
 function apriEmoji() {
-  const pannello = document.getElementById("pannelloEmoji");
-  if (pannello.style.display === "none") {
-    pannello.style.display = "block";
-  } else {
-    pannello.style.display = "none";
-  }
+const pannello = document.getElementById("pannelloEmoji");
+if (pannello.style.display === "none") {
+pannello.style.display = "block";
+} else {
+pannello.style.display = "none";
+}
 }
 document.getElementById("pannelloEmoji").addEventListener("click", function(e) {
-  if (e.target.tagName === "SPAN") {
-    const input = document.getElementById("messaggio");
-    input.value += e.target.innerText;
-    input.focus();
-  }
+if (e.target.tagName === "SPAN") {
+const input = document.getElementById("messaggio");
+input.value += e.target.innerText;
+input.focus();
+}
 });
 let nuoviMessaggiMobile = 0;
 function pulisciTestoChat(testo) {
-  return pulisciTestoHtml(testo);
+return pulisciTestoHtml(testo);
 }
 function aggiornaBadgeChatMobile(){
-  const badge = document.getElementById("badgeChatMobile");
-  if (!badge) return;
-  if (nuoviMessaggiMobile > 0) {
-    badge.style.display = "flex";
-    badge.innerHTML = nuoviMessaggiMobile;
-  } else {
-    badge.style.display = "none";
-  }
+const badge = document.getElementById("badgeChatMobile");
+if (!badge) return;
+if (nuoviMessaggiMobile > 0) {
+badge.style.display = "flex";
+badge.innerHTML = nuoviMessaggiMobile;
+} else {
+badge.style.display = "none";
+}
 }
 function aggiungiMessaggio(uid, nome, testo) {
-  const chat = document.getElementById("chat");
+const chat = document.getElementById("chat");
 
-  const sonoIo = uid === mioUid;
-  const cliccabile = uid && !sonoIo;
+const sonoIo = uid === mioUid;
+const cliccabile = uid && !sonoIo;
 
-  const nomePulito = pulisciTestoHtml(nome || "Giocatore");
-  const uidPulito = pulisciTestoHtml(uid || "");
+const nomePulito = pulisciTestoHtml(nome || "Giocatore");
+const uidPulito = pulisciTestoHtml(uid || "");
 
-  const coloreNickname = sonoIo
-    ? "#111111"
-    : coloreDaNome(nome);
+const coloreNickname = sonoIo
+? "#111111"
+: coloreDaNome(nome);
 
-  const nomeHtml = cliccabile
-    ? `<span
+const nomeHtml = cliccabile
+? <span
         class="nickname-riga player-card-trigger player-card-trigger-inline"
         tabindex="0"
         role="button"
@@ -3159,80 +3162,81 @@ function aggiungiMessaggio(uid, nome, testo) {
         data-player-card-nome="${nomePulito}"
         aria-label="Apri scheda di ${nomePulito}"
         style="color:${coloreNickname};"
-      >${nomePulito}</span>`
-    : `<b style="color:${coloreNickname};">${nomePulito}</b>`;
+      >${nomePulito}</span>
+: <b style="color:${coloreNickname};">${nomePulito}</b>;
 
-  const rigaHtml = `
+const rigaHtml = 
     <div class="messaggio">
       ${nomeHtml}: ${pulisciTestoChat(testo)}
-    </div>`;
+    </div>;
 
-  chat.innerHTML += rigaHtml;
-  chat.scrollTop = chat.scrollHeight;
+chat.innerHTML += rigaHtml;
+chat.scrollTop = chat.scrollHeight;
 
-  const chatMobile = document.getElementById("chatMobile");
-  const contenutoMobile = document.getElementById("contenutoMobile");
+const chatMobile = document.getElementById("chatMobile");
+const contenutoMobile = document.getElementById("contenutoMobile");
 
-  const vistaChatAttiva =
-    document.getElementById("popupMobile").classList.contains("aperto") &&
-    contenutoMobile &&
-    contenutoMobile.dataset.vista === "chat";
+const vistaChatAttiva =
+document.getElementById("popupMobile").classList.contains("aperto") &&
+contenutoMobile &&
+contenutoMobile.dataset.vista === "chat";
 
-  if (chatMobile && vistaChatAttiva) {
-    chatMobile.innerHTML += rigaHtml;
-    chatMobile.scrollTop = chatMobile.scrollHeight;
-  } else if (uid !== mioUid) {
-    nuoviMessaggiMobile++;
-    aggiornaBadgeChatMobile();
-  }
+if (chatMobile && vistaChatAttiva) {
+chatMobile.innerHTML += rigaHtml;
+chatMobile.scrollTop = chatMobile.scrollHeight;
+} else if (uid !== mioUid) {
+nuoviMessaggiMobile++;
+aggiornaBadgeChatMobile();
+}
 }
 // ===== ONLINE IN QUESTA STANZA =====
 function mostraGiocatori(lista) {
-  ultimaListaOnlineStanza = lista || [];
-  aggiornaConteggioOnline(ultimaListaOnlineStanza.length);
-  aggiornaContatoreAmiciOnline();
-  const contenitore = document.getElementById("listaOnline");
-  if (!contenitore) return;
-  if (!lista || lista.length === 0) {
-    contenitore.innerHTML = "<p style='color:#999; font-style:italic;'>Nessun giocatore online</p>";
-  } else {
-    const listaOrdinata = [...lista].sort((a, b) => {
-      const aAmico = mieiAmiciUid.has(a.uid);
-      const bAmico = mieiAmiciUid.has(b.uid);
-      if (aAmico && !bAmico) return -1;
-      if (!aAmico && bAmico) return 1;
-      return a.nickname.localeCompare(b.nickname, "it");
-    });
-    const amici = listaOrdinata.filter(g => mieiAmiciUid.has(g.uid));
-    const altri = listaOrdinata.filter(g => !mieiAmiciUid.has(g.uid));
-    let html = "";
-    if (amici.length) {
-      html += "<h3 style='margin:10px;color:#43a047;'>AMICI ONLINE</h3>";
-      html += amici.map(g => creaRigaGiocatore(g)).join("");
-    }
-    if (altri.length) {
-      html += "<h3 style='margin:10px;color:#666;'>ALTRI GIOCATORI</h3>";
-      html += altri.map(g => creaRigaGiocatore(g)).join("");
-    }
-    contenitore.innerHTML = html;
-  }
-  aggiornaVistaOnlineMobile();
+ultimaListaOnlineStanza = lista || [];
+aggiornaConteggioOnline(ultimaListaOnlineStanza.length);
+aggiornaContatoreAmiciOnline();
+const contenitore = document.getElementById("listaOnline");
+if (!contenitore) return;
+if (!lista || lista.length === 0) {
+contenitore.innerHTML = "<p style='color:#999; font-style:italic;'>Nessun giocatore online</p>";
+} else {
+const listaOrdinata = [...lista].sort((a, b) => {
+const aAmico = mieiAmiciUid.has(a.uid);
+const bAmico = mieiAmiciUid.has(b.uid);
+if (aAmico && !bAmico) return -1;
+if (!aAmico && bAmico) return 1;
+return a.nickname.localeCompare(b.nickname, "it");
+});
+const amici = listaOrdinata.filter(g => mieiAmiciUid.has(g.uid));
+const altri = listaOrdinata.filter(g => !mieiAmiciUid.has(g.uid));
+let html = "";
+if (amici.length) {
+html += "<h3 style='margin:10px;color:#43a047;'>AMICI ONLINE</h3>";
+html += amici.map(g => creaRigaGiocatore(g)).join("");
+}
+if (altri.length) {
+html += "<h3 style='margin:10px;color:#666;'>ALTRI GIOCATORI</h3>";
+html += altri.map(g => creaRigaGiocatore(g)).join("");
+}
+contenitore.innerHTML = html;
+}
+aggiornaVistaOnlineMobile();
 }
 function creaRigaGiocatore(g) {
-    const nicknamePulito = pulisciTestoHtml(g.nickname || "Giocatore");
-    const immagine = g.avatar
-      ? `<img class="avatar-mini" src="${pulisciTestoHtml(g.avatar)}" alt="Avatar di ${nicknamePulito}">`
-      : `<div class="avatar-mini" style="background:${coloreDaNome(g.nickname)};">${iniziale(g.nickname)}</div>`;
-    const cliccabile = g.uid && g.uid !== mioUid;
-    const uidPulito = pulisciTestoHtml(g.uid || "");
-    const attributiPlayerCard = cliccabile
-      ? `data-player-card-uid="${uidPulito}" data-player-card-nome="${nicknamePulito}" tabindex="0" role="button" aria-label="Apri scheda di ${nicknamePulito}"`
-      : "";
-    return `
-      <div class="giocatore-online ${cliccabile ? "player-card-trigger" : ""}" ${attributiPlayerCard}>
-        ${immagine}
-        <div>
-  <span class="nickname-riga">${nicknamePulito}</span>
+const nicknamePulito = pulisciTestoHtml(g.nickname || "Giocatore");
+const immagine = g.avatar
+? <img class="avatar-mini" src="${pulisciTestoHtml(g.avatar)}" alt="Avatar di ${nicknamePulito}">
+: <div class="avatar-mini" style="background:${coloreDaNome(g.nickname)};">${iniziale(g.nickname)}</div>;
+const cliccabile = g.uid && g.uid !== mioUid;
+const uidPulito = pulisciTestoHtml(g.uid || "");
+const attributiPlayerCard = cliccabile
+? data-player-card-uid="${uidPulito}" data-player-card-nome="${nicknamePulito}" tabindex="0" role="button" aria-label="Apri scheda di ${nicknamePulito}"
+: "";
+return `
+<div class="giocatore-online ${cliccabile ? "player-card-trigger" : ""}" ${attributiPlayerCard}>
+${immagine}
+<div>
+<span class="nickname-riga">${nicknamePulito}</span>
+
   <div style="font-size:13px;color:#777;">
     ${iconaDispositivo(g.tipoDispositivo)}
   </div>
@@ -3253,67 +3257,67 @@ async function caricaTopGiocatori() {
     const risposta = await fetch("/api/top-giocatori");
     const dati = await risposta.json();
 
-    const contenitore = document.getElementById("top");
+const contenitore = document.getElementById("top");
 
-    if (!dati.giocatori || dati.giocatori.length === 0) {
-      contenitore.innerHTML = "Nessun giocatore ancora.";
-      return;
-    }
+if (!dati.giocatori || dati.giocatori.length === 0) {
+  contenitore.innerHTML = "Nessun giocatore ancora.";
+  return;
+}
 
-    contenitore.innerHTML = dati.giocatori
-      .slice(0, 2)
-      .map((g, index) => {
+contenitore.innerHTML = dati.giocatori
+  .slice(0, 2)
+  .map((g, index) => {
 
-        const medaglia =
-          index === 0
-            ? "🥇"
-            : "🥈";
+    const medaglia =
+      index === 0
+        ? "🥇"
+        : "🥈";
 
-        return `
-          <div class="top-player">
-            ${medaglia}
-            <b>
-              <a
-                href="profilo-pubblico.html?nickname=${encodeURIComponent(g.nickname)}"
-                style="color:inherit;"
-              >
-                ${pulisciTestoHtml(g.nickname)}
-              </a>
-            </b>
+    return `
+      <div class="top-player">
+        ${medaglia}
+        <b>
+          <a
+            href="profilo-pubblico.html?nickname=${encodeURIComponent(g.nickname)}"
+            style="color:inherit;"
+          >
+            ${pulisciTestoHtml(g.nickname)}
+          </a>
+        </b>
 
-            <br>
-            🎯 Vittorie: ${g.vinte}
+        <br>
+        🎯 Vittorie: ${g.vinte}
 
-            <br>
-            🎮 Partite: ${g.giocate}
-          </div>
+        <br>
+        🎮 Partite: ${g.giocate}
+      </div>
 
-          <br>
-        `;
-      })
-      .join("");
+      <br>
+    `;
+  })
+  .join("");
 
-  } catch (e) {
-    document.getElementById("top").innerHTML =
-      "Errore caricamento classifica";
-  }
+} catch (e) {
+document.getElementById("top").innerHTML =
+"Errore caricamento classifica";
+}
 }
 // ===== AMICI =====
 async function caricaAmici() {
-  try {
-    const r = await fetchAutenticato("https://gioco-oca-server.onrender.com/api/amici");
-    if (!r.ok) return;
-    const d = await r.json();
-    mieiAmiciUid = new Set((d.amici || []).map(a => a.uid));
-    mostraGiocatori(ultimaListaOnlineStanza);
-  } catch (e) {}
+try {
+const r = await fetchAutenticato("https://gioco-oca-server.onrender.com/api/amici");
+if (!r.ok) return;
+const d = await r.json();
+mieiAmiciUid = new Set((d.amici || []).map(a => a.uid));
+mostraGiocatori(ultimaListaOnlineStanza);
+} catch (e) {}
 }
 function aggiornaContatoreAmiciOnline() {
-  const conteggio = ultimaListaOnlineStanza.filter(g => mieiAmiciUid.has(g.uid)).length;
-  const el = document.getElementById("amiciOnline");
-  if (el) el.textContent = conteggio;
-  const elMobile = document.getElementById("amiciOnlineMobile");
-  if (elMobile) elMobile.textContent = conteggio;
+const conteggio = ultimaListaOnlineStanza.filter(g => mieiAmiciUid.has(g.uid)).length;
+const el = document.getElementById("amiciOnline");
+if (el) el.textContent = conteggio;
+const elMobile = document.getElementById("amiciOnlineMobile");
+if (elMobile) elMobile.textContent = conteggio;
 }
 // ===== PLAYER CARD LATERALE GIOCATORE =====
 const RITARDO_HOVER_PLAYER_CARD_MS = 1000;
@@ -3326,239 +3330,238 @@ let playerCardUidAttivo = null;
 let playerCardNomeAttivo = null;
 
 function iconaPlayerCard(tipo) {
-  const comuni = `fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"`;
-  const percorsi = {
-    elo: `<path d="M4 18h16M6 15l3-4 3 2 5-7 2 3" ${comuni}/><path d="M17 6h3v3" ${comuni}/>` ,
-    percentuale: `<circle cx="7.5" cy="7.5" r="2.5" ${comuni}/><circle cx="16.5" cy="16.5" r="2.5" ${comuni}/><path d="M18.5 5.5l-13 13" ${comuni}/>` ,
-    partite: `<rect x="4" y="5" width="16" height="14" rx="3" ${comuni}/><path d="M8 9h8M8 13h5" ${comuni}/>` ,
-    vittorie: `<path d="M8 4h8v4a4 4 0 01-8 0V4z" ${comuni}/><path d="M8 6H5v1a4 4 0 004 4M16 6h3v1a4 4 0 01-4 4M12 12v4M9 20h6M10 16h4" ${comuni}/>` ,
-    streak: `<path d="M13 3s1 4-2 6c-2-2-4-1-5 1-2 5 1 10 6 10s8-4 5-10c-1 2-3 3-4 2 2-3 1-7 0-9z" ${comuni}/>` ,
-    clock: `<circle cx="12" cy="12" r="8" ${comuni}/><path d="M12 8v5l3 2" ${comuni}/>` ,
-    profilo: `<circle cx="12" cy="8" r="3.2" ${comuni}/><path d="M5.5 20c.7-4 3-6 6.5-6s5.8 2 6.5 6" ${comuni}/>` ,
-    aggiungi: `<circle cx="9" cy="8" r="3" ${comuni}/><path d="M3.5 19c.6-3.5 2.5-5.3 5.5-5.3 1.1 0 2.1.2 3 .7M17 12v7M13.5 15.5h7" ${comuni}/>` ,
-    check: `<path d="M5 12.5l4 4L19 6.5" ${comuni}/>` ,
-    rifiuta: `<path d="M7 7l10 10M17 7L7 17" ${comuni}/>` ,
-    blocca: `<circle cx="12" cy="12" r="8.5" ${comuni}/><path d="M6 6l12 12" ${comuni}/>` ,
-    sblocca: `<circle cx="12" cy="12" r="8.5" ${comuni}/><path d="M8 12h8" ${comuni}/>`
-  };
-  return `<svg viewBox="0 0 24 24" aria-hidden="true">${percorsi[tipo] || percorsi.profilo}</svg>`;
+const comuni = fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round";
+const percorsi = {
+elo: <path d="M4 18h16M6 15l3-4 3 2 5-7 2 3" ${comuni}/><path d="M17 6h3v3" ${comuni}/> ,
+percentuale: <circle cx="7.5" cy="7.5" r="2.5" ${comuni}/><circle cx="16.5" cy="16.5" r="2.5" ${comuni}/><path d="M18.5 5.5l-13 13" ${comuni}/> ,
+partite: <rect x="4" y="5" width="16" height="14" rx="3" ${comuni}/><path d="M8 9h8M8 13h5" ${comuni}/> ,
+vittorie: <path d="M8 4h8v4a4 4 0 01-8 0V4z" ${comuni}/><path d="M8 6H5v1a4 4 0 004 4M16 6h3v1a4 4 0 01-4 4M12 12v4M9 20h6M10 16h4" ${comuni}/> ,
+streak: <path d="M13 3s1 4-2 6c-2-2-4-1-5 1-2 5 1 10 6 10s8-4 5-10c-1 2-3 3-4 2 2-3 1-7 0-9z" ${comuni}/> ,
+clock: <circle cx="12" cy="12" r="8" ${comuni}/><path d="M12 8v5l3 2" ${comuni}/> ,
+profilo: <circle cx="12" cy="8" r="3.2" ${comuni}/><path d="M5.5 20c.7-4 3-6 6.5-6s5.8 2 6.5 6" ${comuni}/> ,
+aggiungi: <circle cx="9" cy="8" r="3" ${comuni}/><path d="M3.5 19c.6-3.5 2.5-5.3 5.5-5.3 1.1 0 2.1.2 3 .7M17 12v7M13.5 15.5h7" ${comuni}/> ,
+check: <path d="M5 12.5l4 4L19 6.5" ${comuni}/> ,
+rifiuta: <path d="M7 7l10 10M17 7L7 17" ${comuni}/> ,
+blocca: <circle cx="12" cy="12" r="8.5" ${comuni}/><path d="M6 6l12 12" ${comuni}/> ,
+sblocca: <circle cx="12" cy="12" r="8.5" ${comuni}/><path d="M8 12h8" ${comuni}/>
+};
+return <svg viewBox="0 0 24 24" aria-hidden="true">${percorsi[tipo] || percorsi.profilo}</svg>;
 }
 
 function formattaDurataPlayerCard(secondi) {
-  const totale = Number(secondi);
-  if (!Number.isFinite(totale) || totale < 0) return "—";
-  const minuti = Math.floor(totale / 60);
-  const sec = Math.round(totale % 60);
-  if (minuti <= 0) return `${sec}s`;
-  if (minuti < 60) return `${minuti}m ${String(sec).padStart(2, "0")}s`;
-  const ore = Math.floor(minuti / 60);
-  return `${ore}h ${minuti % 60}m`;
+const totale = Number(secondi);
+if (!Number.isFinite(totale) || totale < 0) return "—";
+const minuti = Math.floor(totale / 60);
+const sec = Math.round(totale % 60);
+if (minuti <= 0) return ${sec}s;
+if (minuti < 60) return ${minuti}m ${String(sec).padStart(2, "0")}s;
+const ore = Math.floor(minuti / 60);
+return ${ore}h ${minuti % 60}m;
 }
 
 function trovaAncoraPlayerCard(trigger) {
-  if (!trigger) return null;
-  return trigger.querySelector(".avatar-mini, .avatar-partita-mini") || trigger;
+if (!trigger) return null;
+return trigger.querySelector(".avatar-mini, .avatar-partita-mini") || trigger;
 }
 
 function annullaTimerHoverPlayerCard() {
-  if (timerHoverPlayerCard) clearTimeout(timerHoverPlayerCard);
-  timerHoverPlayerCard = null;
+if (timerHoverPlayerCard) clearTimeout(timerHoverPlayerCard);
+timerHoverPlayerCard = null;
 }
 
 function annullaTimerChiusuraPlayerCard() {
-  if (timerChiusuraPlayerCard) clearTimeout(timerChiusuraPlayerCard);
-  timerChiusuraPlayerCard = null;
+if (timerChiusuraPlayerCard) clearTimeout(timerChiusuraPlayerCard);
+timerChiusuraPlayerCard = null;
 }
 
 function posizionaPlayerCard(trigger) {
-  const card = document.getElementById("playerCardGiocatore");
-  if (!card || !trigger || window.matchMedia("(max-width:600px)").matches) return;
-  const ancora = trovaAncoraPlayerCard(trigger);
-  if (!ancora) return;
+const card = document.getElementById("playerCardGiocatore");
+if (!card || !trigger || window.matchMedia("(max-width:600px)").matches) return;
+const ancora = trovaAncoraPlayerCard(trigger);
+if (!ancora) return;
 
-  const rect = ancora.getBoundingClientRect();
-  const margine = 12;
-  const spazio = 10;
-  const larghezza = card.offsetWidth || 360;
-  const altezza = card.offsetHeight || 430;
-  let left = rect.right + spazio;
-  let lato = "destra";
+const rect = ancora.getBoundingClientRect();
+const margine = 12;
+const spazio = 10;
+const larghezza = card.offsetWidth || 360;
+const altezza = card.offsetHeight || 430;
+let left = rect.right + spazio;
+let lato = "destra";
 
-  if (left + larghezza > window.innerWidth - margine) {
-    left = rect.left - larghezza - spazio;
-    lato = "sinistra";
-  }
-  left = Math.max(margine, Math.min(left, window.innerWidth - larghezza - margine));
+if (left + larghezza > window.innerWidth - margine) {
+left = rect.left - larghezza - spazio;
+lato = "sinistra";
+}
+left = Math.max(margine, Math.min(left, window.innerWidth - larghezza - margine));
 
-  let top = rect.top + (rect.height / 2) - 58;
-  top = Math.max(margine, Math.min(top, window.innerHeight - altezza - margine));
+let top = rect.top + (rect.height / 2) - 58;
+top = Math.max(margine, Math.min(top, window.innerHeight - altezza - margine));
 
-  card.style.left = `${Math.round(left)}px`;
-  card.style.top = `${Math.round(top)}px`;
-  card.style.right = "auto";
-  card.style.bottom = "auto";
-  card.dataset.lato = lato;
+card.style.left = ${Math.round(left)}px;
+card.style.top = ${Math.round(top)}px;
+card.style.right = "auto";
+card.style.bottom = "auto";
+card.dataset.lato = lato;
 }
 
 function mostraCaricamentoPlayerCard() {
-  document.getElementById("playerCardContenuto").innerHTML = `
+document.getElementById("playerCardContenuto").innerHTML = 
     <div class="player-card-caricamento" aria-label="Caricamento profilo">
       <div class="player-card-skeleton-riga"></div>
       <div class="player-card-skeleton-riga"></div>
       <div class="player-card-skeleton-riga"></div>
       <div class="player-card-skeleton-riga"></div>
       <div class="player-card-skeleton-riga"></div>
-    </div>`;
+    </div>;
 }
 
 function apriPlayerCard(trigger, bloccata) {
-  if (!trigger) return;
-  const uidTarget = trigger.dataset.playerCardUid;
-  const nomeTarget = trigger.dataset.playerCardNome;
-  if (!uidTarget || uidTarget === mioUid || !nomeTarget) return;
+if (!trigger) return;
+const uidTarget = trigger.dataset.playerCardUid;
+const nomeTarget = trigger.dataset.playerCardNome;
+if (!uidTarget || uidTarget === mioUid || !nomeTarget) return;
 
-  annullaTimerHoverPlayerCard();
-  annullaTimerChiusuraPlayerCard();
-  playerCardBloccata = bloccata === true;
-  playerCardTriggerAttivo = trigger;
-  playerCardUidAttivo = uidTarget;
-  playerCardNomeAttivo = nomeTarget;
+annullaTimerHoverPlayerCard();
+annullaTimerChiusuraPlayerCard();
+playerCardBloccata = bloccata === true;
+playerCardTriggerAttivo = trigger;
+playerCardUidAttivo = uidTarget;
+playerCardNomeAttivo = nomeTarget;
 
-  const card = document.getElementById("playerCardGiocatore");
-  const stessaSchedaGiaAperta = card.classList.contains("aperta") && card.dataset.uid === uidTarget;
-  card.dataset.uid = uidTarget;
-  card.setAttribute("aria-hidden", "false");
-  card.classList.add("aperta");
-  posizionaPlayerCard(trigger);
-  requestAnimationFrame(() => card.classList.add("visibile"));
+const card = document.getElementById("playerCardGiocatore");
+const stessaSchedaGiaAperta = card.classList.contains("aperta") && card.dataset.uid === uidTarget;
+card.dataset.uid = uidTarget;
+card.setAttribute("aria-hidden", "false");
+card.classList.add("aperta");
+posizionaPlayerCard(trigger);
+requestAnimationFrame(() => card.classList.add("visibile"));
 
-  if (stessaSchedaGiaAperta && document.getElementById("playerCardContenuto").children.length) {
-    posizionaPlayerCard(trigger);
-    return;
-  }
+if (stessaSchedaGiaAperta && document.getElementById("playerCardContenuto").children.length) {
+posizionaPlayerCard(trigger);
+return;
+}
 
-  mostraCaricamentoPlayerCard();
-  posizionaPlayerCard(trigger);
-  const idRichiesta = ++richiestaProfiloCorrente;
-  caricaDatiPlayerCardGiocatore(nomeTarget, idRichiesta);
+mostraCaricamentoPlayerCard();
+posizionaPlayerCard(trigger);
+const idRichiesta = ++richiestaProfiloCorrente;
+caricaDatiPlayerCardGiocatore(nomeTarget, idRichiesta);
 }
 
 function apriPlayerCardDaClick(trigger) {
-  apriPlayerCard(trigger, true);
+apriPlayerCard(trigger, true);
 }
 
 function pianificaAperturaPlayerCard(trigger) {
-  if (!window.matchMedia("(hover:hover) and (pointer:fine)").matches) return;
-  annullaTimerHoverPlayerCard();
-  timerHoverPlayerCard = setTimeout(() => {
-    timerHoverPlayerCard = null;
-    apriPlayerCard(trigger, false);
-  }, RITARDO_HOVER_PLAYER_CARD_MS);
+if (!window.matchMedia("(hover) and (pointer)").matches) return;
+annullaTimerHoverPlayerCard();
+timerHoverPlayerCard = setTimeout(() => {
+timerHoverPlayerCard = null;
+apriPlayerCard(trigger, false);
+}, RITARDO_HOVER_PLAYER_CARD_MS);
 }
 
 function pianificaChiusuraPlayerCard() {
-  if (playerCardBloccata) return;
-  annullaTimerChiusuraPlayerCard();
-  timerChiusuraPlayerCard = setTimeout(() => {
-    timerChiusuraPlayerCard = null;
-    chiudiPlayerCardGiocatore();
-  }, RITARDO_CHIUSURA_PLAYER_CARD_MS);
+if (playerCardBloccata) return;
+annullaTimerChiusuraPlayerCard();
+timerChiusuraPlayerCard = setTimeout(() => {
+timerChiusuraPlayerCard = null;
+chiudiPlayerCardGiocatore();
+}, RITARDO_CHIUSURA_PLAYER_CARD_MS);
 }
 
 function chiudiPlayerCardGiocatore() {
-  annullaTimerHoverPlayerCard();
-  annullaTimerChiusuraPlayerCard();
-  richiestaProfiloCorrente++;
-  playerCardBloccata = false;
-  playerCardTriggerAttivo = null;
-  playerCardUidAttivo = null;
-  playerCardNomeAttivo = null;
-  const card = document.getElementById("playerCardGiocatore");
-  if (!card) return;
-  card.classList.remove("visibile");
-  card.setAttribute("aria-hidden", "true");
-  setTimeout(() => {
-    if (!card.classList.contains("visibile")) {
-      card.classList.remove("aperta");
-      card.removeAttribute("data-uid");
-    }
-  }, 170);
+annullaTimerHoverPlayerCard();
+annullaTimerChiusuraPlayerCard();
+richiestaProfiloCorrente++;
+playerCardBloccata = false;
+playerCardTriggerAttivo = null;
+playerCardUidAttivo = null;
+playerCardNomeAttivo = null;
+const card = document.getElementById("playerCardGiocatore");
+if (!card) return;
+card.classList.remove("visibile");
+card.setAttribute("aria-hidden", "true");
+setTimeout(() => {
+if (!card.classList.contains("visibile")) {
+card.classList.remove("aperta");
+card.removeAttribute("data-uid");
+}
+}, 170);
 }
 
 async function caricaDatiPlayerCardGiocatore(nomeTarget, idRichiesta) {
-  try {
-    const risposta = await fetchAutenticato("https://gioco-oca-server.onrender.com/api/profilo-pubblico/" + encodeURIComponent(nomeTarget));
-    if (idRichiesta !== richiestaProfiloCorrente) return;
-    if (!risposta.ok) {
-      document.getElementById("playerCardContenuto").innerHTML = `<div class="player-card-errore">Impossibile caricare la scheda del giocatore.</div>`;
-      return;
-    }
-    const dati = await risposta.json();
-    if (idRichiesta !== richiestaProfiloCorrente) return;
-    disegnaPlayerCardGiocatore(dati);
-  } catch (e) {
-    if (idRichiesta !== richiestaProfiloCorrente) return;
-    document.getElementById("playerCardContenuto").innerHTML = `<div class="player-card-errore">Connessione non disponibile. Riprova.</div>`;
-  }
+try {
+const risposta = await fetchAutenticato("https://gioco-oca-server.onrender.com/api/profilo-pubblico/" + encodeURIComponent(nomeTarget));
+if (idRichiesta !== richiestaProfiloCorrente) return;
+if (!risposta.ok) {
+document.getElementById("playerCardContenuto").innerHTML = <div class="player-card-errore">Impossibile caricare la scheda del giocatore.</div>;
+return;
+}
+const dati = await risposta.json();
+if (idRichiesta !== richiestaProfiloCorrente) return;
+disegnaPlayerCardGiocatore(dati);
+} catch (e) {
+if (idRichiesta !== richiestaProfiloCorrente) return;
+document.getElementById("playerCardContenuto").innerHTML = <div class="player-card-errore">Connessione non disponibile. Riprova.</div>;
+}
 }
 
 function creaGiocatoriPartita(partita){
-  if(!partita.giocatori) return "";
-  return partita.giocatori.map(g=>{
-    const nomePulito = pulisciTestoHtml(g.nome || "Giocatore");
-    const uidPulito = pulisciTestoHtml(g.uid || "");
-    const avatar = g.avatar
-    ? `<img class="avatar-partita-mini" src="${pulisciTestoHtml(g.avatar)}" alt="Avatar di ${nomePulito}">`
-    : `<div class="avatar-partita-mini" style="background:${coloreDaNome(g.nome)}">${iniziale(g.nome)}</div>`;
-    const cliccabile = g.uid && g.uid !== mioUid;
-    const attributi = cliccabile
-      ? `data-player-card-uid="${uidPulito}" data-player-card-nome="${nomePulito}" tabindex="0" role="button" aria-label="Apri scheda di ${nomePulito}"`
-      : "";
-    return `
+if(!partita.giocatori) return "";
+return partita.giocatori.map(g=>{
+const nomePulito = pulisciTestoHtml(g.nome || "Giocatore");
+const uidPulito = pulisciTestoHtml(g.uid || "");
+const avatar = g.avatar
+? <img class="avatar-partita-mini" src="${pulisciTestoHtml(g.avatar)}" alt="Avatar di ${nomePulito}">
+: <div class="avatar-partita-mini" style="background:${coloreDaNome(g.nome)}">${iniziale(g.nome)}</div>;
+const cliccabile = g.uid && g.uid !== mioUid;
+const attributi = cliccabile
+? data-player-card-uid="${uidPulito}" data-player-card-nome="${nomePulito}" tabindex="0" role="button" aria-label="Apri scheda di ${nomePulito}"
+: "";
+return 
       <div class="mini-giocatore ${cliccabile ? "player-card-trigger" : ""}" ${attributi}>
         ${avatar}
         <span>${nomePulito}</span><span class="stato-partita-online" aria-label="Online">●</span>
-      </div>`;
-  }).join("");
+      </div>;
+}).join("");
 }
 
 function disegnaPlayerCardGiocatore(dati) {
-  const presenza = ultimaListaOnlineStanza.find(g => g.uid === dati.uid) || null;
-  const online = !!presenza;
-  const inPartita = presenza && presenza.stato === "partita";
-  const statoClasse = inPartita ? "partita" : (online ? "online" : "offline");
-  const statoTesto = inPartita ? "In partita" : (online ? "Online in questa stanza" : "Non online in questa stanza");
-  const nicknamePulito = pulisciTestoHtml(dati.nickname || "Giocatore");
-  const elo = Number.isFinite(Number(dati.elo)) ? Math.round(Number(dati.elo)) : 1500;
-  const giocate = Math.max(0, Number(dati.partiteGiocate) || 0);
-  const vinte = Math.max(0, Number(dati.partiteVinte) || 0);
-  const winRate = Number.isFinite(Number(dati.winRate)) ? Math.max(0, Math.min(100, Math.round(Number(dati.winRate)))) : (giocate ? Math.round(vinte / giocate * 100) : 0);
-  const streak = Math.max(0, Number(dati.streakVittorieMassima) || 0);
-  const veloce = formattaDurataPlayerCard(dati.vittoriaPiuVeloceSecondi);
-  const immagine = dati.avatar
-    ? `<img class="player-card-avatar" src="${pulisciTestoHtml(dati.avatar)}" alt="Avatar di ${nicknamePulito}">`
-    : `<div class="player-card-avatar" style="background:${coloreDaNome(dati.nickname)};">${iniziale(dati.nickname)}</div>`;
+const presenza = ultimaListaOnlineStanza.find(g => g.uid === dati.uid) || null;
+const online = !!presenza;
+const inPartita = presenza && presenza.stato === "partita";
+const statoClasse = inPartita ? "partita" : (online ? "online" : "offline");
+const statoTesto = inPartita ? "In partita" : (online ? "Online in questa stanza" : "Non online in questa stanza");
+const nicknamePulito = pulisciTestoHtml(dati.nickname || "Giocatore");
+const elo = Number.isFinite(Number(dati.elo)) ? Math.round(Number(dati.elo)) : 1500;
+const giocate = Math.max(0, Number(dati.partiteGiocate) || 0);
+const vinte = Math.max(0, Number(dati.partiteVinte) || 0);
+const winRate = Number.isFinite(Number(dati.winRate)) ? Math.max(0, Math.min(100, Math.round(Number(dati.winRate)))) : (giocate ? Math.round(vinte / giocate * 100) : 0);
+const streak = Math.max(0, Number(dati.streakVittorieMassima) || 0);
+const veloce = formattaDurataPlayerCard(dati.vittoriaPiuVeloceSecondi);
+const immagine = dati.avatar
+? <img class="player-card-avatar" src="${pulisciTestoHtml(dati.avatar)}" alt="Avatar di ${nicknamePulito}">
+: <div class="player-card-avatar" style="background:${coloreDaNome(dati.nickname)};">${iniziale(dati.nickname)}</div>;
 
-  const badge = Array.isArray(dati.badge) ? dati.badge.slice(0, 4) : [];
-  const badgeHtml = badge.length
-    ? badge.map(b => `<span class="player-card-badge">${pulisciTestoHtml(b && b.nome ? b.nome : "Badge")}</span>`).join("")
-    : `<span class="player-card-badge-vuoto">Nessun riconoscimento ancora.</span>`;
+const badge = Array.isArray(dati.badge) ? dati.badge.slice(0, 4) : [];
+const badgeHtml = badge.length
+? badge.map(b => <span class="player-card-badge">${pulisciTestoHtml(b && b.nome ? b.nome : "Badge")}</span>).join("")
+: <span class="player-card-badge-vuoto">Nessun riconoscimento ancora.</span>;
 
-  let amiciziaHtml = "";
-  if (dati.statoBlocco && dati.statoBlocco !== "nessuno") {
-    amiciziaHtml = "";
-  } else if (dati.statoAmicizia === "amici") {
-    amiciziaHtml = `<button class="player-card-azione successo" type="button" onclick="rimuoviAmico('${dati.uid}')">${iconaPlayerCard("check")}<span>Amico</span></button>`;
-  } else if (dati.statoAmicizia === "richiesta_inviata") {
-    amiciziaHtml = `<button class="player-card-azione" type="button" disabled>${iconaPlayerCard("check")}<span>Richiesta inviata</span></button>`;
-  } else if (dati.statoAmicizia === "richiesta_ricevuta") {
-    amiciziaHtml = `<button class="player-card-azione successo" type="button" onclick="accettaAmicizia('${dati.uid}')">${iconaPlayerCard("check")}<span>Accetta</span></button><button class="player-card-azione pericolo" type="button" onclick="rifiutaAmicizia('${dati.uid}')">${iconaPlayerCard("rifiuta")}<span>Rifiuta</span></button>`;
-  } else {
-    amiciziaHtml = `<button class="player-card-azione primaria" type="button" onclick="inviaRichiestaAmicizia('${dati.uid}')">${iconaPlayerCard("aggiungi")}<span>Aggiungi</span></button>`;
-  }
+let amiciziaHtml = "";
+if (dati.statoBlocco && dati.statoBlocco !== "nessuno") {
+amiciziaHtml = "";
+} else if (dati.statoAmicizia === "amici") {
+amiciziaHtml = <button class="player-card-azione successo" type="button" onclick="rimuoviAmico('${dati.uid}')">${iconaPlayerCard("check")}<span>Amico</span></button>;
+} else if (dati.statoAmicizia === "richiesta_inviata") {
+amiciziaHtml = <button class="player-card-azione" type="button" disabled>${iconaPlayerCard("check")}<span>Richiesta inviata</span></button>;
+} else if (dati.statoAmicizia === "richiesta_ricevuta") {
+amiciziaHtml = <button class="player-card-azione successo" type="button" onclick="accettaAmicizia('${dati.uid}')">${iconaPlayerCard("check")}<span>Accetta</span></button><button class="player-card-azione pericolo" type="button" onclick="rifiutaAmicizia('${dati.uid}')">${iconaPlayerCard("rifiuta")}<span>Rifiuta</span></button>;
+} else {
+amiciziaHtml = <button class="player-card-azione primaria" type="button" onclick="inviaRichiestaAmicizia('${dati.uid}')">${iconaPlayerCard("aggiungi")}<span>Aggiungi</span></button>;
+}
 
-  document.getElementById("playerCardContenuto").innerHTML = `
-    <div class="player-card-header">
+document.getElementById("playerCardContenuto").innerHTML =     <div class="player-card-header">
       <div class="player-card-avatar-wrap">
         ${immagine}
         <span class="player-card-presenza-dot ${statoClasse}" aria-hidden="true"></span>
@@ -3600,290 +3603,288 @@ function disegnaPlayerCardGiocatore(dati) {
       <button class="player-card-azione segnala" type="button" onclick="apriSegnalazioneGiocatore(\'${dati.uid}\', \'${nicknamePulito.replace(/\'/g, "\\\'")}\')"><span aria-hidden="true">⚑</span><span>Segnala</span></button>
       ${amiciziaHtml}
       ${dati.statoBlocco === "bloccato_da_me"
-        ? `<button class="player-card-azione bloccato" type="button" onclick="sbloccaGiocatore('${dati.uid}')">${iconaPlayerCard("sblocca")}<span>Sblocca</span></button>`
-        : dati.statoBlocco === "mi_ha_bloccato"
-          ? `<button class="player-card-azione bloccato" type="button" disabled>${iconaPlayerCard("blocca")}<span>Interazione bloccata</span></button>`
-          : `<button class="player-card-azione pericolo" type="button" onclick="bloccaGiocatore('${dati.uid}', '${nicknamePulito.replace(/'/g, "\'")}')">${iconaPlayerCard("blocca")}<span>Blocca</span></button>`}
-    </div>`;
+        ?<button class="player-card-azione bloccato" type="button" onclick="sbloccaGiocatore('${dati.uid}')">${iconaPlayerCard("sblocca")}<span>Sblocca</span></button>        : dati.statoBlocco === "mi_ha_bloccato"
+          ?<button class="player-card-azione bloccato" type="button" disabled>${iconaPlayerCard("blocca")}<span>Interazione bloccata</span></button>          :<button class="player-card-azione pericolo" type="button" onclick="bloccaGiocatore('${dati.uid}', '${nicknamePulito.replace(/'/g, "'")}')">${iconaPlayerCard("blocca")}<span>Blocca</span></button>}
+    </div>;
 
-  if (playerCardTriggerAttivo) requestAnimationFrame(() => posizionaPlayerCard(playerCardTriggerAttivo));
+if (playerCardTriggerAttivo) requestAnimationFrame(() => posizionaPlayerCard(playerCardTriggerAttivo));
 }
 
 function triggerPlayerCardDaEvento(target) {
-  return target && target.closest ? target.closest("[data-player-card-uid]") : null;
+return target && target.closest ? target.closest("[data-player-card-uid]") : null;
 }
 
 document.addEventListener("mouseover", (e) => {
-  const trigger = triggerPlayerCardDaEvento(e.target);
-  if (!trigger) return;
-  if (e.relatedTarget && trigger.contains(e.relatedTarget)) return;
-  pianificaAperturaPlayerCard(trigger);
+const trigger = triggerPlayerCardDaEvento(e.target);
+if (!trigger) return;
+if (e.relatedTarget && trigger.contains(e.relatedTarget)) return;
+pianificaAperturaPlayerCard(trigger);
 });
 
 document.addEventListener("mouseout", (e) => {
-  const trigger = triggerPlayerCardDaEvento(e.target);
-  if (!trigger) return;
-  if (e.relatedTarget && trigger.contains(e.relatedTarget)) return;
-  annullaTimerHoverPlayerCard();
-  const card = document.getElementById("playerCardGiocatore");
-  if (e.relatedTarget && card && card.contains(e.relatedTarget)) return;
-  if (playerCardTriggerAttivo === trigger) pianificaChiusuraPlayerCard();
+const trigger = triggerPlayerCardDaEvento(e.target);
+if (!trigger) return;
+if (e.relatedTarget && trigger.contains(e.relatedTarget)) return;
+annullaTimerHoverPlayerCard();
+const card = document.getElementById("playerCardGiocatore");
+if (e.relatedTarget && card && card.contains(e.relatedTarget)) return;
+if (playerCardTriggerAttivo === trigger) pianificaChiusuraPlayerCard();
 });
 
 document.addEventListener("click", (e) => {
-  const trigger = triggerPlayerCardDaEvento(e.target);
-  if (trigger) {
-    e.preventDefault();
-    apriPlayerCardDaClick(trigger);
-    return;
-  }
-  const card = document.getElementById("playerCardGiocatore");
-  if (playerCardBloccata && card && !card.contains(e.target)) chiudiPlayerCardGiocatore();
+const trigger = triggerPlayerCardDaEvento(e.target);
+if (trigger) {
+e.preventDefault();
+apriPlayerCardDaClick(trigger);
+return;
+}
+const card = document.getElementById("playerCardGiocatore");
+if (playerCardBloccata && card && !card.contains(e.target)) chiudiPlayerCardGiocatore();
 });
 
 document.addEventListener("keydown", (e) => {
-  const trigger = triggerPlayerCardDaEvento(e.target);
-  if (trigger && (e.key === "Enter" || e.key === " ")) {
-    e.preventDefault();
-    apriPlayerCardDaClick(trigger);
-  }
-  if (e.key === "Escape") chiudiPlayerCardGiocatore();
+const trigger = triggerPlayerCardDaEvento(e.target);
+if (trigger && (e.key === "Enter" || e.key === " ")) {
+e.preventDefault();
+apriPlayerCardDaClick(trigger);
+}
+if (e.key === "Escape") chiudiPlayerCardGiocatore();
 });
 
 const playerCardElemento = document.getElementById("playerCardGiocatore");
 playerCardElemento.addEventListener("mouseenter", () => annullaTimerChiusuraPlayerCard());
 playerCardElemento.addEventListener("mouseleave", () => pianificaChiusuraPlayerCard());
 document.getElementById("playerCardChiudi").addEventListener("click", (e) => {
-  e.stopPropagation();
-  chiudiPlayerCardGiocatore();
+e.stopPropagation();
+chiudiPlayerCardGiocatore();
 });
 window.addEventListener("resize", () => {
-  if (playerCardTriggerAttivo && playerCardElemento.classList.contains("aperta")) posizionaPlayerCard(playerCardTriggerAttivo);
+if (playerCardTriggerAttivo && playerCardElemento.classList.contains("aperta")) posizionaPlayerCard(playerCardTriggerAttivo);
 });
 window.addEventListener("scroll", () => {
-  if (playerCardTriggerAttivo && playerCardElemento.classList.contains("aperta")) posizionaPlayerCard(playerCardTriggerAttivo);
+if (playerCardTriggerAttivo && playerCardElemento.classList.contains("aperta")) posizionaPlayerCard(playerCardTriggerAttivo);
 }, true);
 
 function chiudiConfermaLobby(esito) {
-  const overlay = document.getElementById("overlayConfermaBlocco");
-  if (overlay) {
-    overlay.classList.remove("aperto");
-    overlay.setAttribute("aria-hidden", "true");
-  }
-  const risolvi = confermaLobbyRisolvi;
-  confermaLobbyRisolvi = null;
-  if (risolvi) risolvi(esito === true);
+const overlay = document.getElementById("overlayConfermaBlocco");
+if (overlay) {
+overlay.classList.remove("aperto");
+overlay.setAttribute("aria-hidden", "true");
+}
+const risolvi = confermaLobbyRisolvi;
+confermaLobbyRisolvi = null;
+if (risolvi) risolvi(esito === true);
 }
 
 function chiediConfermaLobby({ titolo, messaggio, testoConferma = "Conferma" }) {
-  if (confermaLobbyRisolvi) chiudiConfermaLobby(false);
-  const overlay = document.getElementById("overlayConfermaBlocco");
-  document.getElementById("confermaLobbyTitolo").textContent = titolo || "Conferma";
-  document.getElementById("confermaLobbyTesto").textContent = messaggio || "";
-  document.getElementById("confermaLobbyAzione").textContent = testoConferma;
-  overlay.classList.add("aperto");
-  overlay.setAttribute("aria-hidden", "false");
-  return new Promise(resolve => {
-    confermaLobbyRisolvi = resolve;
-  });
+if (confermaLobbyRisolvi) chiudiConfermaLobby(false);
+const overlay = document.getElementById("overlayConfermaBlocco");
+document.getElementById("confermaLobbyTitolo").textContent = titolo || "Conferma";
+document.getElementById("confermaLobbyTesto").textContent = messaggio || "";
+document.getElementById("confermaLobbyAzione").textContent = testoConferma;
+overlay.classList.add("aperto");
+overlay.setAttribute("aria-hidden", "false");
+return new Promise(resolve => {
+confermaLobbyRisolvi = resolve;
+});
 }
 
 document.getElementById("confermaLobbyAnnulla").addEventListener("click", () => chiudiConfermaLobby(false));
 document.getElementById("confermaLobbyAzione").addEventListener("click", () => chiudiConfermaLobby(true));
 document.getElementById("overlayConfermaBlocco").addEventListener("click", e => {
-  if (e.target.id === "overlayConfermaBlocco") chiudiConfermaLobby(false);
+if (e.target.id === "overlayConfermaBlocco") chiudiConfermaLobby(false);
 });
 
 document.addEventListener("keydown", e => {
-  if (e.key === "Escape" && document.getElementById("overlayConfermaBlocco").classList.contains("aperto")) {
-    chiudiConfermaLobby(false);
-  }
+if (e.key === "Escape" && document.getElementById("overlayConfermaBlocco").classList.contains("aperto")) {
+chiudiConfermaLobby(false);
+}
 });
 
 async function caricaBlocchiLobby() {
-  if (!mioUid) return;
-  try {
-    const risposta = await fetchAutenticato("https://gioco-oca-server.onrender.com/api/blocchi");
-    if (!risposta.ok) return;
-    const dati = await risposta.json();
-    uidBloccatiInterazione = new Set(Array.isArray(dati.interazioniBloccateUid) ? dati.interazioniBloccateUid : []);
-  } catch (e) {
-    console.warn("Impossibile aggiornare la lista blocchi:", e);
-  }
+if (!mioUid) return;
+try {
+const risposta = await fetchAutenticato("https://gioco-oca-server.onrender.com/api/blocchi");
+if (!risposta.ok) return;
+const dati = await risposta.json();
+uidBloccatiInterazione = new Set(Array.isArray(dati.interazioniBloccateUid) ? dati.interazioniBloccateUid : []);
+} catch (e) {
+console.warn("Impossibile aggiornare la lista blocchi:", e);
+}
 }
 
 async function bloccaGiocatore(utenteUid, nickname) {
-  if (!utenteUid || utenteUid === mioUid) return;
-  const confermato = await chiediConfermaLobby({
-    titolo: "Bloccare " + (nickname || "questo giocatore") + "?",
-    messaggio: "Non potrete inviarvi messaggi, vedere i messaggi reciproci nelle chat, invitarvi o entrare nella stessa partita. L'eventuale amicizia verrà rimossa.",
-    testoConferma: "Blocca giocatore"
-  });
-  if (!confermato) return;
-  try {
-    const risposta = await fetchAutenticato("https://gioco-oca-server.onrender.com/api/blocchi", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ utenteUid })
-    });
-    const dati = await risposta.json().catch(() => ({}));
-    if (!risposta.ok) {
-      mostraNotifica(dati.errore || "Impossibile bloccare questo giocatore.");
-      return;
-    }
-    await Promise.all([caricaBlocchiLobby(), caricaAmici()]);
-    chiudiPlayerCardGiocatore();
-    mostraNotifica("Giocatore bloccato.");
-  } catch (e) {
-    mostraNotifica("Errore di connessione.");
-  }
+if (!utenteUid || utenteUid === mioUid) return;
+const confermato = await chiediConfermaLobby({
+titolo: "Bloccare " + (nickname || "questo giocatore") + "?",
+messaggio: "Non potrete inviarvi messaggi, vedere i messaggi reciproci nelle chat, invitarvi o entrare nella stessa partita. L'eventuale amicizia verrà rimossa.",
+testoConferma: "Blocca giocatore"
+});
+if (!confermato) return;
+try {
+const risposta = await fetchAutenticato("https://gioco-oca-server.onrender.com/api/blocchi", {
+method: "POST",
+headers: { "Content-Type": "application/json" },
+body: JSON.stringify({ utenteUid })
+});
+const dati = await risposta.json().catch(() => ({}));
+if (!risposta.ok) {
+mostraNotifica(dati.errore || "Impossibile bloccare questo giocatore.");
+return;
+}
+await Promise.all([caricaBlocchiLobby(), caricaAmici()]);
+chiudiPlayerCardGiocatore();
+mostraNotifica("Giocatore bloccato.");
+} catch (e) {
+mostraNotifica("Errore di connessione.");
+}
 }
 
 async function sbloccaGiocatore(utenteUid) {
-  if (!utenteUid || utenteUid === mioUid) return;
-  const confermato = await chiediConfermaLobby({
-    titolo: "Sbloccare questo giocatore?",
-    messaggio: "Rimuoverai il blocco che hai impostato. L'amicizia non verrà ripristinata automaticamente.",
-    testoConferma: "Sblocca"
-  });
-  if (!confermato) return;
-  try {
-    const risposta = await fetchAutenticato("https://gioco-oca-server.onrender.com/api/blocchi/" + encodeURIComponent(utenteUid), {
-      method: "DELETE"
-    });
-    const dati = await risposta.json().catch(() => ({}));
-    if (!risposta.ok) {
-      mostraNotifica(dati.errore || "Impossibile sbloccare questo giocatore.");
-      return;
-    }
-    await caricaBlocchiLobby();
-    chiudiPlayerCardGiocatore();
-    mostraNotifica("Giocatore sbloccato.");
-  } catch (e) {
-    mostraNotifica("Errore di connessione.");
-  }
+if (!utenteUid || utenteUid === mioUid) return;
+const confermato = await chiediConfermaLobby({
+titolo: "Sbloccare questo giocatore?",
+messaggio: "Rimuoverai il blocco che hai impostato. L'amicizia non verrà ripristinata automaticamente.",
+testoConferma: "Sblocca"
+});
+if (!confermato) return;
+try {
+const risposta = await fetchAutenticato("https://gioco-oca-server.onrender.com/api/blocchi/" + encodeURIComponent(utenteUid), {
+method: "DELETE"
+});
+const dati = await risposta.json().catch(() => ({}));
+if (!risposta.ok) {
+mostraNotifica(dati.errore || "Impossibile sbloccare questo giocatore.");
+return;
+}
+await caricaBlocchiLobby();
+chiudiPlayerCardGiocatore();
+mostraNotifica("Giocatore sbloccato.");
+} catch (e) {
+mostraNotifica("Errore di connessione.");
+}
 }
 
 async function inviaRichiestaAmicizia(destinatarioUid) {
-  try {
-    const r = await fetchAutenticato("https://gioco-oca-server.onrender.com/api/amici/richiedi", {
-      method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ destinatarioUid })
-    });
-    const d = await r.json();
-    if (!r.ok) { mostraNotifica(d.errore || "Errore."); return; }
-    chiudiPlayerCardGiocatore();
-  } catch (e) { mostraNotifica("Errore di connessione."); }
+try {
+const r = await fetchAutenticato("https://gioco-oca-server.onrender.com/api/amici/richiedi", {
+method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+body: JSON.stringify({ destinatarioUid })
+});
+const d = await r.json();
+if (!r.ok) { mostraNotifica(d.errore || "Errore."); return; }
+chiudiPlayerCardGiocatore();
+} catch (e) { mostraNotifica("Errore di connessione."); }
 }
 async function accettaAmicizia(daUid) {
-  try {
-    const r = await fetchAutenticato("https://gioco-oca-server.onrender.com/api/amici/accetta", {
-      method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ daUid })
-    });
-    if (!r.ok) { const d = await r.json(); mostraNotifica(d.errore || "Errore."); return false; }
-    chiudiPlayerCardGiocatore();
-    await caricaAmici();
-    return true;
-  } catch (e) { mostraNotifica("Errore di connessione."); return false; }
+try {
+const r = await fetchAutenticato("https://gioco-oca-server.onrender.com/api/amici/accetta", {
+method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+body: JSON.stringify({ daUid })
+});
+if (!r.ok) { const d = await r.json(); mostraNotifica(d.errore || "Errore."); return false; }
+chiudiPlayerCardGiocatore();
+await caricaAmici();
+return true;
+} catch (e) { mostraNotifica("Errore di connessione."); return false; }
 }
 async function rifiutaAmicizia(daUid) {
-  try {
-    const r = await fetchAutenticato("https://gioco-oca-server.onrender.com/api/amici/rifiuta", {
-      method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ daUid })
-    });
-    if (!r.ok) {
-      const d = await r.json().catch(() => ({}));
-      mostraNotifica(d.errore || "Errore.");
-      return false;
-    }
-    chiudiPlayerCardGiocatore();
-    return true;
-  } catch (e) { mostraNotifica("Errore di connessione."); return false; }
+try {
+const r = await fetchAutenticato("https://gioco-oca-server.onrender.com/api/amici/rifiuta", {
+method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+body: JSON.stringify({ daUid })
+});
+if (!r.ok) {
+const d = await r.json().catch(() => ({}));
+mostraNotifica(d.errore || "Errore.");
+return false;
+}
+chiudiPlayerCardGiocatore();
+return true;
+} catch (e) { mostraNotifica("Errore di connessione."); return false; }
 }
 async function rimuoviAmico(altroUid) {
-  const confermato = await chiediConfermaLobby({
-    titolo: "Rimuovere dagli amici?",
-    messaggio: "La persona verrà rimossa dalla tua lista amici.",
-    testoConferma: "Rimuovi"
-  });
-  if (!confermato) return;
-  try {
-    const r = await fetchAutenticato("https://gioco-oca-server.onrender.com/api/amici/rimuovi", {
-      method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ altroUid })
-    });
-    if (!r.ok) { const d = await r.json(); mostraNotifica(d.errore || "Errore."); return; }
-    chiudiPlayerCardGiocatore();
-    caricaAmici();
-  } catch (e) { mostraNotifica("Errore di connessione."); }
+const confermato = await chiediConfermaLobby({
+titolo: "Rimuovere dagli amici?",
+messaggio: "La persona verrà rimossa dalla tua lista amici.",
+testoConferma: "Rimuovi"
+});
+if (!confermato) return;
+try {
+const r = await fetchAutenticato("https://gioco-oca-server.onrender.com/api/amici/rimuovi", {
+method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
+body: JSON.stringify({ altroUid })
+});
+if (!r.ok) { const d = await r.json(); mostraNotifica(d.errore || "Errore."); return; }
+chiudiPlayerCardGiocatore();
+caricaAmici();
+} catch (e) { mostraNotifica("Errore di connessione."); }
 }
 // ===== INVITO A PARTITA PRIVATA =====
 function apriModalInvito(partitaId) {
-  partitaDaInvitareId = partitaId;
-  disegnaListaModalInvito();
-  document.getElementById("overlayModalInvito").classList.add("aperto");
+partitaDaInvitareId = partitaId;
+disegnaListaModalInvito();
+document.getElementById("overlayModalInvito").classList.add("aperto");
 }
 function chiudiModalInvito() {
-  document.getElementById("overlayModalInvito").classList.remove("aperto");
-  partitaDaInvitareId = null;
+document.getElementById("overlayModalInvito").classList.remove("aperto");
+partitaDaInvitareId = null;
 }
 document.getElementById("overlayModalInvito").addEventListener("click", (e) => {
-  if (e.target.id === "overlayModalInvito") chiudiModalInvito();
+if (e.target.id === "overlayModalInvito") chiudiModalInvito();
 });
 function disegnaListaModalInvito() {
-  const altri = ultimaListaOnlineStanza.filter(g =>
-    g.uid !== mioUid &&
-    g.stato !== "partita" &&
-    !uidBloccatiInterazione.has(g.uid)
-  );
-  const box = document.getElementById("listaModalInvito");
-  if (!altri.length) { box.innerHTML = "<p style='text-align:center;color:#999;padding:20px;'>Nessun altro giocatore online in questa stanza al momento.</p>"; return; }
-  box.innerHTML = altri.map(g => {
-    const nicknamePulito = pulisciTestoHtml(g.nickname || "Giocatore");
-    const immagine = g.avatar
-      ? `<img class="modal-invito-avatar" src="${pulisciTestoHtml(g.avatar)}" alt="Avatar di ${nicknamePulito}">`
-      : `<div class="modal-invito-avatar" style="background:${coloreDaNome(g.nickname)};">${iniziale(g.nickname)}</div>`;
-    return `
+const altri = ultimaListaOnlineStanza.filter(g =>
+g.uid !== mioUid &&
+g.stato !== "partita" &&
+!uidBloccatiInterazione.has(g.uid)
+);
+const box = document.getElementById("listaModalInvito");
+if (!altri.length) { box.innerHTML = "<p style='text-align:center;color:#999;padding:20px;'>Nessun altro giocatore online in questa stanza al momento.</p>"; return; }
+box.innerHTML = altri.map(g => {
+const nicknamePulito = pulisciTestoHtml(g.nickname || "Giocatore");
+const immagine = g.avatar
+? <img class="modal-invito-avatar" src="${pulisciTestoHtml(g.avatar)}" alt="Avatar di ${nicknamePulito}">
+: <div class="modal-invito-avatar" style="background:${coloreDaNome(g.nickname)};">${iniziale(g.nickname)}</div>;
+return 
       <div class="modal-invito-riga" id="rigaInvito-${g.uid}" onclick="invitaGiocatore('${g.uid}')">
         ${immagine}
         <span>${nicknamePulito}</span>
-      </div>`;
-  }).join("");
+      </div>;
+}).join("");
 }
 function invitaGiocatore(destinatarioUid) {
-  if (!partitaDaInvitareId) return;
-  inviaMessaggioSocket({ tipo: "invitaPartita", partitaId: partitaDaInvitareId, destinatarioUid });
+if (!partitaDaInvitareId) return;
+inviaMessaggioSocket({ tipo: "invitaPartita", partitaId: partitaDaInvitareId, destinatarioUid });
 }
 function segnaInvitatoNelModal(destinatarioUid) {
-  const riga = document.getElementById("rigaInvito-" + destinatarioUid);
-  if (riga) {
-    riga.classList.add("modal-invito-riga-invitato");
-    riga.innerHTML += ' <span class="modal-invito-check">✓ Invitato</span>';
-    riga.onclick = null;
-  }
+const riga = document.getElementById("rigaInvito-" + destinatarioUid);
+if (riga) {
+riga.classList.add("modal-invito-riga-invitato");
+riga.innerHTML += ' <span class="modal-invito-check">✓ Invitato</span>';
+riga.onclick = null;
+}
 }
 function mostraInvitoRicevuto(dati) {
-  invitoAttivoPartitaId = dati.partitaId;
-  invitoAttivoMedia = dati.mediaAttiva === true;
-  const testoMediaInvito = invitoAttivoMedia
-    ? (rilevaTipoDispositivoClient() === "cellulare"
-        ? "🎙️ In questo tavolo la chiamata è attiva. Da cellulare parteciperai solo con il microfono."
-        : "🎥 In questo tavolo webcam e microfono sono attivi.")
-    : "🔇 Webcam e microfono sono disattivi.";
+invitoAttivoPartitaId = dati.partitaId;
+invitoAttivoMedia = dati.mediaAttiva === true;
+const testoMediaInvito = invitoAttivoMedia
+? (rilevaTipoDispositivoClient() === "cellulare"
+? "🎙️ In questo tavolo la chiamata è attiva. Da cellulare parteciperai solo con il microfono."
+: "🎥 In questo tavolo webcam e microfono sono attivi.")
+: "🔇 Webcam e microfono sono disattivi.";
 
-  document.getElementById("testoInvitoRicevuto").textContent =
-    "🎲 " + dati.daNome + " ti ha invitato a giocare! " + testoMediaInvito;
-  document.getElementById("cardInvitoRicevuto").classList.remove("nascosto");
+document.getElementById("testoInvitoRicevuto").textContent =
+"🎲 " + dati.daNome + " ti ha invitato a giocare! " + testoMediaInvito;
+document.getElementById("cardInvitoRicevuto").classList.remove("nascosto");
 }
 async function rispondiInvito(accettato) {
-  if (!invitoAttivoPartitaId) return;
-  if (accettato && !(await richiediConsensoMediaSeNecessario(invitoAttivoMedia))) return;
-  if (!inviaMessaggioSocket({ tipo: "rispostaInvito", partitaId: invitoAttivoPartitaId, accettato, mediaConsenso: accettato && invitoAttivoMedia })) return;
-  document.getElementById("cardInvitoRicevuto").classList.add("nascosto");
-  invitoAttivoPartitaId = null;
-  invitoAttivoMedia = false;
+if (!invitoAttivoPartitaId) return;
+if (accettato && !(await richiediConsensoMediaSeNecessario(invitoAttivoMedia))) return;
+if (!inviaMessaggioSocket({ tipo: "rispostaInvito", partitaId: invitoAttivoPartitaId, accettato, mediaConsenso: accettato && invitoAttivoMedia })) return;
+document.getElementById("cardInvitoRicevuto").classList.add("nascosto");
+invitoAttivoPartitaId = null;
+invitoAttivoMedia = false;
 }
 let temaSalvato=localStorage.getItem("tema");
 if(temaSalvato==="scuro"){
@@ -3892,135 +3893,136 @@ document.body.classList.add("tema-scuro");
 caricaTopGiocatori();
 verificaSessione();
 
-
 // ===== SEGNALAZIONI GIOCATORI =====
 let segnalazioneTarget = null;
 let categoriaSegnalazione = "";
 
 function apriSegnalazioneGiocatore(uid, nickname) {
-  if (!uid || uid === mioUid) return;
-  segnalazioneTarget = { uid: String(uid), nickname: String(nickname || "Giocatore") };
-  categoriaSegnalazione = "";
-  const overlay = document.getElementById("overlaySegnalazione");
-  document.getElementById("sottotitoloSegnalazione").textContent =
-    "Stai segnalando " + segnalazioneTarget.nickname + ". La segnalazione verrà inviata allo staff.";
-  document.getElementById("segnalazioneNote").value = "";
-  document.querySelectorAll(".segnalazione-opzione").forEach(b => b.classList.remove("selezionata"));
-  document.getElementById("inviaSegnalazione").disabled = true;
-  overlay.classList.add("aperto");
-  overlay.setAttribute("aria-hidden", "false");
+if (!uid || uid === mioUid) return;
+segnalazioneTarget = { uid: String(uid), nickname: String(nickname || "Giocatore") };
+categoriaSegnalazione = "";
+const overlay = document.getElementById("overlaySegnalazione");
+document.getElementById("sottotitoloSegnalazione").textContent =
+"Stai segnalando " + segnalazioneTarget.nickname + ". La segnalazione verrà inviata allo staff.";
+document.getElementById("segnalazioneNote").value = "";
+document.querySelectorAll(".segnalazione-opzione").forEach(b => b.classList.remove("selezionata"));
+document.getElementById("inviaSegnalazione").disabled = true;
+overlay.classList.add("aperto");
+overlay.setAttribute("aria-hidden", "false");
 }
 
 function chiudiSegnalazioneGiocatore() {
-  const overlay = document.getElementById("overlaySegnalazione");
-  overlay.classList.remove("aperto");
-  overlay.setAttribute("aria-hidden", "true");
-  segnalazioneTarget = null;
-  categoriaSegnalazione = "";
+const overlay = document.getElementById("overlaySegnalazione");
+overlay.classList.remove("aperto");
+overlay.setAttribute("aria-hidden", "true");
+segnalazioneTarget = null;
+categoriaSegnalazione = "";
 }
 
 function inizializzaSegnalazioniLobby() {
-  const overlay = document.getElementById("overlaySegnalazione");
-  const annulla = document.getElementById("annullaSegnalazione");
-  const invia = document.getElementById("inviaSegnalazione");
+const overlay = document.getElementById("overlaySegnalazione");
+const annulla = document.getElementById("annullaSegnalazione");
+const invia = document.getElementById("inviaSegnalazione");
 
-  if (!overlay || !annulla || !invia) {
-    console.error("Interfaccia segnalazioni non trovata nel DOM.");
+if (!overlay || !annulla || !invia) {
+console.error("Interfaccia segnalazioni non trovata nel DOM.");
+return;
+}
+
+document.querySelectorAll(".segnalazione-opzione").forEach(bottone => {
+bottone.addEventListener("click", () => {
+categoriaSegnalazione = bottone.dataset.categoria || "";
+
+  document.querySelectorAll(".segnalazione-opzione").forEach(b => {
+    b.classList.toggle("selezionata", b === bottone);
+  });
+
+  invia.disabled = !categoriaSegnalazione;
+});
+
+});
+
+annulla.addEventListener("click", () => {
+chiudiSegnalazioneGiocatore();
+});
+
+overlay.addEventListener("click", e => {
+if (e.target === overlay) {
+chiudiSegnalazioneGiocatore();
+}
+});
+
+invia.addEventListener("click", async () => {
+if (!segnalazioneTarget || !categoriaSegnalazione) return;
+
+invia.disabled = true;
+invia.textContent = "Invio…";
+
+try {
+  const risposta = await fetchAutenticato(
+    "https://gioco-oca-server.onrender.com/api/segnalazioni",
+    {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        uidSegnalato: segnalazioneTarget.uid,
+        categoria: categoriaSegnalazione,
+        descrizione: document
+          .getElementById("segnalazioneNote")
+          .value
+          .trim()
+      })
+    }
+  );
+
+  const dati = await risposta.json().catch(() => ({}));
+
+  if (!risposta.ok) {
+    mostraNotifica(
+      dati.errore ||
+      "Non è stato possibile inviare la segnalazione."
+    );
     return;
   }
 
-  document.querySelectorAll(".segnalazione-opzione").forEach(bottone => {
-    bottone.addEventListener("click", () => {
-      categoriaSegnalazione = bottone.dataset.categoria || "";
+  chiudiSegnalazioneGiocatore();
+  mostraNotifica("Segnalazione inviata correttamente.");
 
-      document.querySelectorAll(".segnalazione-opzione").forEach(b => {
-        b.classList.toggle("selezionata", b === bottone);
-      });
+} catch (e) {
+  console.error("Errore invio segnalazione:", e);
+  mostraNotifica(
+    "Errore di connessione durante l'invio della segnalazione."
+  );
 
-      invia.disabled = !categoriaSegnalazione;
-    });
-  });
+} finally {
+  invia.textContent = "Invia segnalazione";
 
-  annulla.addEventListener("click", () => {
-    chiudiSegnalazioneGiocatore();
-  });
+  if (overlay.classList.contains("aperto")) {
+    invia.disabled = !categoriaSegnalazione;
+  }
+}
 
-  overlay.addEventListener("click", e => {
-    if (e.target === overlay) {
-      chiudiSegnalazioneGiocatore();
-    }
-  });
+});
 
-  invia.addEventListener("click", async () => {
-    if (!segnalazioneTarget || !categoriaSegnalazione) return;
-
-    invia.disabled = true;
-    invia.textContent = "Invio…";
-
-    try {
-      const risposta = await fetchAutenticato(
-        "https://gioco-oca-server.onrender.com/api/segnalazioni",
-        {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            uidSegnalato: segnalazioneTarget.uid,
-            categoria: categoriaSegnalazione,
-            descrizione: document
-              .getElementById("segnalazioneNote")
-              .value
-              .trim()
-          })
-        }
-      );
-
-      const dati = await risposta.json().catch(() => ({}));
-
-      if (!risposta.ok) {
-        mostraNotifica(
-          dati.errore ||
-          "Non è stato possibile inviare la segnalazione."
-        );
-        return;
-      }
-
-      chiudiSegnalazioneGiocatore();
-      mostraNotifica("Segnalazione inviata correttamente.");
-
-    } catch (e) {
-      console.error("Errore invio segnalazione:", e);
-      mostraNotifica(
-        "Errore di connessione durante l'invio della segnalazione."
-      );
-
-    } finally {
-      invia.textContent = "Invia segnalazione";
-
-      if (overlay.classList.contains("aperto")) {
-        invia.disabled = !categoriaSegnalazione;
-      }
-    }
-  });
-
-  document.addEventListener("keydown", e => {
-    if (
-      e.key === "Escape" &&
-      overlay.classList.contains("aperto")
-    ) {
-      chiudiSegnalazioneGiocatore();
-    }
-  });
+document.addEventListener("keydown", e => {
+if (
+e.key === "Escape" &&
+overlay.classList.contains("aperto")
+) {
+chiudiSegnalazioneGiocatore();
+}
+});
 }
 
 if (document.readyState === "loading") {
-  document.addEventListener(
-    "DOMContentLoaded",
-    inizializzaSegnalazioniLobby,
-    { once: true }
-  );
+document.addEventListener(
+"DOMContentLoaded",
+inizializzaSegnalazioniLobby,
+{ once: true }
+);
 } else {
-  inizializzaSegnalazioniLobby();
+inizializzaSegnalazioniLobby();
 }
 
 </script>
