@@ -1,16 +1,17 @@
 <!DOCTYPE html>
+
 <html lang="it">
 <head>
 
 <meta charset="UTF-8">
 
 <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
->
+name="viewport"
+content="width=device-width, initial-scale=1.0"
+
+
 
 <title>Gioco dell'Oca | Stanze</title>
-
 
 <style>
 
@@ -860,50 +861,50 @@ body {
 
 </head>
 
-
 <body>
 
 <button
-    type="button"
-    class="pulsante-indietro"
-    onclick="window.location.href='https://solfriniluca1.wixstudio.com/giochisocieta'"
-    aria-label="Torna alle stanze"
-    title="Torna alle stanze"
+type="button"
+class="pulsante-indietro"
+onclick="window.location.href='https://solfriniluca1.wixstudio.com/giochisocieta'"
+aria-label="Torna alle stanze"
+title="Torna alle stanze"
+
+
+
+<img
+
+    src="https://gioco-oca-server.onrender.com/Immagini/Tornaindietro.png"
+    alt=""
+    class="icona-indietro"
 >
-    <img
-        src="https://visitors-malpractice-monkey-shopper.trycloudflare.com/Immagini/Tornaindietro.png"
-        alt=""
-        class="icona-indietro"
-    >
+
 </button>
 
 <div class="contenitore">
 
+<!-- =====================================================
+     TITOLO
+     ===================================================== -->
 
-    <!-- =====================================================
-         TITOLO
-         ===================================================== -->
+<div class="titolo-gioco-oca">
+    GIOCO DELL'OCA
+</div>
 
-    <div class="titolo-gioco-oca">
-        GIOCO DELL'OCA
+
+<!-- =====================================================
+     LISTA STANZE
+     ===================================================== -->
+
+<div id="lista-stanze">
+
+    <div class="stato-caricamento">
+        Caricamento stanze...
     </div>
-
-
-    <!-- =====================================================
-         LISTA STANZE
-         ===================================================== -->
-
-    <div id="lista-stanze">
-
-        <div class="stato-caricamento">
-            Caricamento stanze...
-        </div>
-
-    </div>
-
 
 </div>
 
+</div>
 
 <script>
 
@@ -912,7 +913,7 @@ body {
    ========================================================= */
 
 const SERVER =
-    "https://visitors-malpractice-monkey-shopper.trycloudflare.com";
+    "https://gioco-oca-server.onrender.com";
 
 
 /* =========================================================
@@ -1120,7 +1121,7 @@ function collegaWebSocket() {
 
         socket =
             new WebSocket(
-                "wss://visitors-malpractice-monkey-shopper.trycloudflare.com"
+                "wss://gioco-oca-server.onrender.com"
             );
 
 
@@ -1293,7 +1294,6 @@ document.addEventListener(
 );
 
 </script>
-
 
 </body>
 </html>
