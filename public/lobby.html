@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GIOCHI SOCIETA  - Lobby</title>
+<title>Gioco di Società - Lobby</title>
 <style>
 /* =========================================================
    RESET E STILE GENERALE
@@ -125,7 +125,7 @@ button:disabled{
 
 
 /* =========================================================
-   MODALITÃ€ PARTITA
+   MODALITÀ PARTITA
 ========================================================= */
 .modalita-partita-box{
     margin-bottom:18px;
@@ -1827,7 +1827,7 @@ body.tema-scuro .giocatore-online{
   <div class="modal-invito-box">
     <div class="modal-invito-titolo">
       Seleziona chi vuoi invitare
-      <button onclick="chiudiModalInvito()">âœ•</button>
+      <button onclick="chiudiModalInvito()">✕</button>
     </div>
     <div id="listaModalInvito"></div>
   </div>
@@ -1836,17 +1836,17 @@ body.tema-scuro .giocatore-online{
   <div class="sinistra">
     <h2>Opzioni di gioco</h2>
     <div class="box">
-      <div class="modalita-partita-box" aria-label="ModalitÃ  partita">
-        <div class="modalita-partita-titolo">ModalitÃ  partita</div>
+      <div class="modalita-partita-box" aria-label="Modalità partita">
+        <div class="modalita-partita-titolo">Modalità partita</div>
         <div class="modalita-partita-scelte">
           <button type="button" class="btn-modalita-partita classifica attiva" data-modalita="classificata" aria-pressed="true" onclick="selezionaModalitaPartita('classificata')">
-            <span class="modalita-partita-check">âœ“</span>
-            <span class="modalita-partita-icona" aria-hidden="true">ðŸ†</span>
+            <span class="modalita-partita-check">✓</span>
+            <span class="modalita-partita-icona" aria-hidden="true">🏆</span>
             <span class="modalita-partita-label">Classifica</span>
           </button>
           <button type="button" class="btn-modalita-partita divertimento" data-modalita="divertimento" aria-pressed="false" onclick="selezionaModalitaPartita('divertimento')">
-            <span class="modalita-partita-check">âœ“</span>
-            <span class="modalita-partita-icona" aria-hidden="true">ðŸŽ²</span>
+            <span class="modalita-partita-check">✓</span>
+            <span class="modalita-partita-icona" aria-hidden="true">🎲</span>
             <span class="modalita-partita-label">Divertimento</span>
           </button>
         </div>
@@ -1868,13 +1868,13 @@ body.tema-scuro .giocatore-online{
       </select>
 <p>Tipo partita</p>
       <select id="tipoPartita">
-        <option value="pubblica">ðŸ”“ Pubblica</option>
-        <option value="privata">ðŸ”’ Privata (solo su invito)</option>
+        <option value="pubblica">🔓 Pubblica</option>
+        <option value="privata">🔒 Privata (solo su invito)</option>
       </select>
       <p>Chiamata del tavolo</p>
       <select id="mediaPartita">
-        <option value="off">ðŸ”‡ Disattiva</option>
-        <option value="on">ðŸŽ¥ Attiva</option>
+        <option value="off">🔇 Disattiva</option>
+        <option value="on">🎥 Attiva</option>
       </select>
       <p style="font-size:12px;line-height:1.35;color:#777;margin-top:8px;">Su computer usa webcam e microfono; su cellulare usa soltanto il microfono.</p>
       <button class="crea" onclick="creaPartita()">Crea partita</button>
@@ -1900,36 +1900,36 @@ body.tema-scuro .giocatore-online{
   z-index:100;
   font-size:22px;
 ">
-<span>ðŸ˜€</span>
-<span>ðŸ˜ƒ</span>
-<span>ðŸ˜„</span>
-<span>ðŸ˜</span>
-<span>ðŸ˜‚</span>
-<span>ðŸ˜Š</span>
-<span>ðŸ˜‰</span>
-<span>ðŸ˜Ž</span>
-<span>ðŸ˜</span>
-<span>ðŸ˜¢</span>
-<span>ðŸ˜¡</span>
-<span>ðŸ˜±</span>
-<span>ðŸ‘</span>
-<span>ðŸ‘Ž</span>
-<span>â¤ï¸</span>
-<span>ðŸ”¥</span>
-<span>ðŸŽ²</span>
-<span>ðŸ†</span>
-<span>ðŸŽ‰</span>
-<span>ðŸ‘‹</span>
+<span>😀</span>
+<span>😃</span>
+<span>😄</span>
+<span>😁</span>
+<span>😂</span>
+<span>😊</span>
+<span>😉</span>
+<span>😎</span>
+<span>😍</span>
+<span>😢</span>
+<span>😡</span>
+<span>😱</span>
+<span>👍</span>
+<span>👎</span>
+<span>❤️</span>
+<span>🔥</span>
+<span>🎲</span>
+<span>🏆</span>
+<span>🎉</span>
+<span>👋</span>
 </div>
   <div style="display:flex; gap:5px;">
-    <button onclick="apriEmoji()" style="width:45px;">ðŸ˜Š</button>
+    <button onclick="apriEmoji()" style="width:45px;">😊</button>
     <input id="messaggio" maxlength="300" placeholder="Scrivi un messaggio">
     <button onclick="inviaChat()">Invia</button>
   </div>
 </div>
   </div>
   <div class="destra">
-    <h2>ðŸ† Top giocatori</h2>
+    <h2>🏆 Top giocatori</h2>
     <div id="top">Caricamento...</div>
     <hr>
     <h2 id="nomeStanza">
@@ -2077,8 +2077,8 @@ function inviaMessaggioSocket(dati) {
 }
 
 // ===== VERIFICA WEBCAM PRIMA DI CREARE/ENTRARE =====
-// La webcam Ã¨ obbligatoria.
-// Il microfono Ã¨ facoltativo e viene gestito successivamente nel gioco.
+// La webcam è obbligatoria.
+// Il microfono è facoltativo e viene gestito successivamente nel gioco.
 let verificaMediaLobbyInCorso = null;
 let mediaLobbyVerificatiFino = 0;
 const DURATA_VALIDITA_MEDIA_LOBBY_MS = 5 * 60 * 1000;
@@ -2124,7 +2124,7 @@ function messaggioErroreMediaLobby(errore) {
     return "Il browser non ha completato l'apertura di webcam e microfono. Riprova.";
   }
 
-  return "Non Ã¨ stato possibile aprire contemporaneamente webcam e microfono. Controlla i dispositivi e riprova.";
+  return "Non è stato possibile aprire contemporaneamente webcam e microfono. Controlla i dispositivi e riprova.";
 }
 
 function getUserMediaConTimeout(vincoli, timeoutMs) {
@@ -2200,7 +2200,7 @@ async function richiediConsensoMediaSeNecessario(mediaAttiva) {
     let streamAudioOnly = null;
 
     try {
-      mostraNotifica("Verifica microfono in corsoâ€¦");
+      mostraNotifica("Verifica microfono in corso…");
 
       streamAudioOnly = await getUserMediaConTimeout({
         video: false,
@@ -2236,13 +2236,13 @@ async function richiediConsensoMediaSeNecessario(mediaAttiva) {
         erroreMicrofono.name === "NotFoundError" ||
         erroreMicrofono.name === "DevicesNotFoundError"
       ) {
-        mostraNotifica("Nessun microfono disponibile. Il microfono Ã¨ obbligatorio per questo tavolo.");
+        mostraNotifica("Nessun microfono disponibile. Il microfono è obbligatorio per questo tavolo.");
       } else if (
         erroreMicrofono.name === "NotReadableError" ||
         erroreMicrofono.name === "TrackStartError" ||
         erroreMicrofono.name === "AbortError"
       ) {
-        mostraNotifica("Il microfono non puÃ² essere avviato. Controlla che non sia utilizzato da altre applicazioni.");
+        mostraNotifica("Il microfono non può essere avviato. Controlla che non sia utilizzato da altre applicazioni.");
       } else {
         mostraNotifica("Impossibile utilizzare il microfono. Riprova.");
       }
@@ -2264,7 +2264,7 @@ async function richiediConsensoMediaSeNecessario(mediaAttiva) {
     ===================================================== */
 
     mostraNotifica(
-      "Verifica webcam in corsoâ€¦"
+      "Verifica webcam in corso…"
     );
 
     try {
@@ -2318,7 +2318,7 @@ async function richiediConsensoMediaSeNecessario(mediaAttiva) {
         erroreWebcam.name === "DevicesNotFoundError"
       ) {
         mostraNotifica(
-          "Nessuna webcam disponibile. La webcam Ã¨ obbligatoria per questo tavolo."
+          "Nessuna webcam disponibile. La webcam è obbligatoria per questo tavolo."
         );
       }
 
@@ -2328,13 +2328,13 @@ async function richiediConsensoMediaSeNecessario(mediaAttiva) {
         erroreWebcam.name === "AbortError"
       ) {
         mostraNotifica(
-          "La webcam non puÃ² essere avviata. Controlla che sia collegata e non utilizzata da altre applicazioni."
+          "La webcam non può essere avviata. Controlla che sia collegata e non utilizzata da altre applicazioni."
         );
       }
 
       else {
         mostraNotifica(
-          "Impossibile utilizzare la webcam. La webcam Ã¨ obbligatoria per questo tavolo."
+          "Impossibile utilizzare la webcam. La webcam è obbligatoria per questo tavolo."
         );
       }
 
@@ -2366,7 +2366,7 @@ async function richiediConsensoMediaSeNecessario(mediaAttiva) {
     ===================================================== */
 
     mostraNotifica(
-      "Webcam verificata. Verifica microfono in corsoâ€¦"
+      "Webcam verificata. Verifica microfono in corso…"
     );
 
 
@@ -2407,7 +2407,7 @@ async function richiediConsensoMediaSeNecessario(mediaAttiva) {
         erroreMicrofono.name === "DevicesNotFoundError"
       ) {
         mostraNotifica(
-          "Nessun microfono disponibile. Il microfono Ã¨ obbligatorio per questo tavolo."
+          "Nessun microfono disponibile. Il microfono è obbligatorio per questo tavolo."
         );
       }
 
@@ -2417,13 +2417,13 @@ async function richiediConsensoMediaSeNecessario(mediaAttiva) {
         erroreMicrofono.name === "AbortError"
       ) {
         mostraNotifica(
-          "Il microfono non puÃ² essere avviato. Controlla che non sia utilizzato da altre applicazioni."
+          "Il microfono non può essere avviato. Controlla che non sia utilizzato da altre applicazioni."
         );
       }
 
       else {
         mostraNotifica(
-          "Impossibile utilizzare il microfono. Il microfono Ã¨ obbligatorio per questo tavolo."
+          "Impossibile utilizzare il microfono. Il microfono è obbligatorio per questo tavolo."
         );
       }
 
@@ -2477,7 +2477,7 @@ async function richiediConsensoMediaSeNecessario(mediaAttiva) {
 
     /*
      * In Lobby servono soltanto per la verifica.
-     * gioco.js li riaprirÃ  quando inizierÃ  la partita.
+     * gioco.js li riaprirà quando inizierà la partita.
      */
 
     if (streamVideo) {
@@ -2519,7 +2519,7 @@ function apriPartita(id, mediaAttiva) {
   destinazione.searchParams.set("stanza", stanza);
   if (mediaAttiva === true) destinazione.searchParams.set("media", "1");
 
-  // La partita sostituisce la Lobby nella cronologia: cosÃ¬ la pagina gioco
+  // La partita sostituisce la Lobby nella cronologia: così la pagina gioco
   // non diventa mai una voce raggiungibile con la freccia Indietro.
   window.location.replace(destinazione.href);
 }
@@ -2536,9 +2536,9 @@ function coloreDaNome(nome) {
   return colori[somma % colori.length];
 }
 function iconaDispositivo(tipo) {
-  if (tipo === "cellulare") return "ðŸ“± Cellulare";
-  if (tipo === "tablet") return "ðŸ“² Tablet";
-  return "ðŸ–¥ï¸ Computer";
+  if (tipo === "cellulare") return "📱 Cellulare";
+  if (tipo === "tablet") return "📲 Tablet";
+  return "🖥️ Computer";
 }
 function rilevaTipoDispositivoClient() {
   const ua = navigator.userAgent;
@@ -2567,17 +2567,17 @@ document.getElementById("contenutoMobile").innerHTML=`
 <h2 style="margin-bottom:15px;">
 CREA TAVOLO
 </h2>
-<div class="modalita-partita-box" aria-label="ModalitÃ  partita">
-<div class="modalita-partita-titolo">ModalitÃ  partita</div>
+<div class="modalita-partita-box" aria-label="Modalità partita">
+<div class="modalita-partita-titolo">Modalità partita</div>
 <div class="modalita-partita-scelte">
 <button type="button" class="btn-modalita-partita classifica" data-modalita="classificata" aria-pressed="false" onclick="selezionaModalitaPartita('classificata')">
-<span class="modalita-partita-check">âœ“</span>
-<span class="modalita-partita-icona" aria-hidden="true">ðŸ†</span>
+<span class="modalita-partita-check">✓</span>
+<span class="modalita-partita-icona" aria-hidden="true">🏆</span>
 <span class="modalita-partita-label">Classifica</span>
 </button>
 <button type="button" class="btn-modalita-partita divertimento" data-modalita="divertimento" aria-pressed="false" onclick="selezionaModalitaPartita('divertimento')">
-<span class="modalita-partita-check">âœ“</span>
-<span class="modalita-partita-icona" aria-hidden="true">ðŸŽ²</span>
+<span class="modalita-partita-check">✓</span>
+<span class="modalita-partita-icona" aria-hidden="true">🎲</span>
 <span class="modalita-partita-label">Divertimento</span>
 </button>
 </div>
@@ -2599,16 +2599,16 @@ CREA TAVOLO
 <p>Tipo partita</p>
 <select id="tipoPartitaMobile">
 <option value="pubblica">
-ðŸ”“ Pubblica
+🔓 Pubblica
 </option>
 <option value="privata">
-ðŸ”’ Privata
+🔒 Privata
 </option>
 </select>
 <p>Chiamata del tavolo</p>
 <select id="mediaPartitaMobile">
-<option value="off">ðŸ”‡ Disattiva</option>
-<option value="on">ðŸŽ™ï¸ Attiva (su cellulare solo audio)</option>
+<option value="off">🔇 Disattiva</option>
+<option value="on">🎙️ Attiva (su cellulare solo audio)</option>
 </select>
 <p style="font-size:12px;line-height:1.35;color:#777;">Su cellulare viene usato solo il microfono: niente webcam e niente video degli altri giocatori.</p>
 <button onclick="creaPartitaMobile()" 
@@ -2707,20 +2707,20 @@ font-size:25px;
 line-height:35px;
 margin-bottom:8px;
 ">
-<span onclick="aggiungiEmojiMobile('ðŸ˜€')">ðŸ˜€</span>
-<span onclick="aggiungiEmojiMobile('ðŸ˜‚')">ðŸ˜‚</span>
-<span onclick="aggiungiEmojiMobile('ðŸ˜Š')">ðŸ˜Š</span>
-<span onclick="aggiungiEmojiMobile('ðŸ˜‰')">ðŸ˜‰</span>
-<span onclick="aggiungiEmojiMobile('ðŸ˜Ž')">ðŸ˜Ž</span>
-<span onclick="aggiungiEmojiMobile('ðŸ˜')">ðŸ˜</span>
-<span onclick="aggiungiEmojiMobile('ðŸ˜¢')">ðŸ˜¢</span>
-<span onclick="aggiungiEmojiMobile('ðŸ˜¡')">ðŸ˜¡</span>
-<span onclick="aggiungiEmojiMobile('ðŸ‘')">ðŸ‘</span>
-<span onclick="aggiungiEmojiMobile('â¤ï¸')">â¤ï¸</span>
-<span onclick="aggiungiEmojiMobile('ðŸ”¥')">ðŸ”¥</span>
-<span onclick="aggiungiEmojiMobile('ðŸŽ²')">ðŸŽ²</span>
-<span onclick="aggiungiEmojiMobile('ðŸ†')">ðŸ†</span>
-<span onclick="aggiungiEmojiMobile('ðŸŽ‰')">ðŸŽ‰</span>
+<span onclick="aggiungiEmojiMobile('😀')">😀</span>
+<span onclick="aggiungiEmojiMobile('😂')">😂</span>
+<span onclick="aggiungiEmojiMobile('😊')">😊</span>
+<span onclick="aggiungiEmojiMobile('😉')">😉</span>
+<span onclick="aggiungiEmojiMobile('😎')">😎</span>
+<span onclick="aggiungiEmojiMobile('😍')">😍</span>
+<span onclick="aggiungiEmojiMobile('😢')">😢</span>
+<span onclick="aggiungiEmojiMobile('😡')">😡</span>
+<span onclick="aggiungiEmojiMobile('👍')">👍</span>
+<span onclick="aggiungiEmojiMobile('❤️')">❤️</span>
+<span onclick="aggiungiEmojiMobile('🔥')">🔥</span>
+<span onclick="aggiungiEmojiMobile('🎲')">🎲</span>
+<span onclick="aggiungiEmojiMobile('🏆')">🏆</span>
+<span onclick="aggiungiEmojiMobile('🎉')">🎉</span>
 </div>
 <div class="chat-mobile-input" style="
 display:flex;
@@ -2732,7 +2732,7 @@ width:45px;
 margin:0;
 padding:0;
 ">
-ðŸ˜Š
+😊
 </button>
 <input id="messaggioMobile"
 maxlength="300"
@@ -2800,7 +2800,7 @@ border-radius:10px;
 margin-top:20px;
 ">
 <div>
-ðŸŒ— Tema
+🌗 Tema
 <br>
 <span style="font-size:13px;color:#777;">
 Chiaro / Scuro
@@ -2813,10 +2813,10 @@ width:120px;
 margin:0;
 ">
 <option value="chiaro">
-â˜€ï¸ Chiaro
+☀️ Chiaro
 </option>
 <option value="scuro">
-ðŸŒ™ Scuro
+🌙 Scuro
 </option>
 </select>
 </div>
@@ -3004,13 +3004,13 @@ async function creaPartita() {
 async function eliminaPartita() {
   const confermato = await chiediConfermaLobby({
     titolo: "Eliminare la partita?",
-    messaggio: "La partita creata verrÃ  eliminata e non sarÃ  piÃ¹ disponibile per gli altri giocatori.",
+    messaggio: "La partita creata verrà eliminata e non sarà più disponibile per gli altri giocatori.",
     testoConferma: "Elimina partita"
   });
   if (!confermato) return;
   inviaMessaggioSocket({ tipo: "eliminaPartita" });
 }
-// NUOVO: il creatore (o un giocatore giÃ  dentro) lascia un tavolo non ancora
+// NUOVO: il creatore (o un giocatore già dentro) lascia un tavolo non ancora
 // avviato senza distruggerlo per gli altri
 async function alzatiDaPartita(id) {
   const confermato = await chiediConfermaLobby({
@@ -3031,33 +3031,33 @@ function mostraPartite(lista) {
     const creatorePulito = pulisciTestoHtml(partita.creatore || "Giocatore");
     const tempoPulito = pulisciTestoHtml(partita.tempo);
     const testoModalitaSfida = partita.classificata === false
-      ? "ðŸŽ² Divertimento Â· ELO invariato"
-      : "ðŸ† Classifica Â· ELO attivo";
+      ? "🎲 Divertimento · ELO invariato"
+      : "🏆 Classifica · ELO attivo";
     let azioniHtml;
 
     if (partita.iniziata) {
-      // Partita giÃ  avviata: chi ne fa parte puÃ² rientrare, gli altri la vedono solo "in corso"
+      // Partita già avviata: chi ne fa parte può rientrare, gli altri la vedono solo "in corso"
       if (cePartecipo) {
         azioniHtml = `<button class="btn-riprendi-scheda" onclick="riprendiPartita('${partita.id}', ${partita.mediaAttiva === true})">Riprendi</button>`;
       } else {
-        azioniHtml = `<button disabled>ðŸŽ² In corso</button>`;
+        azioniHtml = `<button disabled>🎲 In corso</button>`;
       }
     } else if (eMia) {
       // Sei il creatore, partita ancora in attesa di giocatori
       let invito = "";
-      if (partita.modalita === "privata" && !piena) invito = `<button onclick="apriModalInvito('${partita.id}')">âž• Invita</button>`;
+      if (partita.modalita === "privata" && !piena) invito = `<button onclick="apriModalInvito('${partita.id}')">➕ Invita</button>`;
       if (partita.numGiocatoriAttuali <= 1) {
-        // Nessuno si Ã¨ ancora unito: puoi eliminare senza disturbare nessuno
+        // Nessuno si è ancora unito: puoi eliminare senza disturbare nessuno
         azioniHtml = invito + `<button class="btn-elimina-scheda" onclick="eliminaPartita()">Elimina</button>`;
       } else {
-        // Qualcuno Ã¨ giÃ  dentro: non Ã¨ giusto cancellare tutto, solo alzarsi
+        // Qualcuno è già dentro: non è giusto cancellare tutto, solo alzarsi
         azioniHtml = invito + `<button class="btn-alzati-scheda" onclick="alzatiDaPartita('${partita.id}')">Alzati</button>`;
       }
     } else if (cePartecipo) {
       // Ti sei unito ma non sei il creatore, partita non ancora avviata
       azioniHtml = `<button class="btn-alzati-scheda" onclick="alzatiDaPartita('${partita.id}')">Alzati</button>`;
     } else if (partita.modalita === "privata") {
-      azioniHtml = `<button disabled>ðŸ”’ Solo su invito</button>`;
+      azioniHtml = `<button disabled>🔒 Solo su invito</button>`;
     } else {
       azioniHtml = `<button onclick="entraPartita('${partita.id}', ${partita.mediaAttiva === true})" ${piena ? 'disabled' : ''}>${piena ? 'Piena' : 'Entra'}</button>`;
     }
@@ -3065,16 +3065,16 @@ function mostraPartite(lista) {
     html += `
       <div class="scheda-partita">
       <div class="info-partita">
-        ðŸŽ² ${creatorePulito}<br>
-        ${partita.modalita === "privata" ? "ðŸ”’ Privata" : "ðŸ”“ Pubblica"}<br>
+        🎲 ${creatorePulito}<br>
+        ${partita.modalita === "privata" ? "🔒 Privata" : "🔓 Pubblica"}<br>
         ${partita.mediaAttiva === true
           ? (rilevaTipoDispositivoClient() === "cellulare"
-              ? "ðŸŽ™ï¸ Chiamata attiva Â· solo audio su cellulare"
-              : "ðŸŽ¥ Webcam e microfono attivi")
-          : "ðŸ”‡ Chiamata disattiva"}<br>
+              ? "🎙️ Chiamata attiva · solo audio su cellulare"
+              : "🎥 Webcam e microfono attivi")
+          : "🔇 Chiamata disattiva"}<br>
         ${testoModalitaSfida}<br>
-        â± ${tempoPulito} secondi
-        <div style="margin-top:8px;">ðŸ‘¥ ${partita.numGiocatoriAttuali} su ${partita.maxGiocatori}</div>
+        ⏱ ${tempoPulito} secondi
+        <div style="margin-top:8px;">👥 ${partita.numGiocatoriAttuali} su ${partita.maxGiocatori}</div>
       </div>
       <div class="giocatori-mini">${creaGiocatoriPartita(partita)}</div>
       <div class="azioni-scheda">${azioniHtml}</div>
@@ -3241,8 +3241,8 @@ function creaRigaGiocatore(g) {
   };">
     ${
       g.stato === "partita"
-      ? "ðŸŽ² In partita"
-      : "ðŸŸ¢ In lobby"
+      ? "🎲 In partita"
+      : "🟢 In lobby"
     }
   </div>
 </div>
@@ -3266,8 +3266,8 @@ async function caricaTopGiocatori() {
 
         const medaglia =
           index === 0
-            ? "ðŸ¥‡"
-            : "ðŸ¥ˆ";
+            ? "🥇"
+            : "🥈";
 
         return `
           <div class="top-player">
@@ -3282,10 +3282,10 @@ async function caricaTopGiocatori() {
             </b>
 
             <br>
-            ðŸŽ¯ Vittorie: ${g.vinte}
+            🎯 Vittorie: ${g.vinte}
 
             <br>
-            ðŸŽ® Partite: ${g.giocate}
+            🎮 Partite: ${g.giocate}
           </div>
 
           <br>
@@ -3346,7 +3346,7 @@ function iconaPlayerCard(tipo) {
 
 function formattaDurataPlayerCard(secondi) {
   const totale = Number(secondi);
-  if (!Number.isFinite(totale) || totale < 0) return "â€”";
+  if (!Number.isFinite(totale) || totale < 0) return "—";
   const minuti = Math.floor(totale / 60);
   const sec = Math.round(totale % 60);
   if (minuti <= 0) return `${sec}s`;
@@ -3517,7 +3517,7 @@ function creaGiocatoriPartita(partita){
     return `
       <div class="mini-giocatore ${cliccabile ? "player-card-trigger" : ""}" ${attributi}>
         ${avatar}
-        <span>${nomePulito}</span><span class="stato-partita-online" aria-label="Online">â—</span>
+        <span>${nomePulito}</span><span class="stato-partita-online" aria-label="Online">●</span>
       </div>`;
   }).join("");
 }
@@ -3597,7 +3597,7 @@ function disegnaPlayerCardGiocatore(dati) {
     </div>
     <div class="player-card-azioni">
       <a class="player-card-azione" href="profilo-pubblico.html?nickname=${encodeURIComponent(dati.nickname)}">${iconaPlayerCard("profilo")}<span>Profilo</span></a>
-      <button class="player-card-azione segnala" type="button" onclick="apriSegnalazioneGiocatore(\'${dati.uid}\', \'${nicknamePulito.replace(/\'/g, "\\\'")}\')"><span aria-hidden="true">âš‘</span><span>Segnala</span></button>
+      <button class="player-card-azione segnala" type="button" onclick="apriSegnalazioneGiocatore(\'${dati.uid}\', \'${nicknamePulito.replace(/\'/g, "\\\'")}\')"><span aria-hidden="true">⚑</span><span>Segnala</span></button>
       ${amiciziaHtml}
       ${dati.statoBlocco === "bloccato_da_me"
         ? `<button class="player-card-azione bloccato" type="button" onclick="sbloccaGiocatore('${dati.uid}')">${iconaPlayerCard("sblocca")}<span>Sblocca</span></button>`
@@ -3716,7 +3716,7 @@ async function bloccaGiocatore(utenteUid, nickname) {
   if (!utenteUid || utenteUid === mioUid) return;
   const confermato = await chiediConfermaLobby({
     titolo: "Bloccare " + (nickname || "questo giocatore") + "?",
-    messaggio: "Non potrete inviarvi messaggi, vedere i messaggi reciproci nelle chat, invitarvi o entrare nella stessa partita. L'eventuale amicizia verrÃ  rimossa.",
+    messaggio: "Non potrete inviarvi messaggi, vedere i messaggi reciproci nelle chat, invitarvi o entrare nella stessa partita. L'eventuale amicizia verrà rimossa.",
     testoConferma: "Blocca giocatore"
   });
   if (!confermato) return;
@@ -3743,7 +3743,7 @@ async function sbloccaGiocatore(utenteUid) {
   if (!utenteUid || utenteUid === mioUid) return;
   const confermato = await chiediConfermaLobby({
     titolo: "Sbloccare questo giocatore?",
-    messaggio: "Rimuoverai il blocco che hai impostato. L'amicizia non verrÃ  ripristinata automaticamente.",
+    messaggio: "Rimuoverai il blocco che hai impostato. L'amicizia non verrà ripristinata automaticamente.",
     testoConferma: "Sblocca"
   });
   if (!confermato) return;
@@ -3805,7 +3805,7 @@ async function rifiutaAmicizia(daUid) {
 async function rimuoviAmico(altroUid) {
   const confermato = await chiediConfermaLobby({
     titolo: "Rimuovere dagli amici?",
-    messaggio: "La persona verrÃ  rimossa dalla tua lista amici.",
+    messaggio: "La persona verrà rimossa dalla tua lista amici.",
     testoConferma: "Rimuovi"
   });
   if (!confermato) return;
@@ -3860,7 +3860,7 @@ function segnaInvitatoNelModal(destinatarioUid) {
   const riga = document.getElementById("rigaInvito-" + destinatarioUid);
   if (riga) {
     riga.classList.add("modal-invito-riga-invitato");
-    riga.innerHTML += ' <span class="modal-invito-check">âœ“ Invitato</span>';
+    riga.innerHTML += ' <span class="modal-invito-check">✓ Invitato</span>';
     riga.onclick = null;
   }
 }
@@ -3869,12 +3869,12 @@ function mostraInvitoRicevuto(dati) {
   invitoAttivoMedia = dati.mediaAttiva === true;
   const testoMediaInvito = invitoAttivoMedia
     ? (rilevaTipoDispositivoClient() === "cellulare"
-        ? "ðŸŽ™ï¸ In questo tavolo la chiamata Ã¨ attiva. Da cellulare parteciperai solo con il microfono."
-        : "ðŸŽ¥ In questo tavolo webcam e microfono sono attivi.")
-    : "ðŸ”‡ Webcam e microfono sono disattivi.";
+        ? "🎙️ In questo tavolo la chiamata è attiva. Da cellulare parteciperai solo con il microfono."
+        : "🎥 In questo tavolo webcam e microfono sono attivi.")
+    : "🔇 Webcam e microfono sono disattivi.";
 
   document.getElementById("testoInvitoRicevuto").textContent =
-    "ðŸŽ² " + dati.daNome + " ti ha invitato a giocare! " + testoMediaInvito;
+    "🎲 " + dati.daNome + " ti ha invitato a giocare! " + testoMediaInvito;
   document.getElementById("cardInvitoRicevuto").classList.remove("nascosto");
 }
 async function rispondiInvito(accettato) {
@@ -3903,7 +3903,7 @@ function apriSegnalazioneGiocatore(uid, nickname) {
   categoriaSegnalazione = "";
   const overlay = document.getElementById("overlaySegnalazione");
   document.getElementById("sottotitoloSegnalazione").textContent =
-    "Stai segnalando " + segnalazioneTarget.nickname + ". La segnalazione verrÃ  inviata allo staff.";
+    "Stai segnalando " + segnalazioneTarget.nickname + ". La segnalazione verrà inviata allo staff.";
   document.getElementById("segnalazioneNote").value = "";
   document.querySelectorAll(".segnalazione-opzione").forEach(b => b.classList.remove("selezionata"));
   document.getElementById("inviaSegnalazione").disabled = true;
@@ -3955,7 +3955,7 @@ function inizializzaSegnalazioniLobby() {
     if (!segnalazioneTarget || !categoriaSegnalazione) return;
 
     invia.disabled = true;
-    invia.textContent = "Invioâ€¦";
+    invia.textContent = "Invio…";
 
     try {
       const risposta = await fetchAutenticato(
@@ -3980,7 +3980,7 @@ function inizializzaSegnalazioniLobby() {
       if (!risposta.ok) {
         mostraNotifica(
           dati.errore ||
-          "Non Ã¨ stato possibile inviare la segnalazione."
+          "Non è stato possibile inviare la segnalazione."
         );
         return;
       }
@@ -4099,7 +4099,7 @@ if (document.readyState === "loading") {
         class="chiudi-mobile"
         onclick="chiudiMobile()"
     >
-        âœ•
+        ✕
     </button>
     <div id="contenutoMobile"></div>
 </div>
@@ -4108,7 +4108,7 @@ if (document.readyState === "loading") {
   <div class="segnalazione-box" role="dialog" aria-modal="true" aria-labelledby="titoloSegnalazione">
     <div class="segnalazione-header">
       <h3 id="titoloSegnalazione">Segnala giocatore</h3>
-      <p id="sottotitoloSegnalazione">La segnalazione verrà  inviata allo staff.</p>
+      <p id="sottotitoloSegnalazione">La segnalazione verrà inviata allo staff.</p>
     </div>
     <div class="segnalazione-corpo">
       <div class="segnalazione-domanda">Cosa vuoi segnalare?</div>
