@@ -162,7 +162,14 @@ if (db) {
 
 function preparaGiocatoriPerFirebase(giocatori) {
   const risultato = {};
-  for (const uid in giocatori) risultato[uid] = { nome: giocatori[uid].nome, posizione: giocatori[uid].posizione, turniSaltati: giocatori[uid].turniSaltati };
+  for (const uid in giocatori) {
+    risultato[uid] = {
+      nome: giocatori[uid].nome,
+      posizione: giocatori[uid].posizione,
+      turniSaltati: giocatori[uid].turniSaltati,
+      tiriRealiEffettuati: numeroTiriRealiEffettuati(giocatori[uid])
+    };
+  }
   return risultato;
 }
 
@@ -4709,7 +4716,7 @@ app.post("/api/admin/riattiva", richiediAdmin, async (req, res) => {
   res.json({ ok: true });
 });
 
-// ===== DADI: SOLO RANDOM.ORG =====
+// ===== DADI: PRIMO TIRO REALE LOCALE, POI RANDOM.ORG =====
 const randomOrgAgent = new https.Agent({
   keepAlive: true,
   keepAliveMsecs: 30000,
@@ -4793,10 +4800,9 @@ function tiraDadoRandomOrg(timeoutMs = 2500) {
   });
 }
 
-// RANDOM.ORG è l'unica fonte dei risultati.
-// Se per un problema di rete non risponde, NON viene generato nessun numero
-// locale: si ritenta RANDOM.ORG e, se continua a non rispondere, il tiro fallisce
-// e il giocatore può riprovare senza che venga alterata la posizione.
+// Dal secondo tiro reale del giocatore, RANDOM.ORG resta l'unica fonte.
+// Se per un problema di rete non risponde, il tiro fallisce e il giocatore può
+// riprovare senza che venga alterata la posizione.
 async function lanciaDueDadiSicuri() {
   const NUMERO_TENTATIVI = 3;
 
@@ -4823,6 +4829,39 @@ async function lanciaDueDadiSicuri() {
   throw new Error(
     "RANDOM.ORG non raggiungibile: nessun risultato dei dadi è stato generato."
   );
+}
+
+// Le 32 coppie ordinate possibili con due dadi, escluso il totale 9.
+// La scelta di una coppia intera mantiene la stessa probabilità per ogni coppia
+// consentita ed evita qualsiasi ciclo di rigenerazione.
+const COPPIE_PRIMO_TIRO_SENZA_NOVE = [];
+for (let dado1 = 1; dado1 <= 6; dado1++) {
+  for (let dado2 = 1; dado2 <= 6; dado2++) {
+    if (dado1 + dado2 !== 9) COPPIE_PRIMO_TIRO_SENZA_NOVE.push([dado1, dado2]);
+  }
+}
+
+function lanciaDueDadiPrimoTiroLocale() {
+  const indice = Math.floor(Math.random() * COPPIE_PRIMO_TIRO_SENZA_NOVE.length);
+  const [dado1, dado2] = COPPIE_PRIMO_TIRO_SENZA_NOVE[indice];
+  return { dado1, dado2 };
+}
+
+function numeroTiriRealiEffettuati(giocatore) {
+  const valoreSalvato = Number(giocatore && giocatore.tiriRealiEffettuati);
+  if (Number.isInteger(valoreSalvato) && valoreSalvato >= 0) return valoreSalvato;
+
+  // Compatibilità con partite già salvate prima dell'introduzione del contatore:
+  // una pedina oltre la partenza ha certamente già effettuato almeno un tiro.
+  const posizione = Number(giocatore && giocatore.posizione);
+  return Number.isFinite(posizione) && posizione > 0 ? 1 : 0;
+}
+
+async function lanciaDueDadiPerGiocatore(giocatore) {
+  if (numeroTiriRealiEffettuati(giocatore) === 0) {
+    return lanciaDueDadiPrimoTiroLocale();
+  }
+  return lanciaDueDadiSicuri();
 }
 
 // ===== LOGICA DI GIOCO =====
@@ -5392,9 +5431,11 @@ async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, auto
   fermaTimerTurno(partita);
 
   try {
-    const { dado1, dado2 } = await lanciaDueDadiSicuri();
+    const tiriRealiPrimaDelTiro = numeroTiriRealiEffettuati(giocatore);
+    const { dado1, dado2 } = await lanciaDueDadiPerGiocatore(giocatore);
     const valoreDado = dado1 + dado2;
     const risultato = calcolaMovimento(giocatore.posizione, valoreDado);
+    giocatore.tiriRealiEffettuati = tiriRealiPrimaDelTiro + 1;
 
     if (risultato.tiraAncora) partita.tiriConsentitiNelTurno = partita.tiriEffettuatiNelTurno + 1;
 
@@ -5497,9 +5538,9 @@ async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, auto
     }, durataAnimazioneMossaMs(risultato.percorso));
 
   } catch (erroreTiro) {
-    // FIX (turni): se anche il ripiego locale fallisse per qualche motivo
-    // imprevisto, non lasciamo il turno bloccato — restituiamo il tiro appena
-    // consumato e riavviamo subito il timer per lo stesso giocatore.
+    // Se la generazione o l'elaborazione del tiro fallisce, non lasciamo il
+    // turno bloccato: restituiamo il tiro e riavviamo il timer dello stesso
+    // giocatore.
     console.error("Errore durante il tiro dei dadi:", erroreTiro);
     partita.tiriEffettuatiNelTurno = Math.max(0, tiriEffettuati);
     partita.animazioneTiroInCorso = false;
@@ -6223,7 +6264,7 @@ inviaAllaStanza(stanzaAttuale, {
           chatAttiva: dati.chatAttiva !== false,
           mediaAttiva,
           fase: "attesa_giocatori",
-          giocatori: { [uid]: { nome: nickname, avatar: mioAvatar, posizione: 0, socket, tipoDispositivo, turniSaltati: 0, tentativiAutomaticiConsecutivi: 0 } },
+          giocatori: { [uid]: { nome: nickname, avatar: mioAvatar, posizione: 0, socket, tipoDispositivo, turniSaltati: 0, tentativiAutomaticiConsecutivi: 0, tiriRealiEffettuati: 0 } },
           ordineGiocatori: [uid], turnoAttuale: 0, iniziata: false, elaborandoTiro: false, animazioneTiroInCorso: false,
           tiriEffettuatiNelTurno: 0, tiriConsentitiNelTurno: 1,
           invitati: dati.modalita === "privata" ? { [uid]: true } : null, timerTurno: null, tempoInizioTurno: null,
@@ -6272,7 +6313,7 @@ inviaAllaStanza(stanzaAttuale, {
           socket.send(JSON.stringify({ tipo: "errore", messaggio: `Per entrare in questo tavolo devi autorizzare ${requisitoMedia}.` }));
           return;
         }
-        partita.giocatori[uid] = { nome: nickname, avatar: mioAvatar, posizione: 0, socket, tipoDispositivo, turniSaltati: 0, tentativiAutomaticiConsecutivi: 0 };
+        partita.giocatori[uid] = { nome: nickname, avatar: mioAvatar, posizione: 0, socket, tipoDispositivo, turniSaltati: 0, tentativiAutomaticiConsecutivi: 0, tiriRealiEffettuati: 0 };
         partita.ordineGiocatori.push(uid);
 
         // Aggiornamento visivo immediato; se Firebase fallisce facciamo rollback.
@@ -6363,7 +6404,7 @@ inviaAllaStanza(stanzaAttuale, {
         }
         if (Object.keys(partita.giocatori).length >= partita.maxGiocatori) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "La partita si è già riempita." })); return; }
         stanzaAttuale = nomeStanza;
-        partita.giocatori[uid] = { nome: nickname, avatar: mioAvatar, posizione: 0, socket, tipoDispositivo, turniSaltati: 0, tentativiAutomaticiConsecutivi: 0 };
+        partita.giocatori[uid] = { nome: nickname, avatar: mioAvatar, posizione: 0, socket, tipoDispositivo, turniSaltati: 0, tentativiAutomaticiConsecutivi: 0, tiriRealiEffettuati: 0 };
         partita.ordineGiocatori.push(uid);
 
         inviaListaPartite(nomeStanza);
