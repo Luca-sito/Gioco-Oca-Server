@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>Forza 4</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <main class="pagina">
+
+    <!-- SCHERMATA: LOBBY -->
+    <section id="schermata-lobby" class="schermata schermata--attiva">
+      <h1 class="logo-forza4">
+        <span class="logo-forza4__gettone logo-forza4__gettone--rosso"></span>
+        <span class="logo-forza4__gettone logo-forza4__gettone--giallo"></span>
+        <span class="logo-forza4__gettone logo-forza4__gettone--rosso"></span>
+        <span class="logo-forza4__gettone logo-forza4__gettone--giallo"></span>
+        Forza 4
+      </h1>
+
+      <div class="pannello">
+        <button id="btn-crea-stanza" class="bottone bottone--primario" type="button">
+          Crea una stanza
+        </button>
+
+        <div class="separatore"><span>oppure</span></div>
+
+        <form id="form-entra-stanza" class="riga-unisciti">
+          <input
+            id="input-codice"
+            class="campo-codice"
+            type="text"
+            inputmode="text"
+            autocomplete="off"
+            autocapitalize="characters"
+            maxlength="5"
+            placeholder="CODICE STANZA"
+            aria-label="Codice stanza"
+          />
+          <button class="bottone bottone--secondario" type="submit">Unisciti</button>
+        </form>
+      </div>
+
+      <p id="messaggio-errore" class="messaggio-errore" role="alert" aria-live="assertive"></p>
+    </section>
+
+    <!-- SCHERMATA: ATTESA AVVERSARIO -->
+    <section id="schermata-attesa" class="schermata">
+      <div class="pannello pannello--attesa">
+        <p class="etichetta-codice">Codice della stanza</p>
+        <p id="codice-stanza-mostrato" class="codice-grande">------</p>
+        <p class="testo-attesa">
+          <span class="pallino-pulsante"></span>
+          In attesa che un avversario si unisca...
+        </p>
+        <p class="testo-attesa-dettaglio">Condividi il codice per far entrare qualcuno nella partita.</p>
+        <button id="btn-annulla-attesa" class="bottone bottone--testo" type="button">Annulla</button>
+      </div>
+    </section>
+
+    <!-- SCHERMATA: PARTITA -->
+    <section id="schermata-gioco" class="schermata">
+
+      <div class="intestazione-partita">
+        <div id="indicatore-turno" class="indicatore-turno">
+          <span id="pallino-turno" class="pallino-turno"></span>
+          <span id="testo-turno">In attesa...</span>
+        </div>
+        <div id="badge-connessione" class="badge-connessione badge-connessione--nascosto">
+          L'avversario si è disconnesso
+        </div>
+      </div>
+
+      <div class="area-tabellone">
+        <div id="fila-anteprima" class="fila-anteprima"></div>
+        <div id="tabellone" class="tabellone" aria-label="Tabellone di Forza 4"></div>
+        <div class="supporto-tabellone" aria-hidden="true">
+          <div class="gamba-supporto gamba-supporto--sinistra"></div>
+          <div class="gamba-supporto gamba-supporto--destra"></div>
+        </div>
+      </div>
+
+      <div id="overlay-fine-partita" class="overlay-fine-partita">
+        <div class="riquadro-fine-partita">
+          <p id="testo-fine-partita" class="testo-fine-partita">Hai vinto!</p>
+          <button id="btn-nuova-partita" class="bottone bottone--primario" type="button">Nuova partita</button>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <script src="game.js"></script>
+</body>
+</html>
