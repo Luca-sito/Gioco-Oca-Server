@@ -49,8 +49,9 @@ let timerRecuperoTurno = null;
 let paginaInChiusura = false;
 let versioneAnimazioneStato = 0;
 let animazioneMossaInCorso = false;
-let statoPartitaAccodato = null;
+const eventiPartitaAccodati = [];
 const animazioniPedineAttive = new Map();
+const posizioniVisivePedine = new Map();
 let chatPartitaAttiva = true;
 
 let faseAttuale = "normale";
@@ -378,24 +379,70 @@ function inizializzaGestioneLayout() {
   }
 }
 function riposizionaTuttePedine() {
-  ultimoStatoGiocatori.forEach(g => {
-    const p = document.getElementById("pedina-" + g.id);
-    if (p && !animazioniPedineAttive.has(g.id)) posizionaPedina(p, g.posizione);
-  });
+  sincronizzaPosizioniVisivePedine();
+  applicaLayoutPedine();
 }
 
 // ===== MESSAGGIO A TUTTO SCHERMO =====
 let timerFlashMessaggio = null;
-function mostraMessaggioGiocoGrande(testo) {
+function mostraMessaggioGiocoGrande(testo, opzioni = {}) {
   if (!testo) return;
   const el = document.getElementById("flash-messaggio-gioco");
   if (!el) return;
-  el.querySelector("span").textContent = testo;
+  const titolo = el.querySelector("#flash-titolo-gioco") || el.querySelector("span");
+  const dettaglio = el.querySelector("#flash-dettaglio-gioco");
+  const icona = el.querySelector("#flash-icona-gioco");
+  const durataRichiesta = Number(opzioni.durataMs);
+  const durataMs = Number.isFinite(durataRichiesta) && durataRichiesta > 0
+    ? Math.min(durataRichiesta, 5000)
+    : 2500;
+  const testoDettaglio = typeof opzioni.dettaglio === "string" ? opzioni.dettaglio.trim() : "";
+  const testoIcona = typeof opzioni.icona === "string" ? opzioni.icona.trim() : "";
+
+  if (titolo) titolo.textContent = testo;
+  if (dettaglio) {
+    dettaglio.textContent = testoDettaglio;
+    dettaglio.hidden = !testoDettaglio;
+  }
+  if (icona) {
+    icona.textContent = testoIcona;
+    icona.hidden = !testoIcona;
+  }
+  el.classList.toggle("effetto-speciale", opzioni.speciale === true);
+  el.style.setProperty("--durata-flash-gioco", durataMs + "ms");
   el.classList.remove("visibile");
   void el.offsetWidth;
   el.classList.add("visibile");
   if (timerFlashMessaggio) clearTimeout(timerFlashMessaggio);
-  timerFlashMessaggio = setTimeout(() => el.classList.remove("visibile"), 2500);
+  timerFlashMessaggio = setTimeout(() => el.classList.remove("visibile"), durataMs);
+}
+
+function mostraEffettoCasellaSpeciale(effetto) {
+  if (!effetto || !Number.isFinite(Number(effetto.casella))) return;
+  const contenitore = document.getElementById("contenitore-pedine");
+  const coordinate = coordinatePerCasella(Number(effetto.casella));
+  if (!contenitore || !coordinate) return;
+
+  const durataRichiesta = Number(effetto.durataMs);
+  const durataMs = Number.isFinite(durataRichiesta) && durataRichiesta > 0
+    ? Math.min(durataRichiesta, 3000)
+    : 900;
+  const indicatore = document.createElement("div");
+  indicatore.className = "effetto-casella-speciale";
+  indicatore.style.left = coordinate.left + "px";
+  indicatore.style.top = coordinate.top + "px";
+  indicatore.style.setProperty("--durata-effetto-casella", durataMs + "ms");
+  indicatore.dataset.tipo = typeof effetto.tipo === "string" ? effetto.tipo : "speciale";
+  indicatore.setAttribute("aria-hidden", "true");
+  contenitore.appendChild(indicatore);
+
+  mostraMessaggioGiocoGrande(effetto.titolo || "Casella speciale!", {
+    dettaglio: effetto.testo || "La casella ha attivato un effetto.",
+    icona: effetto.icona || "✨",
+    durataMs,
+    speciale: true
+  });
+  setTimeout(() => indicatore.remove(), durataMs);
 }
 
 // ===== "CHI INIZIA?" — turni veri, uno alla volta =====
@@ -941,7 +988,7 @@ function gestisciDeterminazioneCompletata(dati) {
     ? "🎲 Ordine deciso: inizia " + primoMovimento.nomeGiocatore + "!"
     : "🎲 Ordine deciso: la partita inizia!";
 
-  animaSaltoPedina(primoMovimento.idGiocatore, primoMovimento.percorso, () => {
+  animaSaltoPedina(primoMovimento.idGiocatore, primoMovimento.percorso, [], () => {
     if (primoMovimento.messaggi && primoMovimento.messaggi.length) mostraMessaggioGiocoGrande(primoMovimento.messaggi.join(" "));
     if (dati.tempoInizioTurno != null && dati.durataMossaMs != null) avviaCountdownTurno(dati.tempoInizioTurno, dati.durataMossaMs, dati.tempoResiduoMs);
 
@@ -1129,6 +1176,8 @@ function rilevaTipoDispositivoMediaLocale() {
 const tipoDispositivoMediaLocale = rilevaTipoDispositivoMediaLocale();
 const clientCellulareAudioOnly = tipoDispositivoMediaLocale === "cellulare";
 document.body.classList.toggle("client-cellulare-audio-only", clientCellulareAudioOnly);
+document.body.classList.toggle("client-tablet", tipoDispositivoMediaLocale === "tablet");
+document.body.classList.toggle("client-computer", tipoDispositivoMediaLocale === "computer");
 
 let mediaPartitaAttiva = false;
 let flussoMediaLocale = null;
@@ -2043,6 +2092,64 @@ function animaLancioDadi(vf1, vf2, callback) {
   }, 1080);
 }
 
+function calcolaSlotPedina(indice, totale, passoX, passoY) {
+  const quantita = Math.max(1, Math.min(8, Number.isInteger(Number(totale)) ? Number(totale) : 1));
+  const posizione = Math.max(0, Math.min(quantita - 1, Number.isInteger(Number(indice)) ? Number(indice) : 0));
+  const distanzaX = Number.isFinite(Number(passoX)) ? Number(passoX) : 40;
+  const distanzaY = Number.isFinite(Number(passoY)) ? Number(passoY) : 52;
+  const colonne = quantita === 1 ? 1 : (quantita <= 4 ? 2 : (quantita <= 6 ? 3 : 4));
+  const righe = Math.ceil(quantita / colonne);
+  const riga = Math.floor(posizione / colonne);
+  const elementiNellaRiga = Math.min(colonne, quantita - (riga * colonne));
+  const colonna = posizione - (riga * colonne);
+  const scala = quantita <= 2 ? 1 : (quantita <= 4 ? 0.86 : (quantita <= 6 ? 0.72 : 0.62));
+  const larghezzaNickname = quantita === 1
+    ? 68
+    : Math.max(24, Math.min(64, distanzaX - 4));
+
+  return {
+    offsetX: (colonna - ((elementiNellaRiga - 1) / 2)) * distanzaX,
+    offsetY: (riga - ((righe - 1) / 2)) * distanzaY,
+    scala,
+    larghezzaNickname
+  };
+}
+
+function calcolaLayoutPedine(giocatoriVisivi, passoX, passoY) {
+  const giocatori = (Array.isArray(giocatoriVisivi) ? giocatoriVisivi : [])
+    .filter(giocatore => giocatore && giocatore.id != null && Number.isFinite(Number(giocatore.posizione)))
+    .map(giocatore => ({ id: String(giocatore.id), posizione: Number(giocatore.posizione) }));
+  const gruppi = new Map();
+
+  giocatori.forEach(giocatore => {
+    if (!gruppi.has(giocatore.posizione)) gruppi.set(giocatore.posizione, []);
+    gruppi.get(giocatore.posizione).push(giocatore.id);
+  });
+
+  return giocatori.map(giocatore => {
+    const gruppo = gruppi.get(giocatore.posizione) || [giocatore.id];
+    const slot = calcolaSlotPedina(gruppo.indexOf(giocatore.id), gruppo.length, passoX, passoY);
+    return {
+      id: giocatore.id,
+      casella: giocatore.posizione,
+      offsetX: slot.offsetX,
+      offsetY: slot.offsetY,
+      scala: slot.scala,
+      larghezzaNickname: slot.larghezzaNickname
+    };
+  });
+}
+
+function creaSequenzaAnimazionePedina(percorso, effettiCasella) {
+  const passi = Array.isArray(percorso) ? percorso : [];
+  const effetti = Array.isArray(effettiCasella) ? effettiCasella : [];
+  return passi.map((casella, indicePercorso) => ({
+    casella,
+    indicePercorso,
+    effetti: effetti.filter(effetto => Number(effetto && effetto.percorsoIndex) === indicePercorso)
+  }));
+}
+
 function schiarisciColore(hex, p) { return mescolaColore(hex, 255, p); }
 function scuriscColore(hex, p) { return mescolaColore(hex, 0, p); }
 function mescolaColore(hex, target, p) {
@@ -2063,13 +2170,105 @@ function coordinatePerCasella(casellaNumero) {
   if (!casella) return null;
   return { left: casella.x * scaleX, top: casella.y * scaleY };
 }
-function posizionaPedina(pedina, casellaNumero) {
+
+function metricheSpaziaturaPedine() {
+  const cellulare = document.body.classList.contains("client-cellulare-audio-only");
+  const tablet = document.body.classList.contains("client-tablet");
+  const ruotato = document.body.classList.contains("modalita-ruotata");
+  const ridotta = cellulare && ruotato && window.matchMedia("(max-width: 600px)").matches;
+  const larghezza = cellulare ? 26 : (tablet ? 34 : 40);
+  const altezza = cellulare ? 38 : (tablet ? 50 : 58);
+  const passoX = ruotato ? (ridotta ? 40 : larghezza + 26) : (cellulare || tablet ? 48 : 56);
+  const passoY = ruotato ? 56 : altezza + 24;
+  return { passoX, passoY, larghezza, altezza, ruotato, scalaBase: ridotta ? 0.58 : 1, centrata: ridotta };
+}
+
+function sincronizzaPosizioniVisivePedine() {
+  const giocatori = Array.isArray(ultimoStatoGiocatori) ? ultimoStatoGiocatori : [];
+  const idPresenti = new Set(giocatori.map(giocatore => giocatore && giocatore.id).filter(id => id != null));
+  Array.from(posizioniVisivePedine.keys()).forEach(id => {
+    if (!idPresenti.has(id)) posizioniVisivePedine.delete(id);
+  });
+  giocatori.forEach(giocatore => {
+    if (!giocatore || giocatore.id == null || !Number.isFinite(Number(giocatore.posizione))) return;
+    if (!posizioniVisivePedine.has(giocatore.id) || !animazioniPedineAttive.has(giocatore.id)) {
+      posizioniVisivePedine.set(giocatore.id, Number(giocatore.posizione));
+    }
+  });
+}
+
+function applicaLayoutPedine() {
+  const giocatori = (Array.isArray(ultimoStatoGiocatori) ? ultimoStatoGiocatori : []).map(giocatore => ({
+    id: giocatore.id,
+    posizione: posizioniVisivePedine.has(giocatore.id)
+      ? posizioniVisivePedine.get(giocatore.id)
+      : Number(giocatore.posizione)
+  }));
+  const metriche = metricheSpaziaturaPedine();
+  const layout = calcolaLayoutPedine(giocatori, metriche.passoX, metriche.passoY);
+  const immagine = document.getElementById("immagine-tabellone");
+  if (!immagine) return;
+  const gruppi = new Map();
+  const voci = layout.map(voce => {
+    const coordinate = coordinatePerCasella(voce.casella);
+    if (!coordinate) return null;
+    const larghezzaNome = metriche.ruotato ? Math.min(68, metriche.passoY - 4) : voce.larghezzaNickname;
+    const x = coordinate.left + voce.offsetX;
+    const y = coordinate.top + voce.offsetY;
+    const metaCorpo = metriche.larghezza * metriche.scalaBase * voce.scala / 2;
+    const fondoCorpo = metriche.centrata ? metriche.altezza * metriche.scalaBase / 2 : 0;
+    const inizioNomeX = metriche.ruotato ? (metriche.larghezza / 2 + 4) * metriche.scalaBase : -larghezzaNome / 2;
+    const centroNomeY = metriche.centrata ? 0 : -metriche.altezza / 2;
+    const inizioNomeY = metriche.ruotato ? centroNomeY - larghezzaNome / 2 : fondoCorpo + 3;
+    const fineNomeY = metriche.ruotato ? centroNomeY + larghezzaNome / 2 : fondoCorpo + 23;
+    const ingombro = {
+      sinistra: x + Math.min(-metaCorpo, inizioNomeX),
+      destra: x + Math.max(metaCorpo, inizioNomeX + (metriche.ruotato ? 20 : larghezzaNome)),
+      alto: y + Math.min(fondoCorpo - metriche.altezza * metriche.scalaBase * voce.scala, inizioNomeY),
+      basso: y + Math.max(fondoCorpo, fineNomeY)
+    };
+    if (!gruppi.has(voce.casella)) gruppi.set(voce.casella, []);
+    gruppi.get(voce.casella).push(ingombro);
+    return { ...voce, x, y, larghezzaNome };
+  }).filter(Boolean);
+
+  // Sposta l'intero gruppo vicino ai bordi: le singole pedine conservano
+  // i propri slot, inclusa l'area di partenza sotto la casella 1.
+  const correzioni = new Map();
+  gruppi.forEach((ingombri, casella) => {
+    const sinistra = Math.min(...ingombri.map(voce => voce.sinistra));
+    const destra = Math.max(...ingombri.map(voce => voce.destra));
+    const alto = Math.min(...ingombri.map(voce => voce.alto));
+    const basso = Math.max(...ingombri.map(voce => voce.basso));
+    const x = Math.max(8 - sinistra, Math.min(0, immagine.clientWidth - 8 - destra));
+    const y = Math.max(8 - alto, Math.min(0, immagine.clientHeight - 8 - basso));
+    correzioni.set(casella, { x, y });
+  });
+
+  voci.forEach((voce, indice) => {
+    const pedina = document.getElementById("pedina-" + voce.id);
+    if (!pedina) return;
+    const correzione = correzioni.get(voce.casella);
+    pedina.style.left = (voce.x + correzione.x) + "px";
+    pedina.style.top = (voce.y + correzione.y) + "px";
+    pedina.style.setProperty("--scala-affollamento", String(voce.scala));
+    pedina.style.setProperty("--larghezza-nickname", voce.larghezzaNome + "px");
+    pedina.style.zIndex = String(10 + indice);
+  });
+}
+
+function posizionaPedina(pedina, casellaNumero, idGiocatore) {
   const coord = coordinatePerCasella(casellaNumero);
   if (!coord) return;
+  if (idGiocatore != null) {
+    posizioniVisivePedine.set(idGiocatore, Number(casellaNumero));
+    applicaLayoutPedine();
+    return;
+  }
   pedina.style.left = coord.left + "px";
   pedina.style.top = coord.top + "px";
 }
-function ottieniOCreaPedina(idGiocatore, colore, indice) {
+function ottieniOCreaPedina(idGiocatore, colore, indice, nomeGiocatore) {
   let pedina = document.getElementById("pedina-" + idGiocatore);
   if (!pedina) {
     pedina = document.createElement("div");
@@ -2078,7 +2277,7 @@ function ottieniOCreaPedina(idGiocatore, colore, indice) {
     const idG = "gradPedina" + indice;
     pedina.innerHTML = `
       <div class="pedina-interno">
-        <svg width="26" height="38" viewBox="0 0 34 48">
+        <svg class="pedina-svg" width="26" height="38" viewBox="0 0 34 48" aria-hidden="true">
           <defs><radialGradient id="${idG}" cx="35%" cy="25%" r="75%">
             <stop offset="0%" stop-color="${schiarisciColore(colore, 55)}"/>
             <stop offset="55%" stop-color="${colore}"/>
@@ -2093,43 +2292,84 @@ function ottieniOCreaPedina(idGiocatore, colore, indice) {
       </div>`;
     document.getElementById("contenitore-pedine").appendChild(pedina);
   }
+  let etichetta = pedina.querySelector(".pedina-nickname");
+  if (!etichetta) {
+    etichetta = document.createElement("span");
+    etichetta.className = "pedina-nickname";
+    pedina.appendChild(etichetta);
+  }
+  const nomeSicuro = typeof nomeGiocatore === "string" && nomeGiocatore.trim()
+    ? nomeGiocatore.trim()
+    : "Giocatore";
+  etichetta.textContent = nomeSicuro;
+  etichetta.title = nomeSicuro;
   return pedina;
 }
-function animaSaltoPedina(idGiocatore, percorso, callback, tokenAnimazione) {
+function animaSaltoPedina(idGiocatore, percorso, effettiCasella, callback, tokenAnimazione) {
+  if (tokenAnimazione != null && tokenAnimazione !== versioneAnimazioneStato) return;
   if (!percorso || percorso.length === 0) { if (callback) callback(); return; }
+  const sequenza = creaSequenzaAnimazionePedina(percorso, effettiCasella);
   const indice = ultimoStatoGiocatori.findIndex(g => g.id === idGiocatore);
+  const giocatoreCorrente = indice >= 0 ? ultimoStatoGiocatori[indice] : null;
   const colore = coloriGiocatori[(indice >= 0 ? indice : 0) % coloriGiocatori.length];
-  const pedina = ottieniOCreaPedina(idGiocatore, colore, indice >= 0 ? indice : 0);
-  if (animazioniPedineAttive.has(idGiocatore)) {
-    const statoCorrente = ultimoStatoGiocatori.find(g => g.id === idGiocatore);
-    if (statoCorrente) posizionaPedina(pedina, statoCorrente.posizione);
-  }
+  const pedina = ottieniOCreaPedina(
+    idGiocatore,
+    colore,
+    indice >= 0 ? indice : 0,
+    giocatoreCorrente ? giocatoreCorrente.nome : "Giocatore"
+  );
   const tokenPedina = Symbol("animazione-pedina");
   animazioniPedineAttive.set(idGiocatore, tokenPedina);
   let passo = 0;
+
+  function mostraEffettiDelPasso(effetti, completato) {
+    const coda = Array.isArray(effetti) ? effetti.slice() : [];
+    function mostraProssimo() {
+      if (tokenAnimazione != null && tokenAnimazione !== versioneAnimazioneStato) return;
+      if (animazioniPedineAttive.get(idGiocatore) !== tokenPedina) return;
+      const effetto = coda.shift();
+      if (!effetto) {
+        completato();
+        return;
+      }
+      mostraEffettoCasellaSpeciale(effetto);
+      const durataRichiesta = Number(effetto.durataMs);
+      const durata = Number.isFinite(durataRichiesta) && durataRichiesta > 0
+        ? Math.min(durataRichiesta, 3000)
+        : 900;
+      setTimeout(mostraProssimo, durata);
+    }
+    mostraProssimo();
+  }
+
   function saltaProssimo() {
+    if (tokenAnimazione != null && tokenAnimazione !== versioneAnimazioneStato) return;
     if (animazioniPedineAttive.get(idGiocatore) !== tokenPedina) return;
-    if (passo >= percorso.length) {
+    if (passo >= sequenza.length) {
       animazioniPedineAttive.delete(idGiocatore);
-      const statoFinale = ultimoStatoGiocatori.find(g => g.id === idGiocatore);
-      if (statoFinale) posizionaPedina(pedina, statoFinale.posizione);
       if (callback) callback();
+      else applicaLayoutPedine();
       return;
     }
-    const casella = percorso[passo];
+    const frame = sequenza[passo];
+    const casella = frame.casella;
     // Su alcuni browser mobili riaggiungere subito la stessa classe non
     // riavvia l'animazione. La rimozione + reflow forza un salto per casella.
     pedina.classList.remove("pedina-salta");
     void pedina.offsetWidth;
     pedina.classList.add("pedina-salta");
-    posizionaPedina(pedina, casella);
+    posizionaPedina(pedina, casella, idGiocatore);
     suonaPassoPedina();
     const et = document.getElementById("casella-" + idGiocatore);
     if (et && (tokenAnimazione == null || tokenAnimazione === versioneAnimazioneStato)) et.textContent = casella;
-    const pulisciSalto = () => pedina.classList.remove("pedina-salta");
+    const pulisciSalto = () => {
+      if (animazioniPedineAttive.get(idGiocatore) !== tokenPedina) return;
+      if (tokenAnimazione != null && tokenAnimazione !== versioneAnimazioneStato) return;
+      pedina.classList.remove("pedina-salta");
+    };
     pedina.addEventListener("animationend", pulisciSalto, { once: true });
     passo++;
-    setTimeout(saltaProssimo, DURATA_SALTO_MS);
+    setTimeout(() => mostraEffettiDelPasso(frame.effetti, saltaProssimo), DURATA_SALTO_MS);
   }
   saltaProssimo();
 }
@@ -2151,12 +2391,36 @@ function pianificaRecuperoTurno() {
   }, 650);
 }
 
+function annullaAnimazioniPartita() {
+  ++versioneAnimazioneStato;
+  animazioneMossaInCorso = false;
+  eventiPartitaAccodati.length = 0;
+  animazioniPedineAttive.clear();
+}
+
+function tempoResiduoEventoPartita(dati, ricevutoA) {
+  const residuo = Number(dati.tempoResiduoMs);
+  if (dati.tempoResiduoMs == null || !Number.isFinite(residuo)) return dati.tempoResiduoMs;
+  return Math.max(0, residuo - Math.max(0, performance.now() - ricevutoA));
+}
+
+function elaboraEventiPartitaAccodati() {
+  const avevaEventi = eventiPartitaAccodati.length > 0;
+  while (!animazioneMossaInCorso && eventiPartitaAccodati.length) {
+    const evento = eventiPartitaAccodati.shift();
+    if (evento.tipo === "statoPartita") {
+      gestisciStatoPartita(evento.dati, evento.ricevutoA);
+    } else {
+      gestisciAggiornamentoPartita(evento.dati, evento.ricevutoA);
+    }
+  }
+  return avevaEventi;
+}
+
 function gestisciPreparazionePartita(dati) {
   annullaVerificaDeterminazione();
   annullaRecuperoTurno();
-  animazioneMossaInCorso = false;
-  statoPartitaAccodato = null;
-  ++versioneAnimazioneStato;
+  annullaAnimazioniPartita();
   faseAttuale = "preparazione";
   possoTirareIoInDeterminazione = false;
   mioTurno = false;
@@ -2177,19 +2441,23 @@ function gestisciPreparazionePartita(dati) {
   segnalaStatoInizialeRicevuto();
 }
 
-function gestisciStatoPartita(dati) {
+function gestisciStatoPartita(dati, ricevutoA = performance.now()) {
   annullaVerificaDeterminazione();
 
-  // Uno stato del turno successivo non deve troncare l'animazione corrente.
-  // Conserviamo soltanto lo stato più recente e lo applichiamo appena la
-  // pedina ha terminato tutti i salti.
+  // Stati e mosse condividono la coda per preservare l'ordine del server,
+  // anche quando il browser impiega più tempo a completare l'animazione.
   if (animazioneMossaInCorso && !dati.vittoria) {
-    statoPartitaAccodato = dati;
+    eventiPartitaAccodati.push({ tipo: "statoPartita", dati, ricevutoA });
     return;
   }
 
   annullaRecuperoTurno();
-  ++versioneAnimazioneStato;
+  if (dati.vittoria) {
+    annullaAnimazioniPartita();
+  } else {
+    ++versioneAnimazioneStato;
+    animazioniPedineAttive.clear();
+  }
   faseAttuale = "normale";
   possoTirareIoInDeterminazione = false;
   document.getElementById("overlay-determinazione").classList.remove("aperto");
@@ -2215,7 +2483,7 @@ function gestisciStatoPartita(dati) {
     }
     disegnaGiocatori();
     if (turnoPronto) {
-      avviaCountdownTurno(dati.tempoInizioTurno, dati.durataMossaMs, dati.tempoResiduoMs);
+      avviaCountdownTurno(dati.tempoInizioTurno, dati.durataMossaMs, tempoResiduoEventoPartita(dati, ricevutoA));
     }
   }
 
@@ -2223,10 +2491,13 @@ function gestisciStatoPartita(dati) {
   segnalaStatoInizialeRicevuto();
 }
 
-function gestisciAggiornamentoPartita(dati) {
+function gestisciAggiornamentoPartita(dati, ricevutoA = performance.now()) {
+  if (animazioneMossaInCorso) {
+    eventiPartitaAccodati.push({ tipo: "aggiornamentoPartita", dati, ricevutoA });
+    return;
+  }
   annullaRecuperoTurno();
   animazioneMossaInCorso = true;
-  statoPartitaAccodato = null;
   const tokenAnimazione = ++versioneAnimazioneStato;
   mioTurno = false;
   turnoAttualeId = null;
@@ -2236,23 +2507,23 @@ function gestisciAggiornamentoPartita(dati) {
   document.getElementById("messaggi-gioco").textContent = "🎲 " + dati.dado1 + " + " + dati.dado2 + " = " + dati.valoreDado;
 
   animaLancioDadi(dati.dado1, dati.dado2, () => {
-    if (tokenAnimazione !== versioneAnimazioneStato) {
-      animazioneMossaInCorso = false;
-      return;
+    if (tokenAnimazione !== versioneAnimazioneStato) return;
+    if (Array.isArray(dati.messaggiGenerali) && dati.messaggiGenerali.length) {
+      mostraNotificaGioco(dati.messaggiGenerali.join(" "));
     }
-    if (Array.isArray(dati.messaggi) && dati.messaggi.length) mostraMessaggioGiocoGrande(dati.messaggi.join(" "));
 
     const completa = () => {
-      if (tokenAnimazione !== versioneAnimazioneStato) {
-        animazioneMossaInCorso = false;
-        return;
+      if (tokenAnimazione !== versioneAnimazioneStato) return;
+
+      const haEffettiStrutturati = Array.isArray(dati.effettiCasella);
+      if (!haEffettiStrutturati && !dati.vittoria && Array.isArray(dati.messaggi) && dati.messaggi.length) {
+        mostraMessaggioGiocoGrande(dati.messaggi.join(" "));
       }
 
       ultimoStatoGiocatori = Array.isArray(dati.giocatori) ? dati.giocatori : ultimoStatoGiocatori;
 
       if (dati.vittoria) {
-        animazioneMossaInCorso = false;
-        statoPartitaAccodato = null;
+        annullaAnimazioniPartita();
         turnoAttualeId = null;
         mioTurno = false;
         document.getElementById("riga-turno").textContent = "🏆 Partita conclusa";
@@ -2266,7 +2537,8 @@ function gestisciAggiornamentoPartita(dati) {
         animazioneMossaInCorso = false;
         aggiornaTurno(dati.turnoDiId);
         disegnaGiocatori();
-        avviaCountdownTurno(dati.tempoInizioTurno, dati.durataMossaMs, dati.tempoResiduoMs);
+        avviaCountdownTurno(dati.tempoInizioTurno, dati.durataMossaMs, tempoResiduoEventoPartita(dati, ricevutoA));
+        elaboraEventiPartitaAccodati();
         return;
       }
 
@@ -2278,17 +2550,19 @@ function gestisciAggiornamentoPartita(dati) {
       disegnaGiocatori();
       animazioneMossaInCorso = false;
 
-      const statoAccodato = statoPartitaAccodato;
-      statoPartitaAccodato = null;
-      if (statoAccodato) {
-        gestisciStatoPartita(statoAccodato);
-      } else {
+      if (!elaboraEventiPartitaAccodati()) {
         pianificaRecuperoTurno();
       }
     };
 
     if (Array.isArray(dati.percorso) && dati.percorso.length && dati.idGiocatoreCheHaTirato) {
-      animaSaltoPedina(dati.idGiocatoreCheHaTirato, dati.percorso, completa, tokenAnimazione);
+      animaSaltoPedina(
+        dati.idGiocatoreCheHaTirato,
+        dati.percorso,
+        dati.effettiCasella,
+        completa,
+        tokenAnimazione
+      );
     } else {
       completa();
     }
@@ -2515,11 +2789,14 @@ function aggiornaTurno(turnoDiId) {
 function disegnaGiocatori() {
   const contenitore = document.getElementById("contenitore-pedine");
   const giocatori = Array.isArray(ultimoStatoGiocatori) ? ultimoStatoGiocatori : [];
+  sincronizzaPosizioniVisivePedine();
   Array.from(contenitore.children).forEach(p => {
+    if (!p.classList.contains("pedina")) return;
     const giocatore = giocatori.find(g => "pedina-" + g.id === p.id);
     if (!giocatore) {
       const idRimosso = p.id.replace(/^pedina-/, "");
       animazioniPedineAttive.delete(idRimosso);
+      posizioniVisivePedine.delete(idRimosso);
       p.remove();
     }
   });
@@ -2527,8 +2804,7 @@ function disegnaGiocatori() {
   listaPannello.replaceChildren();
   giocatori.forEach((giocatore, indice) => {
     const colore = coloriGiocatori[indice % coloriGiocatori.length];
-    const pedina = ottieniOCreaPedina(giocatore.id, colore, indice);
-    if (!animazioniPedineAttive.has(giocatore.id)) posizionaPedina(pedina, giocatore.posizione);
+    ottieniOCreaPedina(giocatore.id, colore, indice, giocatore.nome);
     const eAttivo = giocatore.id === turnoAttualeId;
 
     const card = document.createElement("div");
@@ -2577,6 +2853,7 @@ function disegnaGiocatori() {
     card.appendChild(casella);
     listaPannello.appendChild(card);
   });
+  applicaLayoutPedine();
 }
 
 function mostraVittoria(nomeVincitore) {
