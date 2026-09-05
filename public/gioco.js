@@ -2102,7 +2102,7 @@ function calcolaSlotPedina(indice, totale, passoX, passoY) {
   const riga = Math.floor(posizione / colonne);
   const elementiNellaRiga = Math.min(colonne, quantita - (riga * colonne));
   const colonna = posizione - (riga * colonne);
-  const scala = quantita <= 2 ? 1 : (quantita <= 4 ? 0.86 : (quantita <= 6 ? 0.72 : 0.62));
+  const scala = quantita === 1 ? 1 : (quantita === 2 ? 0.84 : (quantita <= 4 ? 0.74 : (quantita <= 6 ? 0.65 : 0.57)));
   const larghezzaNickname = quantita === 1
     ? 68
     : Math.max(24, Math.min(64, distanzaX - 4));
@@ -2176,8 +2176,8 @@ function metricheSpaziaturaPedine() {
   const tablet = document.body.classList.contains("client-tablet");
   const ruotato = document.body.classList.contains("modalita-ruotata");
   const ridotta = cellulare && ruotato && window.matchMedia("(max-width: 600px)").matches;
-  const larghezza = cellulare ? 26 : (tablet ? 34 : 40);
-  const altezza = cellulare ? 38 : (tablet ? 50 : 58);
+  const larghezza = cellulare ? 24 : (tablet ? 31 : 36);
+  const altezza = cellulare ? 35 : (tablet ? 45 : 52);
   const passoX = ruotato ? (ridotta ? 40 : larghezza + 26) : (cellulare || tablet ? 48 : 56);
   const passoY = ruotato ? 56 : altezza + 24;
   return { passoX, passoY, larghezza, altezza, ruotato, scalaBase: ridotta ? 0.58 : 1, centrata: ridotta };
@@ -2283,10 +2283,9 @@ function ottieniOCreaPedina(idGiocatore, colore, indice, nomeGiocatore) {
             <stop offset="55%" stop-color="${colore}"/>
             <stop offset="100%" stop-color="${scuriscColore(colore, 35)}"/>
           </radialGradient></defs>
-          <ellipse cx="17" cy="44" rx="12" ry="3.5" fill="rgba(0,0,0,0.3)"/>
-          <ellipse cx="17" cy="42" rx="11" ry="4" fill="${scuriscColore(colore, 25)}"/>
-          <path d="M17 42 C10 42 4 40 4 37 L10 15 C10 15 12 12 17 12 C22 12 24 15 24 15 L30 37 C30 40 24 42 17 42 Z" fill="url(#${idG})" stroke="${scuriscColore(colore, 45)}" stroke-width="0.8"/>
-          <circle cx="17" cy="9" r="7.5" fill="url(#${idG})" stroke="${scuriscColore(colore, 45)}" stroke-width="0.8"/>
+          <rect x="6" y="38" width="22" height="8" rx="0" fill="${scuriscColore(colore, 25)}"/>
+          <path d="M17 42 C10 42 4 40 4 37 L10 15 C10 15 12 12 17 12 C22 12 24 15 24 15 L30 37 C30 40 24 42 17 42 Z" fill="url(#${idG})" stroke="none"/>
+          <circle cx="17" cy="9" r="7.5" fill="url(#${idG})" stroke="none"/>
           <ellipse cx="14" cy="6" rx="2.5" ry="1.8" fill="rgba(255,255,255,0.55)"/>
         </svg>
       </div>`;
@@ -2301,7 +2300,7 @@ function ottieniOCreaPedina(idGiocatore, colore, indice, nomeGiocatore) {
   const nomeSicuro = typeof nomeGiocatore === "string" && nomeGiocatore.trim()
     ? nomeGiocatore.trim()
     : "Giocatore";
-  etichetta.textContent = nomeSicuro;
+  etichetta.textContent = nomeSicuro.slice(0, 15);
   etichetta.title = nomeSicuro;
   return pedina;
 }
