@@ -2292,6 +2292,27 @@ function ottieniOCreaPedina(idGiocatore, colore, indice, nomeGiocatore) {
       </div>`;
     document.getElementById("contenitore-pedine").appendChild(pedina);
   }
+
+  // Il server accetta nickname da 5 a 15 caratteri.
+  // Per sicurezza, se dovesse arrivare un valore più lungo, sul tabellone
+  // mostriamo al massimo i primi 15 caratteri; da 5 a 15 vengono mostrati interamente.
+  const nomeCompleto = typeof nomeGiocatore === "string" && nomeGiocatore.trim()
+    ? nomeGiocatore.trim()
+    : "Giocatore";
+  const caratteriNome = Array.from(nomeCompleto);
+  const nomeVisibile = caratteriNome.length > 15
+    ? caratteriNome.slice(0, 15).join("")
+    : nomeCompleto;
+
+  let etichetta = pedina.querySelector(".pedina-nickname");
+  if (!etichetta) {
+    etichetta = document.createElement("span");
+    etichetta.className = "pedina-nickname";
+    pedina.appendChild(etichetta);
+  }
+  etichetta.textContent = nomeVisibile;
+  etichetta.title = nomeVisibile;
+
   return pedina;
 }
 function animaSaltoPedina(idGiocatore, percorso, effettiCasella, callback, tokenAnimazione) {
