@@ -2102,16 +2102,17 @@ function calcolaSlotPedina(indice, totale, passoX, passoY) {
   const riga = Math.floor(posizione / colonne);
   const elementiNellaRiga = Math.min(colonne, quantita - (riga * colonne));
   const colonna = posizione - (riga * colonne);
-  const scala = quantita <= 2 ? 1 : (quantita <= 4 ? 0.86 : (quantita <= 6 ? 0.72 : 0.62));
-  const larghezzaNickname = quantita === 1
-    ? 68
-    : Math.max(24, Math.min(64, distanzaX - 4));
+  // Una sola pedina resta alla dimensione normale. Appena due o più
+  // pedine condividono la stessa casella, tutte si riducono automaticamente.
+  // Quando il gruppo si separa, il ricalcolo riporta la scala a 1.
+  const scala = quantita === 1
+    ? 1
+    : (quantita === 2 ? 0.84 : (quantita <= 4 ? 0.74 : (quantita <= 6 ? 0.65 : 0.57)));
 
   return {
     offsetX: (colonna - ((elementiNellaRiga - 1) / 2)) * distanzaX,
     offsetY: (riga - ((righe - 1) / 2)) * distanzaY,
-    scala,
-    larghezzaNickname
+    scala
   };
 }
 
@@ -2134,8 +2135,7 @@ function calcolaLayoutPedine(giocatoriVisivi, passoX, passoY) {
       casella: giocatore.posizione,
       offsetX: slot.offsetX,
       offsetY: slot.offsetY,
-      scala: slot.scala,
-      larghezzaNickname: slot.larghezzaNickname
+      scala: slot.scala
     };
   });
 }
@@ -2176,10 +2176,10 @@ function metricheSpaziaturaPedine() {
   const tablet = document.body.classList.contains("client-tablet");
   const ruotato = document.body.classList.contains("modalita-ruotata");
   const ridotta = cellulare && ruotato && window.matchMedia("(max-width: 600px)").matches;
-  const larghezza = cellulare ? 26 : (tablet ? 34 : 40);
-  const altezza = cellulare ? 38 : (tablet ? 50 : 58);
-  const passoX = ruotato ? (ridotta ? 40 : larghezza + 26) : (cellulare || tablet ? 48 : 56);
-  const passoY = ruotato ? 56 : altezza + 24;
+  const larghezza = cellulare ? 24 : (tablet ? 31 : 36);
+  const altezza = cellulare ? 35 : (tablet ? 45 : 52);
+  const passoX = ruotato ? (ridotta ? 38 : larghezza + 24) : (cellulare || tablet ? 44 : 52);
+  const passoY = ruotato ? 52 : altezza + 22;
   return { passoX, passoY, larghezza, altezza, ruotato, scalaBase: ridotta ? 0.58 : 1, centrata: ridotta };
 }
 
@@ -2212,24 +2212,26 @@ function applicaLayoutPedine() {
   const voci = layout.map(voce => {
     const coordinate = coordinatePerCasella(voce.casella);
     if (!coordinate) return null;
-    const larghezzaNome = metriche.ruotato ? Math.min(68, metriche.passoY - 4) : voce.larghezzaNickname;
     const x = coordinate.left + voce.offsetX;
     const y = coordinate.top + voce.offsetY;
-    const metaCorpo = metriche.larghezza * metriche.scalaBase * voce.scala / 2;
-    const fondoCorpo = metriche.centrata ? metriche.altezza * metriche.scalaBase / 2 : 0;
-    const inizioNomeX = metriche.ruotato ? (metriche.larghezza / 2 + 4) * metriche.scalaBase : -larghezzaNome / 2;
-    const centroNomeY = metriche.centrata ? 0 : -metriche.altezza / 2;
-    const inizioNomeY = metriche.ruotato ? centroNomeY - larghezzaNome / 2 : fondoCorpo + 3;
-    const fineNomeY = metriche.ruotato ? centroNomeY + larghezzaNome / 2 : fondoCorpo + 23;
-    const ingombro = {
-      sinistra: x + Math.min(-metaCorpo, inizioNomeX),
-      destra: x + Math.max(metaCorpo, inizioNomeX + (metriche.ruotato ? 20 : larghezzaNome)),
-      alto: y + Math.min(fondoCorpo - metriche.altezza * metriche.scalaBase * voce.scala, inizioNomeY),
-      basso: y + Math.max(fondoCorpo, fineNomeY)
-    };
+    const larghezzaCorpo = metriche.larghezza * metriche.scalaBase * voce.scala;
+    const altezzaCorpo = metriche.altezza * metriche.scalaBase * voce.scala;
+    const ingombro = metriche.centrata
+      ? {
+          sinistra: x - larghezzaCorpo / 2,
+          destra: x + larghezzaCorpo / 2,
+          alto: y - altezzaCorpo / 2,
+          basso: y + altezzaCorpo / 2
+        }
+      : {
+          sinistra: x - larghezzaCorpo / 2,
+          destra: x + larghezzaCorpo / 2,
+          alto: y - altezzaCorpo,
+          basso: y
+        };
     if (!gruppi.has(voce.casella)) gruppi.set(voce.casella, []);
     gruppi.get(voce.casella).push(ingombro);
-    return { ...voce, x, y, larghezzaNome };
+    return { ...voce, x, y };
   }).filter(Boolean);
 
   // Sposta l'intero gruppo vicino ai bordi: le singole pedine conservano
@@ -2252,7 +2254,6 @@ function applicaLayoutPedine() {
     pedina.style.left = (voce.x + correzione.x) + "px";
     pedina.style.top = (voce.y + correzione.y) + "px";
     pedina.style.setProperty("--scala-affollamento", String(voce.scala));
-    pedina.style.setProperty("--larghezza-nickname", voce.larghezzaNome + "px");
     pedina.style.zIndex = String(10 + indice);
   });
 }
@@ -2283,7 +2284,6 @@ function ottieniOCreaPedina(idGiocatore, colore, indice, nomeGiocatore) {
             <stop offset="55%" stop-color="${colore}"/>
             <stop offset="100%" stop-color="${scuriscColore(colore, 35)}"/>
           </radialGradient></defs>
-          <ellipse cx="17" cy="44" rx="12" ry="3.5" fill="rgba(0,0,0,0.3)"/>
           <ellipse cx="17" cy="42" rx="11" ry="4" fill="${scuriscColore(colore, 25)}"/>
           <path d="M17 42 C10 42 4 40 4 37 L10 15 C10 15 12 12 17 12 C22 12 24 15 24 15 L30 37 C30 40 24 42 17 42 Z" fill="url(#${idG})" stroke="${scuriscColore(colore, 45)}" stroke-width="0.8"/>
           <circle cx="17" cy="9" r="7.5" fill="url(#${idG})" stroke="${scuriscColore(colore, 45)}" stroke-width="0.8"/>
@@ -2292,17 +2292,6 @@ function ottieniOCreaPedina(idGiocatore, colore, indice, nomeGiocatore) {
       </div>`;
     document.getElementById("contenitore-pedine").appendChild(pedina);
   }
-  let etichetta = pedina.querySelector(".pedina-nickname");
-  if (!etichetta) {
-    etichetta = document.createElement("span");
-    etichetta.className = "pedina-nickname";
-    pedina.appendChild(etichetta);
-  }
-  const nomeSicuro = typeof nomeGiocatore === "string" && nomeGiocatore.trim()
-    ? nomeGiocatore.trim()
-    : "Giocatore";
-  etichetta.textContent = nomeSicuro;
-  etichetta.title = nomeSicuro;
   return pedina;
 }
 function animaSaltoPedina(idGiocatore, percorso, effettiCasella, callback, tokenAnimazione) {
