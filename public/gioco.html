@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0d1620">
   <title>Gioco dell'Oca - Partita</title>
-  <link rel="stylesheet" href="gioco.css">
+  <link rel="stylesheet" href="gioco.css?v=pedine-effetti-20260905">
 </head>
 <body class="caricamento-in-corso">
 
@@ -125,7 +125,13 @@
     </div>
   </div>
 
-  <div id="flash-messaggio-gioco" role="status" aria-live="assertive"><span></span></div>
+  <div id="flash-messaggio-gioco" role="status" aria-live="assertive" aria-atomic="true">
+    <div class="flash-messaggio-contenuto">
+      <span id="flash-icona-gioco" class="flash-messaggio-icona" aria-hidden="true" hidden></span>
+      <strong id="flash-titolo-gioco" class="flash-messaggio-titolo"></strong>
+      <span id="flash-dettaglio-gioco" class="flash-messaggio-dettaglio" hidden></span>
+    </div>
+  </div>
 
   <section id="videochiamata" class="nascosto" aria-label="Videochiamata della partita">
     <div id="controlli-media-locale" aria-label="Controlli della chiamata">
@@ -211,6 +217,6 @@
   </div>
 </main>
 
-<script src="gioco.js"></script>
+<script src="gioco.js?v=pedine-effetti-20260905"></script>
 </body>
 </html>
