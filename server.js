@@ -4952,10 +4952,24 @@ function calcolaMovimento(posizioneAttuale, valoreDado) {
 
   const percorso = [];
   const messaggi = [];
+  const effettiCasella = [];
   let nuovaPosizione = posizioneBase + passiDado;
   let turniDaSaltare = 0;
   let vittoria = false;
   let tiraAncora = false;
+
+  function aggiungiEffetto(tipo, casella, percorsoIndex, titolo, testo, destinazione = null, icona = "✨") {
+    effettiCasella.push({
+      tipo,
+      casella,
+      destinazione,
+      percorsoIndex,
+      titolo,
+      testo,
+      icona,
+      durataMs: 900
+    });
+  }
 
   // Movimento normale: parte SEMPRE dalla casella successiva.
   // Quindi, per esempio, da 0 con totale 3 il percorso è [1, 2, 3]:
@@ -4973,6 +4987,15 @@ function calcolaMovimento(posizioneAttuale, valoreDado) {
     }
 
     messaggi.push("Hai superato il traguardo, rimbalzi indietro!");
+    aggiungiEffetto(
+      "rimbalzo",
+      CASELLA_VITTORIA,
+      percorso.indexOf(CASELLA_VITTORIA),
+      "Rimbalzo!",
+      "Hai superato il traguardo: torni indietro.",
+      nuovaPosizione,
+      "↩️"
+    );
   } else {
     for (let p = posizioneBase + 1; p <= nuovaPosizione; p++) {
       percorso.push(p);
@@ -4986,6 +5009,7 @@ function calcolaMovimento(posizioneAttuale, valoreDado) {
       nuovaPosizione,
       percorso,
       messaggi,
+      effettiCasella,
       turniDaSaltare,
       vittoria,
       tiraAncora
@@ -4995,6 +5019,15 @@ function calcolaMovimento(posizioneAttuale, valoreDado) {
   if (nuovaPosizione === CASELLA_TIRA_ANCORA) {
     tiraAncora = true;
     messaggi.push("Sali sul ponte! Tira ancora i dadi.");
+    aggiungiEffetto(
+      "tira_ancora",
+      nuovaPosizione,
+      percorso.length - 1,
+      "Tira ancora!",
+      "Il ponte ti concede subito un altro tiro.",
+      null,
+      "🌉"
+    );
   }
 
   // Regola speciale del Gioco dell'Oca: sulle caselle dell'Oca si avanza
@@ -5002,13 +5035,28 @@ function calcolaMovimento(posizioneAttuale, valoreDado) {
   // può contenere più passi del totale dei dadi, oltre ai teletrasporti/rimbalzi.
   if (CASELLE_AVANZA_ANCORA.includes(nuovaPosizione)) {
     messaggi.push("Avanzi dello stesso numero di caselle!");
+    aggiungiEffetto(
+      "doppio_movimento",
+      nuovaPosizione,
+      percorso.length - 1,
+      "Doppio movimento!",
+      "Avanzi ancora dello stesso numero ottenuto con i dadi.",
+      null,
+      "🪿"
+    );
 
     const seguito = calcolaMovimento(nuovaPosizione, passiDado);
+    const offsetPercorsoSeguito = percorso.length;
+    const effettiSeguito = (seguito.effettiCasella || []).map(effetto => ({
+      ...effetto,
+      percorsoIndex: effetto.percorsoIndex + offsetPercorsoSeguito
+    }));
 
     return {
       nuovaPosizione: seguito.nuovaPosizione,
       percorso: percorso.concat(seguito.percorso),
       messaggi: messaggi.concat(seguito.messaggi),
+      effettiCasella: effettiCasella.concat(effettiSeguito),
       turniDaSaltare: seguito.turniDaSaltare,
       vittoria: seguito.vittoria,
       tiraAncora: seguito.tiraAncora
@@ -5018,16 +5066,43 @@ function calcolaMovimento(posizioneAttuale, valoreDado) {
   if (CASELLE_SALTA_TRE_TURNI.includes(nuovaPosizione)) {
     turniDaSaltare = 3;
     messaggi.push("Rimani fermo per 3 turni!");
+    aggiungiEffetto(
+      "fermo_tre_turni",
+      nuovaPosizione,
+      percorso.length - 1,
+      "Stai fermo!",
+      "Dovrai saltare i prossimi 3 turni.",
+      null,
+      "⏳"
+    );
   }
 
   if (CASELLE_SALTA_UN_TURNO.includes(nuovaPosizione)) {
     turniDaSaltare = 1;
     messaggi.push("Salti un turno!");
+    aggiungiEffetto(
+      "fermo_un_turno",
+      nuovaPosizione,
+      percorso.length - 1,
+      "Turno saltato!",
+      "Dovrai restare fermo per un turno.",
+      null,
+      "⏸️"
+    );
   }
 
   if (CASELLE_TORNA_A[nuovaPosizione] !== undefined) {
     const destinazione = CASELLE_TORNA_A[nuovaPosizione];
     messaggi.push(`Torni alla casella ${destinazione}!`);
+    aggiungiEffetto(
+      "torna_indietro",
+      nuovaPosizione,
+      percorso.length - 1,
+      "Torna indietro!",
+      `La casella ti riporta al numero ${destinazione}.`,
+      destinazione,
+      "⬅️"
+    );
     percorso.push(destinazione);
     nuovaPosizione = destinazione;
   }
@@ -5036,6 +5111,7 @@ function calcolaMovimento(posizioneAttuale, valoreDado) {
     nuovaPosizione,
     percorso,
     messaggi,
+    effettiCasella,
     turniDaSaltare,
     vittoria,
     tiraAncora
@@ -5362,9 +5438,13 @@ function avviaTimerTurno(partita, nomeStanza) {
   }, durataServer);
 }
 
-function durataAnimazioneMossaMs(percorso) {
+function durataAnimazioneMossaMs(percorso, effettiCasella) {
   const passi = Array.isArray(percorso) ? percorso.length : 0;
-  return DURATA_ANIMAZIONE_DADI_MS + (passi * DURATA_PASSO_PEDINA_MS) + MARGINE_SINCRONIZZAZIONE_MOSSA_MS;
+  const pausaEffetti = (Array.isArray(effettiCasella) ? effettiCasella : []).reduce((totale, effetto) => {
+    const durata = Number(effetto && effetto.durataMs);
+    return totale + (Number.isFinite(durata) && durata > 0 ? Math.min(durata, 3000) : 0);
+  }, 0);
+  return DURATA_ANIMAZIONE_DADI_MS + (passi * DURATA_PASSO_PEDINA_MS) + pausaEffetti + MARGINE_SINCRONIZZAZIONE_MOSSA_MS;
 }
 
 function ripristinaTimerTurno(partita, nomeStanza) {
@@ -5445,7 +5525,8 @@ async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, auto
     if (!risultato.tiraAncora && !risultato.vittoria) passaAlProssimoTurno(partita);
 
     const statoGiocatori = costruisciStatoGiocatori(partita);
-    const messaggiFinali = automatico ? ["⏱️ Tempo scaduto: mossa automatica."].concat(risultato.messaggi) : risultato.messaggi;
+    const messaggiGenerali = automatico ? ["⏱️ Tempo scaduto: mossa automatica."] : [];
+    const messaggiFinali = messaggiGenerali.concat(risultato.messaggi);
 
     if (risultato.vittoria) {
       Object.values(partita.giocatori).forEach(g => {
@@ -5453,7 +5534,8 @@ async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, auto
           g.socket.send(JSON.stringify({
             tipo: "aggiornamentoPartita", giocatori: statoGiocatori, dado1, dado2, valoreDado,
             percorso: risultato.percorso, idGiocatoreCheHaTirato: idGiocatore, automatico: !!automatico,
-            messaggi: messaggiFinali, turnoDiId: null, tempoInizioTurno: null, durataMossaMs: 0, tempoResiduoMs: 0,
+            messaggi: messaggiFinali, messaggiGenerali, effettiCasella: risultato.effettiCasella || [],
+            turnoDiId: null, tempoInizioTurno: null, durataMossaMs: 0, tempoResiduoMs: 0,
             vittoria: true, vincitore: giocatore.nome
           }));
         }
@@ -5473,7 +5555,7 @@ async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, auto
         g.socket.send(JSON.stringify({
           tipo: "aggiornamentoPartita", giocatori: statoGiocatori, dado1, dado2, valoreDado,
           percorso: risultato.percorso, idGiocatoreCheHaTirato: idGiocatore, automatico: !!automatico,
-          messaggi: messaggiFinali,
+          messaggi: messaggiFinali, messaggiGenerali, effettiCasella: risultato.effettiCasella || [],
           turnoDiId: null,
           tempoInizioTurno: null,
           durataMossaMs: 0, tempoResiduoMs: 0,
@@ -5535,7 +5617,7 @@ async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, auto
         tempoInizioTurno: partita.tempoInizioTurno,
         scadenzaTurno: partita.scadenzaTurno
       });
-    }, durataAnimazioneMossaMs(risultato.percorso));
+    }, durataAnimazioneMossaMs(risultato.percorso, risultato.effettiCasella));
 
   } catch (erroreTiro) {
     // Se la generazione o l'elaborazione del tiro fallisce, non lasciamo il
