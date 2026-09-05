@@ -16,7 +16,7 @@ const GoogleStrategy = require("passport-google-oauth20").Strategy;
 
 const app = express();
 
-function pulisciTesto(testo, massimo = 500) {a
+function pulisciTesto(testo, massimo = 500) {
   if (typeof testo !== "string") return "";
   return testo.trim().replace(/[<>]/g, "").substring(0, massimo);
 }
@@ -39,157 +39,10 @@ app.use(cors({
   credentials: true
 }));
 
-app.use(helmet({
-  crossOriginResourcePolicy: false,
-  contentSecurityPolicy: false,
-  frameguard: false
-}));
-
-// ============================================================
-// PERFORMANCE HTTP / CACHE
-// ============================================================
-//
-// Render applica già Brotli e HTTP/2 sul traffico pubblico.
-// Qui ottimizziamo soprattutto:
-// - cache del browser;
-// - eventuale Edge Cache di Render;
-// - file statici serviti prima dei parser JSON/cookie;
-// - API e OAuth sempre escluse dalla cache.
-// ============================================================
-
-app.disable("x-powered-by");
-
-const CARTELLA_PUBLICA = path.join(__dirname, "public");
-
-function disabilitaCacheDinamica(req, res, next) {
-  res.setHeader(
-    "Cache-Control",
-    "no-store, no-cache, must-revalidate, proxy-revalidate"
-  );
-  res.setHeader(
-    "CDN-Cache-Control",
-    "no-store"
-  );
-  res.setHeader(
-    "Pragma",
-    "no-cache"
-  );
-  res.setHeader(
-    "Expires",
-    "0"
-  );
-  next();
-}
-
-// Mai memorizzare dati account, autenticazione o API.
-// Questa protezione è importante anche se in futuro abiliti
-// "All files" nell'Edge Caching di Render.
-app.use("/api", disabilitaCacheDinamica);
-app.use("/auth", disabilitaCacheDinamica);
-
-function impostaHeaderCacheStatici(res, filePath) {
-  const estensione = path.extname(filePath).toLowerCase();
-  const urlRichiesta = String(
-    res.req && res.req.originalUrl
-      ? res.req.originalUrl
-      : ""
-  );
-
-  // Se l'URL contiene ?v=..., ?ver=... o ?version=...,
-  // il file è considerato versionato: può restare in cache
-  // per un anno senza rischiare di bloccare gli aggiornamenti.
-  const risorsaVersionata =
-    /[?&](?:v|ver|version)=[^&]+/i.test(urlRichiesta);
-
-  if (risorsaVersionata) {
-    res.setHeader(
-      "Cache-Control",
-      "public, max-age=31536000, immutable"
-    );
-    res.setHeader(
-      "CDN-Cache-Control",
-      "public, max-age=31536000, immutable"
-    );
-    return;
-  }
-
-  // HTML: il browser deve poter vedere subito una nuova versione.
-  // Render può comunque tenere una copia molto breve sull'edge.
-  if (estensione === ".html" || estensione === ".htm") {
-    res.setHeader(
-      "Cache-Control",
-      "public, max-age=0, must-revalidate"
-    );
-    res.setHeader(
-      "CDN-Cache-Control",
-      "public, max-age=300, stale-while-revalidate=60"
-    );
-    return;
-  }
-
-  // CSS e JS senza versione: cache breve nel browser,
-  // più lunga sul CDN. Per cache di un anno usa ?v=...
-  if (estensione === ".css" || estensione === ".js") {
-    res.setHeader(
-      "Cache-Control",
-      "public, max-age=3600, stale-while-revalidate=86400"
-    );
-    res.setHeader(
-      "CDN-Cache-Control",
-      "public, max-age=86400, stale-while-revalidate=604800"
-    );
-    return;
-  }
-
-  // Immagini, font, audio e video cambiano molto meno spesso.
-  if (
-    [
-      ".png", ".jpg", ".jpeg", ".webp", ".avif", ".gif", ".svg", ".ico",
-      ".woff", ".woff2", ".ttf", ".otf", ".eot",
-      ".mp3", ".ogg", ".wav", ".m4a",
-      ".mp4", ".webm"
-    ].includes(estensione)
-  ) {
-    res.setHeader(
-      "Cache-Control",
-      "public, max-age=604800, stale-while-revalidate=2592000"
-    );
-    res.setHeader(
-      "CDN-Cache-Control",
-      "public, max-age=2592000, stale-while-revalidate=604800"
-    );
-    return;
-  }
-
-  // Fallback prudente per altri file statici.
-  res.setHeader(
-    "Cache-Control",
-    "public, max-age=3600, stale-while-revalidate=86400"
-  );
-  res.setHeader(
-    "CDN-Cache-Control",
-    "public, max-age=86400"
-  );
-}
-
-// I file statici vengono serviti PRIMA di JSON parser,
-// cookie-parser e Passport: meno lavoro per ogni CSS/JS/immagine.
-app.use(
-  express.static(
-    CARTELLA_PUBLICA,
-    {
-      etag: true,
-      lastModified: true,
-      fallthrough: true,
-      setHeaders: impostaHeaderCacheStatici
-    }
-  )
-);
-
-// Parser e autenticazione servono alle route dinamiche,
-// non ai file statici.
+app.use(helmet({ crossOriginResourcePolicy: false, contentSecurityPolicy: false, frameguard: false }));
 app.use(express.json());
 app.use(cookieParser());
+app.use(express.static(path.join(__dirname, "public")));
 app.use(passport.initialize());
 
 const server = http.createServer(app);
@@ -309,7 +162,14 @@ if (db) {
 
 function preparaGiocatoriPerFirebase(giocatori) {
   const risultato = {};
-  for (const uid in giocatori) risultato[uid] = { nome: giocatori[uid].nome, posizione: giocatori[uid].posizione, turniSaltati: giocatori[uid].turniSaltati };
+  for (const uid in giocatori) {
+    risultato[uid] = {
+      nome: giocatori[uid].nome,
+      posizione: giocatori[uid].posizione,
+      turniSaltati: giocatori[uid].turniSaltati,
+      tiriRealiEffettuati: numeroTiriRealiEffettuati(giocatori[uid])
+    };
+  }
   return risultato;
 }
 
@@ -4856,7 +4716,7 @@ app.post("/api/admin/riattiva", richiediAdmin, async (req, res) => {
   res.json({ ok: true });
 });
 
-// ===== DADI: SOLO RANDOM.ORG =====
+// ===== DADI: PRIMO TIRO REALE LOCALE, POI RANDOM.ORG =====
 const randomOrgAgent = new https.Agent({
   keepAlive: true,
   keepAliveMsecs: 30000,
@@ -4940,10 +4800,9 @@ function tiraDadoRandomOrg(timeoutMs = 2500) {
   });
 }
 
-// RANDOM.ORG è l'unica fonte dei risultati.
-// Se per un problema di rete non risponde, NON viene generato nessun numero
-// locale: si ritenta RANDOM.ORG e, se continua a non rispondere, il tiro fallisce
-// e il giocatore può riprovare senza che venga alterata la posizione.
+// Dal secondo tiro reale del giocatore, RANDOM.ORG resta l'unica fonte.
+// Se per un problema di rete non risponde, il tiro fallisce e il giocatore può
+// riprovare senza che venga alterata la posizione.
 async function lanciaDueDadiSicuri() {
   const NUMERO_TENTATIVI = 3;
 
@@ -4970,6 +4829,39 @@ async function lanciaDueDadiSicuri() {
   throw new Error(
     "RANDOM.ORG non raggiungibile: nessun risultato dei dadi è stato generato."
   );
+}
+
+// Le 32 coppie ordinate possibili con due dadi, escluso il totale 9.
+// La scelta di una coppia intera mantiene la stessa probabilità per ogni coppia
+// consentita ed evita qualsiasi ciclo di rigenerazione.
+const COPPIE_PRIMO_TIRO_SENZA_NOVE = [];
+for (let dado1 = 1; dado1 <= 6; dado1++) {
+  for (let dado2 = 1; dado2 <= 6; dado2++) {
+    if (dado1 + dado2 !== 9) COPPIE_PRIMO_TIRO_SENZA_NOVE.push([dado1, dado2]);
+  }
+}
+
+function lanciaDueDadiPrimoTiroLocale() {
+  const indice = Math.floor(Math.random() * COPPIE_PRIMO_TIRO_SENZA_NOVE.length);
+  const [dado1, dado2] = COPPIE_PRIMO_TIRO_SENZA_NOVE[indice];
+  return { dado1, dado2 };
+}
+
+function numeroTiriRealiEffettuati(giocatore) {
+  const valoreSalvato = Number(giocatore && giocatore.tiriRealiEffettuati);
+  if (Number.isInteger(valoreSalvato) && valoreSalvato >= 0) return valoreSalvato;
+
+  // Compatibilità con partite già salvate prima dell'introduzione del contatore:
+  // una pedina oltre la partenza ha certamente già effettuato almeno un tiro.
+  const posizione = Number(giocatore && giocatore.posizione);
+  return Number.isFinite(posizione) && posizione > 0 ? 1 : 0;
+}
+
+async function lanciaDueDadiPerGiocatore(giocatore) {
+  if (numeroTiriRealiEffettuati(giocatore) === 0) {
+    return lanciaDueDadiPrimoTiroLocale();
+  }
+  return lanciaDueDadiSicuri();
 }
 
 // ===== LOGICA DI GIOCO =====
@@ -5060,10 +4952,24 @@ function calcolaMovimento(posizioneAttuale, valoreDado) {
 
   const percorso = [];
   const messaggi = [];
+  const effettiCasella = [];
   let nuovaPosizione = posizioneBase + passiDado;
   let turniDaSaltare = 0;
   let vittoria = false;
   let tiraAncora = false;
+
+  function aggiungiEffetto(tipo, casella, percorsoIndex, titolo, testo, destinazione = null, icona = "✨") {
+    effettiCasella.push({
+      tipo,
+      casella,
+      destinazione,
+      percorsoIndex,
+      titolo,
+      testo,
+      icona,
+      durataMs: 900
+    });
+  }
 
   // Movimento normale: parte SEMPRE dalla casella successiva.
   // Quindi, per esempio, da 0 con totale 3 il percorso è [1, 2, 3]:
@@ -5081,6 +4987,15 @@ function calcolaMovimento(posizioneAttuale, valoreDado) {
     }
 
     messaggi.push("Hai superato il traguardo, rimbalzi indietro!");
+    aggiungiEffetto(
+      "rimbalzo",
+      CASELLA_VITTORIA,
+      percorso.indexOf(CASELLA_VITTORIA),
+      "Rimbalzo!",
+      "Hai superato il traguardo: torni indietro.",
+      nuovaPosizione,
+      "↩️"
+    );
   } else {
     for (let p = posizioneBase + 1; p <= nuovaPosizione; p++) {
       percorso.push(p);
@@ -5094,6 +5009,7 @@ function calcolaMovimento(posizioneAttuale, valoreDado) {
       nuovaPosizione,
       percorso,
       messaggi,
+      effettiCasella,
       turniDaSaltare,
       vittoria,
       tiraAncora
@@ -5103,6 +5019,15 @@ function calcolaMovimento(posizioneAttuale, valoreDado) {
   if (nuovaPosizione === CASELLA_TIRA_ANCORA) {
     tiraAncora = true;
     messaggi.push("Sali sul ponte! Tira ancora i dadi.");
+    aggiungiEffetto(
+      "tira_ancora",
+      nuovaPosizione,
+      percorso.length - 1,
+      "Tira ancora!",
+      "Il ponte ti concede subito un altro tiro.",
+      null,
+      "🌉"
+    );
   }
 
   // Regola speciale del Gioco dell'Oca: sulle caselle dell'Oca si avanza
@@ -5110,13 +5035,28 @@ function calcolaMovimento(posizioneAttuale, valoreDado) {
   // può contenere più passi del totale dei dadi, oltre ai teletrasporti/rimbalzi.
   if (CASELLE_AVANZA_ANCORA.includes(nuovaPosizione)) {
     messaggi.push("Avanzi dello stesso numero di caselle!");
+    aggiungiEffetto(
+      "doppio_movimento",
+      nuovaPosizione,
+      percorso.length - 1,
+      "Doppio movimento!",
+      "Avanzi ancora dello stesso numero ottenuto con i dadi.",
+      null,
+      "🪿"
+    );
 
     const seguito = calcolaMovimento(nuovaPosizione, passiDado);
+    const offsetPercorsoSeguito = percorso.length;
+    const effettiSeguito = (seguito.effettiCasella || []).map(effetto => ({
+      ...effetto,
+      percorsoIndex: effetto.percorsoIndex + offsetPercorsoSeguito
+    }));
 
     return {
       nuovaPosizione: seguito.nuovaPosizione,
       percorso: percorso.concat(seguito.percorso),
       messaggi: messaggi.concat(seguito.messaggi),
+      effettiCasella: effettiCasella.concat(effettiSeguito),
       turniDaSaltare: seguito.turniDaSaltare,
       vittoria: seguito.vittoria,
       tiraAncora: seguito.tiraAncora
@@ -5126,16 +5066,43 @@ function calcolaMovimento(posizioneAttuale, valoreDado) {
   if (CASELLE_SALTA_TRE_TURNI.includes(nuovaPosizione)) {
     turniDaSaltare = 3;
     messaggi.push("Rimani fermo per 3 turni!");
+    aggiungiEffetto(
+      "fermo_tre_turni",
+      nuovaPosizione,
+      percorso.length - 1,
+      "Stai fermo!",
+      "Dovrai saltare i prossimi 3 turni.",
+      null,
+      "⏳"
+    );
   }
 
   if (CASELLE_SALTA_UN_TURNO.includes(nuovaPosizione)) {
     turniDaSaltare = 1;
     messaggi.push("Salti un turno!");
+    aggiungiEffetto(
+      "fermo_un_turno",
+      nuovaPosizione,
+      percorso.length - 1,
+      "Turno saltato!",
+      "Dovrai restare fermo per un turno.",
+      null,
+      "⏸️"
+    );
   }
 
   if (CASELLE_TORNA_A[nuovaPosizione] !== undefined) {
     const destinazione = CASELLE_TORNA_A[nuovaPosizione];
     messaggi.push(`Torni alla casella ${destinazione}!`);
+    aggiungiEffetto(
+      "torna_indietro",
+      nuovaPosizione,
+      percorso.length - 1,
+      "Torna indietro!",
+      `La casella ti riporta al numero ${destinazione}.`,
+      destinazione,
+      "⬅️"
+    );
     percorso.push(destinazione);
     nuovaPosizione = destinazione;
   }
@@ -5144,6 +5111,7 @@ function calcolaMovimento(posizioneAttuale, valoreDado) {
     nuovaPosizione,
     percorso,
     messaggi,
+    effettiCasella,
     turniDaSaltare,
     vittoria,
     tiraAncora
@@ -5470,9 +5438,13 @@ function avviaTimerTurno(partita, nomeStanza) {
   }, durataServer);
 }
 
-function durataAnimazioneMossaMs(percorso) {
+function durataAnimazioneMossaMs(percorso, effettiCasella) {
   const passi = Array.isArray(percorso) ? percorso.length : 0;
-  return DURATA_ANIMAZIONE_DADI_MS + (passi * DURATA_PASSO_PEDINA_MS) + MARGINE_SINCRONIZZAZIONE_MOSSA_MS;
+  const pausaEffetti = (Array.isArray(effettiCasella) ? effettiCasella : []).reduce((totale, effetto) => {
+    const durata = Number(effetto && effetto.durataMs);
+    return totale + (Number.isFinite(durata) && durata > 0 ? Math.min(durata, 3000) : 0);
+  }, 0);
+  return DURATA_ANIMAZIONE_DADI_MS + (passi * DURATA_PASSO_PEDINA_MS) + pausaEffetti + MARGINE_SINCRONIZZAZIONE_MOSSA_MS;
 }
 
 function ripristinaTimerTurno(partita, nomeStanza) {
@@ -5539,9 +5511,11 @@ async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, auto
   fermaTimerTurno(partita);
 
   try {
-    const { dado1, dado2 } = await lanciaDueDadiSicuri();
+    const tiriRealiPrimaDelTiro = numeroTiriRealiEffettuati(giocatore);
+    const { dado1, dado2 } = await lanciaDueDadiPerGiocatore(giocatore);
     const valoreDado = dado1 + dado2;
     const risultato = calcolaMovimento(giocatore.posizione, valoreDado);
+    giocatore.tiriRealiEffettuati = tiriRealiPrimaDelTiro + 1;
 
     if (risultato.tiraAncora) partita.tiriConsentitiNelTurno = partita.tiriEffettuatiNelTurno + 1;
 
@@ -5551,7 +5525,8 @@ async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, auto
     if (!risultato.tiraAncora && !risultato.vittoria) passaAlProssimoTurno(partita);
 
     const statoGiocatori = costruisciStatoGiocatori(partita);
-    const messaggiFinali = automatico ? ["⏱️ Tempo scaduto: mossa automatica."].concat(risultato.messaggi) : risultato.messaggi;
+    const messaggiGenerali = automatico ? ["⏱️ Tempo scaduto: mossa automatica."] : [];
+    const messaggiFinali = messaggiGenerali.concat(risultato.messaggi);
 
     if (risultato.vittoria) {
       Object.values(partita.giocatori).forEach(g => {
@@ -5559,7 +5534,8 @@ async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, auto
           g.socket.send(JSON.stringify({
             tipo: "aggiornamentoPartita", giocatori: statoGiocatori, dado1, dado2, valoreDado,
             percorso: risultato.percorso, idGiocatoreCheHaTirato: idGiocatore, automatico: !!automatico,
-            messaggi: messaggiFinali, turnoDiId: null, tempoInizioTurno: null, durataMossaMs: 0, tempoResiduoMs: 0,
+            messaggi: messaggiFinali, messaggiGenerali, effettiCasella: risultato.effettiCasella || [],
+            turnoDiId: null, tempoInizioTurno: null, durataMossaMs: 0, tempoResiduoMs: 0,
             vittoria: true, vincitore: giocatore.nome
           }));
         }
@@ -5579,7 +5555,7 @@ async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, auto
         g.socket.send(JSON.stringify({
           tipo: "aggiornamentoPartita", giocatori: statoGiocatori, dado1, dado2, valoreDado,
           percorso: risultato.percorso, idGiocatoreCheHaTirato: idGiocatore, automatico: !!automatico,
-          messaggi: messaggiFinali,
+          messaggi: messaggiFinali, messaggiGenerali, effettiCasella: risultato.effettiCasella || [],
           turnoDiId: null,
           tempoInizioTurno: null,
           durataMossaMs: 0, tempoResiduoMs: 0,
@@ -5641,12 +5617,12 @@ async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, auto
         tempoInizioTurno: partita.tempoInizioTurno,
         scadenzaTurno: partita.scadenzaTurno
       });
-    }, durataAnimazioneMossaMs(risultato.percorso));
+    }, durataAnimazioneMossaMs(risultato.percorso, risultato.effettiCasella));
 
   } catch (erroreTiro) {
-    // FIX (turni): se anche il ripiego locale fallisse per qualche motivo
-    // imprevisto, non lasciamo il turno bloccato — restituiamo il tiro appena
-    // consumato e riavviamo subito il timer per lo stesso giocatore.
+    // Se la generazione o l'elaborazione del tiro fallisce, non lasciamo il
+    // turno bloccato: restituiamo il tiro e riavviamo il timer dello stesso
+    // giocatore.
     console.error("Errore durante il tiro dei dadi:", erroreTiro);
     partita.tiriEffettuatiNelTurno = Math.max(0, tiriEffettuati);
     partita.animazioneTiroInCorso = false;
@@ -6370,7 +6346,7 @@ inviaAllaStanza(stanzaAttuale, {
           chatAttiva: dati.chatAttiva !== false,
           mediaAttiva,
           fase: "attesa_giocatori",
-          giocatori: { [uid]: { nome: nickname, avatar: mioAvatar, posizione: 0, socket, tipoDispositivo, turniSaltati: 0, tentativiAutomaticiConsecutivi: 0 } },
+          giocatori: { [uid]: { nome: nickname, avatar: mioAvatar, posizione: 0, socket, tipoDispositivo, turniSaltati: 0, tentativiAutomaticiConsecutivi: 0, tiriRealiEffettuati: 0 } },
           ordineGiocatori: [uid], turnoAttuale: 0, iniziata: false, elaborandoTiro: false, animazioneTiroInCorso: false,
           tiriEffettuatiNelTurno: 0, tiriConsentitiNelTurno: 1,
           invitati: dati.modalita === "privata" ? { [uid]: true } : null, timerTurno: null, tempoInizioTurno: null,
@@ -6419,7 +6395,7 @@ inviaAllaStanza(stanzaAttuale, {
           socket.send(JSON.stringify({ tipo: "errore", messaggio: `Per entrare in questo tavolo devi autorizzare ${requisitoMedia}.` }));
           return;
         }
-        partita.giocatori[uid] = { nome: nickname, avatar: mioAvatar, posizione: 0, socket, tipoDispositivo, turniSaltati: 0, tentativiAutomaticiConsecutivi: 0 };
+        partita.giocatori[uid] = { nome: nickname, avatar: mioAvatar, posizione: 0, socket, tipoDispositivo, turniSaltati: 0, tentativiAutomaticiConsecutivi: 0, tiriRealiEffettuati: 0 };
         partita.ordineGiocatori.push(uid);
 
         // Aggiornamento visivo immediato; se Firebase fallisce facciamo rollback.
@@ -6510,7 +6486,7 @@ inviaAllaStanza(stanzaAttuale, {
         }
         if (Object.keys(partita.giocatori).length >= partita.maxGiocatori) { socket.send(JSON.stringify({ tipo: "errore", messaggio: "La partita si è già riempita." })); return; }
         stanzaAttuale = nomeStanza;
-        partita.giocatori[uid] = { nome: nickname, avatar: mioAvatar, posizione: 0, socket, tipoDispositivo, turniSaltati: 0, tentativiAutomaticiConsecutivi: 0 };
+        partita.giocatori[uid] = { nome: nickname, avatar: mioAvatar, posizione: 0, socket, tipoDispositivo, turniSaltati: 0, tentativiAutomaticiConsecutivi: 0, tiriRealiEffettuati: 0 };
         partita.ordineGiocatori.push(uid);
 
         inviaListaPartite(nomeStanza);
