@@ -760,162 +760,101 @@ body.modalita-ruotata #mondo-ruotato {
   pointer-events: none;
 }
 
-/* =========================================================
-   PEDINA
-========================================================= */
-
 .pedina {
-  --pedina-larghezza: 34px;
-  --pedina-altezza: 49px;
+  --pedina-larghezza: 38px;
+  --pedina-altezza: 54px;
   --scala-affollamento: 1;
-
   position: absolute;
-
   width: var(--pedina-larghezza);
   height: var(--pedina-altezza);
-
   transform: translate(-50%, -100%);
   transform-origin: center bottom;
-
   overflow: visible;
-
   transition:
     left 0.24s cubic-bezier(0.22, 0.72, 0.28, 1),
     top 0.24s cubic-bezier(0.22, 0.72, 0.28, 1);
 }
 
+.pedina::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -3px;
+  width: 76%;
+  height: 10px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(0, 0, 0, 0.62) 0%, rgba(0, 0, 0, 0.22) 52%, transparent 76%);
+  filter: blur(1.5px);
+  opacity: 0.82;
+  transform: translateX(-50%) scale(var(--scala-affollamento));
+  transform-origin: center;
+}
 
 .pedina-interno {
   position: relative;
-
   width: 100%;
   height: 100%;
-
   z-index: 1;
-
+  filter: drop-shadow(0 4px 3px rgba(0, 0, 0, 0.52));
   transform: scale(var(--scala-affollamento));
   transform-origin: center bottom;
-
   transition: transform 0.22s ease;
 }
 
-
 .pedina-svg {
   display: block;
-
   width: 100%;
   height: 100%;
-
   overflow: visible;
 }
-
-
-/* =========================================================
-   NICKNAME DEL GIOCATORE
-   - rettangolo scuro
-   - niente semicerchio
-   - niente ombra
-   - fino a 15 caratteri
-========================================================= */
 
 .pedina-nickname {
   position: absolute;
-
   left: 50%;
   top: calc(100% + 3px);
-
-  z-index: 20;
-
+  z-index: 2;
   display: block;
-
   width: max-content;
-  min-width: max-content;
-  max-width: none;
-
+  max-width: var(--larghezza-nickname, 68px);
   padding: 2px 5px;
-
-  overflow: visible;
-
-  white-space: nowrap;
-  text-overflow: clip;
-
+  overflow: hidden;
   color: #ffffff;
-
-  background: rgba(15, 17, 19, 0.96);
-
-  border: 0;
-  border-radius: 3px;
-
-  box-shadow: none;
-
-  font-family: Arial, sans-serif;
+  background: rgba(8, 13, 18, 0.9);
+  border: 1px solid rgba(255, 215, 0, 0.82);
+  border-radius: 999px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.55);
   font-size: 10px;
-  font-weight: 800;
-  line-height: 1.2;
-
-  letter-spacing: 0;
-
+  font-weight: 850;
+  line-height: 1.25;
+  letter-spacing: 0.01em;
   text-align: center;
-
-  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
-
-  pointer-events: none;
-
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+  white-space: nowrap;
+  pointer-events: auto;
   transform: translateX(-50%);
-  transform-origin: center center;
 }
 
-
-/* Sul telefono il tabellone è ruotato:
-   il nickname viene contro-ruotato per restare leggibile */
 body.modalita-ruotata .pedina-nickname {
   left: calc(100% + 4px);
   top: 50%;
-
-  transform:
-    rotate(-90deg)
-    scale(var(--scala-etichetta, 1))
-    translateX(-50%);
-
+  transform: rotate(-90deg) scale(var(--scala-etichetta, 1)) translateX(-50%);
   transform-origin: top left;
 }
 
-
-body.client-computer .pedina-nickname {
-  font-size: 11px;
-  padding: 2px 5px;
-}
-
-
-body.client-tablet .pedina-nickname {
-  font-size: 10px;
-  padding: 2px 5px;
-}
-
-
-body.client-cellulare-audio-only .pedina-nickname {
-  font-size: 10px;
-  padding: 2px 5px;
-}
-
-
-/* Dimensioni pedine */
-
 body.client-computer .pedina {
-  --pedina-larghezza: 36px;
-  --pedina-altezza: 52px;
+  --pedina-larghezza: 40px;
+  --pedina-altezza: 58px;
 }
-
 
 body.client-tablet .pedina {
-  --pedina-larghezza: 31px;
-  --pedina-altezza: 45px;
+  --pedina-larghezza: 34px;
+  --pedina-altezza: 50px;
 }
 
-
 body.client-cellulare-audio-only .pedina {
-  --pedina-larghezza: 24px;
-  --pedina-altezza: 35px;
+  --pedina-larghezza: 26px;
+  --pedina-altezza: 38px;
 }
 
 .pedina-salta { animation: salto-pedina 0.22s ease; }
