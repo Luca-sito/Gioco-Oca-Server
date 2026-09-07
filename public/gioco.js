@@ -2268,175 +2268,41 @@ function posizionaPedina(pedina, casellaNumero, idGiocatore) {
   pedina.style.left = coord.left + "px";
   pedina.style.top = coord.top + "px";
 }
-function ottieniOCreaPedina(
-  idGiocatore,
-  colore,
-  indice,
-  nomeGiocatore
-) {
-
-  let pedina =
-    document.getElementById(
-      "pedina-" + idGiocatore
-    );
-
-
+function ottieniOCreaPedina(idGiocatore, colore, indice, nomeGiocatore) {
+  let pedina = document.getElementById("pedina-" + idGiocatore);
   if (!pedina) {
-
-    pedina =
-      document.createElement("div");
-
-    pedina.id =
-      "pedina-" + idGiocatore;
-
-    pedina.className =
-      "pedina";
-
-
-    const idG =
-      "gradPedina" + indice;
-
-
+    pedina = document.createElement("div");
+    pedina.id = "pedina-" + idGiocatore;
+    pedina.className = "pedina";
+    const idG = "gradPedina" + indice;
     pedina.innerHTML = `
-
       <div class="pedina-interno">
-
-        <svg
-          class="pedina-svg"
-          width="26"
-          height="38"
-          viewBox="0 0 34 48"
-          aria-hidden="true"
-        >
-
-          <defs>
-
-            <radialGradient
-              id="${idG}"
-              cx="35%"
-              cy="25%"
-              r="75%"
-            >
-
-              <stop
-                offset="0%"
-                stop-color="${schiarisciColore(colore, 55)}"
-              />
-
-              <stop
-                offset="55%"
-                stop-color="${colore}"
-              />
-
-              <stop
-                offset="100%"
-                stop-color="${scuriscColore(colore, 35)}"
-              />
-
-            </radialGradient>
-
-          </defs>
-
-
-          <!-- BASE RETTANGOLARE -->
-          <rect
-            x="6"
-            y="38"
-            width="22"
-            height="8"
-            rx="0"
-            fill="${scuriscColore(colore, 25)}"
-          />
-
-
-          <!-- CORPO -->
-          <path
-            d="
-              M17 42
-              C10 42 4 40 4 37
-              L10 15
-              C10 15 12 12 17 12
-              C22 12 24 15 24 15
-              L30 37
-              C30 40 24 42 17 42 Z
-            "
-            fill="url(#${idG})"
-            stroke="none"
-          />
-
-
-          <!-- TESTA -->
-          <circle
-            cx="17"
-            cy="9"
-            r="7.5"
-            fill="url(#${idG})"
-            stroke="none"
-          />
-
-
-          <!-- RIFLESSO -->
-          <ellipse
-            cx="14"
-            cy="6"
-            rx="2.5"
-            ry="1.8"
-            fill="rgba(255,255,255,0.55)"
-          />
-
+        <svg class="pedina-svg" width="26" height="38" viewBox="0 0 34 48" aria-hidden="true">
+          <defs><radialGradient id="${idG}" cx="35%" cy="25%" r="75%">
+            <stop offset="0%" stop-color="${schiarisciColore(colore, 55)}"/>
+            <stop offset="55%" stop-color="${colore}"/>
+            <stop offset="100%" stop-color="${scuriscColore(colore, 35)}"/>
+          </radialGradient></defs>
+          <ellipse cx="17" cy="44" rx="12" ry="3.5" fill="rgba(0,0,0,0.3)"/>
+          <ellipse cx="17" cy="42" rx="11" ry="4" fill="${scuriscColore(colore, 25)}"/>
+          <path d="M17 42 C10 42 4 40 4 37 L10 15 C10 15 12 12 17 12 C22 12 24 15 24 15 L30 37 C30 40 24 42 17 42 Z" fill="url(#${idG})" stroke="${scuriscColore(colore, 45)}" stroke-width="0.8"/>
+          <circle cx="17" cy="9" r="7.5" fill="url(#${idG})" stroke="${scuriscColore(colore, 45)}" stroke-width="0.8"/>
+          <ellipse cx="14" cy="6" rx="2.5" ry="1.8" fill="rgba(255,255,255,0.55)"/>
         </svg>
-
-      </div>
-    `;
-
-
-    document
-      .getElementById("contenitore-pedine")
-      .appendChild(pedina);
+      </div>`;
+    document.getElementById("contenitore-pedine").appendChild(pedina);
   }
-
-
-  /* =======================================================
-     NICKNAME
-  ======================================================= */
-
-  let etichetta =
-    pedina.querySelector(
-      ".pedina-nickname"
-    );
-
-
+  let etichetta = pedina.querySelector(".pedina-nickname");
   if (!etichetta) {
-
-    etichetta =
-      document.createElement("span");
-
-    etichetta.className =
-      "pedina-nickname";
-
-    pedina.appendChild(
-      etichetta
-    );
+    etichetta = document.createElement("span");
+    etichetta.className = "pedina-nickname";
+    pedina.appendChild(etichetta);
   }
-
-
-  const nomeSicuro =
-    typeof nomeGiocatore === "string" &&
-    nomeGiocatore.trim()
-
-      ? nomeGiocatore.trim()
-
-      : "Giocatore";
-
-
-  /* Massimo 15 caratteri */
-  etichetta.textContent =
-    nomeSicuro.slice(0, 15);
-
-  etichetta.title =
-    nomeSicuro;
-
-
+  const nomeSicuro = typeof nomeGiocatore === "string" && nomeGiocatore.trim()
+    ? nomeGiocatore.trim()
+    : "Giocatore";
+  etichetta.textContent = nomeSicuro;
+  etichetta.title = nomeSicuro;
   return pedina;
 }
 function animaSaltoPedina(idGiocatore, percorso, effettiCasella, callback, tokenAnimazione) {
