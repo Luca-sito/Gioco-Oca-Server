@@ -5505,6 +5505,21 @@ async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, auto
   partita.animazioneTiroInCorso = true;
   fermaTimerTurno(partita);
 
+  // Avvisiamo SUBITO tutti i client che il tiro è partito, prima ancora di
+  // interrogare RANDOM.ORG. La chiamata a RANDOM.ORG (dal secondo tiro reale
+  // in poi) può richiedere anche 1-2 secondi: senza questo avviso il client
+  // restava fermo e "muto" per tutto quel tempo, dando la sensazione che il
+  // gioco si blocchi/scatti. Ora l'animazione dei dadi può partire subito sul
+  // client, in parallelo all'attesa della risposta.
+  const messaggioTiroAvviato = JSON.stringify({
+    tipo: "tiroAvviato",
+    idGiocatore,
+    automatico: !!automatico
+  });
+  Object.values(partita.giocatori).forEach(g => {
+    if (g.socket && g.socket.readyState === WebSocket.OPEN) g.socket.send(messaggioTiroAvviato);
+  });
+
   try {
     const tiriRealiPrimaDelTiro = numeroTiriRealiEffettuati(giocatore);
     const { dado1, dado2 } = await lanciaDueDadiPerGiocatore(giocatore);
@@ -5793,6 +5808,20 @@ async function eseguiTiroDeterminazionePerGiocatore(partita, nomeStanza, uid, au
   partita.elaborandoTiro = true;
   try {
     fermaTimerTurno(partita);
+
+    // Come per i tiri normali: avvisiamo subito i client che il tiro è
+    // partito, così l'animazione può iniziare senza aspettare la risposta
+    // di RANDOM.ORG (usato anche in questa fase).
+    const giocatoreCheTira = partita.giocatori[uid];
+    const messaggioTiroAvviato = JSON.stringify({
+      tipo: "tiroAvviato",
+      idGiocatore: uid,
+      automatico: !!automatico
+    });
+    Object.values(partita.giocatori).forEach(g => {
+      if (g.socket && g.socket.readyState === WebSocket.OPEN) g.socket.send(messaggioTiroAvviato);
+    });
+
     const { dado1, dado2 } = await lanciaDueDadiSicuri();
     const valoreDado = dado1 + dado2;
     if (!partita.risultatiDeterminazione) partita.risultatiDeterminazione = {};
