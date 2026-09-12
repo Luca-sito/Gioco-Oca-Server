@@ -1,7 +1,6 @@
 const express = require("express");
 const http = require("http");
 const https = require("https");
-const crypto = require("crypto");
 const path = require("path");
 const WebSocket = require("ws");
 const cors = require("cors");
@@ -27,8 +26,7 @@ app.set("trust proxy", 1);
 const ORIGINI_CONSENTITE = [
   "https://solfriniluca1.wixstudio.com",
   "https://solfriniluca1-wixstudio-com.filesusr.com",
-  "https://42e717ea-cbc0-4eba-8835-505a4bbf635c.filesusr.com",
-  "https://api.giochisocieta.com"
+  "https://gioco-oca-server.onrender.com"
 ];
 
 app.use(cors({
@@ -508,7 +506,7 @@ async function partitaContieneUtenteBloccato(partita, uid) {
 }
 
 const URL_SERVER_PUBBLICO =
-  String(process.env.PUBLIC_SERVER_URL || "https://api.giochisocieta.com")
+  String(process.env.PUBLIC_SERVER_URL || "https://gioco-oca-server.onrender.com")
     .replace(/\/$/, "");
 
 function creaUrlAvatarRealtime(uid, avatarPresente, avatarVersione) {
@@ -638,85 +636,6 @@ function aggiungiTokenAlFrammento(urlDestinazione, token) {
   return url.href;
 }
 
-// ===== CODICE TEMPORANEO LOGIN WIX =====
-// Evita di dipendere esclusivamente dal cookie cross-site tra Wix e l'API.
-// Il codice è casuale, monouso e scade dopo 2 minuti; il JWT vero non viene
-// inserito nell'URL di ritorno da Google.
-const CODICI_LOGIN_OAUTH = new Map();
-const DURATA_CODICE_LOGIN_OAUTH_MS = 2 * 60 * 1000;
-
-function creaCodiceLoginOAuth(token) {
-  const codice = crypto.randomBytes(32).toString("base64url");
-  CODICI_LOGIN_OAUTH.set(codice, {
-    token,
-    scadenza: Date.now() + DURATA_CODICE_LOGIN_OAUTH_MS
-  });
-  return codice;
-}
-
-function consumaCodiceLoginOAuth(codice) {
-  if (typeof codice !== "string" || codice.length < 20 || codice.length > 200) {
-    return null;
-  }
-
-  const dati = CODICI_LOGIN_OAUTH.get(codice);
-  CODICI_LOGIN_OAUTH.delete(codice);
-
-  if (!dati || !dati.token || dati.scadenza < Date.now()) {
-    return null;
-  }
-
-  return dati.token;
-}
-
-function aggiungiCodiceOAuthAlRedirect(urlDestinazione, codiceLogin) {
-  const destinazione = normalizzaRedirectAutenticazione(urlDestinazione);
-  if (!destinazione || !codiceLogin) return destinazione || URL_HOME_WIX;
-
-  const url = new URL(destinazione);
-  url.searchParams.set("oauth_code", codiceLogin);
-  return url.href;
-}
-
-const timerPuliziaCodiciOAuth = setInterval(() => {
-  const adesso = Date.now();
-  for (const [codice, dati] of CODICI_LOGIN_OAUTH.entries()) {
-    if (!dati || dati.scadenza < adesso) {
-      CODICI_LOGIN_OAUTH.delete(codice);
-    }
-  }
-}, 60 * 1000);
-
-if (typeof timerPuliziaCodiciOAuth.unref === "function") {
-  timerPuliziaCodiciOAuth.unref();
-}
-
-app.post("/api/auth/oauth-exchange", limiteLogin, (req, res) => {
-  res.set("Cache-Control", "no-store");
-
-  const codice =
-    req.body && typeof req.body.code === "string"
-      ? req.body.code.trim()
-      : "";
-
-  const token = consumaCodiceLoginOAuth(codice);
-
-  if (!token) {
-    return res.status(401).json({
-      errore: "Codice di accesso non valido o scaduto."
-    });
-  }
-
-  // Se il browser permette il cookie lo manteniamo; Wix può comunque usare
-  // il token Bearer restituito qui quando i cookie di terze parti sono bloccati.
-  res.cookie("token", token, OPZIONI_COOKIE);
-
-  return res.json({
-    ok: true,
-    token
-  });
-});
-
 // ===== LOGIN CON GOOGLE =====
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
@@ -799,12 +718,12 @@ app.get("/auth/google/callback",
       const token = creaToken(utente.uid, utente.nickname, utente.ruolo || "utente");
       res.cookie("token", token, OPZIONI_COOKIE);
 
-      const redirectRichiesto = leggiStatoOAuth(req.query.state) || URL_HOME_WIX;
-      const codiceLogin = creaCodiceLoginOAuth(token);
+      const redirectRichiesto = leggiStatoOAuth(req.query.state);
+      if (redirectRichiesto) {
+        return res.redirect(aggiungiTokenAlFrammento(redirectRichiesto, token));
+      }
 
-      return res.redirect(
-        aggiungiCodiceOAuthAlRedirect(redirectRichiesto, codiceLogin)
-      );
+      return res.redirect(URL_HOME_WIX);
     } catch (errore) {
       console.error("Errore callback Google:", errore);
       return res.redirect("/login.html?errore=google");
@@ -5451,7 +5370,7 @@ function inviaConteggioStanze() {
 const HEARTBEAT_MS = 15000;
 const DURATA_ANIMAZIONE_DADI_MS = 1080;
 const DURATA_PASSO_PEDINA_MS = 260;
-const MARGINE_SINCRONIZZAZIONE_MOSSA_MS = 500;
+const MARGINE_SINCRONIZZAZIONE_MOSSA_MS = 90;
 const heartbeatInterval = setInterval(() => {
   wss.clients.forEach(socket => { if (socket.isAlive === false) return socket.terminate(); socket.isAlive = false; socket.ping(); });
 }, HEARTBEAT_MS);
@@ -5591,21 +5510,6 @@ async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, auto
   partita.animazioneTiroInCorso = true;
   fermaTimerTurno(partita);
 
-  // Avvisiamo SUBITO tutti i client che il tiro è partito, prima ancora di
-  // interrogare RANDOM.ORG. La chiamata a RANDOM.ORG (dal secondo tiro reale
-  // in poi) può richiedere anche 1-2 secondi: senza questo avviso il client
-  // restava fermo e "muto" per tutto quel tempo, dando la sensazione che il
-  // gioco si blocchi/scatti. Ora l'animazione dei dadi può partire subito sul
-  // client, in parallelo all'attesa della risposta.
-  const messaggioTiroAvviato = JSON.stringify({
-    tipo: "tiroAvviato",
-    idGiocatore,
-    automatico: !!automatico
-  });
-  Object.values(partita.giocatori).forEach(g => {
-    if (g.socket && g.socket.readyState === WebSocket.OPEN) g.socket.send(messaggioTiroAvviato);
-  });
-
   try {
     const tiriRealiPrimaDelTiro = numeroTiriRealiEffettuati(giocatore);
     const { dado1, dado2 } = await lanciaDueDadiPerGiocatore(giocatore);
@@ -5617,6 +5521,8 @@ async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, auto
 
     giocatore.posizione = risultato.nuovaPosizione;
     if (risultato.turniDaSaltare > 0) giocatore.turniSaltati = risultato.turniDaSaltare;
+
+    if (!risultato.tiraAncora && !risultato.vittoria) passaAlProssimoTurno(partita);
 
     const statoGiocatori = costruisciStatoGiocatori(partita);
     const messaggiGenerali = automatico ? ["⏱️ Tempo scaduto: mossa automatica."] : [];
@@ -5681,12 +5587,6 @@ async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, auto
       if (!trovato || trovato.partita !== partita) return;
       if (!partita.iniziata) return;
       if (tokenAnimazione !== partita.tokenTimerTurno) return;
-
-      // Il turno autorevole cambia soltanto quando la mossa precedente ha
-      // terminato la propria finestra di animazione e sincronizzazione.
-      if (!risultato.tiraAncora) {
-        passaAlProssimoTurno(partita);
-      }
 
       partita.animazioneTiroInCorso = false;
       avviaTimerTurno(partita, nomeStanza);
@@ -5898,20 +5798,6 @@ async function eseguiTiroDeterminazionePerGiocatore(partita, nomeStanza, uid, au
   partita.elaborandoTiro = true;
   try {
     fermaTimerTurno(partita);
-
-    // Come per i tiri normali: avvisiamo subito i client che il tiro è
-    // partito, così l'animazione può iniziare senza aspettare la risposta
-    // di RANDOM.ORG (usato anche in questa fase).
-    const giocatoreCheTira = partita.giocatori[uid];
-    const messaggioTiroAvviato = JSON.stringify({
-      tipo: "tiroAvviato",
-      idGiocatore: uid,
-      automatico: !!automatico
-    });
-    Object.values(partita.giocatori).forEach(g => {
-      if (g.socket && g.socket.readyState === WebSocket.OPEN) g.socket.send(messaggioTiroAvviato);
-    });
-
     const { dado1, dado2 } = await lanciaDueDadiSicuri();
     const valoreDado = dado1 + dado2;
     if (!partita.risultatiDeterminazione) partita.risultatiDeterminazione = {};
