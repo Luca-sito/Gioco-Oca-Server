@@ -498,7 +498,7 @@ async function accedi() {
     try {
 
         const risposta = await fetch(
-            "https://gioco-oca-server.onrender.com/api/login",
+            "https://api.giochisocieta.com/api/login",
             {
                 method: "POST",
 
@@ -570,7 +570,7 @@ async function accedi() {
 function accediConGoogle() {
 
     let url =
-        "https://gioco-oca-server.onrender.com/auth/google";
+        "https://api.giochisocieta.com/auth/google";
 
 
     if (redirect) {

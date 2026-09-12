@@ -60,7 +60,7 @@ async function registrati() {
   bottone.textContent = "Registrazione in corso...";
 
   try {
-    const risposta = await fetch("https://gioco-oca-server.onrender.com/api/registrati", {
+    const risposta = await fetch("https://api.giochisocieta.com/api/registrati", {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },

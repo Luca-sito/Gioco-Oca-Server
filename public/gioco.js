@@ -27,10 +27,10 @@ const DURATA_SALTO_MS = 260;
 
 const origineConfigurata = typeof window.GIOCO_SERVER_URL === "string" ? window.GIOCO_SERVER_URL.trim() : "";
 const hostLocale = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" || window.location.hostname === "[::1]";
-const paginaSulServerUfficiale = window.location.hostname === "gioco-oca-server.onrender.com";
+const paginaSulServerUfficiale = window.location.hostname === "api.giochisocieta.com";
 const ORIGINE_SERVER = (origineConfigurata || ((hostLocale || paginaSulServerUfficiale)
   ? window.location.origin
-  : "https://gioco-oca-server.onrender.com")).replace(/\/$/, "");
+  : "https://api.giochisocieta.com")).replace(/\/$/, "");
 const URL_WEBSOCKET = ORIGINE_SERVER.replace(/^http:/, "ws:").replace(/^https:/, "wss:");
 
 const params = new URLSearchParams(window.location.search);

@@ -349,7 +349,7 @@ try{
 
 
 const risposta = await fetch(
-"https://gioco-oca-server.onrender.com/api/me",
+"https://api.giochisocieta.com/api/me",
 {
 credentials:"include"
 }
@@ -380,7 +380,7 @@ document.getElementById("avatarAttuale");
 if(dati.avatar){
 
 avatar.innerHTML =
-"<img src='https://gioco-oca-server.onrender.com" + dati.avatar + "'>";
+"<img src='https://api.giochisocieta.com" + dati.avatar + "'>";
 
 }else{
 
@@ -399,7 +399,7 @@ document.getElementById("anteprimaAvatar");
 if(dati.avatar){
 
 anteprima.innerHTML =
-"<img src='https://gioco-oca-server.onrender.com" + dati.avatar + "'>";
+"<img src='https://api.giochisocieta.com" + dati.avatar + "'>";
 
 }else{
 
@@ -529,7 +529,7 @@ try{
 
 
 const risposta = await fetch(
-"https://gioco-oca-server.onrender.com/api/carica-avatar",
+"https://api.giochisocieta.com/api/carica-avatar",
 {
 method:"POST",
 credentials:"include",

@@ -49,7 +49,7 @@ function formattaDurata(secondi) {
 async function carica() {
   try {
     const risposta = await fetch(
-      "https://gioco-oca-server.onrender.com/api/storico" + (nicknameRichiesto ? "?nickname=" + encodeURIComponent(nicknameRichiesto) : ""),
+      "https://api.giochisocieta.com/api/storico" + (nicknameRichiesto ? "?nickname=" + encodeURIComponent(nicknameRichiesto) : ""),
       { credentials: "include" }
     );
 

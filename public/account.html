@@ -27,7 +27,7 @@ button:hover{ background:#ffaa00; }
 
 <script>
 async function caricaAccount() {
-  const risposta = await fetch("https://gioco-oca-server.onrender.com/api/me", { credentials: "include" });
+  const risposta = await fetch("https://api.giochisocieta.com/api/me", { credentials: "include" });
   if (!risposta.ok) { window.location.href = "login.html"; return; }
   const dati = await risposta.json();
   document.getElementById("email").innerHTML = dati.email;
@@ -36,7 +36,7 @@ async function caricaAccount() {
 
 async function salvaNickname() {
   const nickname = document.getElementById("nickname").value;
-  const risposta = await fetch("https://gioco-oca-server.onrender.com/api/modifica-nickname", {
+  const risposta = await fetch("https://api.giochisocieta.com/api/modifica-nickname", {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
@@ -50,7 +50,7 @@ async function salvaNickname() {
 }
 
 async function logout() {
-  try { await fetch("https://gioco-oca-server.onrender.com/api/logout", { method: "POST", credentials: "include" }); } catch (e) {}
+  try { await fetch("https://api.giochisocieta.com/api/logout", { method: "POST", credentials: "include" }); } catch (e) {}
   window.location.href = "login.html";
 }
 

@@ -1938,7 +1938,7 @@ body.tema-scuro .giocatore-online{
 
         <span class="contatore-icona">
             <img
-                src="https://gioco-oca-server.onrender.com/Immagini/Giocatori.png"
+                src="https://api.giochisocieta.com/Immagini/Giocatori.png"
                 alt="Giocatori online"
             >
             <span id="online">0</span>
@@ -1946,7 +1946,7 @@ body.tema-scuro .giocatore-online{
 
         <span class="contatore-icona">
             <img
-                src="https://gioco-oca-server.onrender.com/Immagini/Amici.png"
+                src="https://api.giochisocieta.com/Immagini/Amici.png"
                 alt="Amici online"
             >
             <span id="amiciOnline">0</span>
@@ -1963,7 +1963,7 @@ let socket = null;
 let timerRiconnessione = null;
 let sessioneVerificata = false;
 let paginaInUscita = false;
-const URL_SERVER_WS = "wss://gioco-oca-server.onrender.com";
+const URL_SERVER_WS = "wss://api.giochisocieta.com";
 const CHIAVE_TOKEN_AUTH = "giochiSocietaAuthToken";
 
 function acquisisciTokenAutenticazioneDaUrl() {
@@ -2648,11 +2648,11 @@ function creaIntestazioneOnlineMobile(){
       <span class="online-mobile-stanza">${pulisciTestoHtml(stanza)}</span>
       <span class="online-mobile-contatori">
         <span class="online-mobile-contatore" title="Giocatori nella stanza">
-          <img src="https://gioco-oca-server.onrender.com/Immagini/Giocatori.png" alt="Giocatori online">
+          <img src="https://api.giochisocieta.com/Immagini/Giocatori.png" alt="Giocatori online">
           <span id="onlineMobile">${giocatori}</span>
         </span>
         <span class="online-mobile-contatore" title="Amici nella stanza">
-          <img src="https://gioco-oca-server.onrender.com/Immagini/Amici.png" alt="Amici online">
+          <img src="https://api.giochisocieta.com/Immagini/Amici.png" alt="Amici online">
           <span id="amiciOnlineMobile">${amici}</span>
         </span>
       </span>
@@ -2842,7 +2842,7 @@ document.getElementById("contenutoMobile").dataset.vista = "";
 async function verificaSessione() {
   try {
     const risposta = await fetchAutenticato(
-      "https://gioco-oca-server.onrender.com/api/me"
+      "https://api.giochisocieta.com/api/me"
     );
 
     if (!risposta.ok) {
@@ -2869,7 +2869,7 @@ async function esci() {
   paginaInUscita = true;
   try {
     await fetchAutenticato(
-      "https://gioco-oca-server.onrender.com/api/logout",
+      "https://api.giochisocieta.com/api/logout",
       { method: "POST" }
     );
   } catch (e) {}
@@ -3301,7 +3301,7 @@ async function caricaTopGiocatori() {
 // ===== AMICI =====
 async function caricaAmici() {
   try {
-    const r = await fetchAutenticato("https://gioco-oca-server.onrender.com/api/amici");
+    const r = await fetchAutenticato("https://api.giochisocieta.com/api/amici");
     if (!r.ok) return;
     const d = await r.json();
     mieiAmiciUid = new Set((d.amici || []).map(a => a.uid));
@@ -3487,7 +3487,7 @@ function chiudiPlayerCardGiocatore() {
 
 async function caricaDatiPlayerCardGiocatore(nomeTarget, idRichiesta) {
   try {
-    const risposta = await fetchAutenticato("https://gioco-oca-server.onrender.com/api/profilo-pubblico/" + encodeURIComponent(nomeTarget));
+    const risposta = await fetchAutenticato("https://api.giochisocieta.com/api/profilo-pubblico/" + encodeURIComponent(nomeTarget));
     if (idRichiesta !== richiestaProfiloCorrente) return;
     if (!risposta.ok) {
       document.getElementById("playerCardContenuto").innerHTML = `<div class="player-card-errore">Impossibile caricare la scheda del giocatore.</div>`;
@@ -3703,7 +3703,7 @@ document.addEventListener("keydown", e => {
 async function caricaBlocchiLobby() {
   if (!mioUid) return;
   try {
-    const risposta = await fetchAutenticato("https://gioco-oca-server.onrender.com/api/blocchi");
+    const risposta = await fetchAutenticato("https://api.giochisocieta.com/api/blocchi");
     if (!risposta.ok) return;
     const dati = await risposta.json();
     uidBloccatiInterazione = new Set(Array.isArray(dati.interazioniBloccateUid) ? dati.interazioniBloccateUid : []);
@@ -3721,7 +3721,7 @@ async function bloccaGiocatore(utenteUid, nickname) {
   });
   if (!confermato) return;
   try {
-    const risposta = await fetchAutenticato("https://gioco-oca-server.onrender.com/api/blocchi", {
+    const risposta = await fetchAutenticato("https://api.giochisocieta.com/api/blocchi", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ utenteUid })
@@ -3748,7 +3748,7 @@ async function sbloccaGiocatore(utenteUid) {
   });
   if (!confermato) return;
   try {
-    const risposta = await fetchAutenticato("https://gioco-oca-server.onrender.com/api/blocchi/" + encodeURIComponent(utenteUid), {
+    const risposta = await fetchAutenticato("https://api.giochisocieta.com/api/blocchi/" + encodeURIComponent(utenteUid), {
       method: "DELETE"
     });
     const dati = await risposta.json().catch(() => ({}));
@@ -3766,7 +3766,7 @@ async function sbloccaGiocatore(utenteUid) {
 
 async function inviaRichiestaAmicizia(destinatarioUid) {
   try {
-    const r = await fetchAutenticato("https://gioco-oca-server.onrender.com/api/amici/richiedi", {
+    const r = await fetchAutenticato("https://api.giochisocieta.com/api/amici/richiedi", {
       method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ destinatarioUid })
     });
@@ -3777,7 +3777,7 @@ async function inviaRichiestaAmicizia(destinatarioUid) {
 }
 async function accettaAmicizia(daUid) {
   try {
-    const r = await fetchAutenticato("https://gioco-oca-server.onrender.com/api/amici/accetta", {
+    const r = await fetchAutenticato("https://api.giochisocieta.com/api/amici/accetta", {
       method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ daUid })
     });
@@ -3789,7 +3789,7 @@ async function accettaAmicizia(daUid) {
 }
 async function rifiutaAmicizia(daUid) {
   try {
-    const r = await fetchAutenticato("https://gioco-oca-server.onrender.com/api/amici/rifiuta", {
+    const r = await fetchAutenticato("https://api.giochisocieta.com/api/amici/rifiuta", {
       method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ daUid })
     });
@@ -3810,7 +3810,7 @@ async function rimuoviAmico(altroUid) {
   });
   if (!confermato) return;
   try {
-    const r = await fetchAutenticato("https://gioco-oca-server.onrender.com/api/amici/rimuovi", {
+    const r = await fetchAutenticato("https://api.giochisocieta.com/api/amici/rimuovi", {
       method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ altroUid })
     });
@@ -3959,7 +3959,7 @@ function inizializzaSegnalazioniLobby() {
 
     try {
       const risposta = await fetchAutenticato(
-        "https://gioco-oca-server.onrender.com/api/segnalazioni",
+        "https://api.giochisocieta.com/api/segnalazioni",
         {
           method: "POST",
           credentials: "include",
@@ -4029,7 +4029,7 @@ if (document.readyState === "loading") {
     <!-- CREA -->
     <button class="btn-mobile" onclick="apriCreaMobile()">
         <img
-            src="https://gioco-oca-server.onrender.com/Immagini/Creatavolo.png"
+            src="https://api.giochisocieta.com/Immagini/Creatavolo.png"
             alt="Crea"
             style="
                 width:24px;
@@ -4042,7 +4042,7 @@ if (document.readyState === "loading") {
     <!-- ONLINE -->
     <button class="btn-mobile" onclick="apriOnlineMobile()">
         <img
-            src="https://gioco-oca-server.onrender.com/Immagini/Amicionline.png"
+            src="https://api.giochisocieta.com/Immagini/Amicionline.png"
             alt="Online"
             style="
                 width:24px;
@@ -4062,7 +4062,7 @@ if (document.readyState === "loading") {
     <!-- CHAT -->
     <button class="btn-mobile" onclick="apriChatMobile()">
         <img
-            src="https://gioco-oca-server.onrender.com/Immagini/Chatonline.png"
+            src="https://api.giochisocieta.com/Immagini/Chatonline.png"
             alt="Chat"
             style="
                 width:24px;
@@ -4082,7 +4082,7 @@ if (document.readyState === "loading") {
     <!-- OPZIONI -->
     <button class="btn-mobile" onclick="apriOpzioniMobile()">
         <img
-            src="https://gioco-oca-server.onrender.com/Immagini/Impostazioni.png"
+            src="https://api.giochisocieta.com/Immagini/Impostazioni.png"
             alt="Opzioni"
             style="
                 width:24px;

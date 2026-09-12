@@ -26,7 +26,7 @@ app.set("trust proxy", 1);
 const ORIGINI_CONSENTITE = [
   "https://solfriniluca1.wixstudio.com",
   "https://solfriniluca1-wixstudio-com.filesusr.com",
-  "https://gioco-oca-server.onrender.com"
+  "https://api.giochisocieta.com"
 ];
 
 app.use(cors({
@@ -506,7 +506,7 @@ async function partitaContieneUtenteBloccato(partita, uid) {
 }
 
 const URL_SERVER_PUBBLICO =
-  String(process.env.PUBLIC_SERVER_URL || "https://gioco-oca-server.onrender.com")
+  String(process.env.PUBLIC_SERVER_URL || "https://api.giochisocieta.com")
     .replace(/\/$/, "");
 
 function creaUrlAvatarRealtime(uid, avatarPresente, avatarVersione) {
@@ -717,11 +717,6 @@ app.get("/auth/google/callback",
 
       const token = creaToken(utente.uid, utente.nickname, utente.ruolo || "utente");
       res.cookie("token", token, OPZIONI_COOKIE);
-
-      const redirectRichiesto = leggiStatoOAuth(req.query.state);
-      if (redirectRichiesto) {
-        return res.redirect(aggiungiTokenAlFrammento(redirectRichiesto, token));
-      }
 
       return res.redirect(URL_HOME_WIX);
     } catch (errore) {
