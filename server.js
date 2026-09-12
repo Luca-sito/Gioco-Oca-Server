@@ -28,6 +28,7 @@ const ORIGINI_CONSENTITE = [
   "https://solfriniluca1-wixstudio-com.filesusr.com",
   "https://42e717ea-cbc0-4eba-8835-505a4bbf635c.filesusr.com",
   "https://gioco-oca-server.onrender.com"
+  "https://api.giochisocieta.com"
 ];
 
 app.use(cors({
