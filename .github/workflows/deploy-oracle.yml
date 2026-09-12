@@ -1,0 +1,51 @@
+name: Deploy su Oracle
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Configura SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.OCI_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.OCI_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Deploy su Oracle
+        run: |
+          ssh \
+            -i ~/.ssh/id_ed25519 \
+            -o IdentitiesOnly=yes \
+            ${{ secrets.OCI_USER }}@${{ secrets.OCI_HOST }} <<'REMOTE'
+              set -e
+
+              cd /home/opc/Gioco-Oca-Server
+
+              echo "=== Aggiornamento repository ==="
+              git fetch origin main
+              git reset --hard origin/main
+
+              echo "=== Installazione dipendenze ==="
+              npm ci
+
+              echo "=== Riavvio server ==="
+              pm2 restart giochi-societa-server
+
+              echo "=== Stato PM2 ==="
+              pm2 status
+
+              echo "=== Deploy completato ==="
+          REMOTE
