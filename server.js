@@ -26,6 +26,7 @@ app.set("trust proxy", 1);
 const ORIGINI_CONSENTITE = [
   "https://solfriniluca1.wixstudio.com",
   "https://solfriniluca1-wixstudio-com.filesusr.com",
+  "https://42e717ea-cbc0-4eba-8835-505a4bbf635c.filesusr.com",
   "https://gioco-oca-server.onrender.com"
 ];
 
@@ -5370,7 +5371,7 @@ function inviaConteggioStanze() {
 const HEARTBEAT_MS = 15000;
 const DURATA_ANIMAZIONE_DADI_MS = 1080;
 const DURATA_PASSO_PEDINA_MS = 260;
-const MARGINE_SINCRONIZZAZIONE_MOSSA_MS = 90;
+const MARGINE_SINCRONIZZAZIONE_MOSSA_MS = 500;
 const heartbeatInterval = setInterval(() => {
   wss.clients.forEach(socket => { if (socket.isAlive === false) return socket.terminate(); socket.isAlive = false; socket.ping(); });
 }, HEARTBEAT_MS);
@@ -5522,8 +5523,6 @@ async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, auto
     giocatore.posizione = risultato.nuovaPosizione;
     if (risultato.turniDaSaltare > 0) giocatore.turniSaltati = risultato.turniDaSaltare;
 
-    if (!risultato.tiraAncora && !risultato.vittoria) passaAlProssimoTurno(partita);
-
     const statoGiocatori = costruisciStatoGiocatori(partita);
     const messaggiGenerali = automatico ? ["⏱️ Tempo scaduto: mossa automatica."] : [];
     const messaggiFinali = messaggiGenerali.concat(risultato.messaggi);
@@ -5589,6 +5588,14 @@ async function eseguiTiroDadiPerGiocatore(partita, nomeStanza, idGiocatore, auto
       if (tokenAnimazione !== partita.tokenTimerTurno) return;
 
       partita.animazioneTiroInCorso = false;
+
+      // Il turno cambia solo DOPO che dadi, pedina ed eventuali effetti
+      // hanno terminato la loro finestra di animazione. In questo modo lo
+      // stato autorevole del server non anticipa visivamente il client.
+      if (!risultato.tiraAncora && !risultato.vittoria) {
+        passaAlProssimoTurno(partita);
+      }
+
       avviaTimerTurno(partita, nomeStanza);
 
       const statoDopoAnimazione = costruisciStatoGiocatori(partita);
