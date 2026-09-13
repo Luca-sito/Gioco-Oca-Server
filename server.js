@@ -27,7 +27,8 @@ const ORIGINI_CONSENTITE = [
   "https://solfriniluca1.wixstudio.com",
   "https://solfriniluca1-wixstudio-com.filesusr.com",
   "https://42e717ea-cbc0-4eba-8835-505a4bbf635c.filesusr.com",
-  "https://gioco-oca-server.onrender.com"
+  "https://giochisocieta.com",
+  "https://www.giochisocieta.com",
   "https://api.giochisocieta.com"
 ];
 
@@ -52,7 +53,7 @@ const wss = new WebSocket.Server({ server, maxPayload: 256 * 1024 });
 const PORT = process.env.PORT || 3000;
 
 const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET) throw new Error("JWT_SECRET mancante: impostala nelle variabili d'ambiente su Render prima di avviare il server.");
+if (!JWT_SECRET) throw new Error("JWT_SECRET mancante: impostala nelle variabili d'ambiente prima di avviare il server.");
 
 const OPZIONI_COOKIE = {
   httpOnly: true,
@@ -60,6 +61,13 @@ const OPZIONI_COOKIE = {
   sameSite: "none",
   path: "/",
   maxAge: 30 * 24 * 60 * 60 * 1000
+};
+
+const OPZIONI_RIMOZIONE_COOKIE = {
+  httpOnly: OPZIONI_COOKIE.httpOnly,
+  secure: OPZIONI_COOKIE.secure,
+  sameSite: OPZIONI_COOKIE.sameSite,
+  path: OPZIONI_COOKIE.path
 };
 
 const uploadAvatar = multer({
@@ -82,6 +90,7 @@ const limiteSegnalazioni = rateLimit({
 
 // ===== FIREBASE ADMIN =====
 let db = null;
+let databasePronto = false;
 try {
   const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
   admin.initializeApp({ credential: admin.credential.cert(serviceAccount), databaseURL: "https://giochi-societa-e8add-default-rtdb.europe-west1.firebasedatabase.app" });
@@ -90,6 +99,15 @@ try {
 } catch (e) {
   console.error("ATTENZIONE: Firebase Admin NON inizializzato:", e.message);
 }
+
+app.get("/healthz", (req, res) => {
+  res.status(200).json({ ok: true });
+});
+
+app.get("/readyz", (req, res) => {
+  const pronto = Boolean(db && databasePronto);
+  res.status(pronto ? 200 : 503).json({ ok: pronto });
+});
 
 // ===== LOG CHAT MODERAZIONE — CONSERVAZIONE MASSIMA 90 GIORNI =====
 const DURATA_LOG_CHAT_MS = 90 * 24 * 60 * 60 * 1000;
@@ -382,10 +400,20 @@ async function concludiPartita(partita, vincitoreUid, nomeStanza, elencoPartecip
 function creaToken(uid, nickname, ruolo) { return jwt.sign({ uid, nickname, ruolo }, JWT_SECRET, { expiresIn: "30d" }); }
 function verificaToken(token) { if (!token) return null; try { return jwt.verify(token, JWT_SECRET); } catch (e) { return null; } }
 function estraiTokenHeader(req) {
-  if (req.cookies && req.cookies.token) return req.cookies.token;
-  const header = req.headers.authorization || "";
-  const parti = header.split(" ");
-  return parti.length === 2 ? parti[1] : null;
+  const header = typeof req.headers.authorization === "string"
+    ? req.headers.authorization.trim()
+    : "";
+
+  if (header) {
+    const bearer = /^Bearer +(\S+)$/i.exec(header);
+    return bearer ? bearer[1] : null;
+  }
+
+  if (req.cookies && typeof req.cookies.token === "string" && req.cookies.token) {
+    return req.cookies.token;
+  }
+
+  return null;
 }
 function estraiTokenDaCookieHeader(cookieHeaderGrezzo) {
   if (!cookieHeaderGrezzo) return null;
@@ -508,7 +536,7 @@ async function partitaContieneUtenteBloccato(partita, uid) {
 }
 
 const URL_SERVER_PUBBLICO =
-  String(process.env.PUBLIC_SERVER_URL || "https://gioco-oca-server.onrender.com")
+  String(process.env.PUBLIC_SERVER_URL || "https://api.giochisocieta.com")
     .replace(/\/$/, "");
 
 function creaUrlAvatarRealtime(uid, avatarPresente, avatarVersione) {
@@ -592,7 +620,10 @@ async function generaNicknameGoogleUnico(nome, email) {
 }
 
 // ===== REDIRECT AUTENTICAZIONE / OAUTH =====
-const URL_HOME_WIX = "https://solfriniluca1.wixstudio.com/giochisocieta";
+const PUBLIC_SITE_URL =
+  String(process.env.PUBLIC_SITE_URL || "https://solfriniluca1.wixstudio.com/giochisocieta")
+    .replace(/\/$/, "");
+const URL_HOME_WIX = PUBLIC_SITE_URL;
 
 function normalizzaRedirectAutenticazione(valore) {
   if (typeof valore !== "string" || !valore.trim()) return null;
@@ -642,12 +673,15 @@ function aggiungiTokenAlFrammento(urlDestinazione, token) {
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const GOOGLE_CALLBACK_URL = process.env.GOOGLE_CALLBACK_URL;
+const GOOGLE_OAUTH_CONFIGURATO = Boolean(
+  GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET && GOOGLE_CALLBACK_URL
+);
 
-if (!GOOGLE_CLIENT_ID) console.warn("GOOGLE_CLIENT_ID non configurato su Render.");
-if (!GOOGLE_CLIENT_SECRET) console.warn("GOOGLE_CLIENT_SECRET non configurato su Render.");
-if (!GOOGLE_CALLBACK_URL) console.warn("GOOGLE_CALLBACK_URL non configurato su Render.");
+if (!GOOGLE_CLIENT_ID) console.warn("GOOGLE_CLIENT_ID non configurato.");
+if (!GOOGLE_CLIENT_SECRET) console.warn("GOOGLE_CLIENT_SECRET non configurato.");
+if (!GOOGLE_CALLBACK_URL) console.warn("GOOGLE_CALLBACK_URL non configurato.");
 
-if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET && GOOGLE_CALLBACK_URL) {
+if (GOOGLE_OAUTH_CONFIGURATO) {
   passport.use(new GoogleStrategy({
     clientID: GOOGLE_CLIENT_ID,
     clientSecret: GOOGLE_CLIENT_SECRET,
@@ -702,7 +736,14 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET && GOOGLE_CALLBACK_URL) {
   }));
 }
 
-app.get("/auth/google", (req, res, next) => {
+function richiediGoogleOAuthConfigurato(req, res, next) {
+  if (!GOOGLE_OAUTH_CONFIGURATO) {
+    return res.status(503).json({ errore: "Google OAuth non configurato." });
+  }
+  next();
+}
+
+app.get("/auth/google", richiediGoogleOAuthConfigurato, (req, res, next) => {
   const state = creaStatoOAuth(req.query.redirect);
   passport.authenticate("google", {
     scope: ["profile", "email"],
@@ -711,6 +752,7 @@ app.get("/auth/google", (req, res, next) => {
 });
 
 app.get("/auth/google/callback",
+  richiediGoogleOAuthConfigurato,
   passport.authenticate("google", { session: false, failureRedirect: "/login.html?errore=google" }),
   async (req, res) => {
     try {
@@ -1434,7 +1476,7 @@ app.get(
   }
 );
 
-app.post("/api/logout", (req, res) => { res.clearCookie("token", OPZIONI_COOKIE); res.json({ ok: true }); });
+app.post("/api/logout", (req, res) => { res.clearCookie("token", OPZIONI_RIMOZIONE_COOKIE); res.json({ ok: true }); });
 
 app.get("/api/me", richiediAuth, async (req, res) => {
   if (!db) {
@@ -6772,7 +6814,14 @@ socket.on("close", async () => {
 
 });
 
-server.listen(PORT, async () => {
+server.listen(PORT, () => {
   console.log("Server avviato sulla porta " + PORT);
-  await ripristinaPartiteDaFirebase();
+  ripristinaPartiteDaFirebase()
+    .then(() => {
+      databasePronto = Boolean(db);
+    })
+    .catch((errore) => {
+      databasePronto = false;
+      console.error("Errore ripristino partite da Firebase:", errore.message);
+    });
 });
