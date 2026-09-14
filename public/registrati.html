@@ -3,93 +3,630 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="no-referrer">
 <title>Registrati - Giochi Società</title>
 
 <style>
-* { box-sizing: border-box; font-family: Arial, sans-serif; }
-body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #101820; }
-.scatola { background: #1e2a38; border: 2px solid #ffd700; border-radius: 14px; padding: 36px; width: 360px; max-width: 90%; }
-h1 { color: #ffd700; text-align: center; font-size: 22px; margin-top: 0; }
-label { display: block; color: #ccc; font-size: 13px; font-weight: bold; margin: 14px 0 6px; }
-input { width: 100%; padding: 11px; border-radius: 8px; border: none; background: #101820; color: #fff; font-size: 14px; }
-button { width: 100%; margin-top: 22px; padding: 13px; border: none; border-radius: 8px; background: #ffd700; color: #111; font-weight: bold; font-size: 15px; cursor: pointer; }
-button:hover { background: #ffaa00; }
-button:disabled { background: #666; cursor: not-allowed; }
-.errore { color: #ff6b6b; font-size: 13px; margin-top: 12px; text-align: center; min-height: 16px; }
-.link-sotto { text-align: center; margin-top: 16px; font-size: 13px; color: #aaa; }
-.link-sotto a { color: #ffd700; text-decoration: none; }
+* {
+  box-sizing: border-box;
+  font-family: Arial, sans-serif;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #101820;
+  padding: 20px 12px;
+  color: #fff;
+}
+
+.scatola {
+  background: #1e2a38;
+  border: 2px solid #ffd700;
+  border-radius: 14px;
+  padding: 32px;
+  width: 380px;
+  max-width: 100%;
+}
+
+h1 {
+  color: #ffd700;
+  text-align: center;
+  font-size: 22px;
+  margin: 0 0 20px;
+}
+
+p {
+  color: #ccd3dc;
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+label {
+  display: block;
+  color: #ccc;
+  font-size: 13px;
+  font-weight: bold;
+  margin: 14px 0 6px;
+}
+
+input {
+  width: 100%;
+  padding: 11px;
+  border-radius: 8px;
+  border: 1px solid #425164;
+  background: #101820;
+  color: #fff;
+  font-size: 16px;
+}
+
+button,
+.bottone {
+  display: block;
+  width: 100%;
+  margin-top: 22px;
+  padding: 13px;
+  border: none;
+  border-radius: 8px;
+  background: #ffd700;
+  color: #111;
+  font-weight: bold;
+  font-size: 15px;
+  cursor: pointer;
+  text-align: center;
+  text-decoration: none;
+}
+
+button:hover,
+.bottone:hover {
+  background: #ffaa00;
+}
+
+button:disabled {
+  background: #59616c;
+  color: #ddd;
+  cursor: not-allowed;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible {
+  outline: 3px solid #ffd700;
+  outline-offset: 4px;
+}
+
+.errore {
+  color: #ff9494;
+  font-size: 13px;
+  margin-top: 12px;
+  text-align: center;
+  min-height: 16px;
+}
+
+.avviso {
+  padding: 12px;
+  border: 1px solid #526176;
+  border-radius: 8px;
+  background: #101820;
+}
+
+.avviso.problema {
+  border-color: #b36a5f;
+}
+
+.link-sotto {
+  text-align: center;
+  margin-top: 16px;
+  font-size: 13px;
+  color: #aaa;
+}
+
+.link-sotto a,
+.link-testo {
+  color: #ffd700;
+  text-decoration: underline;
+}
+
+.link-testo {
+  background: transparent;
+  padding: 6px;
+  font-size: 13px;
+  font-weight: normal;
+  margin-top: 12px;
+}
+
+.link-testo:hover {
+  background: transparent;
+  color: #ffaa00;
+}
+
+.piccolo {
+  font-size: 12px;
+}
+
+@media (max-width: 390px) {
+  .scatola {
+    padding: 24px 20px;
+  }
+}
 </style>
 </head>
-<body>
 
-<div class="scatola">
-  <h1>Crea il tuo account</h1>
-  <label>Email</label>
-  <input type="email" id="email" placeholder="tuaemail@esempio.com">
-  <label>Nickname (5-15 caratteri, sarà fisso)</label>
-  <input type="text" id="nickname" placeholder="Es. LucaSolfrini">
-  <label>Password (almeno 6 caratteri)</label>
-  <input type="password" id="password" placeholder="••••••••">
-  <label>Conferma password</label>
-  <input type="password" id="passwordConferma" placeholder="••••••••">
-  <button id="btnRegistrati" onclick="registrati()">Registrati</button>
-  <div class="errore" id="errore"></div>
+<body>
+<main class="scatola">
+
+  <section id="registrazione">
+    <h1>Crea il tuo account</h1>
+
+    <form id="formRegistrazione">
+      <label for="email">Email</label>
+      <input
+        type="email"
+        id="email"
+        autocomplete="email"
+        maxlength="100"
+        required
+        placeholder="tuaemail@esempio.com"
+      >
+
+      <label for="nickname">Nickname (5–15 caratteri)</label>
+      <input
+        type="text"
+        id="nickname"
+        autocomplete="username"
+        minlength="5"
+        maxlength="15"
+        pattern="[a-zA-Z0-9_ ]{5,15}"
+        required
+        placeholder="Es. LucaSolfrini"
+      >
+
+      <label for="password">Password (almeno 6 caratteri)</label>
+      <input
+        type="password"
+        id="password"
+        autocomplete="new-password"
+        minlength="6"
+        maxlength="100"
+        required
+      >
+
+      <label for="passwordConferma">Conferma password</label>
+      <input
+        type="password"
+        id="passwordConferma"
+        autocomplete="new-password"
+        minlength="6"
+        maxlength="100"
+        required
+      >
+
+      <button type="submit" id="btnRegistrati">
+        Registrati
+      </button>
+
+      <div class="errore" id="errore" role="alert"></div>
+    </form>
+
+    <button type="button" class="link-testo" id="apriReinvio">
+      Reinvia email di verifica
+    </button>
+  </section>
+
+  <section id="attesaVerifica" hidden>
+    <h1 id="titoloAttesa" tabindex="-1">
+      Controlla la tua email
+    </h1>
+
+    <p id="messaggioAttesa" class="avviso" role="status"></p>
+
+    <p>
+      Apri il link ricevuto e premi <strong>Conferma email</strong>.
+      Il link è valido per 24 ore. Controlla anche la cartella spam.
+    </p>
+
+    <form id="formReinvio">
+      <label for="emailReinvio">Email dell'account</label>
+      <input
+        id="emailReinvio"
+        type="email"
+        autocomplete="email"
+        maxlength="100"
+        required
+      >
+
+      <button id="btnReinviaEmail" type="submit">
+        Reinvia email
+      </button>
+    </form>
+
+    <p id="tempoReinvio" class="piccolo" role="status"></p>
+
+    <button id="tornaRegistrazione" class="link-testo" type="button">
+      Torna alla registrazione
+    </button>
+  </section>
+
+  <section id="confermaVerifica" hidden>
+    <h1 id="titoloConferma" tabindex="-1">
+      Conferma la tua email
+    </h1>
+
+    <p id="messaggioConferma" role="status">
+      Premi il pulsante per completare la registrazione che hai richiesto.
+      Se non sei stato tu, chiudi questa pagina.
+    </p>
+
+    <button id="btnConfermaEmail" type="button">
+      Conferma email
+    </button>
+
+    <a id="linkLoginConferma" class="bottone" href="login.html" hidden>
+      Vai ad Accedi
+    </a>
+
+    <button id="reinviaDaConferma" class="link-testo" type="button">
+      Richiedi un nuovo link
+    </button>
+  </section>
+
   <div class="link-sotto">
-    Hai già un account? <a id="linkLogin" href="login.html">Accedi</a>
+    Hai già un account?
+    <a id="linkLogin" href="login.html">Accedi</a>
   </div>
-</div>
+
+  <noscript>
+    <p>
+      Per registrarti o confermare l'email devi abilitare JavaScript.
+    </p>
+  </noscript>
+
+</main>
 
 <script>
+"use strict";
+
+const SERVER = "https://api.giochisocieta.com";
+const el = id => document.getElementById(id);
 const parametri = new URLSearchParams(window.location.search);
-const redirect = parametri.get("redirect");
-if (redirect) document.getElementById("linkLogin").href = "login.html?redirect=" + encodeURIComponent(redirect);
 
-async function registrati() {
-  const email = document.getElementById("email").value.trim();
-  const nickname = document.getElementById("nickname").value.trim();
-  const password = document.getElementById("password").value;
-  const passwordConferma = document.getElementById("passwordConferma").value;
-  const erroreEl = document.getElementById("errore");
-  const bottone = document.getElementById("btnRegistrati");
-  erroreEl.textContent = "";
+const originiConsentite = new Set([
+  "https://api.giochisocieta.com",
+  "https://giochisocieta.com",
+  "https://www.giochisocieta.com",
+  "https://solfriniluca1.wixstudio.com",
+  "https://solfriniluca1-wixstudio-com.filesusr.com",
+  "https://42e717ea-cbc0-4eba-8835-505a4bbf635c.filesusr.com"
+]);
 
-  if (!email || !nickname || !password) { erroreEl.textContent = "Compila tutti i campi."; return; }
-  if (password !== passwordConferma) { erroreEl.textContent = "Le due password non coincidono."; return; }
-
-  bottone.disabled = true;
-  bottone.textContent = "Registrazione in corso...";
-
+function redirectSicuro(valore) {
   try {
-    const risposta = await fetch("https://api.giochisocieta.com/api/registrati", {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, nickname, password })
-    });
-    const dati = await risposta.json();
-
-    if (!risposta.ok) {
-      erroreEl.textContent = dati.errore || "Errore durante la registrazione.";
-      bottone.disabled = false;
-      bottone.textContent = "Registrati";
-      return;
-    }
-
-    window.location.href = redirect || "https://solfriniluca1.wixstudio.com/giochisocieta";
-  } catch (e) {
-    erroreEl.textContent = "Errore di connessione al server.";
-    bottone.disabled = false;
-    bottone.textContent = "Registrati";
+    const url = new URL(valore);
+    return url.protocol === "https:" &&
+      !url.username &&
+      !url.password &&
+      originiConsentite.has(url.origin)
+        ? url.href
+        : null;
+  } catch (_) {
+    return null;
   }
 }
 
-document.addEventListener("keydown", function(e) {
-    if (e.key === "Enter") {
-        registrati();
-    }
-});
-  
-</script>
+const redirect = redirectSicuro(parametri.get("redirect"));
+const loginUrl = new URL("/login.html", SERVER);
 
+if (redirect) {
+  loginUrl.searchParams.set("redirect", redirect);
+}
+
+el("linkLogin").href = loginUrl.href;
+el("linkLoginConferma").href = loginUrl.href;
+
+let occupato = false;
+let reinvioDisponibileIl = 0;
+
+let tokenVerifica = new URLSearchParams(
+  window.location.hash.slice(1)
+).get("verifica") || "";
+
+function mostra(id) {
+  for (const nome of [
+    "registrazione",
+    "attesaVerifica",
+    "confermaVerifica"
+  ]) {
+    el(nome).hidden = nome !== id;
+  }
+}
+
+function aggiornaReinvio() {
+  const secondi = Math.max(
+    0,
+    Math.ceil((reinvioDisponibileIl - Date.now()) / 1000)
+  );
+
+  el("btnReinviaEmail").disabled = occupato || secondi > 0;
+
+  el("tempoReinvio").textContent = secondi === 0
+    ? ""
+    : secondi <= 90
+      ? "Puoi richiedere un'altra email tra " + secondi + " secondi."
+      : "Puoi riprovare dal " +
+        new Date(reinvioDisponibileIl).toLocaleString("it-IT") +
+        ".";
+}
+
+function impostaPausa(secondi) {
+  const n = Number(secondi);
+
+  if (Number.isFinite(n) && n > 0) {
+    reinvioDisponibileIl =
+      Date.now() + Math.min(n, 32 * 86400) * 1000;
+  }
+
+  aggiornaReinvio();
+}
+
+function apriAttesa(email, messaggio, problema = false) {
+  mostra("attesaVerifica");
+  el("emailReinvio").value = email || "";
+  el("messaggioAttesa").textContent = messaggio;
+  el("messaggioAttesa").classList.toggle("problema", problema);
+  el("titoloAttesa").focus();
+  aggiornaReinvio();
+}
+
+async function invia(percorso, corpo) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 20000);
+
+  try {
+    const risposta = await fetch(SERVER + percorso, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(corpo),
+      signal: controller.signal
+    });
+
+    const dati = await risposta.json();
+
+    if (!dati || typeof dati !== "object") {
+      throw new Error("Risposta non valida");
+    }
+
+    return { risposta, dati };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function pulisciPassword() {
+  el("password").value = "";
+  el("passwordConferma").value = "";
+}
+
+el("formRegistrazione").addEventListener("submit", async event => {
+  event.preventDefault();
+
+  if (occupato) return;
+
+  el("errore").textContent = "";
+
+  const email = el("email").value.trim();
+  const nickname = el("nickname").value.trim();
+  const password = el("password").value;
+
+  if (!email || !nickname || !password) {
+    el("errore").textContent = "Compila tutti i campi.";
+    return;
+  }
+
+  if (password !== el("passwordConferma").value) {
+    el("errore").textContent = "Le due password non coincidono.";
+    return;
+  }
+
+  occupato = true;
+  el("btnRegistrati").disabled = true;
+  el("btnRegistrati").textContent = "Registrazione in corso...";
+
+  try {
+    const { risposta, dati } = await invia("/api/registrati", {
+      email,
+      nickname,
+      password,
+      redirect
+    });
+
+    if (dati.codice === "EMAIL_DA_VERIFICARE") {
+      pulisciPassword();
+
+      apriAttesa(
+        email,
+        "Questo account è già in attesa di conferma. " +
+        "Puoi richiedere un nuovo link; la password resta " +
+        "quella scelta nella prima registrazione."
+      );
+    } else if (!risposta.ok) {
+      el("errore").textContent =
+        dati.errore || "Registrazione non riuscita.";
+    } else if (dati.richiedeVerifica === true) {
+      pulisciPassword();
+
+      apriAttesa(
+        dati.email || email,
+        dati.messaggio || "Controlla la tua email.",
+        dati.emailInviata === false
+      );
+
+      impostaPausa(dati.retryAfterSeconds || 60);
+    } else {
+      el("errore").textContent =
+        "Il servizio di registrazione deve essere aggiornato. " +
+        "Riprova più tardi.";
+    }
+  } catch (_) {
+    el("errore").textContent =
+      "Connessione interrotta. Controlla se è arrivata l'email " +
+      "oppure riprova la registrazione.";
+  } finally {
+    occupato = false;
+    el("btnRegistrati").disabled = false;
+    el("btnRegistrati").textContent = "Registrati";
+    aggiornaReinvio();
+  }
+});
+
+el("formReinvio").addEventListener("submit", async event => {
+  event.preventDefault();
+
+  if (occupato || Date.now() < reinvioDisponibileIl) return;
+
+  const email = el("emailReinvio").value.trim();
+
+  if (!email) return;
+
+  occupato = true;
+  aggiornaReinvio();
+  el("messaggioAttesa").textContent = "Richiesta in corso...";
+
+  try {
+    const { risposta, dati } = await invia(
+      "/api/reinvia-verifica-email",
+      { email, redirect }
+    );
+
+    el("messaggioAttesa").textContent = risposta.ok
+      ? dati.messaggio
+      : dati.errore || "Invio non riuscito.";
+
+    el("messaggioAttesa").classList.toggle(
+      "problema",
+      !risposta.ok
+    );
+
+    impostaPausa(dati.retryAfterSeconds || 60);
+  } catch (_) {
+    el("messaggioAttesa").textContent =
+      "L'invio non è stato confermato. Controlla la posta " +
+      "oppure riprova tra un minuto.";
+
+    el("messaggioAttesa").classList.add("problema");
+    impostaPausa(60);
+  } finally {
+    occupato = false;
+    aggiornaReinvio();
+  }
+});
+
+el("btnConfermaEmail").addEventListener("click", async () => {
+  if (occupato || !tokenVerifica) return;
+
+  occupato = true;
+  el("btnConfermaEmail").disabled = true;
+  el("messaggioConferma").textContent = "Verifica in corso...";
+
+  try {
+    const { risposta, dati } = await invia("/api/verifica-email", {
+      token: tokenVerifica
+    });
+
+    if (!risposta.ok) {
+      el("messaggioConferma").textContent =
+        dati.errore || "Verifica non riuscita. Riprova.";
+
+      if (dati.codice === "LINK_NON_VALIDO") {
+        tokenVerifica = "";
+      }
+
+      return;
+    }
+
+    tokenVerifica = "";
+    el("titoloConferma").textContent = "Email confermata";
+    el("messaggioConferma").textContent =
+      "Il tuo account è pronto. Ora puoi accedere con email e password.";
+
+    el("btnConfermaEmail").hidden = true;
+
+    try {
+      const url = new URL(dati.urlLogin);
+
+      if (
+        url.origin === SERVER &&
+        url.pathname === "/login.html" &&
+        !url.username &&
+        !url.password
+      ) {
+        el("linkLoginConferma").href = url.href;
+        el("linkLogin").href = url.href;
+      }
+    } catch (_) {}
+
+    el("linkLoginConferma").hidden = false;
+    el("reinviaDaConferma").hidden = true;
+  } catch (_) {
+    el("messaggioConferma").textContent =
+      "Connessione interrotta. Riprova con il pulsante; " +
+      "se l'email risulta già confermata, vai ad Accedi.";
+  } finally {
+    occupato = false;
+    el("btnConfermaEmail").disabled = !tokenVerifica;
+  }
+});
+
+function mostraReinvio() {
+  if (occupato) return;
+
+  apriAttesa(
+    el("email").value.trim(),
+    "Inserisci l'email usata per la registrazione per richiedere un nuovo link."
+  );
+}
+
+el("apriReinvio").addEventListener("click", mostraReinvio);
+el("reinviaDaConferma").addEventListener("click", mostraReinvio);
+
+el("tornaRegistrazione").addEventListener("click", () => {
+  if (occupato) return;
+  mostra("registrazione");
+  el("email").focus();
+});
+
+setInterval(aggiornaReinvio, 1000);
+
+if (tokenVerifica) {
+  try {
+    window.history.replaceState(
+      null,
+      "",
+      window.location.pathname + window.location.search
+    );
+  } catch (_) {}
+
+  mostra("confermaVerifica");
+
+  if (!/^[A-Za-z0-9_-]{1,128}\.[a-f0-9]{64}$/.test(tokenVerifica)) {
+    tokenVerifica = "";
+    el("messaggioConferma").textContent =
+      "Il link non è valido. Richiedi una nuova email.";
+    el("btnConfermaEmail").disabled = true;
+  }
+} else if (parametri.get("reinvia") === "1") {
+  mostraReinvio();
+}
+</script>
 </body>
 </html>
