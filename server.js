@@ -669,6 +669,349 @@ function aggiungiTokenAlFrammento(urlDestinazione, token) {
   return url.href;
 }
 
+// ===== LOGIN CON GOOGLE / VERIFICA EMAIL =====
+// Sostituzione completa della sezione account.
+// Le chiavi si leggono dalle variabili d'ambiente del server.
+
+const cryptoEmailGS = require("node:crypto");
+const GS_EMAIL_DURATA = 24 * 60 * 60 * 1000;
+const GS_EMAIL_PAUSA = 60 * 1000;
+const GS_EMAIL_MAX_UTENTE = 5;
+
+const GS_RESEND_KEY = String(process.env.RESEND_API_KEY || "").trim();
+const GS_RESEND_FROM = String(process.env.RESEND_FROM || "").trim();
+
+const GS_URL_ACCOUNT = new URL(
+  process.env.PUBLIC_SERVER_URL || "https://api.giochisocieta.com"
+);
+
+if (
+  GS_URL_ACCOUNT.protocol !== "https:" ||
+  GS_URL_ACCOUNT.username ||
+  GS_URL_ACCOUNT.password
+) {
+  throw new Error("PUBLIC_SERVER_URL deve essere un URL HTTPS valido.");
+}
+
+function gsLimiteGratis(valore, massimo) {
+  if (valore == null || valore === "") return massimo;
+  const numero = Number(valore);
+  if (!Number.isInteger(numero) || numero < 1) {
+    throw new Error("Il limite Resend deve essere un numero intero positivo.");
+  }
+  return Math.min(numero, massimo);
+}
+
+const GS_EMAIL_MAX_GIORNO = gsLimiteGratis(
+  process.env.RESEND_LIMITE_GIORNALIERO, 100
+);
+const GS_EMAIL_MAX_MESE = gsLimiteGratis(
+  process.env.RESEND_LIMITE_MENSILE, 3000
+);
+
+function gsErroreEmail(messaggio, codice, status = 503, pausa = 60) {
+  return Object.assign(new Error(messaggio), {
+    codice, status, retryAfterSeconds: pausa
+  });
+}
+
+function gsEmail(valore) {
+  if (typeof valore !== "string") return null;
+  const email = valore.trim().toLowerCase();
+  if (
+    email.length > 100 ||
+    !/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i.test(email)
+  ) return null;
+  return email;
+}
+
+function gsHash(valore) {
+  return cryptoEmailGS.createHash("sha256").update(valore).digest("hex");
+}
+
+function gsEscape(valore) {
+  return String(valore).replace(/[&<>"']/g, carattere => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;",
+    '"': "&quot;", "'": "&#39;"
+  })[carattere]);
+}
+
+function gsRedirect(valore) {
+  const valido = normalizzaRedirectAutenticazione(valore);
+  if (!valido) return null;
+  const url = new URL(valido);
+  return url.protocol === "https:" && !url.username && !url.password
+    ? url.href : null;
+}
+
+function gsUrlPagina(percorso, redirect) {
+  const url = new URL(percorso, GS_URL_ACCOUNT);
+  const destinazione = gsRedirect(redirect);
+  if (destinazione) url.searchParams.set("redirect", destinazione);
+  return url;
+}
+
+function gsConfigurazioneEmail() {
+  if (!GS_RESEND_KEY || !GS_RESEND_FROM || /[\r\n]/.test(GS_RESEND_FROM)) {
+    throw gsErroreEmail(
+      "Il servizio email non è ancora configurato. Riprova più tardi.",
+      "EMAIL_NON_CONFIGURATA"
+    );
+  }
+}
+
+function gsRispostaErrore(res, errore) {
+  const noto = typeof errore.codice === "string";
+  const pausa = noto ? errore.retryAfterSeconds : 60;
+  res.set("Retry-After", String(pausa));
+  return res.status(noto ? errore.status : 503).json({
+    errore: noto ? errore.message : "Servizio email non disponibile. Riprova.",
+    codice: noto ? errore.codice : "EMAIL_NON_DISPONIBILE",
+    retryAfterSeconds: pausa
+  });
+}
+
+// Compatibilità anche se hai già inserito i controlli della risposta precedente.
+async function controllaEmailAccount(uid) {
+  if (!db) return "non_disponibile";
+  if (typeof uid !== "string" || !/^[A-Za-z0-9_-]{1,128}$/.test(uid)) {
+    return "inesistente";
+  }
+  try {
+    const ref = db.ref("utenti/" + uid);
+    const [nome, verifica] = await Promise.all([
+      ref.child("nickname").once("value"),
+      ref.child("emailVerificata").once("value")
+    ]);
+    if (!nome.exists()) return "inesistente";
+    return verifica.val() === false ? "da_verificare" : "consentito";
+  } catch (_) {
+    return "non_disponibile";
+  }
+}
+
+async function autorizzaEmailHttp(uid, req, res) {
+  const stato = await controllaEmailAccount(uid);
+  if (stato === "consentito") return true;
+  res.status(stato === "da_verificare" ? 403 :
+    stato === "inesistente" ? 401 : 503).json({
+    errore: stato === "da_verificare"
+      ? "Conferma la tua email prima di accedere."
+      : "Sessione non disponibile. Riprova ad accedere.",
+    codice: stato === "da_verificare"
+      ? "EMAIL_DA_VERIFICARE" : "SESSIONE_NON_DISPONIBILE"
+  });
+  return false;
+}
+
+// Contatore persistente: non si azzera riavviando il server.
+// Tiene conto degli invii di questa integrazione, anche se il provider fallisce.
+async function gsPrenotaQuota() {
+  const ref = db.ref("sicurezzaEmail/quotaResend");
+  await ref.once("value");
+  const ora = Date.now();
+  const giorno = new Date(ora).toISOString().slice(0, 10);
+  const mese = giorno.slice(0, 7);
+  const domani = Date.parse(giorno + "T00:00:00Z") + GS_EMAIL_DURATA;
+  const data = new Date(ora);
+  const prossimoMese = Date.UTC(data.getUTCFullYear(), data.getUTCMonth() + 1, 1);
+  let pausa = 60;
+
+  const risultato = await ref.transaction(valore => {
+    const v = valore || {};
+    const giornaliero = v.giorno === giorno ? Number(v.giornaliero) || 0 : 0;
+    const mensile = v.mese === mese ? Number(v.mensile) || 0 : 0;
+    if (mensile >= GS_EMAIL_MAX_MESE) {
+      pausa = Math.max(60, Math.ceil((prossimoMese - ora) / 1000));
+      return;
+    }
+    if (giornaliero >= GS_EMAIL_MAX_GIORNO) {
+      pausa = Math.max(60, Math.ceil((domani - ora) / 1000));
+      return;
+    }
+    return { giorno, mese, giornaliero: giornaliero + 1, mensile: mensile + 1 };
+  });
+
+  if (!risultato.committed) {
+    throw gsErroreEmail(
+      "Il limite degli invii gratuiti è stato raggiunto. Riprova più tardi.",
+      "LIMITE_EMAIL", 429, pausa
+    );
+  }
+}
+
+function gsInviaResend(payload, idempotenza) {
+  return new Promise((resolve, reject) => {
+    const corpo = JSON.stringify(payload);
+    let richiesta;
+    let finita = false;
+
+    function termina(errore, risultato) {
+      if (finita) return;
+      finita = true;
+      clearTimeout(timer);
+      if (errore) reject(errore);
+      else resolve(risultato);
+    }
+
+    const timer = setTimeout(() => {
+      termina(gsErroreEmail(
+        "L'invio non è stato confermato. Controlla la posta oppure richiedi un nuovo link.",
+        "EMAIL_TIMEOUT"
+      ));
+      if (richiesta) richiesta.destroy();
+    }, 15000);
+
+    try {
+      richiesta = https.request("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer " + GS_RESEND_KEY,
+          "Content-Type": "application/json",
+          "Content-Length": Buffer.byteLength(corpo),
+          "Idempotency-Key": idempotenza
+        }
+      }, risposta => {
+        let testo = "";
+        risposta.setEncoding("utf8");
+        risposta.on("data", parte => {
+          testo += parte;
+          if (testo.length > 65536) {
+            termina(gsErroreEmail("Risposta email non valida.", "EMAIL_PROVIDER"));
+            risposta.destroy();
+          }
+        });
+        risposta.on("error", () => termina(
+          gsErroreEmail("Servizio email non raggiungibile.", "EMAIL_PROVIDER")
+        ));
+        risposta.on("aborted", () => termina(
+          gsErroreEmail("Risposta email interrotta.", "EMAIL_PROVIDER")
+        ));
+        risposta.on("end", () => {
+          let dati;
+          try { dati = JSON.parse(testo); } catch (_) {}
+          if (
+            risposta.statusCode >= 200 && risposta.statusCode < 300 &&
+            dati && typeof dati.id === "string"
+          ) {
+            termina(null, dati.id);
+          } else {
+            console.warn("Resend: invio non confermato, HTTP", risposta.statusCode);
+            termina(gsErroreEmail(
+              "Invio email non riuscito. Puoi richiedere un nuovo link tra un minuto.",
+              "EMAIL_PROVIDER"
+            ));
+          }
+        });
+      });
+      richiesta.on("error", () => termina(
+        gsErroreEmail("Servizio email non raggiungibile.", "EMAIL_PROVIDER")
+      ));
+      richiesta.end(corpo);
+    } catch (_) {
+      termina(gsErroreEmail("Invio email non riuscito.", "EMAIL_PROVIDER"));
+    }
+  });
+}
+
+async function gsInviaVerifica(uid, redirectRichiesto) {
+  gsConfigurazioneEmail();
+  const ref = db.ref("utenti/" + uid);
+  await ref.once("value");
+  const segreto = cryptoEmailGS.randomBytes(32).toString("hex");
+  const hash = gsHash(segreto);
+  const redirect = gsRedirect(redirectRichiesto);
+  let errore;
+
+  const risultato = await ref.transaction(utente => {
+    errore = null;
+    if (!utente || utente.emailVerificata !== false) return;
+    const ora = Date.now();
+    const giorno = new Date(ora).toISOString().slice(0, 10);
+    const stato = utente.verificaEmail || {};
+    const attesa = Number(stato.ultimoTentativoIl || 0) + GS_EMAIL_PAUSA - ora;
+    if (attesa > 0) {
+      errore = gsErroreEmail(
+        "Attendi prima di richiedere un'altra email.",
+        "ATTENDI_REINVIO", 429, Math.ceil(attesa / 1000)
+      );
+      return;
+    }
+
+    const invii = stato.giorno === giorno ? Number(stato.invii) || 0 : 0;
+    if (invii >= GS_EMAIL_MAX_UTENTE) {
+      const domani = Date.parse(giorno + "T00:00:00Z") + GS_EMAIL_DURATA;
+      errore = gsErroreEmail(
+        "Hai raggiunto il limite giornaliero di richieste. Riprova domani.",
+        "LIMITE_REINVII", 429, Math.ceil((domani - ora) / 1000)
+      );
+      return;
+    }
+
+    const email = gsEmail(utente.emailLower || utente.email);
+    if (!email) return;
+    const links = Object.fromEntries(
+      Object.entries(stato.links || {})
+        .filter(([, link]) => link && link.scadeIl > ora && link.email === email)
+        .sort((a, b) => b[1].scadeIl - a[1].scadeIl)
+        .slice(0, 9)
+    );
+    links[hash] = { email, scadeIl: ora + GS_EMAIL_DURATA, redirect };
+    utente.verificaEmail = {
+      giorno, invii: invii + 1, ultimoTentativoIl: ora, links
+    };
+    return utente;
+  });
+
+  if (!risultato.committed) {
+    if (errore) throw errore;
+    return false;
+  }
+
+  await gsPrenotaQuota();
+  const utente = risultato.snapshot.val();
+  const link = gsUrlPagina("/registrati.html", null);
+  link.hash = new URLSearchParams({ verifica: uid + "." + segreto }).toString();
+  const url = link.href;
+  const nome = utente.nickname || "Giocatore";
+
+  await gsInviaResend({
+    from: GS_RESEND_FROM,
+    to: [utente.emailLower || utente.email],
+    subject: "Conferma la tua email - Giochi Società",
+    text: "Ciao " + nome + ",\n\n" +
+      "per confermare la registrazione a Giochi Società apri questo link " +
+      "e premi Conferma email:\n\n" + url + "\n\n" +
+      "Il link è valido per 24 ore. Se non hai richiesto la registrazione, ignoralo.",
+    html: '<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;padding:28px;color:#202938">' +
+      '<h1 style="font-size:24px">Conferma la tua email</h1>' +
+      '<p>Ciao ' + gsEscape(nome) + ',</p>' +
+      '<p>Conferma la registrazione a Giochi Società. Apri la pagina e premi <strong>Conferma email</strong>.</p>' +
+      '<p style="margin:28px 0"><a href="' + gsEscape(url) + '" style="display:inline-block;background:#ffd700;color:#111;padding:14px 22px;border-radius:8px;text-decoration:none;font-weight:bold">Apri la conferma</a></p>' +
+      '<p>Il link è valido per 24 ore.</p>' +
+      '<p>Se non hai richiesto questa registrazione, ignora il messaggio.</p></div>'
+  }, "gs-verifica-" + uid + "-" + hash);
+  return true;
+}
+
+const gsLimiteReinvio = rateLimit({
+  windowMs: 15 * 60 * 1000, max: 10,
+  standardHeaders: true, legacyHeaders: false,
+  message: {
+    errore: "Troppe richieste. Riprova tra 15 minuti.",
+    retryAfterSeconds: 900
+  }
+});
+
+const gsLimiteConferma = rateLimit({
+  windowMs: 15 * 60 * 1000, max: 30,
+  standardHeaders: true, legacyHeaders: false,
+  message: {
+    errore: "Troppi tentativi. Riprova tra 15 minuti.",
+    retryAfterSeconds: 900
+  }
+});
+
 // ===== LOGIN CON GOOGLE =====
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
@@ -676,10 +1019,6 @@ const GOOGLE_CALLBACK_URL = process.env.GOOGLE_CALLBACK_URL;
 const GOOGLE_OAUTH_CONFIGURATO = Boolean(
   GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET && GOOGLE_CALLBACK_URL
 );
-
-if (!GOOGLE_CLIENT_ID) console.warn("GOOGLE_CLIENT_ID non configurato.");
-if (!GOOGLE_CLIENT_SECRET) console.warn("GOOGLE_CLIENT_SECRET non configurato.");
-if (!GOOGLE_CALLBACK_URL) console.warn("GOOGLE_CALLBACK_URL non configurato.");
 
 if (GOOGLE_OAUTH_CONFIGURATO) {
   passport.use(new GoogleStrategy({
@@ -689,49 +1028,89 @@ if (GOOGLE_OAUTH_CONFIGURATO) {
   }, async (accessToken, refreshToken, profile, done) => {
     try {
       if (!db) return done(new Error("Database non disponibile."));
+      const googleId = typeof profile.id === "string" ? profile.id : "";
+      const email = gsEmail(profile.emails?.[0]?.value);
+      const json = profile._json || {};
+      const verificata = profile.emails?.[0]?.verified === true ||
+        json.email_verified === true || json.verified_email === true;
+      if (!googleId || !email || !verificata) {
+        return done(new Error("Google non ha confermato un indirizzo email valido."));
+      }
 
-      const googleId = profile.id;
-      const email = profile.emails?.[0]?.value?.trim().toLowerCase();
-      const emailVerificata = profile.emails?.[0]?.verified;
-
-      if (!googleId) return done(new Error("Google non ha restituito un ID valido."));
-      if (!email) return done(new Error("Google non ha restituito un indirizzo email."));
-      if (emailVerificata === false) return done(new Error("L'indirizzo email Google non è verificato."));
+      const dominio = email.split("@")[1];
+      const autorevole = dominio === "gmail.com" || dominio === "googlemail.com" ||
+        (typeof json.hd === "string" && json.hd.length > 0);
 
       let utente = await trovaUtentePerGoogleId(googleId);
-      if (!utente) utente = await trovaUtentePerEmail(email);
+      if (!utente) {
+        utente = await trovaUtentePerEmail(email);
+        if (utente && (!autorevole ||
+          (utente.googleId && utente.googleId !== googleId))) {
+          return done(new Error("Accedi con il metodo già associato al tuo account."));
+        }
+      }
 
       if (utente) {
-        if (utente.stato === "bannato") return done(new Error("Il tuo account è stato bannato."));
-        if (utente.stato === "sospeso" && utente.sospesoFino && utente.sospesoFino > Date.now()) {
-          return done(new Error("Account sospeso fino al " + new Date(utente.sospesoFino).toLocaleString("it-IT") + "."));
-        }
-        await db.ref("utenti/" + utente.uid).update({ googleId, providerGoogle: true, elo: ottieniElo(utente), ultimoAccesso: Date.now() });
-        return done(null, { uid: utente.uid, nickname: utente.nickname, ruolo: utente.ruolo || "utente" });
+        const ref = db.ref("utenti/" + utente.uid);
+        await ref.once("value");
+        let motivo = "Account non disponibile.";
+        const esito = await ref.transaction(attuale => {
+          if (!attuale) return;
+          if (attuale.stato === "bannato" ||
+            (attuale.stato === "sospeso" && Number(attuale.sospesoFino) > Date.now())) {
+            motivo = "Il tuo account è bannato o sospeso.";
+            return;
+          }
+          if (attuale.googleId && attuale.googleId !== googleId) return;
+          if (!attuale.googleId && (!autorevole ||
+            gsEmail(attuale.emailLower || attuale.email) !== email)) return;
+          if (attuale.emailVerificata === false) {
+            if (gsEmail(attuale.emailLower || attuale.email) !== email) return;
+            // Chi ha prenotato un'email non verificata non mantiene la password.
+            attuale.passwordHash = null;
+            attuale.emailVerificata = true;
+            attuale.emailVerificataIl = Date.now();
+            attuale.emailVerificataCon = "google";
+            delete attuale.verificaEmail;
+          } else if (gsEmail(attuale.emailLower || attuale.email) === email) {
+            attuale.emailVerificata = true;
+            attuale.emailVerificataIl = attuale.emailVerificataIl || Date.now();
+            attuale.emailVerificataCon = "google";
+          }
+          attuale.googleId = googleId;
+          attuale.providerGoogle = true;
+          attuale.elo = ottieniElo(attuale);
+          attuale.ultimoAccesso = Date.now();
+          return attuale;
+        });
+        if (!esito.committed) return done(new Error(motivo));
+        const aggiornato = esito.snapshot.val();
+        return done(null, {
+          uid: utente.uid, nickname: aggiornato.nickname,
+          ruolo: aggiornato.ruolo || "utente"
+        });
       }
 
       const nickname = await generaNicknameGoogleUnico(profile.displayName, email);
-      const nuovoRef = db.ref("utenti").push();
-      const uid = nuovoRef.key;
-
-      await nuovoRef.set({
+      const ref = db.ref("utenti").push();
+      const uid = ref.key;
+      const foto = profile.photos?.[0]?.value || null;
+      await ref.set({
         partiteVinte: 0, partiteGiocate: 0, puntiTotali: 0, elo: ELO_INIZIALE,
-        streakVittorieAttuale: 0, streakVittorieMassima: 0, vittoriaPiuVeloceSecondi: null,
-        email, emailLower: email,
-        nickname, nicknameLower: nickname.toLowerCase(),
-        passwordHash: null,
-        googleId, providerGoogle: true,
-        avatar: profile.photos?.[0]?.value || null,
-        avatarPresente: Boolean(profile.photos?.[0]?.value),
-        avatarAggiornatoIl: profile.photos?.[0]?.value ? Date.now() : 0,
+        streakVittorieAttuale: 0, streakVittorieMassima: 0,
+        vittoriaPiuVeloceSecondi: null,
+        email, emailLower: email, nickname, nicknameLower: nickname.toLowerCase(),
+        passwordHash: null, googleId, providerGoogle: true,
+        emailVerificata: true, emailVerificataIl: Date.now(),
+        emailVerificataCon: "google",
+        avatar: foto, avatarPresente: Boolean(foto),
+        avatarAggiornatoIl: foto ? Date.now() : 0,
         ruolo: "utente", stato: "attivo", sospesoFino: null,
         avvisi: [], creatoIl: Date.now(), ultimoAccesso: Date.now()
       });
-
       return done(null, { uid, nickname, ruolo: "utente" });
-    } catch (errore) {
-      console.error("Errore verifica account Google:", errore);
-      return done(errore);
+    } catch (_) {
+      return done(new Error("Impossibile completare l'accesso con Google."));
     }
   }));
 }
@@ -744,64 +1123,207 @@ function richiediGoogleOAuthConfigurato(req, res, next) {
 }
 
 app.get("/auth/google", richiediGoogleOAuthConfigurato, (req, res, next) => {
-  const state = creaStatoOAuth(req.query.redirect);
   passport.authenticate("google", {
     scope: ["profile", "email"],
-    state
+    state: creaStatoOAuth(req.query.redirect)
   })(req, res, next);
 });
 
 app.get("/auth/google/callback",
   richiediGoogleOAuthConfigurato,
-  passport.authenticate("google", { session: false, failureRedirect: "/login.html?errore=google" }),
-  async (req, res) => {
+  passport.authenticate("google", {
+    session: false, failureRedirect: "/login.html?errore=google"
+  }),
+  (req, res) => {
     try {
       const utente = req.user;
       if (!utente || !utente.uid) return res.redirect("/login.html?errore=google");
-
       const token = creaToken(utente.uid, utente.nickname, utente.ruolo || "utente");
       res.cookie("token", token, OPZIONI_COOKIE);
-
-      const redirectRichiesto = leggiStatoOAuth(req.query.state);
-      if (redirectRichiesto) {
-        return res.redirect(aggiungiTokenAlFrammento(redirectRichiesto, token));
-      }
-
-      return res.redirect(URL_HOME_WIX);
-    } catch (errore) {
-      console.error("Errore callback Google:", errore);
+      const redirect = leggiStatoOAuth(req.query.state);
+      return res.redirect(redirect
+        ? aggiungiTokenAlFrammento(redirect, token) : URL_HOME_WIX);
+    } catch (_) {
       return res.redirect("/login.html?errore=google");
     }
   }
 );
 
-// ===== API REGISTRAZIONE / LOGIN =====
+// ===== REGISTRAZIONE: NESSUNA SESSIONE PRIMA DELLA CONFERMA =====
 app.post("/api/registrati", limiteLogin, async (req, res) => {
-  if (!db) return res.status(500).json({ errore: "Servizio account non disponibile al momento." });
+  res.set("Cache-Control", "no-store");
+  if (!db) return res.status(503).json({ errore: "Servizio account non disponibile." });
   try {
-    const { email, nickname, password } = req.body;
-    if (!email || !nickname || !password) return res.status(400).json({ errore: "Compila tutti i campi." });
-    const nicknamePulito = pulisciTesto(nickname, 20);
-    if (nicknamePulito.length < 5 || nicknamePulito.length > 15) return res.status(400).json({ errore: "Il nickname deve contenere da 5 a 15 caratteri." });
-    if (!/^[a-zA-Z0-9_ ]+$/.test(nicknamePulito)) return res.status(400).json({ errore: "Il nickname contiene caratteri non consentiti." });
-    if (password.length < 6 || password.length > 100) return res.status(400).json({ errore: "La password deve avere tra 6 e 100 caratteri." });
-    const emailPulita = pulisciTesto(email, 100).toLowerCase();
-    if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(emailPulita)) return res.status(400).json({ errore: "Inserisci un indirizzo email valido." });
-    const nicknameLower = nicknamePulito.toLowerCase();
-    if (await trovaUtentePerEmail(emailPulita)) return res.status(400).json({ errore: "Questa email è già registrata." });
-    if (await trovaUtentePerNickname(nicknameLower)) return res.status(400).json({ errore: "Questo nickname è già in uso." });
-    const passwordHash = await bcrypt.hash(password, 10);
-    const nuovoRef = db.ref("utenti").push();
-    const uid = nuovoRef.key;
-    await nuovoRef.set({
-      partiteVinte: 0, partiteGiocate: 0, puntiTotali: 0, elo: ELO_INIZIALE, streakVittorieAttuale: 0, streakVittorieMassima: 0, vittoriaPiuVeloceSecondi: null,
-      email: emailPulita, emailLower: emailPulita, nickname: nicknamePulito, nicknameLower, passwordHash,
-      avatar: null, avatarPresente: false, avatarAggiornatoIl: 0, ruolo: "utente", stato: "attivo", sospesoFino: null, avvisi: [], creatoIl: Date.now(), ultimoAccesso: Date.now()
+    const email = gsEmail(req.body?.email);
+    const nickname = typeof req.body?.nickname === "string" ? req.body.nickname.trim() : "";
+    const password = req.body?.password;
+    if (!email) return res.status(400).json({ errore: "Inserisci un indirizzo email valido." });
+    if (!/^[a-zA-Z0-9_ ]{5,15}$/.test(nickname)) {
+      return res.status(400).json({
+        errore: "Il nickname deve avere da 5 a 15 caratteri: lettere, numeri, spazi o trattini bassi."
+      });
+    }
+    if (typeof password !== "string" || password.length < 6 ||
+      password.length > 100) {
+      return res.status(400).json({
+        errore: "La password deve avere da 6 a 100 caratteri."
+      });
+    }
+
+    const esistente = await trovaUtentePerEmail(email);
+    if (esistente) return res.status(409).json({
+      errore: esistente.emailVerificata === false
+        ? "Questa email è in attesa di verifica. Richiedi un nuovo link."
+        : "Questa email è già registrata.",
+      codice: esistente.emailVerificata === false ? "EMAIL_DA_VERIFICARE" : "EMAIL_ESISTENTE"
     });
-    const token = creaToken(uid, nicknamePulito, "utente");
+    if (await trovaUtentePerNickname(nickname.toLowerCase())) {
+      return res.status(409).json({ errore: "Questo nickname è già in uso." });
+    }
+    gsConfigurazioneEmail();
+    const passwordHash = await bcrypt.hash(password, 10);
+    const ref = db.ref("utenti").push();
+    await ref.set({
+      partiteVinte: 0, partiteGiocate: 0, puntiTotali: 0, elo: ELO_INIZIALE,
+      streakVittorieAttuale: 0, streakVittorieMassima: 0,
+      vittoriaPiuVeloceSecondi: null,
+      email, emailLower: email, nickname, nicknameLower: nickname.toLowerCase(),
+      passwordHash, emailVerificata: false, providerGoogle: false,
+      avatar: null, avatarPresente: false, avatarAggiornatoIl: 0,
+      ruolo: "utente", stato: "attivo", sospesoFino: null,
+      avvisi: [], creatoIl: Date.now(), ultimoAccesso: null
+    });
+
+    let emailInviata = false;
+    let messaggio = "Account creato. Controlla la posta per confermare la tua email.";
+    let pausa = 60;
+    try {
+      emailInviata = await gsInviaVerifica(ref.key, req.body?.redirect);
+    } catch (errore) {
+      messaggio = "Account creato, ma l'invio non è stato confermato. " +
+        (errore.codice ? errore.message : "Puoi richiedere un nuovo link.");
+      pausa = errore.retryAfterSeconds || 60;
+    }
+    return res.status(201).json({
+      richiedeVerifica: true, email, emailInviata, messaggio,
+      retryAfterSeconds: pausa
+    });
+  } catch (errore) {
+    if (errore.codice) return gsRispostaErrore(res, errore);
+    console.error("Errore durante la registrazione.");
+    return res.status(500).json({ errore: "Errore del server, riprova." });
+  }
+});
+
+// ===== REINVIO EMAIL =====
+app.post("/api/reinvia-verifica-email", gsLimiteReinvio, async (req, res) => {
+  res.set("Cache-Control", "no-store");
+  if (!db) return res.status(503).json({ errore: "Servizio account non disponibile." });
+  const email = gsEmail(req.body?.email);
+  if (!email) return res.status(400).json({ errore: "Inserisci un indirizzo email valido." });
+  try {
+    gsConfigurazioneEmail();
+    const utente = await trovaUtentePerEmail(email);
+    if (utente && utente.emailVerificata === false &&
+      utente.stato !== "bannato" &&
+      !(utente.stato === "sospeso" && Number(utente.sospesoFino) > Date.now())) {
+      await gsInviaVerifica(utente.uid, req.body?.redirect);
+    }
+    return res.json({
+      ok: true,
+      messaggio: "Se questo account richiede la verifica, riceverai un'email. Se è già confermato, puoi accedere.",
+      retryAfterSeconds: 60
+    });
+  } catch (errore) {
+    return gsRispostaErrore(res, errore);
+  }
+});
+
+// ===== CONFERMA EMAIL: LINK MONOUSO, SENZA LOGIN AUTOMATICO =====
+app.post("/api/verifica-email", gsLimiteConferma, async (req, res) => {
+  res.set("Cache-Control", "no-store");
+  if (!db) return res.status(503).json({ errore: "Servizio account non disponibile." });
+  const token = typeof req.body?.token === "string" ? req.body.token : "";
+  const parti = /^([A-Za-z0-9_-]{1,128})\.([a-f0-9]{64})$/.exec(token);
+  const nonValido = () => res.status(400).json({
+    codice: "LINK_NON_VALIDO",
+    errore: "Il link è scaduto, è già stato usato o non è valido. Richiedine uno nuovo oppure prova ad accedere."
+  });
+  if (!parti) return nonValido();
+  try {
+    const ref = db.ref("utenti/" + parti[1]);
+    await ref.once("value");
+    const hash = gsHash(parti[2]);
+    let redirect = null;
+    const risultato = await ref.transaction(utente => {
+      redirect = null;
+      if (!utente || utente.emailVerificata !== false) return;
+      const link = utente.verificaEmail?.links?.[hash];
+      if (!link || !Number.isFinite(Number(link.scadeIl)) ||
+        Number(link.scadeIl) <= Date.now() ||
+        link.email !== gsEmail(utente.emailLower || utente.email)) return;
+      redirect = gsRedirect(link.redirect);
+      utente.emailVerificata = true;
+      utente.emailVerificataIl = Date.now();
+      utente.emailVerificataCon = "link";
+      delete utente.verificaEmail;
+      return utente;
+    });
+    if (!risultato.committed) return nonValido();
+    return res.json({
+      ok: true,
+      messaggio: "Email confermata. Ora puoi accedere.",
+      urlLogin: gsUrlPagina("/login.html", redirect).href
+    });
+  } catch (_) {
+    return res.status(503).json({
+      errore: "Verifica non disponibile. Riprova tra poco."
+    });
+  }
+});
+
+// ===== LOGIN CON EMAIL E PASSWORD =====
+app.post("/api/login", limiteLogin, async (req, res) => {
+  res.set("Cache-Control", "no-store");
+  if (!db) return res.status(503).json({ errore: "Servizio account non disponibile." });
+  try {
+    const email = gsEmail(req.body?.email);
+    const password = req.body?.password;
+    if (!email || typeof password !== "string" || !password || password.length > 100) {
+      return res.status(400).json({ errore: "Inserisci email e password valide." });
+    }
+    const utente = await trovaUtentePerEmail(email);
+    if (!utente) return res.status(400).json({ errore: "Email o password errati." });
+    if (!utente.passwordHash) return res.status(400).json({
+      errore: "Questo account usa Google. Premi Accedi con Google."
+    });
+    if (!(await bcrypt.compare(password, utente.passwordHash))) {
+      return res.status(400).json({ errore: "Email o password errati." });
+    }
+    if (utente.stato === "bannato") {
+      return res.status(403).json({ errore: "Il tuo account è stato bannato." });
+    }
+    if (utente.stato === "sospeso" && Number(utente.sospesoFino) > Date.now()) {
+      return res.status(403).json({ errore: "Il tuo account è sospeso." });
+    }
+    // Gli account precedenti, senza questo campo, mantengono l'accesso.
+    if (utente.emailVerificata === false) {
+      return res.status(403).json({
+        codice: "EMAIL_DA_VERIFICARE",
+        errore: "Conferma la tua email prima di accedere. Per un nuovo link apri Registrati e premi Reinvia email di verifica.",
+        urlRegistrazione: gsUrlPagina("/registrati.html?reinvia=1", req.body?.redirect).href
+      });
+    }
+    await db.ref("utenti/" + utente.uid).update({
+      ultimoAccesso: Date.now(), elo: ottieniElo(utente),
+      ...(utente.stato === "sospeso" ? { stato: "attivo", sospesoFino: null } : {})
+    });
+    const token = creaToken(utente.uid, utente.nickname, utente.ruolo || "utente");
     res.cookie("token", token, OPZIONI_COOKIE);
-    res.json({ nickname: nicknamePulito, ruolo: "utente", token });
-  } catch (err) { console.error(err); res.status(500).json({ errore: "Errore del server, riprova." }); }
+    return res.json({ nickname: utente.nickname, ruolo: utente.ruolo || "utente", token });
+  } catch (_) {
+    return res.status(500).json({ errore: "Errore del server, riprova." });
+  }
 });
 
 app.post("/api/login", limiteLogin, async (req, res) => {
