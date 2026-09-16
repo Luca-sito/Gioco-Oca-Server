@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0d1620">
   <title>Gioco dell'Oca - Partita</title>
-  <link rel="stylesheet" href="gioco.css?v=pedine-effetti-20260905">
+  <link rel="stylesheet" href="gioco.css?v=menu-turni-sfondo-20260916">
 </head>
 <body class="caricamento-in-corso">
 
@@ -169,18 +169,36 @@
   </aside>
 
   <div id="giocatori-wrapper">
-    <button type="button" id="btn-giocatori" aria-label="Mostra giocatori" aria-controls="pannello-giocatori" aria-expanded="false"><img class="icona-pulsante-gioco" src="https://api.giochisocieta.com/Immagini/Personemenugioco.png" alt="" aria-hidden="true"></button>
+    <button type="button" id="btn-giocatori" aria-label="Mostra giocatori" aria-controls="pannello-giocatori" aria-expanded="false"><img class="icona-pulsante-gioco" src="https://gioco-oca-server.onrender.com/Immagini/Personemenugioco.png" alt="" aria-hidden="true"></button>
   </div>
 
   <div id="menu-wrapper">
-    <button type="button" id="btn-menu" aria-label="Apri menu" aria-controls="pannello-menu" aria-expanded="false"><img class="icona-pulsante-gioco" src="https://api.giochisocieta.com/Immagini/Hamburgerbuttonmenugioco.png" alt="" aria-hidden="true"></button>
+    <button type="button" id="btn-menu" aria-label="Apri menu" aria-controls="pannello-menu" aria-expanded="false"><img class="icona-pulsante-gioco" src="https://gioco-oca-server.onrender.com/Immagini/Hamburgerbuttonmenugioco.png" alt="" aria-hidden="true"></button>
     <div id="pannello-menu" class="nascosto">
-      <button type="button" onclick="apriProfilo()">👤 Profilo</button>
-      <button type="button" onclick="apriImpostazioni()">⚙️ Impostazioni</button>
-      <button type="button" id="btn-toggle-suoni" onclick="toggleSuoni()">🔊 Suoni: On</button>
-      <button type="button" id="btn-toggle-fullscreen" onclick="toggleFullscreen()">⛶ Tutto schermo</button>
-      <button type="button" id="btn-stato-media" disabled>🔇 Videochiamata: non attiva</button>
-      <button type="button" class="voce-pericolo" onclick="abbandonaPartita()">🚪 Abbandona partita</button>
+      <div class="menu-intestazione">
+        <span class="menu-marchio">GIOCHI SOCIETÀ</span>
+        <span class="menu-sottotitolo">Gioco dell'Oca</span>
+      </div>
+
+      <div class="menu-sezione menu-sezione-sfondo">
+        <div class="menu-etichetta">Sfondo</div>
+        <div id="selettore-sfondo" class="selettore-sfondo" role="group" aria-label="Scegli lo sfondo del gioco">
+          <button type="button" class="opzione-sfondo" data-sfondo-gioco="classico" onclick="impostaSfondoGioco('classico')" aria-pressed="false"><span class="campione-sfondo campione-classico" aria-hidden="true"></span><span>Classico</span></button>
+          <button type="button" class="opzione-sfondo" data-sfondo-gioco="verde" onclick="impostaSfondoGioco('verde')" aria-pressed="false"><span class="campione-sfondo campione-verde" aria-hidden="true"></span><span>Verde</span></button>
+          <button type="button" class="opzione-sfondo" data-sfondo-gioco="blu" onclick="impostaSfondoGioco('blu')" aria-pressed="false"><span class="campione-sfondo campione-blu" aria-hidden="true"></span><span>Blu</span></button>
+          <button type="button" class="opzione-sfondo" data-sfondo-gioco="viola" onclick="impostaSfondoGioco('viola')" aria-pressed="false"><span class="campione-sfondo campione-viola" aria-hidden="true"></span><span>Viola</span></button>
+          <button type="button" class="opzione-sfondo" data-sfondo-gioco="notte" onclick="impostaSfondoGioco('notte')" aria-pressed="false"><span class="campione-sfondo campione-notte" aria-hidden="true"></span><span>Notte</span></button>
+        </div>
+      </div>
+
+      <div class="menu-sezione menu-azioni">
+        <button type="button" class="menu-voce" onclick="apriProfilo()"><span class="menu-voce-icona" aria-hidden="true">👤</span><span>Profilo</span></button>
+        <button type="button" class="menu-voce" onclick="apriImpostazioni()"><span class="menu-voce-icona" aria-hidden="true">⚙️</span><span>Impostazioni</span></button>
+        <button type="button" class="menu-voce" id="btn-toggle-suoni" onclick="toggleSuoni()"><span class="menu-voce-icona" aria-hidden="true">🔊</span><span class="menu-voce-testo">Suoni: On</span></button>
+        <button type="button" class="menu-voce" id="btn-toggle-fullscreen" onclick="toggleFullscreen()"><span class="menu-voce-icona" aria-hidden="true">⛶</span><span>Tutto schermo</span></button>
+        <button type="button" class="menu-voce" id="btn-stato-media" disabled><span class="menu-voce-icona" aria-hidden="true">🔇</span><span class="menu-voce-testo">Videochiamata: non attiva</span></button>
+        <button type="button" class="menu-voce voce-pericolo" onclick="abbandonaPartita()"><span class="menu-voce-icona" aria-hidden="true">🚪</span><span>Abbandona partita</span></button>
+      </div>
     </div>
   </div>
 
@@ -205,7 +223,7 @@
   </div>
 
   <div id="chat-wrapper">
-    <button type="button" id="btn-chat" aria-label="Apri chat" aria-controls="pannello-chat" aria-expanded="false"><img class="icona-pulsante-gioco" src="https://api.giochisocieta.com/Immagini/Chatmenugioco.png" alt="" aria-hidden="true"><span id="badge-chat-partita" class="badge-chat-partita" style="display:none;">0</span></button>
+    <button type="button" id="btn-chat" aria-label="Apri chat" aria-controls="pannello-chat" aria-expanded="false"><img class="icona-pulsante-gioco" src="https://gioco-oca-server.onrender.com/Immagini/Chatmenugioco.png" alt="" aria-hidden="true"><span id="badge-chat-partita" class="badge-chat-partita" style="display:none;">0</span></button>
     <section id="pannello-chat" class="nascosto" aria-label="Chat della partita">
       <div id="chat-messaggi" role="log" aria-live="polite" aria-relevant="additions"></div>
       <div id="chat-input-riga">
@@ -217,6 +235,6 @@
   </div>
 </main>
 
-<script src="gioco.js?v=pedine-effetti-20260905"></script>
+<script src="gioco.js?v=menu-turni-sfondo-20260916"></script>
 </body>
 </html>
