@@ -215,6 +215,10 @@ input:focus-visible {
 
       <div class="errore" id="errore" role="alert"></div>
     </form>
+
+    <button type="button" class="link-testo" id="apriReinvio">
+      Reinvia email di verifica
+    </button>
   </section>
 
   <section id="attesaVerifica" hidden>
@@ -592,6 +596,7 @@ function mostraReinvio() {
   );
 }
 
+el("apriReinvio").addEventListener("click", mostraReinvio);
 el("reinviaDaConferma").addEventListener("click", mostraReinvio);
 
 el("tornaRegistrazione").addEventListener("click", () => {
