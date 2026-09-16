@@ -27,10 +27,10 @@ const DURATA_SALTO_MS = 260;
 
 const origineConfigurata = typeof window.GIOCO_SERVER_URL === "string" ? window.GIOCO_SERVER_URL.trim() : "";
 const hostLocale = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" || window.location.hostname === "[::1]";
-const paginaSulServerUfficiale = window.location.hostname === "gioco-oca-server.onrender.com";
+const paginaSulServerUfficiale = window.location.hostname === "api.giochisocieta.com";
 const ORIGINE_SERVER = (origineConfigurata || ((hostLocale || paginaSulServerUfficiale)
   ? window.location.origin
-  : "https://gioco-oca-server.onrender.com")).replace(/\/$/, "");
+  : "https://api.giochisocieta.com")).replace(/\/$/, "");
 const URL_WEBSOCKET = ORIGINE_SERVER.replace(/^http:/, "ws:").replace(/^https:/, "wss:");
 
 const params = new URLSearchParams(window.location.search);
@@ -56,74 +56,6 @@ let chatPartitaAttiva = true;
 
 let faseAttuale = "normale";
 let possoTirareIoInDeterminazione = false;
-
-// ===== ORDINE TURNI VISIBILE NEL PANNELLO GIOCATORI =====
-let ordineTurniGiocatori = [];
-
-function chiaveOrdineTurni() {
-  return "giochi-societa:ordine-turni:" + (partitaId || "sconosciuta");
-}
-
-function salvaOrdineTurni(ordine) {
-  if (!Array.isArray(ordine)) return;
-  const normalizzato = ordine
-    .map(nome => typeof nome === "string" ? nome.trim() : "")
-    .filter(Boolean);
-  if (!normalizzato.length) return;
-
-  ordineTurniGiocatori = normalizzato;
-  try { sessionStorage.setItem(chiaveOrdineTurni(), JSON.stringify(normalizzato)); }
-  catch (errore) {}
-}
-
-function caricaOrdineTurni() {
-  try {
-    const salvato = JSON.parse(sessionStorage.getItem(chiaveOrdineTurni()) || "[]");
-    if (Array.isArray(salvato)) ordineTurniGiocatori = salvato.filter(nome => typeof nome === "string" && nome.trim());
-  } catch (errore) {
-    ordineTurniGiocatori = [];
-  }
-}
-
-function ordineTurnoPerGiocatore(giocatore) {
-  const nome = String(giocatore?.nome || "").trim().toLocaleLowerCase("it");
-  if (!nome) return null;
-  const indice = ordineTurniGiocatori.findIndex(voce => String(voce).trim().toLocaleLowerCase("it") === nome);
-  return indice >= 0 ? indice + 1 : null;
-}
-
-caricaOrdineTurni();
-
-// ===== SFONDO PERSONALIZZABILE DEL GIOCO =====
-const CHIAVE_SFONDO_GIOCO = "giochi-societa:sfondo-gioco";
-const SFONDI_GIOCO = new Set(["classico", "verde", "blu", "viola", "notte"]);
-
-function aggiornaSelettoreSfondo(sfondo) {
-  document.querySelectorAll("#selettore-sfondo [data-sfondo-gioco]").forEach(bottone => {
-    const attivo = bottone.dataset.sfondoGioco === sfondo;
-    bottone.classList.toggle("attivo", attivo);
-    bottone.setAttribute("aria-pressed", attivo ? "true" : "false");
-  });
-}
-
-function impostaSfondoGioco(sfondo, salva = true) {
-  const scelto = SFONDI_GIOCO.has(sfondo) ? sfondo : "classico";
-  document.body.dataset.sfondoGioco = scelto;
-  aggiornaSelettoreSfondo(scelto);
-  if (salva) {
-    try { localStorage.setItem(CHIAVE_SFONDO_GIOCO, scelto); }
-    catch (errore) {}
-  }
-}
-
-function caricaSfondoGioco() {
-  let salvato = "classico";
-  try { salvato = localStorage.getItem(CHIAVE_SFONDO_GIOCO) || "classico"; }
-  catch (errore) {}
-  impostaSfondoGioco(salvato, false);
-}
-
-caricaSfondoGioco();
 
 // ===== PRESENTAZIONE SFIDA PRE-PARTITA =====
 let mioProfilo = null;
@@ -325,9 +257,7 @@ function impostaSuoni(attivi) {
   if (attivi && interazioneUtenteRegistrata) ottieniContestoAudio();
   aggiornaTestoBottoneSuoni();
 }
-function aggiornaTestoBottoneSuoni() {
-  aggiornaTestoVoceMenu("btn-toggle-suoni", suoniAttivi ? "Suoni: On" : "Suoni: Off", suoniAttivi ? "🔊" : "🔇");
-}
+function aggiornaTestoBottoneSuoni() { const b = document.getElementById("btn-toggle-suoni"); if (b) b.textContent = suoniAttivi ? "🔊 Suoni: On" : "🔇 Suoni: Off"; }
 
 // ===== TUTTO SCHERMO (solo Computer) =====
 function toggleFullscreen() {
@@ -349,8 +279,9 @@ function toggleFullscreen() {
   }
 }
 function aggiornaTestoBottoneFullscreen() {
-  const attivo = !!(document.fullscreenElement || document.webkitFullscreenElement);
-  aggiornaTestoVoceMenu("btn-toggle-fullscreen", attivo ? "Esci da tutto schermo" : "Tutto schermo", attivo ? "🡼" : "⛶");
+  const b = document.getElementById("btn-toggle-fullscreen");
+  if (!b) return;
+  b.textContent = (document.fullscreenElement || document.webkitFullscreenElement) ? "🡼 Esci da tutto schermo" : "⛶ Tutto schermo";
 }
 document.addEventListener("fullscreenchange", aggiornaTestoBottoneFullscreen);
 document.addEventListener("webkitfullscreenchange", aggiornaTestoBottoneFullscreen);
@@ -1013,7 +944,6 @@ function gestisciRisultatoDeterminazione(dati) {
 
 function gestisciOrdineFinaleCalcolato(dati) {
   if (accodaEventoDeterminazioneDurantePresentazione("ordineFinaleCalcolato", dati)) return;
-  salvaOrdineTurni(dati.ordineGiocatori);
   possoTirareIoInDeterminazione = false;
   impostaDadiAbilitati(false);
   fermaCountdown(false);
@@ -1051,7 +981,6 @@ function gestisciDeterminazioneCompletata(dati) {
   document.getElementById("overlay-determinazione").classList.remove("aperto");
   riportaDadiAllaPartita();
 
-  salvaOrdineTurni(dati.ordineGiocatori);
   ultimoStatoGiocatori = Array.isArray(dati.giocatori) ? dati.giocatori : [];
 
   const primoMovimento = dati.primoMovimento || {};
@@ -1416,11 +1345,11 @@ function aggiornaInterfacciaMedia(testo, errore) {
   }
   if (voceMenu) {
     if (!mediaPartitaAttiva) {
-      aggiornaTestoVoceMenu("btn-stato-media", "Videochiamata: non attiva", "🔇");
+      voceMenu.textContent = "🔇 Videochiamata: non attiva";
     } else if (clientCellulareAudioOnly) {
-      aggiornaTestoVoceMenu("btn-stato-media", errore ? "Microfono: verifica necessaria" : "Chiamata audio attiva", errore ? "⚠️" : "🎙️");
+      voceMenu.textContent = errore ? "⚠️ Microfono: verifica necessaria" : "🎙️ Chiamata audio attiva";
     } else {
-      aggiornaTestoVoceMenu("btn-stato-media", errore ? "Webcam/microfono: verifica necessaria" : "Webcam e microfono attivi", errore ? "⚠️" : "🎥");
+      voceMenu.textContent = errore ? "⚠️ Webcam/microfono: verifica necessaria" : "🎥 Webcam e microfono attivi";
     }
     voceMenu.classList.toggle("media-attiva", mediaPartitaAttiva && !errore);
   }
@@ -2535,7 +2464,6 @@ function gestisciStatoPartita(dati, ricevutoA = performance.now()) {
   riportaDadiAllaPartita();
   fermaCountdown(false);
 
-  if (Array.isArray(dati.ordineGiocatori)) salvaOrdineTurni(dati.ordineGiocatori);
   ultimoStatoGiocatori = Array.isArray(dati.giocatori) ? dati.giocatori : [];
   impostaVisibilitaChat(dati.chatAttiva);
 
@@ -2881,18 +2809,6 @@ function disegnaGiocatori() {
 
     const card = document.createElement("div");
     card.className = "giocatore-card" + (eAttivo ? " attivo" : "");
-
-    const numeroOrdine = ordineTurnoPerGiocatore(giocatore);
-    card.style.order = String(numeroOrdine != null ? numeroOrdine : 1000 + indice);
-    if (numeroOrdine != null) {
-      const ordine = document.createElement("span");
-      ordine.className = "ordine-turno-badge";
-      ordine.textContent = String(numeroOrdine);
-      ordine.title = "Ordine di turno: " + numeroOrdine;
-      ordine.setAttribute("aria-label", "Ordine di turno " + numeroOrdine);
-      card.appendChild(ordine);
-    }
-
     card.appendChild(creaAvatarMini(giocatore.nome, giocatore.avatar, colore));
 
     const linkProfilo = document.createElement("a");
@@ -3017,16 +2933,6 @@ async function abbandonaPartita() {
   paginaInChiusura = true;
   setTimeout(tornaAllaLobby, 120);
 }
-function aggiornaTestoVoceMenu(id, testo, icona = null) {
-  const bottone = document.getElementById(id);
-  if (!bottone) return;
-  const testoEl = bottone.querySelector(".menu-voce-testo");
-  const iconaEl = bottone.querySelector(".menu-voce-icona");
-  if (testoEl) testoEl.textContent = testo;
-  else bottone.textContent = (icona ? icona + " " : "") + testo;
-  if (iconaEl && icona) iconaEl.textContent = icona;
-}
-
 function apriProfilo() { chiudiMenu(); window.location.href = "profilo.html"; }
 function apriImpostazioni() { chiudiMenu(); window.location.href = "account.html"; }
 function chiudiMenu() {
