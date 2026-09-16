@@ -2,6 +2,7 @@
   --altezza-reale: 100vh;
   --colore-oro: #ffd700;
   --sfondo: #0d1620;
+  --sfondo-gioco: radial-gradient(circle at 50% 35%, #1a2d3b 0%, #0d1620 52%, #080d12 100%);
   --pannello: #121c26;
 }
 
@@ -721,6 +722,32 @@ body.disconnesso:not(.modalita-desktop) #messaggi-gioco { top: calc(120px + env(
   inset: 0;
   overflow: hidden;
   isolation: isolate;
+  background: var(--sfondo-gioco, var(--sfondo));
+}
+
+body[data-sfondo-gioco="classico"] {
+  --sfondo: #0d1620;
+  --sfondo-gioco: radial-gradient(circle at 50% 35%, #1a2d3b 0%, #0d1620 52%, #080d12 100%);
+}
+
+body[data-sfondo-gioco="verde"] {
+  --sfondo: #10231a;
+  --sfondo-gioco: radial-gradient(circle at 50% 32%, #28543d 0%, #153326 48%, #091711 100%);
+}
+
+body[data-sfondo-gioco="blu"] {
+  --sfondo: #0b1930;
+  --sfondo-gioco: radial-gradient(circle at 50% 30%, #234d7a 0%, #102947 48%, #071323 100%);
+}
+
+body[data-sfondo-gioco="viola"] {
+  --sfondo: #1b1028;
+  --sfondo-gioco: radial-gradient(circle at 50% 32%, #563673 0%, #2b1940 48%, #120a1d 100%);
+}
+
+body[data-sfondo-gioco="notte"] {
+  --sfondo: #06080c;
+  --sfondo-gioco: radial-gradient(circle at 50% 28%, #202936 0%, #0e131b 46%, #040609 100%);
 }
 
 #mondo-ruotato {
@@ -1034,13 +1061,15 @@ body.modalita-ruotata #area-tabellone > #area-dadi {
 }
 
 #lista-giocatori {
+  display: flex;
   min-height: 0;
+  flex-direction: column;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
 
 body:not(.modalita-desktop) #lista-giocatori { display: none; }
-body:not(.modalita-desktop) #pannello-giocatori.aperto #lista-giocatori { display: block; }
+body:not(.modalita-desktop) #pannello-giocatori.aperto #lista-giocatori { display: flex; }
 
 .giocatore-card {
   display: flex;
@@ -1061,6 +1090,27 @@ body:not(.modalita-desktop) #pannello-giocatori.aperto #lista-giocatori { displa
 .giocatore-card.attivo {
   color: var(--colore-oro);
   font-weight: 700;
+}
+
+.ordine-turno-badge {
+  display: inline-flex;
+  flex: 0 0 25px;
+  align-items: center;
+  justify-content: center;
+  width: 25px;
+  height: 25px;
+  color: #10151b;
+  background: var(--colore-oro);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 8px;
+  box-shadow: 0 2px 7px rgba(0, 0, 0, 0.28);
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.giocatore-card.attivo .ordine-turno-badge {
+  box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.2), 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .avatar-mini {
@@ -1165,38 +1215,193 @@ body.modalita-desktop #btn-chat {
 
 #pannello-menu {
   position: absolute;
-  top: 58px;
+  top: 66px;
   right: 0;
-  width: min(215px, calc(100vw - 28px));
-  max-height: calc(var(--altezza-reale, 100vh) - 86px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  width: min(290px, calc(100vw - 28px));
+  max-height: calc(var(--altezza-reale, 100vh) - 94px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
   overflow-y: auto;
-  background: var(--pannello);
-  border: 1px solid rgba(255, 215, 0, 0.25);
-  border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  color: #f4f5f7;
+  background: linear-gradient(180deg, rgba(18, 28, 38, 0.99), rgba(8, 14, 20, 0.99));
+  border: 1px solid rgba(255, 215, 0, 0.38);
+  border-radius: 18px;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.58), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  animation: none;
+  transition: none;
 }
 
 #pannello-menu.nascosto { display: none; }
 
-#pannello-menu button {
-  display: block;
-  width: 100%;
-  min-height: 44px;
-  padding: 11px 16px;
-  color: #eee;
-  background: none;
-  border: 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  text-align: left;
-  font-size: 14px;
+.menu-intestazione {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 17px 18px 15px;
+  overflow: hidden;
+  border-bottom: 1px solid rgba(255, 215, 0, 0.18);
+}
+
+.menu-intestazione::after {
+  content: "";
+  position: absolute;
+  top: -38px;
+  right: -28px;
+  width: 112px;
+  height: 112px;
+  background: radial-gradient(circle, rgba(255, 215, 0, 0.16), transparent 68%);
+  pointer-events: none;
+}
+
+.menu-marchio {
+  color: var(--colore-oro);
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 0.9px;
+}
+
+.menu-sottotitolo {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.menu-sezione {
+  padding: 10px;
+}
+
+.menu-sezione-sfondo {
+  padding-top: 11px;
+  padding-bottom: 12px;
+}
+
+.menu-sezione + .menu-sezione {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.menu-etichetta {
+  padding: 2px 5px 9px;
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.75px;
+  text-transform: uppercase;
+}
+
+.selettore-sfondo {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 7px;
+}
+
+#pannello-menu .opzione-sfondo {
+  display: flex;
+  min-width: 0;
+  min-height: 58px;
+  padding: 7px 3px 6px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  color: rgba(255, 255, 255, 0.76);
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 11px;
+  font-size: 9px;
+  font-weight: 700;
+  text-align: center;
   cursor: pointer;
 }
 
-#pannello-menu button:last-child { border-bottom: 0; }
-#pannello-menu button:hover { background: rgba(255, 255, 255, 0.06); }
-#pannello-menu .voce-pericolo { color: #ff7b7b; }
-#pannello-menu #btn-stato-media:disabled { color: #aaa; cursor: default; opacity: 1; }
+#pannello-menu .opzione-sfondo:hover {
+  background: rgba(255, 255, 255, 0.075);
+  border-color: rgba(255, 215, 0, 0.24);
+}
+
+#pannello-menu .opzione-sfondo.attivo {
+  color: #fff;
+  background: rgba(255, 215, 0, 0.09);
+  border-color: rgba(255, 215, 0, 0.72);
+  box-shadow: inset 0 0 0 1px rgba(255, 215, 0, 0.12);
+}
+
+.campione-sfondo {
+  display: block;
+  width: 27px;
+  height: 27px;
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  border-radius: 50%;
+  box-shadow: 0 2px 7px rgba(0, 0, 0, 0.35);
+}
+
+.campione-classico { background: linear-gradient(135deg, #284457, #0d1620); }
+.campione-verde { background: linear-gradient(135deg, #3a7453, #10231a); }
+.campione-blu { background: linear-gradient(135deg, #356fa8, #0b1930); }
+.campione-viola { background: linear-gradient(135deg, #76519a, #1b1028); }
+.campione-notte { background: linear-gradient(135deg, #283240, #05070a); }
+
+.menu-azioni {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+#pannello-menu .menu-voce {
+  display: flex;
+  width: 100%;
+  min-height: 43px;
+  padding: 9px 11px;
+  align-items: center;
+  gap: 10px;
+  color: #edf0f3;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+#pannello-menu .menu-voce:hover {
+  background: rgba(255, 255, 255, 0.065);
+  border-color: rgba(255, 255, 255, 0.07);
+}
+
+#pannello-menu .menu-voce:active {
+  background: rgba(255, 215, 0, 0.09);
+}
+
+.menu-voce-icona {
+  display: inline-flex;
+  flex: 0 0 27px;
+  align-items: center;
+  justify-content: center;
+  width: 27px;
+  height: 27px;
+  background: rgba(255, 255, 255, 0.055);
+  border-radius: 8px;
+  font-size: 15px;
+}
+
+#pannello-menu .voce-pericolo {
+  color: #ff8c8c;
+}
+
+#pannello-menu .voce-pericolo:hover {
+  background: rgba(255, 77, 77, 0.08);
+  border-color: rgba(255, 100, 100, 0.14);
+}
+
+#pannello-menu #btn-stato-media:disabled {
+  color: #9ca3aa;
+  cursor: default;
+  opacity: 1;
+}
+
 #pannello-menu #btn-stato-media.media-attiva:disabled { color: #72d979; }
+
 body:not(.modalita-desktop) #btn-toggle-fullscreen { display: none; }
 
 #messaggi-gioco {
