@@ -680,6 +680,7 @@ const GS_EMAIL_MAX_UTENTE = 5;
 
 const GS_RESEND_KEY = String(process.env.RESEND_API_KEY || "").trim();
 const GS_RESEND_FROM = String(process.env.RESEND_FROM || "").trim();
+const GS_CONTATTI_FROM = String(process.env.CONTATTI_FROM || "Giochi Società <noreply@giochisocieta.com>").trim();
 
 const GS_URL_ACCOUNT = new URL(
   process.env.PUBLIC_SERVER_URL || "https://api.giochisocieta.com"
@@ -896,7 +897,11 @@ function gsInviaResend(payload, idempotenza) {
           ) {
             termina(null, dati.id);
           } else {
-            console.warn("Resend: invio non confermato, HTTP", risposta.statusCode);
+            console.warn(
+              "Resend: invio non confermato, HTTP",
+              risposta.statusCode,
+              testo ? testo.substring(0, 1000) : "(nessuna risposta)"
+            );
             termina(gsErroreEmail(
               "Invio email non riuscito. Puoi richiedere un nuovo link tra un minuto.",
               "EMAIL_PROVIDER"
@@ -916,19 +921,31 @@ function gsInviaResend(payload, idempotenza) {
 
 async function gsInviaVerifica(uid, redirectRichiesto) {
   gsConfigurazioneEmail();
+  if (!db) throw gsErroreEmail("Database non disponibile.", "EMAIL_PROVIDER");
+
   const ref = db.ref("utenti/" + uid);
-  await ref.once("value");
+  const snapshot = await ref.once("value");
+  const utente = snapshot.val();
+
+  if (!utente || utente.emailVerificata !== false) return false;
+
+  const email = gsEmail(utente.emailLower || utente.email);
+  if (!email) return false;
+
   const segreto = cryptoEmailGS.randomBytes(32).toString("hex");
   const hash = gsHash(segreto);
   const redirect = gsRedirect(redirectRichiesto);
-  let errore;
+  const ora = Date.now();
+  const giorno = new Date(ora).toISOString().slice(0, 10);
+  let errore = null;
 
-  const risultato = await ref.transaction(utente => {
+  const statoRef = ref.child("verificaEmail");
+  const risultato = await statoRef.transaction(statoAttuale => {
     errore = null;
-    if (!utente || utente.emailVerificata !== false) return;
-    const ora = Date.now();
-    const giorno = new Date(ora).toISOString().slice(0, 10);
-    const stato = utente.verificaEmail || {};
+    const stato = statoAttuale && typeof statoAttuale === "object"
+      ? statoAttuale
+      : {};
+
     const attesa = Number(stato.ultimoTentativoIl || 0) + GS_EMAIL_PAUSA - ora;
     if (attesa > 0) {
       errore = gsErroreEmail(
@@ -948,19 +965,21 @@ async function gsInviaVerifica(uid, redirectRichiesto) {
       return;
     }
 
-    const email = gsEmail(utente.emailLower || utente.email);
-    if (!email) return;
     const links = Object.fromEntries(
       Object.entries(stato.links || {})
-        .filter(([, link]) => link && link.scadeIl > ora && link.email === email)
-        .sort((a, b) => b[1].scadeIl - a[1].scadeIl)
+        .filter(([, link]) => link && Number(link.scadeIl) > ora && link.email === email)
+        .sort((a, b) => Number(b[1].scadeIl) - Number(a[1].scadeIl))
         .slice(0, 9)
     );
+
     links[hash] = { email, scadeIl: ora + GS_EMAIL_DURATA, redirect };
-    utente.verificaEmail = {
-      giorno, invii: invii + 1, ultimoTentativoIl: ora, links
+
+    return {
+      giorno,
+      invii: invii + 1,
+      ultimoTentativoIl: ora,
+      links
     };
-    return utente;
   });
 
   if (!risultato.committed) {
@@ -969,7 +988,7 @@ async function gsInviaVerifica(uid, redirectRichiesto) {
   }
 
   await gsPrenotaQuota();
-  const utente = risultato.snapshot.val();
+
   const link = gsUrlPagina("/registrati.html", null);
   link.hash = new URLSearchParams({ verifica: uid + "." + segreto }).toString();
   const url = link.href;
@@ -977,9 +996,9 @@ async function gsInviaVerifica(uid, redirectRichiesto) {
 
   await gsInviaResend({
     from: GS_RESEND_FROM,
-    to: [utente.emailLower || utente.email],
+    to: [email],
     subject: "Conferma la tua email - Giochi Società",
-    text: "Ciao " + nome + ",\n\n" +
+    text: "Ciao " + nome + "\n\n" +
       "per confermare la registrazione a Giochi Società apri questo link " +
       "e premi Conferma email:\n\n" + url + "\n\n" +
       "Il link è valido per 24 ore. Se non hai richiesto la registrazione, ignoralo.",
@@ -991,6 +1010,7 @@ async function gsInviaVerifica(uid, redirectRichiesto) {
       '<p>Il link è valido per 24 ore.</p>' +
       '<p>Se non hai richiesto questa registrazione, ignora il messaggio.</p></div>'
   }, "gs-verifica-" + uid + "-" + hash);
+
   return true;
 }
 
@@ -1052,42 +1072,52 @@ if (GOOGLE_OAUTH_CONFIGURATO) {
 
       if (utente) {
         const ref = db.ref("utenti/" + utente.uid);
-        await ref.once("value");
-        let motivo = "Account non disponibile.";
-        const esito = await ref.transaction(attuale => {
-          if (!attuale) return;
-          if (attuale.stato === "bannato" ||
-            (attuale.stato === "sospeso" && Number(attuale.sospesoFino) > Date.now())) {
-            motivo = "Il tuo account è bannato o sospeso.";
-            return;
+        const snap = await ref.once("value");
+        const attuale = snap.val();
+
+        if (!attuale) return done(new Error("Account non disponibile."));
+
+        if (attuale.stato === "bannato" ||
+          (attuale.stato === "sospeso" && Number(attuale.sospesoFino) > Date.now())) {
+          return done(new Error("Il tuo account è bannato o sospeso."));
+        }
+
+        const emailAccount = gsEmail(attuale.emailLower || attuale.email);
+        if (attuale.googleId && attuale.googleId !== googleId) {
+          return done(new Error("Accedi con il metodo già associato al tuo account."));
+        }
+        if (!attuale.googleId && (!autorevole || emailAccount !== email)) {
+          return done(new Error("Accedi con il metodo già associato al tuo account."));
+        }
+
+        const adesso = Date.now();
+        const aggiornamenti = {
+          googleId,
+          providerGoogle: true,
+          elo: ottieniElo(attuale),
+          ultimoAccesso: adesso
+        };
+
+        if (emailAccount === email) {
+          aggiornamenti.emailVerificata = true;
+          aggiornamenti.emailVerificataIl = attuale.emailVerificataIl || adesso;
+          aggiornamenti.emailVerificataCon = "google";
+        }
+
+        if (attuale.emailVerificata === false) {
+          if (emailAccount !== email) {
+            return done(new Error("Accedi con il metodo già associato al tuo account."));
           }
-          if (attuale.googleId && attuale.googleId !== googleId) return;
-          if (!attuale.googleId && (!autorevole ||
-            gsEmail(attuale.emailLower || attuale.email) !== email)) return;
-          if (attuale.emailVerificata === false) {
-            if (gsEmail(attuale.emailLower || attuale.email) !== email) return;
-            // Chi ha prenotato un'email non verificata non mantiene la password.
-            attuale.passwordHash = null;
-            attuale.emailVerificata = true;
-            attuale.emailVerificataIl = Date.now();
-            attuale.emailVerificataCon = "google";
-            delete attuale.verificaEmail;
-          } else if (gsEmail(attuale.emailLower || attuale.email) === email) {
-            attuale.emailVerificata = true;
-            attuale.emailVerificataIl = attuale.emailVerificataIl || Date.now();
-            attuale.emailVerificataCon = "google";
-          }
-          attuale.googleId = googleId;
-          attuale.providerGoogle = true;
-          attuale.elo = ottieniElo(attuale);
-          attuale.ultimoAccesso = Date.now();
-          return attuale;
-        });
-        if (!esito.committed) return done(new Error(motivo));
-        const aggiornato = esito.snapshot.val();
+          aggiornamenti.passwordHash = null;
+          aggiornamenti.verificaEmail = null;
+        }
+
+        await ref.update(aggiornamenti);
+
         return done(null, {
-          uid: utente.uid, nickname: aggiornato.nickname,
-          ruolo: aggiornato.ruolo || "utente"
+          uid: utente.uid,
+          nickname: attuale.nickname,
+          ruolo: attuale.ruolo || "utente"
         });
       }
 
@@ -1243,39 +1273,52 @@ app.post("/api/reinvia-verifica-email", gsLimiteReinvio, async (req, res) => {
 app.post("/api/verifica-email", gsLimiteConferma, async (req, res) => {
   res.set("Cache-Control", "no-store");
   if (!db) return res.status(503).json({ errore: "Servizio account non disponibile." });
+
   const token = typeof req.body?.token === "string" ? req.body.token : "";
   const parti = /^([A-Za-z0-9_-]{1,128})\.([a-f0-9]{64})$/.exec(token);
   const nonValido = () => res.status(400).json({
     codice: "LINK_NON_VALIDO",
     errore: "Il link è scaduto, è già stato usato o non è valido. Richiedine uno nuovo oppure prova ad accedere."
   });
+
   if (!parti) return nonValido();
+
   try {
     const ref = db.ref("utenti/" + parti[1]);
-    await ref.once("value");
+    const snapshot = await ref.once("value");
+    const utente = snapshot.val();
+    if (!utente || utente.emailVerificata !== false) return nonValido();
+
     const hash = gsHash(parti[2]);
-    let redirect = null;
-    const risultato = await ref.transaction(utente => {
-      redirect = null;
-      if (!utente || utente.emailVerificata !== false) return;
-      const link = utente.verificaEmail?.links?.[hash];
-      if (!link || !Number.isFinite(Number(link.scadeIl)) ||
-        Number(link.scadeIl) <= Date.now() ||
-        link.email !== gsEmail(utente.emailLower || utente.email)) return;
-      redirect = gsRedirect(link.redirect);
-      utente.emailVerificata = true;
-      utente.emailVerificataIl = Date.now();
-      utente.emailVerificataCon = "link";
-      delete utente.verificaEmail;
-      return utente;
+    const email = gsEmail(utente.emailLower || utente.email);
+    const link = utente.verificaEmail?.links?.[hash];
+
+    if (!link || !Number.isFinite(Number(link.scadeIl)) ||
+      Number(link.scadeIl) <= Date.now() || link.email !== email) {
+      return nonValido();
+    }
+
+    const redirect = gsRedirect(link.redirect);
+    const risultato = await ref.child("emailVerificata").transaction(valore => {
+      if (valore !== false) return;
+      return true;
     });
+
     if (!risultato.committed) return nonValido();
+
+    await ref.update({
+      emailVerificataIl: Date.now(),
+      emailVerificataCon: "link",
+      verificaEmail: null
+    });
+
     return res.json({
       ok: true,
       messaggio: "Email confermata. Ora puoi accedere.",
       urlLogin: gsUrlPagina("/login.html", redirect).href
     });
-  } catch (_) {
+  } catch (errore) {
+    console.error("Errore verifica email:", errore?.message || errore);
     return res.status(503).json({
       errore: "Verifica non disponibile. Riprova tra poco."
     });
@@ -1324,27 +1367,6 @@ app.post("/api/login", limiteLogin, async (req, res) => {
   } catch (_) {
     return res.status(500).json({ errore: "Errore del server, riprova." });
   }
-});
-
-app.post("/api/login", limiteLogin, async (req, res) => {
-  if (!db) return res.status(500).json({ errore: "Servizio account non disponibile al momento." });
-  try {
-    const { email, password } = req.body;
-    if (!email || !password) return res.status(400).json({ errore: "Inserisci email e password." });
-    const utente = await trovaUtentePerEmail(pulisciTesto(email, 100).toLowerCase());
-    if (!utente) return res.status(400).json({ errore: "Email o password errati." });
-    if (!utente.passwordHash) return res.status(400).json({ errore: "Questo account è stato creato con Google. Usa 'Accedi con Google'." });
-    if (!(await bcrypt.compare(password, utente.passwordHash))) return res.status(400).json({ errore: "Email o password errati." });
-    if (utente.stato === "bannato") return res.status(403).json({ errore: "Il tuo account è stato bannato." });
-    if (utente.stato === "sospeso") {
-      if (utente.sospesoFino && utente.sospesoFino > Date.now()) return res.status(403).json({ errore: "Account sospeso fino al " + new Date(utente.sospesoFino).toLocaleString("it-IT") + "." });
-      await db.ref("utenti/" + utente.uid).update({ stato: "attivo", sospesoFino: null });
-    }
-    await db.ref("utenti/" + utente.uid).update({ ultimoAccesso: Date.now(), elo: ottieniElo(utente) });
-    const token = creaToken(utente.uid, utente.nickname, utente.ruolo || "utente");
-    res.cookie("token", token, OPZIONI_COOKIE);
-    res.json({ nickname: utente.nickname, ruolo: utente.ruolo || "utente", token });
-  } catch (err) { console.error(err); res.status(500).json({ errore: "Errore del server, riprova." }); }
 });
 
 app.post("/api/cambia-password", richiediAuth, async (req, res) => {
@@ -4658,7 +4680,7 @@ app.post("/api/contatti", limiteContatti, async (req, res) => {
 
     await gsInviaResend(
       {
-        from: GS_RESEND_FROM,
+        from: GS_CONTATTI_FROM,
 
         // La segnalazione arriva nella tua vera casella Zoho.
         to: [
