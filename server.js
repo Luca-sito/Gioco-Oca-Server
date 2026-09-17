@@ -4568,26 +4568,188 @@ app.post(
   }
 );
 
+// ===== CONTATTI: INVIO DIRETTO ALLA CASELLA AZIENDALE =====
 app.post("/api/contatti", limiteContatti, async (req, res) => {
-  if (!db) return res.status(500).json({ errore: "Servizio non disponibile al momento." });
   try {
-    const { categoria, messaggio } = req.body;
-    let { nickname, email } = req.body;
-    if (!messaggio || !messaggio.trim()) return res.status(400).json({ errore: "Scrivi un messaggio prima di inviare." });
-    const messaggioPulito = pulisciTesto(messaggio, 1000);
-    const datiToken = verificaToken(estraiTokenHeader(req));
-    let uidMittente = null;
-    if (datiToken) {
-      uidMittente = datiToken.uid;
-      const utenteDb = (await db.ref("utenti/" + datiToken.uid).once("value")).val();
-      if (utenteDb) { nickname = utenteDb.nickname; email = utenteDb.email; }
-    }
-    if (!nickname || !nickname.trim() || !email || !email.trim()) return res.status(400).json({ errore: "Nickname ed email sono obbligatori." });
-    await db.ref("contatti").push().set({ nickname: nickname.trim(), email: email.trim(), categoria: categoria || "Altro", messaggio: messaggioPulito, uidMittente, letto: false, data: Date.now() });
-    res.json({ ok: true });
-  } catch (err) { console.error(err); res.status(500).json({ errore: "Errore durante l'invio, riprova." }); }
-});
+    gsConfigurazioneEmail();
 
+    const categorieConsentite = [
+      "Assistenza tecnica",
+      "Segnalazione",
+      "Collaborazioni",
+      "Altro"
+    ];
+
+    let nickname = pulisciTesto(req.body?.nickname, 30);
+    let email = gsEmail(req.body?.email);
+
+    const messaggio = pulisciTesto(
+      req.body?.messaggio,
+      1000
+    );
+
+    const categoriaRichiesta = pulisciTesto(
+      req.body?.categoria,
+      40
+    );
+
+    const categoria = categorieConsentite.includes(categoriaRichiesta)
+      ? categoriaRichiesta
+      : "Altro";
+
+    const datiToken = verificaToken(
+      estraiTokenHeader(req)
+    );
+
+    let uidMittente = null;
+
+    // Se l'utente è autenticato prendiamo i dati reali dal database,
+    // invece di fidarci dei campi modificabili nel browser.
+    if (datiToken?.uid && db) {
+      const utenteDb = (
+        await db
+          .ref("utenti/" + datiToken.uid)
+          .once("value")
+      ).val();
+
+      if (utenteDb) {
+        uidMittente = datiToken.uid;
+
+        nickname = pulisciTesto(
+          utenteDb.nickname,
+          30
+        );
+
+        email = gsEmail(
+          utenteDb.emailLower || utenteDb.email
+        );
+      }
+    }
+
+    if (!nickname || nickname.length < 3) {
+      return res.status(400).json({
+        errore: "Inserisci un nickname valido."
+      });
+    }
+
+    if (!email) {
+      return res.status(400).json({
+        errore: "Inserisci un indirizzo email valido."
+      });
+    }
+
+    if (!messaggio) {
+      return res.status(400).json({
+        errore: "Scrivi un messaggio prima di inviare."
+      });
+    }
+
+    const data = new Date().toLocaleString(
+      "it-IT",
+      {
+        timeZone: "Europe/Rome",
+        dateStyle: "medium",
+        timeStyle: "short"
+      }
+    );
+
+    // Conta l'invio nel limite email già usato dal server.
+    await gsPrenotaQuota();
+
+    await gsInviaResend(
+      {
+        from: GS_RESEND_FROM,
+
+        // La segnalazione arriva nella tua vera casella Zoho.
+        to: [
+          "account@giochisocieta.com"
+        ],
+
+        // Premendo "Rispondi" da Zoho rispondi direttamente
+        // all'utente che ha compilato il modulo.
+        reply_to: email,
+
+        subject:
+          "[" +
+          categoria +
+          "] " +
+          nickname +
+          " - Giochi Società",
+
+        text:
+          "Nuovo messaggio ricevuto dal sito Giochi Società\n\n" +
+          "Categoria: " + categoria + "\n" +
+          "Nickname: " + nickname + "\n" +
+          "Email: " + email + "\n" +
+          "UID: " + (uidMittente || "Ospite") + "\n" +
+          "Data: " + data + "\n\n" +
+          "Messaggio:\n" +
+          messaggio,
+
+        html:
+          '<div style="font-family:Arial,sans-serif;max-width:680px;margin:auto;color:#202938">' +
+
+          '<h2 style="margin-bottom:24px">Nuovo messaggio - Giochi Società</h2>' +
+
+          '<p><strong>Categoria:</strong> ' +
+          gsEscape(categoria) +
+          '</p>' +
+
+          '<p><strong>Nickname:</strong> ' +
+          gsEscape(nickname) +
+          '</p>' +
+
+          '<p><strong>Email:</strong> ' +
+          gsEscape(email) +
+          '</p>' +
+
+          '<p><strong>UID:</strong> ' +
+          gsEscape(uidMittente || "Ospite") +
+          '</p>' +
+
+          '<p><strong>Data:</strong> ' +
+          gsEscape(data) +
+          '</p>' +
+
+          '<hr style="border:0;border-top:1px solid #ddd;margin:24px 0">' +
+
+          '<p style="white-space:pre-wrap">' +
+          gsEscape(messaggio) +
+          '</p>' +
+
+          '</div>'
+      },
+
+      "gs-contatto-" +
+      cryptoEmailGS.randomUUID()
+    );
+
+    return res.json({
+      ok: true,
+      messaggio: "Messaggio inviato correttamente."
+    });
+
+  } catch (errore) {
+    console.error(
+      "Errore invio contatto via email:",
+      errore?.codice ||
+      errore?.message ||
+      errore
+    );
+
+    if (errore?.status === 429) {
+      return res.status(429).json({
+        errore:
+          "Hai effettuato troppi invii. Riprova più tardi."
+      });
+    }
+
+    return res.status(503).json({
+      errore:
+        "Non è stato possibile inviare il messaggio. Riprova tra poco."
+    });
+  }
+});
 
 // ===== UTENTI BLOCCATI =====
 app.get("/api/blocchi", richiediAuth, async (req, res) => {
