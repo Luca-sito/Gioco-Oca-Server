@@ -1299,14 +1299,13 @@ app.post("/api/verifica-email", gsLimiteConferma, async (req, res) => {
     }
 
     const redirect = gsRedirect(link.redirect);
-    const risultato = await ref.child("emailVerificata").transaction(valore => {
-      if (valore !== false) return;
-      return true;
-    });
 
-    if (!risultato.committed) return nonValido();
-
+    // Lo snapshot sopra ha già verificato che l'account sia ancora da confermare
+    // e che il link sia valido. Evitiamo una transaction su un singolo booleano:
+    // Firebase può invocare inizialmente la callback con null e far fallire
+    // un link perfettamente valido. L'update imposta direttamente lo stato finale.
     await ref.update({
+      emailVerificata: true,
       emailVerificataIl: Date.now(),
       emailVerificataCon: "link",
       verificaEmail: null
