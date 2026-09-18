@@ -6782,6 +6782,1572 @@ async function esciDaPartitaInAttesa(partita, nomeStanza, uid) {
   return true;
 }
 
+// ============================================================================
+// DAMA ITALIANA — MODULO MULTIPLAYER SEPARATO DALLA LOGICA DEL GIOCO DELL'OCA
+// ============================================================================
+// Account e autenticazione restano unici per tutta Giochi Società: questo modulo
+// usa lo stesso JWT/cookie e gli stessi utenti. Le statistiche di gioco vengono
+// invece salvate in /utenti/{uid}/giochi/dama, senza modificare l'ELO dell'Oca.
+
+const DAMA_ID_GIOCO = "dama";
+const DAMA_ELO_INIZIALE = 1500;
+const DAMA_NOMI_STANZE = ["BAR", "PUB", "DISCOPUB", "SERATE"];
+const DAMA_TEMPO_MINIMO_SECONDI = 10;
+const DAMA_TEMPO_MASSIMO_SECONDI = 300;
+
+const damaStanze = Object.fromEntries(
+  DAMA_NOMI_STANZE.map(nome => [nome, { giocatoriOnline: {}, partite: {} }])
+);
+
+const damaContestiSocket = new Map();
+
+function damaGiocoDaRequest(request) {
+  try {
+    const url = new URL(request && request.url ? request.url : "/", "https://api.giochisocieta.com");
+    return String(url.searchParams.get("gioco") || "").trim().toLowerCase();
+  } catch (_) {
+    return "";
+  }
+}
+
+function damaTokenDaRequest(request) {
+  try {
+    const url = new URL(request && request.url ? request.url : "/", "https://api.giochisocieta.com");
+    const token = String(url.searchParams.get("token") || "");
+    return token.length > 0 && token.length <= 4096 ? token : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function damaMessaggioAppartieneAlGioco(giocoRichiestoSocket, dati) {
+  const tipo = typeof dati?.tipo === "string" ? dati.tipo : "";
+  return giocoRichiestoSocket === DAMA_ID_GIOCO ||
+    String(dati?.gioco || "").toLowerCase() === DAMA_ID_GIOCO ||
+    tipo.startsWith("dama_");
+}
+
+function damaContesto(socketId, socket, tipoDispositivo, uid = null) {
+  let contesto = damaContestiSocket.get(socketId);
+  if (!contesto) {
+    contesto = {
+      socketId,
+      socket,
+      uid: uid || null,
+      nickname: null,
+      avatar: null,
+      stanza: null,
+      partitaId: null,
+      tipoDispositivo: tipoDispositivo || "computer",
+      schermataPartita: false
+    };
+    damaContestiSocket.set(socketId, contesto);
+  } else {
+    contesto.socket = socket;
+    if (uid) contesto.uid = uid;
+    if (tipoDispositivo) contesto.tipoDispositivo = tipoDispositivo;
+  }
+  return contesto;
+}
+
+function damaCreaScacchieraIniziale() {
+  const scacchiera = Array.from({ length: 8 }, () => Array(8).fill(null));
+
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 8; c++) {
+      if ((r + c) % 2 === 1) scacchiera[r][c] = { colore: "nero", dama: false };
+    }
+  }
+
+  for (let r = 5; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      if ((r + c) % 2 === 1) scacchiera[r][c] = { colore: "bianco", dama: false };
+    }
+  }
+
+  return scacchiera;
+}
+
+function damaDentro(r, c) {
+  return Number.isInteger(r) && Number.isInteger(c) && r >= 0 && r < 8 && c >= 0 && c < 8;
+}
+
+function damaChiaveCasella(r, c) {
+  return `${r},${c}`;
+}
+
+function damaDirezioniPezzo(pezzo) {
+  if (pezzo && pezzo.dama === true) {
+    return [[-1, -1], [-1, 1], [1, -1], [1, 1]];
+  }
+  return pezzo && pezzo.colore === "bianco"
+    ? [[-1, -1], [-1, 1]]
+    : [[1, -1], [1, 1]];
+}
+
+function damaClonaScacchiera(scacchiera) {
+  return scacchiera.map(riga => riga.map(pezzo => pezzo ? { ...pezzo } : null));
+}
+
+// Genera tutte le sequenze di presa COMPLETE da un singolo pezzo.
+// Regole italiane applicate qui:
+// - pedina: prende solo in avanti e non può prendere una dama;
+// - dama: prende avanti/indietro e può prendere pedine e dame;
+// - una pedina che raggiunge la base durante una presa resta pedina fino alla
+//   conclusione dell'intera mossa;
+// - uno stesso pezzo avversario non può essere scavalcato due volte.
+function damaSequenzePresaDa(scacchiera, r, c, catturati = new Set()) {
+  const pezzo = scacchiera?.[r]?.[c];
+  if (!pezzo) return [];
+
+  const risultati = [];
+  const direzioni = damaDirezioniPezzo(pezzo);
+
+  for (const [dr, dc] of direzioni) {
+    const mr = r + dr;
+    const mc = c + dc;
+    const ar = r + dr * 2;
+    const ac = c + dc * 2;
+
+    if (!damaDentro(mr, mc) || !damaDentro(ar, ac)) continue;
+    if (scacchiera[ar][ac]) continue;
+
+    const bersaglio = scacchiera[mr][mc];
+    if (!bersaglio || bersaglio.colore === pezzo.colore) continue;
+
+    const chiaveBersaglio = damaChiaveCasella(mr, mc);
+    if (catturati.has(chiaveBersaglio)) continue;
+
+    // Nella dama italiana una pedina non può catturare una dama.
+    if (pezzo.dama !== true && bersaglio.dama === true) continue;
+
+    const prossima = damaClonaScacchiera(scacchiera);
+    prossima[r][c] = null;
+    prossima[ar][ac] = { ...pezzo };
+
+    // Il bersaglio resta sulla scacchiera virtuale fino a fine sequenza.
+    // In questo modo non può diventare una casella di appoggio durante la stessa
+    // presa multipla; il Set impedisce inoltre di catturarlo di nuovo.
+    const catturatiNuovi = new Set(catturati);
+    catturatiNuovi.add(chiaveBersaglio);
+
+    const seguiti = damaSequenzePresaDa(prossima, ar, ac, catturatiNuovi);
+    const passo = {
+      a: { r: ar, c: ac },
+      presa: { r: mr, c: mc },
+      presaDama: bersaglio.dama === true
+    };
+
+    if (seguiti.length === 0) {
+      risultati.push({
+        da: { r, c },
+        pezzoDama: pezzo.dama === true,
+        passi: [passo]
+      });
+    } else {
+      for (const seguito of seguiti) {
+        risultati.push({
+          da: { r, c },
+          pezzoDama: pezzo.dama === true,
+          passi: [passo, ...seguito.passi]
+        });
+      }
+    }
+  }
+
+  return risultati;
+}
+
+function damaSequenzePresaTutte(scacchiera, colore) {
+  const sequenze = [];
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const pezzo = scacchiera?.[r]?.[c];
+      if (!pezzo || pezzo.colore !== colore) continue;
+      sequenze.push(...damaSequenzePresaDa(scacchiera, r, c));
+    }
+  }
+  return sequenze;
+}
+
+// Applica le priorità di presa della Dama Italiana:
+// 1) maggior numero di pezzi;
+// 2) a parità, deve prendere la dama invece della pedina;
+// 3) tra prese di dama, maggior numero di dame avversarie;
+// 4) a ulteriore parità, la dama avversaria deve essere incontrata prima.
+function damaFiltraPrioritaPrese(sequenze) {
+  if (!Array.isArray(sequenze) || sequenze.length === 0) return [];
+
+  let filtrate = sequenze.slice();
+  const massimoPezzi = Math.max(...filtrate.map(s => s.passi.length));
+  filtrate = filtrate.filter(s => s.passi.length === massimoPezzi);
+
+  if (filtrate.some(s => s.pezzoDama === true)) {
+    filtrate = filtrate.filter(s => s.pezzoDama === true);
+  }
+
+  if (filtrate.length > 1 && filtrate.every(s => s.pezzoDama === true)) {
+    const massimoDame = Math.max(...filtrate.map(s => s.passi.filter(p => p.presaDama).length));
+    filtrate = filtrate.filter(s => s.passi.filter(p => p.presaDama).length === massimoDame);
+
+    const primoIndiceDama = s => {
+      const indice = s.passi.findIndex(p => p.presaDama === true);
+      return indice === -1 ? Number.POSITIVE_INFINITY : indice;
+    };
+
+    const indiceMinimo = Math.min(...filtrate.map(primoIndiceDama));
+    filtrate = filtrate.filter(s => primoIndiceDama(s) === indiceMinimo);
+  }
+
+  return filtrate;
+}
+
+function damaSequenzeOttimali(scacchiera, colore) {
+  return damaFiltraPrioritaPrese(damaSequenzePresaTutte(scacchiera, colore));
+}
+
+function damaMosseSempliciDa(scacchiera, r, c) {
+  const pezzo = scacchiera?.[r]?.[c];
+  if (!pezzo) return [];
+
+  const mosse = [];
+  for (const [dr, dc] of damaDirezioniPezzo(pezzo)) {
+    const ar = r + dr;
+    const ac = c + dc;
+    if (!damaDentro(ar, ac) || scacchiera[ar][ac]) continue;
+    mosse.push({ da: { r, c }, a: { r: ar, c: ac }, presa: false });
+  }
+  return mosse;
+}
+
+function damaColoreAvversario(colore) {
+  return colore === "bianco" ? "nero" : "bianco";
+}
+
+function damaUidPerColore(partita, colore) {
+  return Object.keys(partita.giocatori || {}).find(uid => partita.giocatori[uid]?.colore === colore) || null;
+}
+
+function damaContaPezzi(scacchiera, colore) {
+  let totale = 0;
+  for (const riga of scacchiera || []) {
+    for (const pezzo of riga || []) {
+      if (pezzo && pezzo.colore === colore) totale++;
+    }
+  }
+  return totale;
+}
+
+function damaHaAlmenoUnaMossa(scacchiera, colore) {
+  if (damaSequenzeOttimali(scacchiera, colore).length > 0) return true;
+
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      if (scacchiera?.[r]?.[c]?.colore === colore && damaMosseSempliciDa(scacchiera, r, c).length > 0) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function damaPromuoviSeNecessario(scacchiera, r, c) {
+  const pezzo = scacchiera?.[r]?.[c];
+  if (!pezzo || pezzo.dama === true) return false;
+  if ((pezzo.colore === "bianco" && r === 0) || (pezzo.colore === "nero" && r === 7)) {
+    pezzo.dama = true;
+    return true;
+  }
+  return false;
+}
+
+function damaDurataTurnoMs(partita) {
+  const secondi = Math.max(
+    DAMA_TEMPO_MINIMO_SECONDI,
+    Math.min(DAMA_TEMPO_MASSIMO_SECONDI, parseInt(partita?.tempo, 10) || 15)
+  );
+  return secondi * 1000;
+}
+
+function damaSerializzaGiocatori(partita) {
+  const risultato = {};
+  for (const [uid, giocatore] of Object.entries(partita.giocatori || {})) {
+    risultato[uid] = {
+      uid,
+      nome: giocatore.nome || "Giocatore",
+      nickname: giocatore.nome || "Giocatore",
+      avatar: giocatore.avatar || null,
+      colore: giocatore.colore || null,
+      elo: Number.isFinite(Number(giocatore.elo)) ? Math.round(Number(giocatore.elo)) : DAMA_ELO_INIZIALE
+    };
+  }
+  return risultato;
+}
+
+function damaSerializzaPartitaClient(partita) {
+  return {
+    id: partita.id,
+    stanza: partita.stanza,
+    fase: partita.fase,
+    iniziata: partita.iniziata === true,
+    turno: partita.turno || "bianco",
+    scacchiera: partita.scacchiera || damaCreaScacchieraIniziale(),
+    giocatori: damaSerializzaGiocatori(partita),
+    numeroMossa: Number(partita.numeroMossa || 0),
+    ultimoMovimento: partita.ultimoMovimento || null,
+    prese: partita.prese || {},
+    presaInCorso: partita.presaInCorso
+      ? { uid: partita.presaInCorso.uid, r: partita.presaInCorso.r, c: partita.presaInCorso.c }
+      : null,
+    scadenzaTurno: partita.scadenzaTurno || null,
+    durataTurnoMs: damaDurataTurnoMs(partita),
+    classificata: partita.classificata !== false,
+    vincitoreUid: partita.vincitoreUid || null,
+    motivoFine: partita.motivoFine || null
+  };
+}
+
+function damaPreparaPartitaFirebase(partita) {
+  const giocatori = {};
+  for (const [uid, g] of Object.entries(partita.giocatori || {})) {
+    giocatori[uid] = {
+      nome: g.nome || "Giocatore",
+      avatar: g.avatar || null,
+      colore: g.colore || null,
+      elo: Number.isFinite(Number(g.elo)) ? Math.round(Number(g.elo)) : DAMA_ELO_INIZIALE
+    };
+  }
+
+  return {
+    id: partita.id,
+    gioco: DAMA_ID_GIOCO,
+    stanza: partita.stanza,
+    creatore: partita.creatore,
+    creatoDa: partita.creatoDa,
+    tempo: partita.tempo,
+    modalita: partita.modalita,
+    classificata: partita.classificata !== false,
+    maxGiocatori: 2,
+    chatAttiva: partita.chatAttiva !== false,
+    mediaAttiva: false,
+    fase: partita.fase,
+    iniziata: partita.iniziata === true,
+    iniziataIl: partita.iniziataIl || null,
+    giocatori,
+    ordineGiocatori: partita.ordineGiocatori || [],
+    turno: partita.turno || "bianco",
+    scacchiera: partita.scacchiera || null,
+    numeroMossa: Number(partita.numeroMossa || 0),
+    ultimoMovimento: partita.ultimoMovimento || null,
+    prese: partita.prese || {},
+    presaInCorso: partita.presaInCorso || null,
+    tempoInizioTurno: partita.tempoInizioTurno || null,
+    scadenzaTurno: partita.scadenzaTurno || null,
+    aggiornataIl: Date.now()
+  };
+}
+
+async function damaSalvaPartita(partita) {
+  if (!db || !partita) return;
+  await db.ref(`giochi/${DAMA_ID_GIOCO}/partite/${partita.id}`).set(damaPreparaPartitaFirebase(partita));
+}
+
+async function damaRimuoviPartita(stanza, partitaId) {
+  const partita = damaStanze[stanza]?.partite?.[partitaId];
+  if (partita?.timerTurno) clearTimeout(partita.timerTurno);
+  if (damaStanze[stanza]) delete damaStanze[stanza].partite[partitaId];
+
+  if (db) {
+    try {
+      await db.ref(`giochi/${DAMA_ID_GIOCO}/partite/${partitaId}`).remove();
+    } catch (errore) {
+      console.error("Dama: errore rimozione partita da Firebase:", errore.message);
+    }
+  }
+
+  damaInviaListaPartite(stanza);
+  damaInviaConteggioStanze();
+}
+
+function damaTrovaPartita(partitaId) {
+  if (!partitaId) return null;
+  for (const stanza of DAMA_NOMI_STANZE) {
+    const partita = damaStanze[stanza]?.partite?.[partitaId];
+    if (partita) return { partita, stanza };
+  }
+  return null;
+}
+
+function damaTrovaPartitaPerUid(uid) {
+  if (!uid) return null;
+  for (const stanza of DAMA_NOMI_STANZE) {
+    for (const partita of Object.values(damaStanze[stanza].partite || {})) {
+      if (partita?.giocatori?.[uid]) {
+        return { partitaId: partita.id, stanza, gioco: DAMA_ID_GIOCO };
+      }
+    }
+  }
+  return null;
+}
+
+function damaInviaSocket(socket, dati) {
+  if (!socket || socket.readyState !== WebSocket.OPEN) return false;
+  socket.send(JSON.stringify({ gioco: DAMA_ID_GIOCO, ...dati }));
+  return true;
+}
+
+function damaInviaAllaStanza(stanza, dati) {
+  const oggettoStanza = damaStanze[stanza];
+  if (!oggettoStanza) return;
+  for (const socketId of Object.keys(oggettoStanza.giocatoriOnline || {})) {
+    const socket = socketsPerId[socketId];
+    damaInviaSocket(socket, dati);
+  }
+}
+
+function damaInviaConteggioStanze() {
+  const conteggi = {};
+  const giocatori = {};
+
+  for (const nome of DAMA_NOMI_STANZE) {
+    const presenze = Object.values(damaStanze[nome].giocatoriOnline || {});
+    const unici = new Map();
+    for (const presenza of presenze) {
+      if (!presenza?.uid) continue;
+      unici.set(presenza.uid, presenza);
+    }
+
+    const valori = Array.from(unici.values());
+    conteggi[nome] = valori.length;
+    giocatori[nome] = valori.map(p => ({
+      uid: p.uid,
+      nickname: p.nickname,
+      avatar: p.avatar || null,
+      tipoDispositivo: p.tipoDispositivo || "computer",
+      stato: p.schermataPartita ? "partita" : "lobby"
+    }));
+  }
+
+  for (const contesto of damaContestiSocket.values()) {
+    damaInviaSocket(contesto.socket, {
+      tipo: "conteggioStanze",
+      stanze: conteggi,
+      giocatori
+    });
+  }
+}
+
+function damaListaPartite(stanza) {
+  if (!damaStanze[stanza]) return [];
+  return Object.values(damaStanze[stanza].partite || {}).map(p => ({
+    id: p.id,
+    creatore: p.creatore,
+    creatoDa: p.creatoDa,
+    tempo: p.tempo,
+    modalita: p.modalita,
+    classificata: p.classificata !== false,
+    maxGiocatori: 2,
+    numGiocatoriAttuali: Object.keys(p.giocatori || {}).length,
+    chatAttiva: p.chatAttiva !== false,
+    mediaAttiva: false,
+    iniziata: p.iniziata === true,
+    giocatori: Object.entries(p.giocatori || {}).map(([uid, g]) => ({
+      uid,
+      nome: g.nome,
+      avatar: g.avatar || null
+    }))
+  }));
+}
+
+function damaInviaListaPartite(stanza) {
+  damaInviaAllaStanza(stanza, {
+    tipo: "listaPartite",
+    partite: damaListaPartite(stanza)
+  });
+}
+
+async function damaLeggiStatisticheUtente(uid) {
+  if (!db || !uid) {
+    return { elo: DAMA_ELO_INIZIALE, partiteGiocate: 0, partiteVinte: 0, pareggi: 0 };
+  }
+
+  const snap = await db.ref(`utenti/${uid}/giochi/${DAMA_ID_GIOCO}`).once("value");
+  const dati = snap.val() || {};
+  return {
+    elo: Number.isFinite(Number(dati.elo)) ? Math.round(Number(dati.elo)) : DAMA_ELO_INIZIALE,
+    partiteGiocate: Math.max(0, Number(dati.partiteGiocate) || 0),
+    partiteVinte: Math.max(0, Number(dati.partiteVinte) || 0),
+    pareggi: Math.max(0, Number(dati.pareggi) || 0)
+  };
+}
+
+async function damaAggiornaStatisticheFinali(partita, vincitoreUid = null, pareggio = false) {
+  if (!db || !partita) return {};
+  const uids = Object.keys(partita.giocatori || {});
+  if (uids.length !== 2) return {};
+
+  const [statsA, statsB] = await Promise.all([
+    damaLeggiStatisticheUtente(uids[0]),
+    damaLeggiStatisticheUtente(uids[1])
+  ]);
+
+  const prima = {
+    [uids[0]]: statsA.elo,
+    [uids[1]]: statsB.elo
+  };
+
+  const risultatiElo = {};
+  const aggiornamenti = {};
+
+  for (const uid of uids) {
+    const avversario = uids.find(x => x !== uid);
+    const risultato = pareggio ? 0.5 : (uid === vincitoreUid ? 1 : 0);
+    const eloDopo = partita.classificata === false
+      ? prima[uid]
+      : calcolaNuovoElo(prima[uid], [prima[avversario]], risultato);
+
+    const stats = uid === uids[0] ? statsA : statsB;
+    const base = `utenti/${uid}/giochi/${DAMA_ID_GIOCO}`;
+    aggiornamenti[`${base}/elo`] = eloDopo;
+    aggiornamenti[`${base}/partiteGiocate`] = stats.partiteGiocate + 1;
+    aggiornamenti[`${base}/partiteVinte`] = stats.partiteVinte + (!pareggio && uid === vincitoreUid ? 1 : 0);
+    aggiornamenti[`${base}/pareggi`] = stats.pareggi + (pareggio ? 1 : 0);
+    aggiornamenti[`${base}/ultimaPartitaIl`] = Date.now();
+
+    risultatiElo[uid] = {
+      nome: partita.giocatori[uid]?.nome || "Giocatore",
+      eloPrima: prima[uid],
+      eloDopo,
+      variazione: eloDopo - prima[uid]
+    };
+
+    if (partita.giocatori[uid]) partita.giocatori[uid].elo = eloDopo;
+  }
+
+  const storicoRef = db.ref(`giochi/${DAMA_ID_GIOCO}/storicoPartite`).push();
+  aggiornamenti[`giochi/${DAMA_ID_GIOCO}/storicoPartite/${storicoRef.key}`] = {
+    id: storicoRef.key,
+    data: Date.now(),
+    partitaId: partita.id,
+    stanza: partita.stanza,
+    classificata: partita.classificata !== false,
+    vincitoreUid: pareggio ? null : vincitoreUid,
+    pareggio: pareggio === true,
+    partecipanti: uids.map(uid => ({ uid, nome: partita.giocatori[uid]?.nome || "Giocatore" })),
+    risultatiElo
+  };
+
+  await db.ref().update(aggiornamenti);
+  return risultatiElo;
+}
+
+function damaMosseLegaliDa(partita, uid, r, c) {
+  if (!partita || partita.fase !== "in_corso") return [];
+  const giocatore = partita.giocatori?.[uid];
+  if (!giocatore || giocatore.colore !== partita.turno) return [];
+
+  const pezzo = partita.scacchiera?.[r]?.[c];
+  if (!pezzo || pezzo.colore !== giocatore.colore) return [];
+
+  if (partita.presaInCorso) {
+    const stato = partita.presaInCorso;
+    if (stato.uid !== uid || stato.r !== r || stato.c !== c) return [];
+
+    const indice = Number(stato.indicePasso || 0);
+    const uniche = new Map();
+    for (const sequenza of stato.sequenze || []) {
+      const passo = sequenza.passi?.[indice];
+      if (!passo) continue;
+      const key = damaChiaveCasella(passo.a.r, passo.a.c);
+      if (!uniche.has(key)) {
+        uniche.set(key, { da: { r, c }, a: { ...passo.a }, presa: true });
+      }
+    }
+    return Array.from(uniche.values());
+  }
+
+  const prese = damaSequenzeOttimali(partita.scacchiera, giocatore.colore);
+  if (prese.length > 0) {
+    const uniche = new Map();
+    for (const sequenza of prese) {
+      if (sequenza.da.r !== r || sequenza.da.c !== c) continue;
+      const passo = sequenza.passi[0];
+      const key = damaChiaveCasella(passo.a.r, passo.a.c);
+      if (!uniche.has(key)) {
+        uniche.set(key, { da: { r, c }, a: { ...passo.a }, presa: true });
+      }
+    }
+    return Array.from(uniche.values());
+  }
+
+  return damaMosseSempliciDa(partita.scacchiera, r, c);
+}
+
+async function damaInviaStatoPartita(partita) {
+  const stato = damaSerializzaPartitaClient(partita);
+  for (const giocatore of Object.values(partita.giocatori || {})) {
+    damaInviaSocket(giocatore.socket, { tipo: "dama_stato", partita: stato });
+  }
+}
+
+function damaFermaTimer(partita) {
+  if (!partita) return;
+  if (partita.timerTurno) clearTimeout(partita.timerTurno);
+  partita.timerTurno = null;
+}
+
+async function damaConcludiPartita(partita, vincitoreUid, motivo, pareggio = false) {
+  if (!partita || partita.fase === "terminata") return;
+  damaFermaTimer(partita);
+
+  partita.fase = "terminata";
+  partita.vincitoreUid = pareggio ? null : vincitoreUid;
+  partita.motivoFine = motivo || null;
+  partita.scadenzaTurno = null;
+  partita.tempoInizioTurno = null;
+
+  let risultatiElo = {};
+  try {
+    risultatiElo = await damaAggiornaStatisticheFinali(partita, vincitoreUid, pareggio);
+  } catch (errore) {
+    console.error("Dama: errore aggiornamento ELO:", errore.message);
+  }
+
+  const stato = damaSerializzaPartitaClient(partita);
+  for (const giocatore of Object.values(partita.giocatori || {})) {
+    damaInviaSocket(giocatore.socket, {
+      tipo: "dama_fine",
+      partita: stato,
+      vincitoreUid: pareggio ? null : vincitoreUid,
+      motivo: motivo || null,
+      pareggio: pareggio === true,
+      risultatiElo
+    });
+  }
+
+  const stanza = partita.stanza;
+  await damaRimuoviPartita(stanza, partita.id);
+}
+
+function damaAvviaTimer(partita, conservaScadenza = false) {
+  if (!partita || partita.fase !== "in_corso") return;
+  damaFermaTimer(partita);
+
+  const durata = damaDurataTurnoMs(partita);
+  const adesso = Date.now();
+  if (!conservaScadenza || !Number.isFinite(Number(partita.scadenzaTurno))) {
+    partita.tempoInizioTurno = adesso;
+    partita.scadenzaTurno = adesso + durata;
+  }
+
+  const attesa = Math.max(0, Number(partita.scadenzaTurno) - Date.now());
+  partita.timerTurno = setTimeout(async () => {
+    if (!partita || partita.fase !== "in_corso") return;
+    const uidScaduto = damaUidPerColore(partita, partita.turno);
+    const uidVincitore = damaUidPerColore(partita, damaColoreAvversario(partita.turno));
+    if (!uidScaduto || !uidVincitore) return;
+    await damaConcludiPartita(partita, uidVincitore, "Tempo esaurito.", false);
+  }, attesa + 50);
+
+  if (typeof partita.timerTurno.unref === "function") partita.timerTurno.unref();
+}
+
+async function damaFinalizzaMossa(partita, uid) {
+  const giocatore = partita.giocatori[uid];
+  if (!giocatore) return;
+
+  const coloreAvversario = damaColoreAvversario(giocatore.colore);
+  const uidAvversario = damaUidPerColore(partita, coloreAvversario);
+
+  if (
+    damaContaPezzi(partita.scacchiera, coloreAvversario) === 0 ||
+    !damaHaAlmenoUnaMossa(partita.scacchiera, coloreAvversario)
+  ) {
+    await damaConcludiPartita(
+      partita,
+      uid,
+      damaContaPezzi(partita.scacchiera, coloreAvversario) === 0
+        ? "Tutti i pezzi avversari sono stati catturati."
+        : "L'avversario non ha più mosse legali.",
+      false
+    );
+    return;
+  }
+
+  if (!uidAvversario) {
+    await damaConcludiPartita(partita, uid, "L'avversario non è più presente nella partita.", false);
+    return;
+  }
+
+  partita.turno = coloreAvversario;
+  partita.numeroMossa = Number(partita.numeroMossa || 0) + 1;
+  partita.presaInCorso = null;
+  damaAvviaTimer(partita, false);
+
+  await damaSalvaPartita(partita);
+  await damaInviaStatoPartita(partita);
+}
+
+async function damaEseguiMossa(partita, uid, da, a) {
+  if (!partita || partita.fase !== "in_corso") return { ok: false, errore: "Partita non disponibile." };
+  const giocatore = partita.giocatori?.[uid];
+  if (!giocatore || giocatore.colore !== partita.turno) return { ok: false, errore: "Non è il tuo turno." };
+
+  const r0 = Number(da?.r), c0 = Number(da?.c), r1 = Number(a?.r), c1 = Number(a?.c);
+  if (![r0, c0, r1, c1].every(Number.isInteger) || !damaDentro(r0, c0) || !damaDentro(r1, c1)) {
+    return { ok: false, errore: "Mossa non valida." };
+  }
+
+  const legali = damaMosseLegaliDa(partita, uid, r0, c0);
+  const scelta = legali.find(m => m.a.r === r1 && m.a.c === c1);
+  if (!scelta) return { ok: false, errore: "Mossa non consentita dalle regole della Dama Italiana." };
+
+  const pezzo = partita.scacchiera[r0][c0];
+  if (!pezzo) return { ok: false, errore: "Pedina non trovata." };
+
+  if (scelta.presa === true) {
+    let sequenzeCompatibili;
+    let indicePasso;
+
+    if (partita.presaInCorso) {
+      indicePasso = Number(partita.presaInCorso.indicePasso || 0);
+      sequenzeCompatibili = (partita.presaInCorso.sequenze || []).filter(seq => {
+        const passo = seq.passi?.[indicePasso];
+        return passo && passo.a.r === r1 && passo.a.c === c1;
+      });
+    } else {
+      indicePasso = 0;
+      sequenzeCompatibili = damaSequenzeOttimali(partita.scacchiera, giocatore.colore).filter(seq => {
+        const passo = seq.passi?.[0];
+        return seq.da.r === r0 && seq.da.c === c0 && passo && passo.a.r === r1 && passo.a.c === c1;
+      });
+    }
+
+    if (!sequenzeCompatibili.length) return { ok: false, errore: "Presa non valida." };
+    const passo = sequenzeCompatibili[0].passi[indicePasso];
+    const bersaglio = partita.scacchiera?.[passo.presa.r]?.[passo.presa.c];
+    if (!bersaglio || bersaglio.colore === pezzo.colore) return { ok: false, errore: "Presa non più disponibile." };
+
+    partita.scacchiera[r0][c0] = null;
+    partita.scacchiera[passo.presa.r][passo.presa.c] = null;
+    partita.scacchiera[r1][c1] = pezzo;
+    partita.prese[uid] = Number(partita.prese?.[uid] || 0) + 1;
+    partita.ultimoMovimento = {
+      da: { r: r0, c: c0 },
+      a: { r: r1, c: c1 },
+      presa: { ...passo.presa },
+      uid,
+      data: Date.now()
+    };
+
+    const prossimoIndice = indicePasso + 1;
+    const ancora = sequenzeCompatibili.some(seq => seq.passi.length > prossimoIndice);
+
+    if (ancora) {
+      partita.presaInCorso = {
+        uid,
+        r: r1,
+        c: c1,
+        indicePasso: prossimoIndice,
+        sequenze: sequenzeCompatibili
+      };
+      await damaSalvaPartita(partita);
+      await damaInviaStatoPartita(partita);
+      return { ok: true, continuaPresa: true };
+    }
+
+    partita.presaInCorso = null;
+    damaPromuoviSeNecessario(partita.scacchiera, r1, c1);
+    await damaFinalizzaMossa(partita, uid);
+    return { ok: true, continuaPresa: false };
+  }
+
+  // Mossa semplice: se esiste una presa obbligatoria, damaMosseLegaliDa non
+  // avrebbe restituito questa destinazione.
+  partita.scacchiera[r0][c0] = null;
+  partita.scacchiera[r1][c1] = pezzo;
+  damaPromuoviSeNecessario(partita.scacchiera, r1, c1);
+  partita.ultimoMovimento = {
+    da: { r: r0, c: c0 },
+    a: { r: r1, c: c1 },
+    presa: null,
+    uid,
+    data: Date.now()
+  };
+
+  await damaFinalizzaMossa(partita, uid);
+  return { ok: true, continuaPresa: false };
+}
+
+async function damaAvviaPartita(partita) {
+  if (!partita || partita.iniziata === true) return;
+  const uids = Object.keys(partita.giocatori || {});
+  if (uids.length !== 2) return;
+
+  const primoBianco = Math.random() < 0.5 ? uids[0] : uids[1];
+  const primoNero = uids.find(uid => uid !== primoBianco);
+
+  partita.giocatori[primoBianco].colore = "bianco";
+  partita.giocatori[primoNero].colore = "nero";
+  partita.scacchiera = damaCreaScacchieraIniziale();
+  partita.turno = "bianco";
+  partita.fase = "in_corso";
+  partita.iniziata = true;
+  partita.iniziataIl = Date.now();
+  partita.numeroMossa = 0;
+  partita.ultimoMovimento = null;
+  partita.prese = { [primoBianco]: 0, [primoNero]: 0 };
+  partita.presaInCorso = null;
+  damaAvviaTimer(partita, false);
+
+  await damaSalvaPartita(partita);
+
+  for (const giocatore of Object.values(partita.giocatori)) {
+    damaInviaSocket(giocatore.socket, {
+      tipo: "partitaAvviata",
+      partitaId: partita.id,
+      mediaAttiva: false
+    });
+  }
+
+  damaInviaListaPartite(partita.stanza);
+  damaInviaConteggioStanze();
+}
+
+async function damaRimuoviDaPartitaInAttesa(partita, stanza, uid) {
+  if (!partita || partita.fase !== "attesa_giocatori" || !partita.giocatori?.[uid]) return false;
+  delete partita.giocatori[uid];
+  partita.ordineGiocatori = (partita.ordineGiocatori || []).filter(x => x !== uid);
+
+  const restanti = Object.keys(partita.giocatori);
+  if (restanti.length === 0) {
+    await damaRimuoviPartita(stanza, partita.id);
+    return true;
+  }
+
+  if (partita.creatoDa === uid) {
+    partita.creatoDa = restanti[0];
+    partita.creatore = partita.giocatori[restanti[0]].nome;
+  }
+
+  await damaSalvaPartita(partita);
+  damaInviaListaPartite(stanza);
+  damaInviaConteggioStanze();
+  return true;
+}
+
+async function damaCaricaUtentePerGioco(uid, nicknameFallback) {
+  const base = await caricaUtenteRealtimeLeggero(uid, nicknameFallback);
+  if (!base) return null;
+  const stats = await damaLeggiStatisticheUtente(uid);
+  return { ...base, eloDama: stats.elo };
+}
+
+async function damaRipristinaPartiteDaFirebase() {
+  if (!db) return;
+  const snap = await db.ref(`giochi/${DAMA_ID_GIOCO}/partite`).once("value");
+  const salvate = snap.val() || {};
+  let ripristinate = 0;
+
+  for (const [id, dati] of Object.entries(salvate)) {
+    if (!dati || !damaStanze[dati.stanza]) continue;
+
+    const giocatori = {};
+    for (const [uid, g] of Object.entries(dati.giocatori || {})) {
+      giocatori[uid] = {
+        nome: g.nome || "Giocatore",
+        avatar: g.avatar || null,
+        colore: g.colore || null,
+        elo: Number.isFinite(Number(g.elo)) ? Math.round(Number(g.elo)) : DAMA_ELO_INIZIALE,
+        socket: null
+      };
+    }
+
+    const partita = {
+      ...dati,
+      id,
+      gioco: DAMA_ID_GIOCO,
+      maxGiocatori: 2,
+      mediaAttiva: false,
+      giocatori,
+      ordineGiocatori: Array.isArray(dati.ordineGiocatori) ? dati.ordineGiocatori : Object.keys(giocatori),
+      scacchiera: Array.isArray(dati.scacchiera) ? dati.scacchiera : null,
+      prese: dati.prese && typeof dati.prese === "object" ? dati.prese : {},
+      presaInCorso: dati.presaInCorso && typeof dati.presaInCorso === "object" ? dati.presaInCorso : null,
+      timerTurno: null
+    };
+
+    damaStanze[dati.stanza].partite[id] = partita;
+    ripristinate++;
+
+    if (partita.fase === "in_corso" && partita.iniziata === true) {
+      damaAvviaTimer(partita, true);
+    }
+  }
+
+  console.log("Partite Dama ripristinate da Firebase:", ripristinate);
+}
+
+async function damaConnettiLobby({ socket, socketId, tipoDispositivo, uid, datiTokenIniziali, stanza }) {
+  if (!db) {
+    damaInviaSocket(socket, { tipo: "errore", messaggio: "Servizio account non disponibile." });
+    return;
+  }
+  if (!uid) {
+    damaInviaSocket(socket, { tipo: "sessioneScaduta" });
+    return;
+  }
+  if (typeof stanza !== "string" || !damaStanze[stanza]) {
+    damaInviaSocket(socket, { tipo: "errore", messaggio: "Stanza non valida." });
+    return;
+  }
+
+  const utente = await damaCaricaUtentePerGioco(
+    uid,
+    datiTokenIniziali?.nickname || "Utente"
+  );
+  if (!utente) {
+    damaInviaSocket(socket, { tipo: "sessioneScaduta" });
+    return;
+  }
+  if (utente.stato === "bannato") {
+    damaInviaSocket(socket, { tipo: "errore", messaggio: "Il tuo account è stato bannato." });
+    return;
+  }
+  if (utente.stato === "sospeso" && Number(utente.sospesoFino) > Date.now()) {
+    damaInviaSocket(socket, {
+      tipo: "errore",
+      messaggio: "Account sospeso fino al " + new Date(Number(utente.sospesoFino)).toLocaleString("it-IT") + "."
+    });
+    return;
+  }
+
+  const contesto = damaContesto(socketId, socket, tipoDispositivo, uid);
+  if (contesto.stanza && contesto.stanza !== stanza && damaStanze[contesto.stanza]) {
+    delete damaStanze[contesto.stanza].giocatoriOnline[socketId];
+  }
+
+  contesto.uid = uid;
+  contesto.nickname = utente.nickname;
+  contesto.avatar = utente.avatar || null;
+  contesto.stanza = stanza;
+  contesto.schermataPartita = false;
+  contesto.partitaId = null;
+
+  damaStanze[stanza].giocatoriOnline[socketId] = {
+    uid,
+    nickname: contesto.nickname,
+    avatar: contesto.avatar,
+    tipoDispositivo,
+    schermataPartita: false,
+    partitaIdAttiva: null
+  };
+
+  // Se era già seduto a un tavolo in attesa, collega il nuovo socket.
+  for (const partita of Object.values(damaStanze[stanza].partite || {})) {
+    if (partita.giocatori?.[uid] && partita.fase === "attesa_giocatori") {
+      partita.giocatori[uid].socket = socket;
+      partita.giocatori[uid].avatar = contesto.avatar;
+      partita.giocatori[uid].elo = utente.eloDama;
+    }
+  }
+
+  damaInviaConteggioStanze();
+  damaInviaListaPartite(stanza);
+  damaInviaSocket(socket, {
+    tipo: "online",
+    numero: new Set(Object.values(damaStanze[stanza].giocatoriOnline).map(g => g.uid).filter(Boolean)).size
+  });
+  damaInviaSocket(socket, {
+    tipo: "statoPartitaPersonale",
+    partitaAttiva: damaTrovaPartitaPerUid(uid)
+  });
+}
+
+async function damaGestisciMessaggioSocket({
+  socket,
+  request,
+  socketId,
+  tipoDispositivo,
+  uid,
+  datiTokenIniziali,
+  giocoRichiestoSocket,
+  dati
+}) {
+  if (!damaMessaggioAppartieneAlGioco(giocoRichiestoSocket, dati)) return false;
+
+  const contesto = damaContesto(socketId, socket, tipoDispositivo, uid);
+  if (uid) contesto.uid = uid;
+  const tipo = typeof dati.tipo === "string" ? dati.tipo : "";
+
+  if (tipo === "richiediConteggio") {
+    damaInviaConteggioStanze();
+    return true;
+  }
+
+  if (tipo === "entraLobby") {
+    await damaConnettiLobby({
+      socket,
+      socketId,
+      tipoDispositivo,
+      uid,
+      datiTokenIniziali,
+      stanza: dati.stanza
+    });
+    return true;
+  }
+
+  if (tipo === "lasciaLobby") {
+    if (contesto.stanza && damaStanze[contesto.stanza]) {
+      const stanza = contesto.stanza;
+      delete damaStanze[stanza].giocatoriOnline[socketId];
+
+      for (const partita of Object.values(damaStanze[stanza].partite || {})) {
+        if (
+          partita.fase === "attesa_giocatori" &&
+          partita.giocatori?.[contesto.uid] &&
+          (!partita.giocatori[contesto.uid].socket || partita.giocatori[contesto.uid].socket === socket)
+        ) {
+          await damaRimuoviDaPartitaInAttesa(partita, stanza, contesto.uid);
+        }
+      }
+
+      contesto.stanza = null;
+      damaInviaConteggioStanze();
+      damaInviaListaPartite(stanza);
+    }
+    return true;
+  }
+
+  if (!uid) {
+    damaInviaSocket(socket, { tipo: "sessioneScaduta" });
+    return true;
+  }
+
+  if (tipo === "creaPartita") {
+    const stanza = contesto.stanza;
+    if (!stanza || !damaStanze[stanza]) return true;
+    if (damaTrovaPartitaPerUid(uid)) {
+      damaInviaSocket(socket, { tipo: "errore", messaggio: "Fai già parte di una partita di Dama attiva." });
+      return true;
+    }
+
+    const tempoRichiesto = parseInt(dati.tempo, 10);
+    const tempo = String(Math.max(
+      DAMA_TEMPO_MINIMO_SECONDI,
+      Math.min(DAMA_TEMPO_MASSIMO_SECONDI, Number.isFinite(tempoRichiesto) ? tempoRichiesto : 15)
+    ));
+    const id = "dama_" + Date.now() + "_" + Math.floor(Math.random() * 100000);
+    const stats = await damaLeggiStatisticheUtente(uid);
+
+    const partita = {
+      id,
+      gioco: DAMA_ID_GIOCO,
+      stanza,
+      creatore: contesto.nickname || "Giocatore",
+      creatoDa: uid,
+      tempo,
+      modalita: dati.modalita === "privata" ? "privata" : "pubblica",
+      classificata: dati.classificata !== false,
+      maxGiocatori: 2,
+      chatAttiva: dati.chatAttiva !== false,
+      mediaAttiva: false,
+      fase: "attesa_giocatori",
+      iniziata: false,
+      iniziataIl: null,
+      giocatori: {
+        [uid]: {
+          nome: contesto.nickname || "Giocatore",
+          avatar: contesto.avatar || null,
+          colore: null,
+          elo: stats.elo,
+          socket
+        }
+      },
+      ordineGiocatori: [uid],
+      turno: "bianco",
+      scacchiera: null,
+      numeroMossa: 0,
+      ultimoMovimento: null,
+      prese: { [uid]: 0 },
+      presaInCorso: null,
+      invitati: dati.modalita === "privata" ? { [uid]: true } : {},
+      tempoInizioTurno: null,
+      scadenzaTurno: null,
+      timerTurno: null
+    };
+
+    damaStanze[stanza].partite[id] = partita;
+    try {
+      await damaSalvaPartita(partita);
+    } catch (errore) {
+      delete damaStanze[stanza].partite[id];
+      console.error("Dama: errore creazione partita:", errore.message);
+      damaInviaSocket(socket, { tipo: "errore", messaggio: "Non è stato possibile creare la partita." });
+      return true;
+    }
+
+    damaInviaListaPartite(stanza);
+    damaInviaConteggioStanze();
+    return true;
+  }
+
+  if (tipo === "entraPartita") {
+    const stanza = contesto.stanza;
+    const partita = stanza ? damaStanze[stanza]?.partite?.[dati.id] : null;
+    if (!partita) return true;
+    if (partita.fase !== "attesa_giocatori" || partita.iniziata === true) {
+      damaInviaSocket(socket, { tipo: "errore", messaggio: "Questa partita è già iniziata." });
+      return true;
+    }
+    if (partita.giocatori[uid]) return true;
+    if (damaTrovaPartitaPerUid(uid)) {
+      damaInviaSocket(socket, { tipo: "errore", messaggio: "Fai già parte di un'altra partita di Dama." });
+      return true;
+    }
+    if (partita.modalita === "privata") {
+      damaInviaSocket(socket, { tipo: "errore", messaggio: "Questa partita è privata: puoi entrare solo su invito." });
+      return true;
+    }
+    if (await partitaContieneUtenteBloccato(partita, uid)) {
+      damaInviaSocket(socket, { tipo: "errore", messaggio: "Non puoi entrare in questa partita a causa di un blocco tra utenti." });
+      return true;
+    }
+
+    const stats = await damaLeggiStatisticheUtente(uid);
+    partita.giocatori[uid] = {
+      nome: contesto.nickname || "Giocatore",
+      avatar: contesto.avatar || null,
+      colore: null,
+      elo: stats.elo,
+      socket
+    };
+    partita.ordineGiocatori.push(uid);
+    partita.prese[uid] = 0;
+    await damaSalvaPartita(partita);
+    damaInviaListaPartite(stanza);
+    damaInviaConteggioStanze();
+    await damaAvviaPartita(partita);
+    return true;
+  }
+
+  if (tipo === "invitaPartita") {
+    const trovato = damaTrovaPartita(dati.partitaId);
+    if (!trovato) return true;
+    const { partita, stanza } = trovato;
+    if (partita.creatoDa !== uid || partita.modalita !== "privata" || partita.fase !== "attesa_giocatori") return true;
+
+    const destinatarioUid = String(dati.destinatarioUid || "");
+    if (!destinatarioUid || destinatarioUid === uid || partita.giocatori[destinatarioUid]) return true;
+    if (await sonoBloccatiTraLoro(uid, destinatarioUid)) {
+      damaInviaSocket(socket, { tipo: "errore", messaggio: "Non puoi invitare questo giocatore perché tra voi è attivo un blocco." });
+      return true;
+    }
+
+    const socketIdDest = Object.keys(damaStanze[stanza].giocatoriOnline || {}).find(
+      sid => damaStanze[stanza].giocatoriOnline[sid]?.uid === destinatarioUid
+    );
+    if (!socketIdDest) {
+      damaInviaSocket(socket, { tipo: "errore", messaggio: "Questo giocatore non è più online in questa stanza." });
+      return true;
+    }
+
+    partita.invitati[destinatarioUid] = true;
+    const destinatarioSocket = socketsPerId[socketIdDest];
+    damaInviaSocket(destinatarioSocket, {
+      tipo: "invitoRicevuto",
+      partitaId: partita.id,
+      stanza,
+      daUid: uid,
+      daNome: contesto.nickname || partita.creatore,
+      mediaAttiva: false
+    });
+    damaInviaSocket(socket, {
+      tipo: "invitoInviato",
+      destinatarioUid,
+      destinatarioNome: damaStanze[stanza].giocatoriOnline[socketIdDest]?.nickname || "Giocatore"
+    });
+    return true;
+  }
+
+  if (tipo === "rispostaInvito") {
+    const trovato = damaTrovaPartita(dati.partitaId);
+    if (!trovato) return true;
+    const { partita, stanza } = trovato;
+    if (!partita.invitati?.[uid]) return true;
+
+    if (dati.accettato !== true) {
+      delete partita.invitati[uid];
+      damaInviaSocket(partita.giocatori?.[partita.creatoDa]?.socket, {
+        tipo: "invitoRifiutato",
+        destinatarioNome: contesto.nickname || "Il giocatore"
+      });
+      return true;
+    }
+
+    if (partita.fase !== "attesa_giocatori" || Object.keys(partita.giocatori).length >= 2) {
+      damaInviaSocket(socket, { tipo: "errore", messaggio: "La partita non è più disponibile." });
+      return true;
+    }
+    if (damaTrovaPartitaPerUid(uid)) {
+      damaInviaSocket(socket, { tipo: "errore", messaggio: "Fai già parte di un'altra partita di Dama." });
+      return true;
+    }
+    if (await partitaContieneUtenteBloccato(partita, uid)) {
+      delete partita.invitati[uid];
+      damaInviaSocket(socket, { tipo: "errore", messaggio: "Non puoi entrare in questa partita a causa di un blocco tra utenti." });
+      return true;
+    }
+
+    const stats = await damaLeggiStatisticheUtente(uid);
+    contesto.stanza = stanza;
+    partita.giocatori[uid] = {
+      nome: contesto.nickname || "Giocatore",
+      avatar: contesto.avatar || null,
+      colore: null,
+      elo: stats.elo,
+      socket
+    };
+    partita.ordineGiocatori.push(uid);
+    partita.prese[uid] = 0;
+    delete partita.invitati[uid];
+    await damaSalvaPartita(partita);
+    damaInviaListaPartite(stanza);
+    await damaAvviaPartita(partita);
+    return true;
+  }
+
+  if (tipo === "eliminaPartita") {
+    const stanza = contesto.stanza;
+    if (!stanza) return true;
+    const partita = Object.values(damaStanze[stanza].partite || {}).find(
+      p => p.creatoDa === uid && p.fase === "attesa_giocatori"
+    );
+    if (!partita) {
+      damaInviaSocket(socket, { tipo: "errore", messaggio: "Non hai nessuna partita da eliminare." });
+      return true;
+    }
+    await damaRimuoviPartita(stanza, partita.id);
+    return true;
+  }
+
+  if (tipo === "abbandonaPartita") {
+    const trovato = damaTrovaPartita(dati.partitaId);
+    if (!trovato || !trovato.partita.giocatori?.[uid]) return true;
+    if (trovato.partita.fase === "attesa_giocatori") {
+      await damaRimuoviDaPartitaInAttesa(trovato.partita, trovato.stanza, uid);
+      return true;
+    }
+    if (trovato.partita.fase === "in_corso") {
+      const avversarioUid = Object.keys(trovato.partita.giocatori).find(x => x !== uid);
+      if (avversarioUid) {
+        await damaConcludiPartita(trovato.partita, avversarioUid, `${trovato.partita.giocatori[uid].nome} ha abbandonato la partita.`, false);
+      } else {
+        await damaRimuoviPartita(trovato.stanza, trovato.partita.id);
+      }
+    }
+    return true;
+  }
+
+  if (tipo === "chat") {
+    const stanza = contesto.stanza;
+    const testo = pulisciTesto(dati.testo, 300);
+    if (!stanza || !testo) return true;
+
+    try {
+      await registraLogChat({
+        uid,
+        nome: contesto.nickname || "Giocatore",
+        testo,
+        ambito: "lobby",
+        stanza: `DAMA/${stanza}`
+      });
+    } catch (errore) {
+      console.error("Dama: errore log chat Lobby:", errore.message);
+    }
+
+    for (const [sid, presenza] of Object.entries(damaStanze[stanza].giocatoriOnline || {})) {
+      if (!presenza?.uid) continue;
+      if (presenza.uid !== uid && await sonoBloccatiTraLoro(uid, presenza.uid)) continue;
+      damaInviaSocket(socketsPerId[sid], {
+        tipo: "chat",
+        uid,
+        nome: contesto.nickname || "Giocatore",
+        testo
+      });
+    }
+    return true;
+  }
+
+  if (tipo === "dama_entra") {
+    const trovato = damaTrovaPartita(dati.partitaId);
+    if (!trovato) {
+      damaInviaSocket(socket, { tipo: "dama_errore", errore: "Partita di Dama non trovata." });
+      return true;
+    }
+    const { partita, stanza } = trovato;
+    const giocatore = partita.giocatori?.[uid];
+    if (!giocatore) {
+      damaInviaSocket(socket, { tipo: "dama_errore", errore: "Non fai parte di questa partita." });
+      return true;
+    }
+
+    const utente = await damaCaricaUtentePerGioco(uid, giocatore.nome);
+    if (!utente || utente.stato === "bannato" || (utente.stato === "sospeso" && Number(utente.sospesoFino) > Date.now())) {
+      damaInviaSocket(socket, { tipo: "sessioneScaduta" });
+      return true;
+    }
+
+    giocatore.socket = socket;
+    giocatore.nome = utente.nickname || giocatore.nome;
+    giocatore.avatar = utente.avatar || null;
+    giocatore.elo = utente.eloDama;
+
+    contesto.uid = uid;
+    contesto.nickname = giocatore.nome;
+    contesto.avatar = giocatore.avatar;
+    contesto.stanza = stanza;
+    contesto.partitaId = partita.id;
+    contesto.schermataPartita = true;
+
+    damaStanze[stanza].giocatoriOnline[socketId] = {
+      uid,
+      nickname: giocatore.nome,
+      avatar: giocatore.avatar,
+      tipoDispositivo,
+      schermataPartita: true,
+      partitaIdAttiva: partita.id
+    };
+
+    damaInviaSocket(socket, {
+      tipo: "dama_identita",
+      uid,
+      colore: giocatore.colore
+    });
+    damaInviaSocket(socket, {
+      tipo: "dama_stato",
+      uid,
+      colore: giocatore.colore,
+      partita: damaSerializzaPartitaClient(partita)
+    });
+    damaInviaConteggioStanze();
+    return true;
+  }
+
+  if (tipo === "dama_richiedi_mosse") {
+    const trovato = damaTrovaPartita(dati.partitaId);
+    if (!trovato || !trovato.partita.giocatori?.[uid]) return true;
+    const r = Number(dati.da?.r), c = Number(dati.da?.c);
+    if (!Number.isInteger(r) || !Number.isInteger(c)) return true;
+    const mosse = damaMosseLegaliDa(trovato.partita, uid, r, c);
+    damaInviaSocket(socket, { tipo: "dama_mosse_legali", mosse });
+    return true;
+  }
+
+  if (tipo === "dama_mossa") {
+    const trovato = damaTrovaPartita(dati.partitaId);
+    if (!trovato || !trovato.partita.giocatori?.[uid]) return true;
+    const risultato = await damaEseguiMossa(trovato.partita, uid, dati.da, dati.a);
+    if (!risultato.ok) {
+      damaInviaSocket(socket, { tipo: "dama_errore", errore: risultato.errore || "Mossa non valida." });
+    }
+    return true;
+  }
+
+  if (tipo === "dama_chat") {
+    const trovato = damaTrovaPartita(dati.partitaId);
+    if (!trovato || !trovato.partita.giocatori?.[uid]) return true;
+    const testo = pulisciTesto(dati.messaggio, 250);
+    if (!testo) return true;
+
+    const mittente = trovato.partita.giocatori[uid];
+    try {
+      await registraLogChat({
+        uid,
+        nome: mittente.nome,
+        testo,
+        ambito: "partita",
+        stanza: `DAMA/${trovato.stanza}`,
+        partitaId: trovato.partita.id
+      });
+    } catch (errore) {
+      console.error("Dama: errore log chat Partita:", errore.message);
+    }
+
+    for (const [destUid, giocatore] of Object.entries(trovato.partita.giocatori)) {
+      if (destUid !== uid && await sonoBloccatiTraLoro(uid, destUid)) continue;
+      damaInviaSocket(giocatore.socket, {
+        tipo: "dama_chat",
+        uid,
+        nickname: mittente.nome,
+        messaggio: testo
+      });
+    }
+    return true;
+  }
+
+  if (tipo === "dama_abbandona") {
+    const trovato = damaTrovaPartita(dati.partitaId);
+    if (!trovato || !trovato.partita.giocatori?.[uid]) return true;
+    const avversarioUid = Object.keys(trovato.partita.giocatori).find(x => x !== uid);
+    if (trovato.partita.fase === "in_corso" && avversarioUid) {
+      await damaConcludiPartita(
+        trovato.partita,
+        avversarioUid,
+        `${trovato.partita.giocatori[uid].nome} ha abbandonato la partita.`,
+        false
+      );
+    } else {
+      await damaRimuoviDaPartitaInAttesa(trovato.partita, trovato.stanza, uid);
+    }
+    return true;
+  }
+
+  if (tipo === "dama_rivincita") {
+    const trovato = damaTrovaPartita(dati.partitaId);
+    if (!trovato) return true;
+    const avversarioUid = Object.keys(trovato.partita.giocatori || {}).find(x => x !== uid);
+    if (avversarioUid) {
+      damaInviaSocket(trovato.partita.giocatori[avversarioUid]?.socket, {
+        tipo: "dama_rivincita",
+        daUid: uid,
+        messaggio: `${trovato.partita.giocatori[uid]?.nome || "L'avversario"} chiede una rivincita.`
+      });
+    }
+    return true;
+  }
+
+  damaInviaSocket(socket, {
+    tipo: "dama_errore",
+    errore: "Comando Dama non riconosciuto."
+  });
+  return true;
+}
+
+async function damaChiudiSocket(socketId, socket) {
+  const contesto = damaContestiSocket.get(socketId);
+  if (!contesto) return false;
+  damaContestiSocket.delete(socketId);
+
+  const stanza = contesto.stanza;
+  if (stanza && damaStanze[stanza]) {
+    delete damaStanze[stanza].giocatoriOnline[socketId];
+
+    for (const partita of Object.values(damaStanze[stanza].partite || {})) {
+      const giocatore = partita.giocatori?.[contesto.uid];
+      if (!giocatore || (giocatore.socket && giocatore.socket !== socket)) continue;
+
+      if (partita.fase === "attesa_giocatori") {
+        await damaRimuoviDaPartitaInAttesa(partita, stanza, contesto.uid);
+      } else {
+        giocatore.socket = null;
+      }
+    }
+
+    damaInviaListaPartite(stanza);
+    damaInviaConteggioStanze();
+  }
+  return true;
+}
+
+
+// Classifica e player-card specifiche della Dama: riusano gli stessi account,
+// ma leggono esclusivamente le statistiche /utenti/{uid}/giochi/dama.
+app.get("/api/giochi/dama/top-giocatori", async (req, res) => {
+  try {
+    if (!db) return res.status(503).json({ errore: "Database non disponibile." });
+    const snap = await db.ref("utenti").once("value");
+    const utenti = snap.val() || {};
+    const giocatori = Object.entries(utenti)
+      .map(([uid, utente]) => {
+        const stats = utente?.giochi?.[DAMA_ID_GIOCO] || {};
+        return {
+          uid,
+          nickname: utente?.nickname || "Giocatore",
+          elo: Number.isFinite(Number(stats.elo)) ? Math.round(Number(stats.elo)) : DAMA_ELO_INIZIALE,
+          vinte: Math.max(0, Number(stats.partiteVinte) || 0),
+          giocate: Math.max(0, Number(stats.partiteGiocate) || 0)
+        };
+      })
+      .filter(g => g.giocate > 0)
+      .sort((a, b) => b.elo - a.elo || b.vinte - a.vinte || a.nickname.localeCompare(b.nickname, "it"))
+      .slice(0, 100);
+
+    return res.json({ gioco: DAMA_ID_GIOCO, giocatori });
+  } catch (errore) {
+    console.error("Dama: errore classifica:", errore.message);
+    return res.status(500).json({ errore: "Impossibile caricare la classifica della Dama." });
+  }
+});
+
+app.get("/api/giochi/dama/profilo-pubblico/:nickname", richiediAuth, async (req, res) => {
+  try {
+    if (!db) return res.status(503).json({ errore: "Database non disponibile." });
+    const utente = await trovaUtentePerNickname(pulisciTesto(req.params.nickname, 20).toLowerCase());
+    if (!utente) return res.status(404).json({ errore: "Utente non trovato." });
+
+    const stats = await damaLeggiStatisticheUtente(utente.uid);
+    const statoBlocco = await statoBloccoTra(req.utente.uid, utente.uid);
+    const statoAmiciziaCorrente = statoBlocco === "nessuno"
+      ? await statoAmicizia(req.utente.uid, utente.uid)
+      : "nessuno";
+
+    return res.json({
+      uid: utente.uid,
+      nickname: utente.nickname,
+      avatar: utente.avatar || null,
+      creatoIl: utente.creatoIl || null,
+      ultimoAccesso: utente.ultimoAccesso || null,
+      partiteVinte: stats.partiteVinte,
+      partiteGiocate: stats.partiteGiocate,
+      winRate: stats.partiteGiocate > 0
+        ? Math.round((stats.partiteVinte / stats.partiteGiocate) * 100)
+        : 0,
+      elo: stats.elo,
+      streakVittorieMassima: 0,
+      vittoriaPiuVeloceSecondi: null,
+      badge: [],
+      gioco: DAMA_ID_GIOCO,
+      statoAmicizia: statoAmiciziaCorrente,
+      statoBlocco
+    });
+  } catch (errore) {
+    console.error("Dama: errore profilo pubblico:", errore.message);
+    return res.status(500).json({ errore: "Impossibile caricare il profilo Dama." });
+  }
+});
+
+// Endpoint di sola lettura per la Dama. Usa lo stesso account/token già esistente.
+// La struttura /utenti/{uid}/giochi/{gioco} è pronta anche per i giochi futuri,
+// senza duplicare registrazione, Google OAuth o password.
+app.get("/api/giochi/dama/me", richiediAuth, async (req, res) => {
+  try {
+    if (!db) return res.status(503).json({ errore: "Database non disponibile." });
+    const [utenteSnap, stats] = await Promise.all([
+      db.ref(`utenti/${req.utente.uid}`).once("value"),
+      damaLeggiStatisticheUtente(req.utente.uid)
+    ]);
+    const utente = utenteSnap.val();
+    if (!utente) return res.status(404).json({ errore: "Account non trovato." });
+    return res.json({
+      uid: req.utente.uid,
+      nickname: utente.nickname || req.utente.nickname || "Utente",
+      avatar: creaUrlAvatarRealtime(
+        req.utente.uid,
+        Boolean(utente.avatarPresente || utente.avatar),
+        Number(utente.avatarAggiornatoIl) || 1
+      ),
+      gioco: DAMA_ID_GIOCO,
+      ...stats
+    });
+  } catch (errore) {
+    console.error("Dama: errore lettura statistiche account:", errore.message);
+    return res.status(500).json({ errore: "Impossibile leggere le statistiche della Dama." });
+  }
+});
+
+
+
 // ===== CONNESSIONI WEBSOCKET =====
 wss.on("connection", (socket, request) => {
   const origineWebSocket = request.headers.origin || "";
@@ -6798,9 +8364,16 @@ wss.on("connection", (socket, request) => {
   const socketId = "s" + (contatoreId++);
   socketsPerId[socketId] = socket;
 
+  // La Dama usa lo stesso account/JWT del resto di Giochi Società. Il parametro
+  // ?gioco=dama serve solo a separare il traffico realtime dei diversi giochi.
+  const giocoRichiestoSocket = damaGiocoDaRequest(request);
+
   let stanzaAttuale = null, nickname = null, mioAvatar = null;
   const tokenDalCookie = estraiTokenDaCookieHeader(request.headers.cookie);
-  const datiTokenIniziali = verificaToken(tokenDalCookie);
+  const tokenDamaDaQuery = giocoRichiestoSocket === DAMA_ID_GIOCO
+    ? damaTokenDaRequest(request)
+    : null;
+  const datiTokenIniziali = verificaToken(tokenDalCookie || tokenDamaDaQuery);
   let uid = datiTokenIniziali ? datiTokenIniziali.uid : null;
 
   socket.on("message", async (message) => {
@@ -6821,6 +8394,23 @@ wss.on("connection", (socket, request) => {
         if (datiTokenMessaggio && datiTokenMessaggio.uid) {
           uid = datiTokenMessaggio.uid;
         }
+      }
+
+      // I messaggi della Dama vengono gestiti prima della logica del Gioco
+      // dell'Oca. In questo modo le due logiche condividono account e server,
+      // ma partite, stanze ed ELO restano completamente separate.
+      if (damaMessaggioAppartieneAlGioco(giocoRichiestoSocket, dati)) {
+        const gestitoDama = await damaGestisciMessaggioSocket({
+          socket,
+          request,
+          socketId,
+          tipoDispositivo,
+          uid,
+          datiTokenIniziali,
+          giocoRichiestoSocket,
+          dati
+        });
+        if (gestitoDama) return;
       }
 
       if (dati.tipo === "richiediConteggio") { inviaConteggioStanze(); return; }
@@ -7476,6 +9066,13 @@ inviaAllaStanza(stanzaAttuale, {
 
 socket.on("close", async () => {
   try {
+    // Se questa connessione appartiene alla Dama, la pulizia viene eseguita dal
+    // modulo Dama e non entra nella gestione delle stanze del Gioco dell'Oca.
+    if (await damaChiudiSocket(socketId, socket)) {
+      delete socketsPerId[socketId];
+      return;
+    }
+
     delete socketsPerId[socketId];
 
     if (!stanzaAttuale || !stanze[stanzaAttuale]) return;
@@ -7522,6 +9119,7 @@ socket.on("close", async () => {
 server.listen(PORT, () => {
   console.log("Server avviato sulla porta " + PORT);
   ripristinaPartiteDaFirebase()
+    .then(() => damaRipristinaPartiteDaFirebase())
     .then(() => {
       databasePronto = Boolean(db);
     })
