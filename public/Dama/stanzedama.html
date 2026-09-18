@@ -1066,7 +1066,7 @@ function creaStanze() {
 
                     window.location.href =
                         SERVER +
-                        "/Dama/lobby.html?stanza=" +
+                        "/Dama/lobbydama.html?stanza=" +
                         encodeURIComponent(
                             stanza.nome
                         );
@@ -1171,7 +1171,8 @@ function collegaWebSocket() {
 
                 if (
                     dati.tipo ===
-                    "conteggioStanze"
+                    "conteggioStanze" &&
+                    dati.gioco === "dama"
                 ) {
 
 
