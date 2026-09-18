@@ -1855,12 +1855,6 @@ body.tema-scuro .giocatore-online{
       <p>Numero giocatori</p>
       <select id="numeroGiocatori">
         <option value="2">2 giocatori</option>
-        <option value="3">3 giocatori</option>
-        <option value="4">4 giocatori</option>
-        <option value="5">5 giocatori</option>
-        <option value="6">6 giocatori</option>
-        <option value="7">7 giocatori</option>
-        <option value="8">8 giocatori</option>
       </select>
       <p>Tempo di mossa</p>
       <select id="tempo" disabled aria-label="Tempo di mossa fisso">
@@ -2585,12 +2579,6 @@ CREA TAVOLO
 <p>Numero giocatori</p>
 <select id="numeroGiocatoriMobile">
 <option value="2">2 giocatori</option>
-<option value="3">3 giocatori</option>
-<option value="4">4 giocatori</option>
-<option value="5">5 giocatori</option>
-<option value="6">6 giocatori</option>
-<option value="7">7 giocatori</option>
-<option value="8">8 giocatori</option>
 </select>
 <p>Tempo di mossa</p>
 <select id="tempoMobile" disabled aria-label="Tempo di mossa fisso">
@@ -2892,7 +2880,6 @@ function connetti() {
     }
     connessione.send(JSON.stringify({
       tipo: "entraLobby",
-      gioco: "dama",
       stanza: stanza,
       token: ottieniTokenAutenticazione() || undefined
     }));
@@ -2925,6 +2912,8 @@ function connetti() {
     if (dati.tipo === "online") {
       aggiornaConteggioOnline(dati.numero);
     }
+
+    if (dati.tipo === "conteggioStanze" && dati.gioco !== "dama") return;
 
     if (dati.tipo === "conteggioStanze" && dati.giocatori) {
       const giocatoriStanza = dati.giocatori[stanza] || [];
@@ -2974,8 +2963,7 @@ window.addEventListener("pagehide", () => {
   try {
     if (connessione && connessione.readyState === WebSocket.OPEN) {
       connessione.send(JSON.stringify({
-        tipo: "lasciaLobby",
-        gioco: "dama"
+        tipo: "lasciaLobby"
       }));
     }
     if (connessione && connessione.readyState < WebSocket.CLOSING) connessione.close();
@@ -3252,7 +3240,7 @@ function creaRigaGiocatore(g) {
 }
 async function caricaTopGiocatori() {
   try {
-    const risposta = await fetch("/api/top-giocatori");
+    const risposta = await fetch("/api/giochi/dama/top-giocatori");
     const dati = await risposta.json();
 
     const contenitore = document.getElementById("top");
@@ -3489,7 +3477,7 @@ function chiudiPlayerCardGiocatore() {
 
 async function caricaDatiPlayerCardGiocatore(nomeTarget, idRichiesta) {
   try {
-    const risposta = await fetchAutenticato("https://api.giochisocieta.com/api/profilo-pubblico/" + encodeURIComponent(nomeTarget));
+    const risposta = await fetchAutenticato("https://api.giochisocieta.com/api/giochi/dama/profilo-pubblico/" + encodeURIComponent(nomeTarget));
     if (idRichiesta !== richiestaProfiloCorrente) return;
     if (!risposta.ok) {
       document.getElementById("playerCardContenuto").innerHTML = `<div class="player-card-errore">Impossibile caricare la scheda del giocatore.</div>`;
