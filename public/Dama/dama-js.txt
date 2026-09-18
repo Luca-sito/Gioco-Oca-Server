@@ -1,0 +1,294 @@
+(() => {
+"use strict";
+
+const API="https://api.giochisocieta.com";
+const WS=API.replace(/^http/,"ws");
+const q=new URLSearchParams(location.search);
+const partitaId=q.get("partita")||q.get("id")||"";
+const stanza=q.get("stanza")||"dama";
+const $=id=>document.getElementById(id);
+
+const ui={
+  board:$("damiera"),stato:$("statoConnessione"),banner:$("bannerTurno"),
+  msg:$("messaggioGioco"),mosse:$("contatoreMosse"),
+  nomeB:$("nomeBianco"),nomeN:$("nomeNero"),eloB:$("eloBianco"),eloN:$("eloNero"),
+  timerB:$("timerBianco"),timerN:$("timerNero"),boxB:$("giocatoreBianco"),boxN:$("giocatoreNero"),
+  colore:$("mioColore"),turno:$("turnoCorrente"),prese:$("miePrese"),
+  wait:$("overlayAttesa"),waitTitolo:$("overlayTitolo"),waitTesto:$("overlayTesto"),
+  fine:$("overlayFine"),esitoIcona:$("esitoIcona"),esitoTitolo:$("esitoTitolo"),esitoTesto:$("esitoTesto"),
+  chat:$("chatMessaggi"),formChat:$("formChat"),inputChat:$("inputChat"),
+  abbandona:$("btnAbbandona"),lobby:$("btnLobby"),rivincita:$("btnRivincita"),
+  fullscreen:$("btnFullscreen"),suoni:$("btnSuoni"),esci:$("btnEsci"),toasts:$("toasts")
+};
+
+let socket=null,reconnect=null,mioUid=null,mioColore=null,selezionata=null,mosseLegali=[];
+let suoni=localStorage.getItem("dama_suoni")!=="0";
+let stato=creaStatoBase();
+
+function creaStatoBase(){
+  const scacchiera=Array.from({length:8},()=>Array(8).fill(null));
+  for(let r=0;r<3;r++)for(let c=0;c<8;c++)if((r+c)%2===1)scacchiera[r][c]={colore:"nero",dama:false};
+  for(let r=5;r<8;r++)for(let c=0;c<8;c++)if((r+c)%2===1)scacchiera[r][c]={colore:"bianco",dama:false};
+  return {fase:"attesa",turno:"bianco",scacchiera,giocatori:{},numeroMossa:0,ultimoMovimento:null,prese:{},scadenzaTurno:null};
+}
+
+function token(){
+  const h=new URLSearchParams(location.hash.replace(/^#/,""));
+  return h.get("auth_token")||localStorage.getItem("auth_token")||"";
+}
+
+function invia(dati){
+  if(!socket||socket.readyState!==WebSocket.OPEN)return false;
+  socket.send(JSON.stringify(dati));
+  return true;
+}
+
+function toast(testo){
+  const el=document.createElement("div");
+  el.className="toast";el.textContent=testo;ui.toasts.appendChild(el);
+  setTimeout(()=>el.remove(),3200);
+}
+
+function connetti(){
+  clearTimeout(reconnect);
+  connessione(false,"Connessione...");
+  const p=new URLSearchParams({gioco:"dama",stanza});
+  if(token())p.set("token",token());
+  if(partitaId)p.set("partita",partitaId);
+
+  socket=new WebSocket(`${WS}/?${p}`);
+
+  socket.addEventListener("open",()=>{
+    connessione(true,"Connesso");
+    invia({tipo:"dama_entra",partitaId:partitaId||null,stanza});
+  });
+
+  socket.addEventListener("message",e=>{
+    let m;try{m=JSON.parse(e.data)}catch{return}
+    gestisci(m);
+  });
+
+  socket.addEventListener("close",()=>{
+    connessione(false,"Disconnesso");
+    ui.msg.textContent="Connessione persa. Riconnessione in corso...";
+    reconnect=setTimeout(connetti,1800);
+  });
+
+  socket.addEventListener("error",()=>{try{socket.close()}catch{}});
+}
+
+function connessione(ok,testo){
+  ui.stato.textContent=testo;
+  ui.stato.classList.toggle("on",ok);
+  ui.stato.classList.toggle("off",!ok);
+}
+
+function gestisci(m){
+  if(!m||typeof m!=="object")return;
+
+  if(m.tipo==="dama_identita"){
+    mioUid=m.uid||null;mioColore=m.colore||null;aggiornaPannello();return;
+  }
+
+  if(m.tipo==="dama_stato"){
+    if(m.partita){
+      stato={...stato,...m.partita};
+      if(Array.isArray(m.partita.scacchiera))stato.scacchiera=m.partita.scacchiera;
+      if(m.uid)mioUid=m.uid;if(m.colore)mioColore=m.colore;
+      selezionata=null;mosseLegali=[];render();
+    }
+    return;
+  }
+
+  if(m.tipo==="dama_mosse_legali"){
+    mosseLegali=Array.isArray(m.mosse)?m.mosse:[];
+    renderBoard();return;
+  }
+
+  if(m.tipo==="dama_chat"){
+    aggiungiChat(m.nickname||"Utente",m.messaggio||"");return;
+  }
+
+  if(m.tipo==="dama_errore"){
+    toast(m.errore||"Operazione non consentita.");return;
+  }
+
+  if(m.tipo==="dama_fine"){
+    if(m.partita)stato={...stato,...m.partita};
+    mostraFine(m);render();return;
+  }
+
+  if(m.tipo==="dama_rivincita")toast(m.messaggio||"Richiesta di rivincita ricevuta.");
+}
+
+function render(){
+  renderBoard();
+  aggiornaPannello();
+  aggiornaOverlay();
+}
+
+function renderBoard(){
+  ui.board.textContent="";
+  const dest=new Map();
+  for(const m of mosseLegali){
+    const a=m.a||m.to;
+    if(a)dest.set(`${a.r},${a.c}`,!!(m.presa||m.capture));
+  }
+
+  for(let r=0;r<8;r++){
+    for(let c=0;c<8;c++){
+      const s=document.createElement("button");
+      s.type="button";
+      s.className=`sq ${(r+c)%2===0?"light":"dark"}`;
+      s.setAttribute("aria-label",`${String.fromCharCode(97+c)}${8-r}`);
+
+      if(selezionata&&selezionata.r===r&&selezionata.c===c)s.classList.add("selected");
+
+      const key=`${r},${c}`;
+      if(dest.has(key))s.classList.add(dest.get(key)?"capture":"target");
+
+      const u=stato.ultimoMovimento||{};
+      if((u.da&&u.da.r===r&&u.da.c===c)||(u.a&&u.a.r===r&&u.a.c===c))s.classList.add("last");
+
+      const pezzo=stato.scacchiera?.[r]?.[c];
+      if(pezzo){
+        const p=document.createElement("div");
+        p.className=`piece ${pezzo.colore}${pezzo.dama?" dama":""}`;
+        s.appendChild(p);
+      }
+
+      if((r+c)%2===1)s.addEventListener("click",()=>clickCasella(r,c));
+      else s.disabled=true;
+
+      ui.board.appendChild(s);
+    }
+  }
+}
+
+function clickCasella(r,c){
+  if(stato.fase!=="in_corso"||!mioColore||stato.turno!==mioColore)return;
+  const pezzo=stato.scacchiera?.[r]?.[c];
+
+  if(pezzo&&pezzo.colore===mioColore){
+    selezionata={r,c};mosseLegali=[];renderBoard();
+    invia({tipo:"dama_richiedi_mosse",partitaId:stato.id||partitaId,da:{r,c}});
+    return;
+  }
+
+  if(!selezionata)return;
+  const scelta=mosseLegali.find(m=>{
+    const a=m.a||m.to;
+    return a&&a.r===r&&a.c===c;
+  });
+  if(!scelta)return;
+
+  invia({tipo:"dama_mossa",partitaId:stato.id||partitaId,da:selezionata,a:{r,c}});
+  selezionata=null;mosseLegali=[];renderBoard();
+}
+
+function giocatore(colore){
+  return Object.values(stato.giocatori||{}).find(g=>g&&g.colore===colore)||null;
+}
+
+function n(v){
+  const x=Number(v);return Number.isFinite(x)?Math.round(x):"—";
+}
+
+function cap(s){return s?s[0].toUpperCase()+s.slice(1):"—"}
+
+function aggiornaPannello(){
+  const b=giocatore("bianco"),nro=giocatore("nero");
+  ui.nomeB.textContent=b?.nickname||b?.nome||"In attesa...";
+  ui.nomeN.textContent=nro?.nickname||nro?.nome||"In attesa...";
+  ui.eloB.textContent=`ELO ${n(b?.elo)}`;
+  ui.eloN.textContent=`ELO ${n(nro?.elo)}`;
+  ui.colore.textContent=cap(mioColore);
+  ui.turno.textContent=cap(stato.turno);
+  ui.prese.textContent=String(stato.prese?.[mioUid]||0);
+  ui.mosse.textContent=`Mossa ${Number(stato.numeroMossa||0)}`;
+
+  ui.boxB.classList.toggle("active",stato.fase==="in_corso"&&stato.turno==="bianco");
+  ui.boxN.classList.toggle("active",stato.fase==="in_corso"&&stato.turno==="nero");
+
+  const mio=stato.fase==="in_corso"&&stato.turno===mioColore;
+  ui.banner.classList.toggle("mio",mio);
+  ui.banner.textContent=stato.fase==="in_corso"?(mio?"È il tuo turno":`Turno del ${stato.turno}`):stato.fase==="attesa"?"In attesa dell'avversario":"Partita terminata";
+  ui.msg.textContent=stato.fase==="in_corso"?(mio?"Seleziona una pedina.":"Attendi la mossa dell'avversario."):"Il tavolo è in attesa.";
+}
+
+function aggiornaOverlay(){
+  const attesa=stato.fase==="attesa";
+  ui.wait.classList.toggle("visible",attesa);
+  if(attesa){
+    ui.waitTitolo.textContent=partitaId?"In attesa dell'avversario":"Connessione alla partita";
+    ui.waitTesto.textContent=partitaId?"La partita inizierà appena entrerà il secondo giocatore.":"Stiamo preparando il tavolo da gioco.";
+  }
+}
+
+function mostraFine(m){
+  ui.fine.classList.add("visible");
+  const pareggio=!m.vincitoreUid;
+  const vinto=m.vincitoreUid&&mioUid&&m.vincitoreUid===mioUid;
+  ui.esitoIcona.textContent=pareggio?"🤝":vinto?"🏆":"🏁";
+  ui.esitoTitolo.textContent=pareggio?"Pareggio":vinto?"Hai vinto!":"Partita terminata";
+  ui.esitoTesto.textContent=m.motivo||stato.motivoFine||(pareggio?"La partita si è conclusa in parità.":vinto?"Hai vinto la partita.":"L'avversario ha vinto.");
+}
+
+function aggiungiChat(nome,testo,system=false){
+  const d=document.createElement("div");
+  d.className=`chatrow${system?" system":""}`;
+  if(system)d.textContent=testo;
+  else{
+    const b=document.createElement("strong");b.textContent=nome+": ";
+    d.append(b,document.createTextNode(testo));
+  }
+  ui.chat.appendChild(d);ui.chat.scrollTop=ui.chat.scrollHeight;
+}
+
+ui.formChat.addEventListener("submit",e=>{
+  e.preventDefault();
+  const t=ui.inputChat.value.trim();if(!t)return;
+  if(invia({tipo:"dama_chat",partitaId:stato.id||partitaId,messaggio:t}))ui.inputChat.value="";
+});
+
+ui.abbandona.addEventListener("click",()=>{
+  if(confirm("Vuoi davvero abbandonare la partita?"))invia({tipo:"dama_abbandona",partitaId:stato.id||partitaId});
+});
+
+ui.rivincita.addEventListener("click",()=>{
+  invia({tipo:"dama_rivincita",partitaId:stato.id||partitaId});
+  toast("Richiesta di rivincita inviata.");
+});
+
+ui.lobby.addEventListener("click",()=>location.href="https://solfriniluca1.wixstudio.com/giochisocieta");
+ui.esci.addEventListener("click",()=>location.href="https://solfriniluca1.wixstudio.com/giochisocieta");
+
+ui.fullscreen.addEventListener("click",async()=>{
+  try{if(!document.fullscreenElement)await document.documentElement.requestFullscreen();else await document.exitFullscreen()}catch{}
+});
+
+ui.suoni.addEventListener("click",()=>{
+  suoni=!suoni;localStorage.setItem("dama_suoni",suoni?"1":"0");ui.suoni.textContent=suoni?"🔊":"🔇";
+});
+
+function aggiornaTimer(){
+  if(!stato.scadenzaTurno||stato.fase!=="in_corso"){
+    ui.timerB.textContent="--:--";ui.timerN.textContent="--:--";return;
+  }
+  const sec=Math.max(0,Math.ceil((Number(stato.scadenzaTurno)-Date.now())/1000));
+  const testo=`00:${String(sec).padStart(2,"0")}`;
+  ui.timerB.textContent=stato.turno==="bianco"?testo:"--:--";
+  ui.timerN.textContent=stato.turno==="nero"?testo:"--:--";
+}
+
+ui.suoni.textContent=suoni?"🔊":"🔇";
+aggiungiChat("","Chat della partita pronta.",true);
+render();
+setInterval(aggiornaTimer,250);
+connetti();
+
+window.addEventListener("beforeunload",()=>{
+  clearTimeout(reconnect);
+  try{socket?.close()}catch{}
+});
+})();
