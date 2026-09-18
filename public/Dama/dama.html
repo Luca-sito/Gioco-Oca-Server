@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111111">
+<title>Dama Italiana | Giochi Società</title>
+<link rel="stylesheet" href="dama.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="https://solfriniluca1.wixstudio.com/giochisocieta"><i></i>GIOCHI SOCIETÀ</a>
+  <div class="actions">
+    <button id="btnSuoni" class="icon">🔊</button>
+    <button id="btnFullscreen" class="icon desktop">⛶</button>
+    <button id="btnEsci" class="btn dark">Esci</button>
+  </div>
+</header>
+
+<main class="layout">
+  <section class="card tavolo">
+    <div class="titolo">
+      <div><small>DAMA ITALIANA</small><h1>Partita online</h1></div>
+      <span id="statoConnessione" class="status off">Connessione...</span>
+    </div>
+
+    <div id="bannerTurno" class="turno">In attesa della partita</div>
+
+    <div class="boardbox">
+      <div class="letters"><span>a</span><span>b</span><span>c</span><span>d</span><span>e</span><span>f</span><span>g</span><span>h</span></div>
+      <div class="boardrow">
+        <div class="numbers"><span>8</span><span>7</span><span>6</span><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span></div>
+        <div id="damiera" class="board" aria-label="Damiera italiana"></div>
+        <div class="numbers"><span>8</span><span>7</span><span>6</span><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span></div>
+      </div>
+      <div class="letters"><span>a</span><span>b</span><span>c</span><span>d</span><span>e</span><span>f</span><span>g</span><span>h</span></div>
+    </div>
+
+    <div class="sotto">
+      <strong id="messaggioGioco">Collegamento al server...</strong>
+      <span id="contatoreMosse">Mossa 0</span>
+    </div>
+  </section>
+
+  <aside class="sidebar">
+    <section class="card pannello">
+      <h2>Giocatori</h2>
+      <div id="giocatoreNero" class="player">
+        <span class="mini nero"></span><div><strong id="nomeNero">In attesa...</strong><small id="eloNero">ELO —</small></div><b id="timerNero">--:--</b>
+      </div>
+      <div class="vs">VS</div>
+      <div id="giocatoreBianco" class="player">
+        <span class="mini bianco"></span><div><strong id="nomeBianco">In attesa...</strong><small id="eloBianco">ELO —</small></div><b id="timerBianco">--:--</b>
+      </div>
+    </section>
+
+    <section class="card pannello">
+      <h2>Partita</h2>
+      <div class="riga"><span>Modalità</span><b>Dama italiana</b></div>
+      <div class="riga"><span>Colore</span><b id="mioColore">—</b></div>
+      <div class="riga"><span>Turno</span><b id="turnoCorrente">—</b></div>
+      <div class="riga"><span>Prese</span><b id="miePrese">0</b></div>
+    </section>
+
+    <section class="card pannello chat">
+      <h2>Chat</h2>
+      <div id="chatMessaggi" class="chatlog"></div>
+      <form id="formChat"><input id="inputChat" maxlength="250" placeholder="Scrivi un messaggio..." autocomplete="off"><button>➤</button></form>
+    </section>
+
+    <button id="btnAbbandona" class="btn danger">Abbandona partita</button>
+  </aside>
+</main>
+
+<div id="overlayAttesa" class="overlay visible">
+  <div class="modal">
+    <div class="spinner"></div>
+    <small>DAMA ITALIANA</small>
+    <h2 id="overlayTitolo">Connessione alla partita</h2>
+    <p id="overlayTesto">Stiamo preparando il tavolo da gioco.</p>
+  </div>
+</div>
+
+<div id="overlayFine" class="overlay">
+  <div class="modal">
+    <div id="esitoIcona" class="esito">🏁</div>
+    <small>PARTITA TERMINATA</small>
+    <h2 id="esitoTitolo">Partita conclusa</h2>
+    <p id="esitoTesto"></p>
+    <div class="modalbuttons">
+      <button id="btnRivincita" class="btn gold">Chiedi rivincita</button>
+      <button id="btnLobby" class="btn dark">Torna alla Lobby</button>
+    </div>
+  </div>
+</div>
+
+<div id="toasts"></div>
+<script src="dama.js"></script>
+</body>
+</html>
