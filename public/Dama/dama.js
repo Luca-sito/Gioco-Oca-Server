@@ -32,9 +32,19 @@ function creaStatoBase(){
   return {fase:"attesa",turno:"bianco",scacchiera,giocatori:{},numeroMossa:0,ultimoMovimento:null,prese:{},scadenzaTurno:null};
 }
 
+const CHIAVE_TOKEN_AUTH="giochiSocietaAuthToken";
 function token(){
-  const h=new URLSearchParams(location.hash.replace(/^#/,""));
-  return h.get("auth_token")||localStorage.getItem("auth_token")||"";
+  try{
+    const h=new URLSearchParams(location.hash.replace(/^#/,""));
+    const daUrl=h.get("auth_token");
+    if(daUrl){
+      sessionStorage.setItem(CHIAVE_TOKEN_AUTH,daUrl);
+      h.delete("auth_token");
+      history.replaceState(null,"",location.pathname+location.search+(h.toString()?"#"+h.toString():""));
+      return daUrl;
+    }
+    return sessionStorage.getItem(CHIAVE_TOKEN_AUTH)||"";
+  }catch{return "";}
 }
 
 function invia(dati){
@@ -96,6 +106,10 @@ function gestisci(m){
       if(Array.isArray(m.partita.scacchiera))stato.scacchiera=m.partita.scacchiera;
       if(m.uid)mioUid=m.uid;if(m.colore)mioColore=m.colore;
       selezionata=null;mosseLegali=[];render();
+      if(stato.presaInCorso&&stato.presaInCorso.uid===mioUid){
+        selezionata={r:stato.presaInCorso.r,c:stato.presaInCorso.c};
+        invia({tipo:"dama_richiedi_mosse",partitaId:stato.id||partitaId,da:selezionata});
+      }
     }
     return;
   }
@@ -118,7 +132,10 @@ function gestisci(m){
     mostraFine(m);render();return;
   }
 
-  if(m.tipo==="dama_rivincita")toast(m.messaggio||"Richiesta di rivincita ricevuta.");
+  if(m.tipo==="dama_rivincita"){toast(m.messaggio||"Richiesta di rivincita ricevuta.");return;}
+  if(m.tipo==="sessioneScaduta"){
+    location.href="/login.html?redirect="+encodeURIComponent(location.href);
+  }
 }
 
 function render(){
@@ -260,7 +277,7 @@ ui.rivincita.addEventListener("click",()=>{
   toast("Richiesta di rivincita inviata.");
 });
 
-ui.lobby.addEventListener("click",()=>location.href="https://solfriniluca1.wixstudio.com/giochisocieta");
+ui.lobby.addEventListener("click",()=>location.href="lobbydama.html?stanza="+encodeURIComponent(stanza));
 ui.esci.addEventListener("click",()=>location.href="https://solfriniluca1.wixstudio.com/giochisocieta");
 
 ui.fullscreen.addEventListener("click",async()=>{
