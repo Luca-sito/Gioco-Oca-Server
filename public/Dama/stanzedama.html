@@ -860,6 +860,122 @@ body {
 
 </head>
 
+<script>
+const ID_NOVITA_GIOCO = "dama_2026";
+
+
+function leggiTokenNovita() {
+
+    try {
+
+        const parametri =
+            new URLSearchParams(
+                window.location.hash.replace(/^#/, "")
+            );
+
+        return (
+            parametri.get("auth_token") ||
+            ""
+        ).trim();
+
+    } catch (errore) {
+
+        return "";
+
+    }
+}
+
+
+async function registraNovitaComeVista() {
+
+    try {
+
+        const token =
+            leggiTokenNovita();
+
+
+        const headers = {
+            "Accept": "application/json"
+        };
+
+
+        if (token) {
+
+            headers.Authorization =
+                "Bearer " + token;
+
+        }
+
+
+        const risposta = await fetch(
+            "/api/novita/" +
+            encodeURIComponent(
+                ID_NOVITA_GIOCO
+            ),
+            {
+                method: "POST",
+                credentials: "include",
+                headers
+            }
+        );
+
+
+        if (!risposta.ok) {
+
+            console.error(
+                "NOVITÀ non registrata:",
+                risposta.status
+            );
+
+            return;
+        }
+
+
+        const risultato =
+            await risposta.json();
+
+
+        console.log(
+            "NOVITÀ registrata:",
+            risultato
+        );
+
+
+        // Solo ORA rimuoviamo il token dall'indirizzo.
+        if (token) {
+
+            history.replaceState(
+                null,
+                "",
+                window.location.pathname +
+                window.location.search
+            );
+
+        }
+
+
+    } catch (errore) {
+
+        console.error(
+            "Errore registrazione NOVITÀ:",
+            errore
+        );
+
+    }
+
+}
+
+
+// Aspettiamo il vero caricamento della pagina.
+window.addEventListener(
+    "load",
+    () => {
+
+        registraNovitaComeVista();
+
+    }
+);
+</script>
 
 <body>
 
