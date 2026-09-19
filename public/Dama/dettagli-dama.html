@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dama Italiana - Dettagli del gioco | GIOCHI SOCIETA</title>
+<style>
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: #ffffff;
+  color: #111111;
+  font-family: Arial, Helvetica, sans-serif;
+  line-height: 1.65;
+}
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+.header {
+  background: #111111;
+  color: #ffffff;
+  border-bottom: 4px solid #ffd400;
+  padding: 28px 20px;
+}
+
+.header-inner {
+  width: min(1120px, calc(100% - 32px));
+  margin: 0 auto;
+}
+
+.brand {
+  display: inline-block;
+  color: #ffd400;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: clamp(30px, 5vw, 48px);
+  line-height: 1.1;
+  font-weight: 900;
+}
+
+.header p {
+  margin: 10px 0 0;
+  color: #cccccc;
+  font-size: 15px;
+}
+
+/* =========================================================
+   CONTENITORE
+========================================================= */
+
+.container {
+  width: min(1120px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 45px 0 70px;
+}
+
+/* =========================================================
+   INDICE
+========================================================= */
+
+.indice {
+  background: #111111;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 36px;
+  border-left: 6px solid #ffd400;
+}
+
+.indice h2 {
+  margin: 0 0 14px;
+  color: #ffd400;
+  font-size: 18px;
+}
+
+.indice a {
+  display: block;
+  color: #ffffff;
+  text-decoration: none;
+  padding: 7px 0;
+  font-size: 14px;
+  transition: color 0.2s;
+}
+
+.indice a:hover {
+  color: #ffd400;
+}
+
+/* =========================================================
+   SEZIONI
+========================================================= */
+
+.sezione {
+  margin-bottom: 42px;
+}
+
+.sezione h2 {
+  position: relative;
+  margin: 0 0 18px;
+  padding-bottom: 10px;
+  font-size: 27px;
+  line-height: 1.2;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.sezione h2::after {
+  content: "";
+  display: block;
+  width: 62px;
+  height: 4px;
+  background: #ffd400;
+  margin-top: 10px;
+}
+
+.sezione p {
+  margin: 0 0 16px;
+  font-size: 16px;
+}
+
+.introduzione {
+  background: #f6f6f6;
+  border: 1px solid #dddddd;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 28px;
+}
+
+.introduzione p:last-child {
+  margin-bottom: 0;
+}
+
+/* =========================================================
+   LOGO
+========================================================= */
+
+.logo-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 28px 0;
+  padding: 24px;
+  background: #ffffff;
+  border: 1px solid #dddddd;
+  border-radius: 16px;
+}
+
+.logo-box img {
+  max-width: 81px;
+  height: auto;
+  display: block;
+}
+
+/* =========================================================
+   REGOLE
+========================================================= */
+
+.regola {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 18px 0;
+  border-bottom: 1px solid #e4e4e4;
+}
+
+.regola:last-child {
+  border-bottom: none;
+}
+
+.regola-numero {
+  flex: 0 0 42px;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #ffd400;
+  color: #111111;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 15px;
+}
+
+.regola-testo {
+  flex: 1;
+  font-size: 16px;
+}
+
+/* =========================================================
+   SCOPO
+========================================================= */
+
+.box-evidenza {
+  background: #111111;
+  color: #ffffff;
+  border-radius: 16px;
+  padding: 26px;
+  border-left: 6px solid #ffd400;
+}
+
+.box-evidenza strong {
+  color: #ffd400;
+}
+
+/* =========================================================
+   CASELLE SPECIALI
+========================================================= */
+
+.caselle-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.casella {
+  background: #ffffff;
+  border: 1px solid #dddddd;
+  border-radius: 14px;
+  padding: 18px;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.casella:hover {
+  transform: translateY(-2px);
+  border-color: #ffd400;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+}
+
+.casella-numero {
+  flex: 0 0 48px;
+  width: 48px;
+  height: 48px;
+  background: #111111;
+  color: #ffd400;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.casella-testo {
+  flex: 1;
+  font-size: 15px;
+}
+
+.casella-testo strong {
+  display: block;
+  margin-bottom: 3px;
+  color: #111111;
+}
+
+/* =========================================================
+   TRAGUARDO
+========================================================= */
+
+.traguardo {
+  margin-top: 22px;
+  background: #ffd400;
+  color: #111111;
+  border-radius: 16px;
+  padding: 24px;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.traguardo strong {
+  font-weight: 900;
+}
+
+/* =========================================================
+   FOOTER
+========================================================= */
+
+.footer {
+  background: #111111;
+  color: #aaaaaa;
+  text-align: center;
+  padding: 28px 20px;
+  border-top: 4px solid #ffd400;
+  font-size: 13px;
+}
+
+.footer strong {
+  color: #ffd400;
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 760px) {
+  .container {
+    padding-top: 30px;
+  }
+
+  .caselle-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .regola {
+    gap: 12px;
+  }
+
+  .regola-numero {
+    flex-basis: 38px;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+  }
+
+  .sezione h2 {
+    font-size: 23px;
+  }
+
+  .sezione p,
+  .regola-testo {
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .header {
+    padding: 22px 16px;
+  }
+
+  .container {
+    width: min(100% - 22px, 1120px);
+  }
+
+  .indice,
+  .introduzione,
+  .box-evidenza,
+  .traguardo {
+    padding: 18px;
+  }
+
+  .casella {
+    padding: 14px;
+  }
+}
+</style>
+<style>
+.info-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:26px 0}.info-card{background:#fff;border:1px solid #ddd;border-radius:14px;padding:18px;text-align:center}.info-card strong{display:block;margin-bottom:4px;font-size:18px;font-weight:900}.info-card span{color:#666;font-size:13px}.damiera-wrap{display:grid;grid-template-columns:minmax(280px,420px) 1fr;align-items:center;gap:28px;margin:28px 0}.damiera{width:100%;aspect-ratio:1/1;display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr);border:8px solid #111;border-radius:12px;overflow:hidden;box-shadow:0 12px 30px rgba(0,0,0,.16)}.c{position:relative;min-width:0;min-height:0}.c.chiara{background:#f1dfbf}.c.scura{background:#6a452c}.pedina{position:absolute;width:72%;aspect-ratio:1/1;left:14%;top:14%;border-radius:50%;box-shadow:0 3px 7px rgba(0,0,0,.35)}.pedina.nera{background:radial-gradient(circle at 35% 30%,#555 0 8%,#222 42%,#050505 100%);border:2px solid #000}.pedina.bianca{background:radial-gradient(circle at 35% 30%,#fff 0 10%,#eee 44%,#cfcfcf 100%);border:2px solid #aaa}.priorita{counter-reset:priorita;display:grid;gap:12px;margin-top:18px}.priorita-item{counter-increment:priorita;display:grid;grid-template-columns:46px 1fr;gap:14px;align-items:center;padding:16px;background:#f6f6f6;border:1px solid #ddd;border-radius:14px}.priorita-item::before{content:counter(priorita);width:42px;height:42px;display:grid;place-items:center;border-radius:50%;background:#ffd400;color:#111;font-weight:900}.muted{color:#666}.tag{display:inline-block;background:#111;color:#ffd400;font-weight:900;border-radius:999px;padding:6px 10px;font-size:12px;margin:0 6px 6px 0}@media(max-width:900px){.info-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.damiera-wrap{grid-template-columns:1fr}.damiera{width:min(100%,520px);margin:0 auto}}@media(max-width:480px){.info-grid{grid-template-columns:1fr}}
+</style>
+
+</head>
+
+<body>
+<header class="header"><div class="header-inner"><div class="brand">GIOCHI SOCIETA</div><h1>DAMA ITALIANA</h1><p>Dettagli, regole e funzionamento della Dama Italiana.</p></div></header>
+<main class="container">
+<nav class="indice"><h2>INDICE</h2><a href="#gioco">La Dama Italiana</a><a href="#preparazione">Preparazione</a><a href="#regole">Come si gioca</a><a href="#presa">Catture e prese multiple</a><a href="#priorita">Priorità di presa</a><a href="#dama">La dama</a><a href="#vittoria">Come si vince</a></nav>
+
+<section class="sezione" id="gioco"><h2>Dama Italiana</h2><div class="introduzione"><p>La <strong>Dama Italiana</strong> è un gioco di strategia per due giocatori. Si gioca su una damiera di <strong>64 caselle</strong> alternate chiare e scure; le pedine si muovono esclusivamente sulle caselle scure.</p><p>Ogni giocatore parte con <strong>12 pedine</strong>. Un giocatore conduce i pezzi bianchi e l'altro quelli neri. <strong>Il Bianco muove per primo.</strong></p></div><div class="info-grid"><div class="info-card"><strong>2</strong><span>giocatori</span></div><div class="info-card"><strong>12 + 12</strong><span>pedine</span></div><div class="info-card"><strong>8 × 8</strong><span>damiera</span></div><div class="info-card"><strong>Bianco</strong><span>prima mossa</span></div></div></section>
+
+<section class="sezione" id="preparazione"><h2>Preparazione</h2><div class="damiera-wrap"><div class="damiera" id="damiera-demo" aria-label="Posizione iniziale della Dama Italiana"></div><div><p>La damiera va orientata con la casella in basso a destra di colore <strong>scuro</strong>.</p><p>Le 12 pedine di ciascun giocatore vengono disposte sulle <strong>prime tre righe di caselle scure</strong> del proprio lato.</p><p><span class="tag">12 bianche</span><span class="tag">12 nere</span><span class="tag">solo caselle scure</span></p></div></div></section>
+
+<section class="sezione" id="regole"><h2>Come si gioca</h2><div>
+<div class="regola"><div class="regola-numero">01</div><div class="regola-testo">I giocatori effettuano <strong>una mossa alla volta</strong>, alternandosi. Inizia sempre il Bianco.</div></div>
+<div class="regola"><div class="regola-numero">02</div><div class="regola-testo">La <strong>pedina semplice</strong> si muove di una sola casella in diagonale e soltanto <strong>in avanti</strong>, su una casella scura libera.</div></div>
+<div class="regola"><div class="regola-numero">03</div><div class="regola-testo">Non è possibile muovere sulle caselle chiare né occupare una casella già occupata.</div></div>
+<div class="regola"><div class="regola-numero">04</div><div class="regola-testo">Quando una pedina raggiunge l'ultima riga del campo avversario viene <strong>promossa a dama</strong>.</div></div>
+</div></section>
+
+<section class="sezione" id="presa"><h2>Catture e prese multiple</h2><div class="box-evidenza">Se una cattura è disponibile, <strong>la presa è obbligatoria</strong>.</div><div class="caselle-grid" style="margin-top:18px">
+<div class="casella"><div class="casella-numero">1</div><div class="casella-testo"><strong>Presa semplice</strong>La pedina scavalca diagonalmente una pedina avversaria adiacente e atterra sulla casella libera immediatamente successiva.</div></div>
+<div class="casella"><div class="casella-numero">↗</div><div class="casella-testo"><strong>Direzione</strong>Nella Dama Italiana la pedina semplice cattura soltanto <strong>in avanti</strong>.</div></div>
+<div class="casella"><div class="casella-numero">×2</div><div class="casella-testo"><strong>Presa multipla</strong>Se dopo una cattura è possibile catturare ancora, la sequenza continua nella stessa mossa.</div></div>
+<div class="casella"><div class="casella-numero">♟</div><div class="casella-testo"><strong>Limite della pedina</strong>Una pedina semplice può catturare pedine avversarie, ma <strong>non una dama</strong>.</div></div>
+</div></section>
+
+<section class="sezione" id="priorita"><h2>Priorità di presa</h2><p>Quando sono disponibili più catture, non si sceglie liberamente: bisogna rispettare questo ordine.</p><div class="priorita"><div class="priorita-item">Si deve scegliere la sequenza che cattura il <strong>maggior numero di pezzi</strong>.</div><div class="priorita-item">A parità di pezzi catturabili tra pedina e dama, deve catturare la <strong>dama</strong>.</div><div class="priorita-item">Se una dama ha più prese equivalenti, va scelta quella che cattura il <strong>maggior numero di dame avversarie</strong>.</div><div class="priorita-item">Se persiste la parità, si sceglie la sequenza in cui si incontra <strong>prima una dama avversaria</strong>.</div></div></section>
+
+<section class="sezione" id="dama"><h2>La dama</h2><div class="introduzione"><p>Una pedina che raggiunge l'ultima riga viene promossa a <strong>dama</strong>.</p><p>La dama si muove sempre in diagonale di <strong>una casella alla volta</strong>, ma può muoversi sia <strong>in avanti sia indietro</strong>.</p></div><div class="caselle-grid"><div class="casella"><div class="casella-numero">♛</div><div class="casella-testo"><strong>Movimento</strong>Può muoversi nelle quattro direzioni diagonali su una casella scura libera adiacente.</div></div><div class="casella"><div class="casella-numero">↔</div><div class="casella-testo"><strong>Cattura</strong>Può catturare sia in avanti sia indietro e può catturare sia pedine sia dame avversarie.</div></div></div></section>
+
+<section class="sezione" id="vittoria"><h2>Come si vince</h2><div class="box-evidenza"><strong>Vince il giocatore</strong> che cattura tutti i pezzi dell'avversario oppure li <strong>blocca</strong>, lasciando l'avversario senza mosse legali.</div><div class="traguardo"><strong>Fine della partita:</strong> la partita può terminare anche per abbandono. In condizioni di equilibrio finale può verificarsi un pareggio secondo le regole applicate alla partita.</div></section>
+</main>
+<footer class="footer"><strong>GIOCHI SOCIETA</strong> · Dettagli della Dama Italiana</footer>
+<script>(function(){const d=document.getElementById('damiera-demo');if(!d)return;for(let r=0;r<8;r++){for(let c=0;c<8;c++){const e=document.createElement('div');const s=(r+c)%2===1;e.className='c '+(s?'scura':'chiara');if(s&&r<3){const p=document.createElement('div');p.className='pedina nera';e.appendChild(p)}if(s&&r>4){const p=document.createElement('div');p.className='pedina bianca';e.appendChild(p)}d.appendChild(e)}}})();</script>
+</body>
+
+</html>
