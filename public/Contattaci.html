@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Contatti | Giochi Società</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at top, rgba(255, 215, 0, 0.06), transparent 34%),
+    #f4f4f2;
+  color: #111;
+  font-family: Arial, Helvetica, sans-serif;
+  line-height: 1.6;
+}
+
+a {
+  color: inherit;
+}
+
+/* =========================================================
+   LAYOUT
+========================================================= */
+
+.pagina {
+  min-height: 100vh;
+  padding: 0 20px;
+}
+
+.contenitore {
+  width: min(1120px, 100%);
+  margin: 0 auto;
+  padding: 34px 0 70px;
+}
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+.header {
+  position: relative;
+  background: #111;
+  color: #fff;
+  border-bottom: 4px solid #ffd700;
+  border-radius: 0 0 18px 18px;
+  overflow: hidden;
+  margin-bottom: 32px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12);
+}
+
+.header::after {
+  content: "";
+  position: absolute;
+  width: 240px;
+  height: 240px;
+  right: -90px;
+  top: -100px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 215, 0, 0.16);
+  box-shadow:
+    0 0 0 30px rgba(255, 215, 0, 0.03),
+    0 0 0 60px rgba(255, 215, 0, 0.02);
+}
+
+.header-contenuto {
+  position: relative;
+  z-index: 1;
+  padding: 38px 42px;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #ffd700;
+}
+
+.brand-punto {
+  width: 8px;
+  height: 8px;
+  background: #ffd700;
+  border-radius: 50%;
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.7);
+}
+
+.header h1 {
+  margin: 0;
+  font-size: clamp(32px, 5vw, 48px);
+  line-height: 1.05;
+  letter-spacing: -1.5px;
+}
+
+.header p {
+  max-width: 720px;
+  margin: 16px 0 0;
+  color: #bcbcbc;
+  font-size: 16px;
+}
+
+/* =========================================================
+   GRID CONTATTI
+========================================================= */
+
+.sezione-titolo {
+  margin-bottom: 18px;
+}
+
+.sezione-titolo .sopratitolo {
+  margin: 0 0 4px;
+  color: #777;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+
+.sezione-titolo h2 {
+  margin: 0;
+  font-size: 26px;
+  letter-spacing: -0.4px;
+}
+
+.box-contatti {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin-bottom: 42px;
+}
+
+.card {
+  position: relative;
+  background: #fff;
+  border: 1px solid #dedede;
+  border-radius: 16px;
+  padding: 26px;
+  cursor: pointer;
+  transition:
+    transform 0.22s ease,
+    border-color 0.22s ease,
+    box-shadow 0.22s ease;
+  overflow: hidden;
+}
+
+.card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 4px;
+  height: 100%;
+  background: #ffd700;
+  transform: scaleY(0);
+  transform-origin: bottom;
+  transition: transform 0.22s ease;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  border-color: #cfcfcf;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.08);
+}
+
+.card:hover::before {
+  transform: scaleY(1);
+}
+
+.card-icona {
+  width: 46px;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 18px;
+  background: #111;
+  color: #ffd700;
+  border-radius: 12px;
+  font-size: 21px;
+}
+
+.card h3 {
+  margin: 0 0 8px;
+  font-size: 18px;
+  color: #111;
+}
+
+.card p {
+  margin: 0;
+  color: #6c6c6c;
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+/* =========================================================
+   AREA FORM
+========================================================= */
+
+.area-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 22px;
+  align-items: start;
+}
+
+.modulo {
+  background: #fff;
+  border: 1px solid #dedede;
+  border-radius: 18px;
+  padding: 32px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.05);
+}
+
+.modulo-header {
+  padding-bottom: 22px;
+  margin-bottom: 22px;
+  border-bottom: 1px solid #ebebeb;
+}
+
+.modulo-header h2 {
+  margin: 0 0 6px;
+  font-size: 26px;
+  letter-spacing: -0.5px;
+}
+
+.modulo-header p {
+  margin: 0;
+  color: #737373;
+  font-size: 14px;
+}
+
+/* =========================================================
+   FORM
+========================================================= */
+
+.form-riga {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.campo {
+  margin-bottom: 18px;
+}
+
+.campo label {
+  display: block;
+  margin-bottom: 7px;
+  color: #222;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.campo label span {
+  color: #d09d00;
+}
+
+.input,
+.select,
+.textarea {
+  width: 100%;
+  border: 1px solid #d4d4d4;
+  border-radius: 11px;
+  background: #fafafa;
+  color: #111;
+  padding: 13px 14px;
+  outline: none;
+  font: inherit;
+  font-size: 14px;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.input,
+.select {
+  height: 48px;
+}
+
+.textarea {
+  min-height: 170px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  color: #999;
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+  background: #fff;
+  border-color: #e1b900;
+  box-shadow: 0 0 0 4px rgba(255, 215, 0, 0.13);
+}
+
+.select {
+  appearance: none;
+  cursor: pointer;
+}
+
+.select-wrapper {
+  position: relative;
+}
+
+.select-wrapper::after {
+  content: "⌄";
+  position: absolute;
+  right: 15px;
+  top: 13px;
+  font-size: 17px;
+  pointer-events: none;
+  color: #555;
+}
+
+/* =========================================================
+   PULSANTE
+========================================================= */
+
+#invio {
+  width: 100%;
+  height: 50px;
+  margin-top: 4px;
+  border: none;
+  border-radius: 11px;
+  background: #ffd700;
+  color: #111;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  transition:
+    transform 0.18s ease,
+    background 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+#invio:hover {
+  background: #f3cb00;
+  box-shadow: 0 8px 22px rgba(255, 215, 0, 0.25);
+}
+
+#invio:active {
+  transform: scale(0.98);
+}
+
+#invio:disabled {
+  background: #cfcfcf;
+  color: #666;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* =========================================================
+   MESSAGGI
+========================================================= */
+
+#success,
+#error {
+  display: none;
+  margin-top: 16px;
+  padding: 14px 15px;
+  border-radius: 11px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+#success {
+  background: #eefaf1;
+  border: 1px solid #b8e2c2;
+  color: #1f6931;
+}
+
+#error {
+  background: #fff2f2;
+  border: 1px solid #edbcbc;
+  color: #a12727;
+}
+
+/* =========================================================
+   COLONNA INFO
+========================================================= */
+
+.info-box {
+  background: #111;
+  color: #fff;
+  border-radius: 18px;
+  padding: 28px;
+  border: 1px solid #242424;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.10);
+}
+
+.info-box h3 {
+  margin: 0 0 14px;
+  color: #ffd700;
+  font-size: 20px;
+}
+
+.info-box p {
+  margin: 0 0 20px;
+  color: #bdbdbd;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.info-item {
+  padding: 14px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.info-item strong {
+  display: block;
+  color: #fff;
+  margin-bottom: 3px;
+  font-size: 13px;
+}
+
+.info-item span {
+  color: #999;
+  font-size: 13px;
+}
+
+/* =========================================================
+   FOOTER
+========================================================= */
+
+footer {
+  margin-top: 44px;
+  padding-top: 22px;
+  border-top: 1px solid #d9d9d9;
+  text-align: center;
+  color: #888;
+  font-size: 12px;
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 900px) {
+  .box-contatti {
+    grid-template-columns: 1fr;
+  }
+
+  .area-form {
+    grid-template-columns: 1fr;
+  }
+
+  .info-box {
+    order: -1;
+  }
+}
+
+@media (max-width: 640px) {
+  .pagina {
+    padding: 0 12px;
+  }
+
+  .contenitore {
+    padding-top: 14px;
+    padding-bottom: 40px;
+  }
+
+  .header {
+    border-radius: 0 0 14px 14px;
+    margin-bottom: 22px;
+  }
+
+  .header-contenuto {
+    padding: 28px 22px;
+  }
+
+  .header h1 {
+    font-size: 31px;
+  }
+
+  .header p {
+    font-size: 14px;
+  }
+
+  .modulo {
+    padding: 22px;
+    border-radius: 15px;
+  }
+
+  .form-riga {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .card {
+    padding: 22px;
+  }
+
+  .info-box {
+    padding: 22px;
+    border-radius: 15px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="pagina">
+
+  <main class="contenitore">
+
+    <!-- =====================================================
+         HEADER
+    ====================================================== -->
+
+    <section class="header">
+
+      <div class="header-contenuto">
+
+        <div class="brand">
+          <span class="brand-punto"></span>
+          GIOCHI SOCIETÀ
+        </div>
+
+        <h1>Contatti</h1>
+
+        <p>
+          Hai bisogno di assistenza, vuoi segnalare un problema
+          o desideri contattare lo staff? Siamo qui per aiutarti.
+        </p>
+
+      </div>
+
+    </section>
+
+
+    <!-- =====================================================
+         CATEGORIE
+    ====================================================== -->
+
+    <section>
+
+      <div class="sezione-titolo">
+        <p class="sopratitolo">Centro assistenza</p>
+        <h2>Come possiamo aiutarti?</h2>
+      </div>
+
+      <div class="box-contatti">
+
+        <div
+          class="card"
+          onclick="scegli('Assistenza tecnica')"
+        >
+          <div class="card-icona">⚙</div>
+
+          <h3>Assistenza tecnica</h3>
+
+          <p>
+            Problemi con il gioco, accesso al tuo account,
+            errori tecnici o malfunzionamenti del sito.
+          </p>
+        </div>
+
+
+        <div
+          class="card"
+          onclick="scegli('Segnalazione')"
+        >
+          <div class="card-icona">!</div>
+
+          <h3>Segnalazioni</h3>
+
+          <p>
+            Segnala utenti, problemi durante le partite
+            o comportamenti non corretti.
+          </p>
+        </div>
+
+
+        <div
+          class="card"
+          onclick="scegli('Collaborazioni')"
+        >
+          <div class="card-icona">↗</div>
+
+          <h3>Collaborazioni</h3>
+
+          <p>
+            Proposte, partnership, iniziative e richieste
+            relative alla piattaforma.
+          </p>
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- =====================================================
+         FORM + INFO
+    ====================================================== -->
+
+    <section class="area-form">
+
+      <div class="modulo">
+
+        <div class="modulo-header">
+
+          <h2>Invia un messaggio</h2>
+
+          <p>
+            Compila il modulo e il tuo messaggio verrà inviato
+            direttamente allo staff di Giochi Società.
+          </p>
+
+        </div>
+
+
+        <div class="form-riga">
+
+          <div class="campo">
+
+            <label for="nickname">
+              Nickname <span>*</span>
+            </label>
+
+            <input
+              id="nickname"
+              class="input"
+              type="text"
+              maxlength="30"
+              autocomplete="nickname"
+              placeholder="Il tuo nickname"
+            >
+
+          </div>
+
+
+          <div class="campo">
+
+            <label for="email">
+              Email <span>*</span>
+            </label>
+
+            <input
+              id="email"
+              class="input"
+              type="email"
+              autocomplete="email"
+              placeholder="La tua email"
+            >
+
+          </div>
+
+        </div>
+
+
+        <div class="campo">
+
+          <label for="categoria">
+            Categoria <span>*</span>
+          </label>
+
+          <div class="select-wrapper">
+
+            <select
+              id="categoria"
+              class="select"
+            >
+              <option value="Assistenza tecnica">
+                Assistenza tecnica
+              </option>
+
+              <option value="Segnalazione">
+                Segnalazione
+              </option>
+
+              <option value="Collaborazioni">
+                Collaborazioni
+              </option>
+
+              <option value="Altro">
+                Altro
+              </option>
+            </select>
+
+          </div>
+
+        </div>
+
+
+        <div class="campo">
+
+          <label for="messaggio">
+            Messaggio <span>*</span>
+          </label>
+
+          <textarea
+            id="messaggio"
+            class="textarea"
+            maxlength="1000"
+            placeholder="Descrivi nel modo più preciso possibile la tua richiesta..."
+          ></textarea>
+
+        </div>
+
+
+        <button
+          id="invio"
+          type="button"
+          onclick="inviaContatto()"
+        >
+          Invia richiesta
+        </button>
+
+
+        <div id="success">
+          ✓ Il tuo messaggio è stato inviato correttamente allo staff.
+        </div>
+
+
+        <div id="error"></div>
+
+      </div>
+
+
+      <!-- ===================================================
+           INFO
+      ==================================================== -->
+
+      <aside class="info-box">
+
+        <h3>Prima di contattarci</h3>
+
+        <p>
+          Per permetterci di aiutarti il più efficacemente possibile,
+          descrivi il problema in modo chiaro e indica
+          eventuali dettagli utili.
+        </p>
+
+        <div class="info-item">
+          <strong>Assistenza tecnica</strong>
+          <span>
+            Indica cosa è successo e, se possibile,
+            in quale pagina o partita.
+          </span>
+        </div>
+
+        <div class="info-item">
+          <strong>Segnalazioni</strong>
+          <span>
+            Specifica il nickname dell'utente e
+            descrivi l'accaduto.
+          </span>
+        </div>
+
+        <div class="info-item">
+          <strong>Collaborazioni</strong>
+          <span>
+            Presenta la proposta
+            e le informazioni principali.
+          </span>
+        </div>
+
+      </aside>
+
+    </section>
+
+
+    <!-- =====================================================
+         FOOTER
+    ====================================================== -->
+
+    <footer>
+      © 2026 Giochi Società · Tutti i diritti riservati
+    </footer>
+
+  </main>
+
+</div>
+
+
+<script>
+
+const API_SERVER =
+  "https://api.giochisocieta.com";
+
+
+/* =========================================================
+   SCELTA CATEGORIA
+========================================================= */
+
+function scegli(tipo) {
+
+  const categoria =
+    document.getElementById("categoria");
+
+  const modulo =
+    document.querySelector(".modulo");
+
+  if (categoria) {
+    categoria.value = tipo;
+  }
+
+  if (modulo) {
+
+    modulo.scrollIntoView({
+      behavior: "smooth",
+      block: "start"
+    });
+
+  }
+
+}
+
+
+/* =========================================================
+   CARICA DATI UTENTE AUTENTICATO
+========================================================= */
+
+async function caricaUtente() {
+
+  try {
+
+    const risposta =
+      await fetch(
+        API_SERVER + "/api/me",
+        {
+          credentials: "include",
+          cache: "no-store"
+        }
+      );
+
+    if (!risposta.ok) {
+      return;
+    }
+
+    const utente =
+      await risposta.json();
+
+    const nickname =
+      document.getElementById("nickname");
+
+    const email =
+      document.getElementById("email");
+
+    if (
+      nickname &&
+      utente.nickname &&
+      !nickname.value
+    ) {
+
+      nickname.value =
+        utente.nickname;
+
+    }
+
+    if (
+      email &&
+      utente.email &&
+      !email.value
+    ) {
+
+      email.value =
+        utente.email;
+
+    }
+
+  } catch (errore) {
+
+    console.warn(
+      "Impossibile recuperare i dati dell'utente:",
+      errore
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   INVIO CONTATTO
+========================================================= */
+
+async function inviaContatto() {
+
+  const nickname =
+    document.getElementById("nickname");
+
+  const email =
+    document.getElementById("email");
+
+  const categoria =
+    document.getElementById("categoria");
+
+  const messaggio =
+    document.getElementById("messaggio");
+
+  const success =
+    document.getElementById("success");
+
+  const error =
+    document.getElementById("error");
+
+  const btn =
+    document.getElementById("invio");
+
+
+  if (
+    !nickname ||
+    !email ||
+    !categoria ||
+    !messaggio ||
+    !btn
+  ) {
+    return;
+  }
+
+
+  success.style.display = "none";
+  error.style.display = "none";
+
+
+  const dati = {
+
+    nickname:
+      nickname.value.trim(),
+
+    email:
+      email.value.trim(),
+
+    categoria:
+      categoria.value,
+
+    messaggio:
+      messaggio.value.trim()
+
+  };
+
+
+  /* =======================================================
+     VALIDAZIONE
+  ======================================================== */
+
+  if (!dati.nickname) {
+
+    error.textContent =
+      "Inserisci il tuo nickname.";
+
+    error.style.display =
+      "block";
+
+    nickname.focus();
+
+    return;
+
+  }
+
+
+  if (dati.nickname.length < 3) {
+
+    error.textContent =
+      "Il nickname inserito non è valido.";
+
+    error.style.display =
+      "block";
+
+    nickname.focus();
+
+    return;
+
+  }
+
+
+  if (!dati.email) {
+
+    error.textContent =
+      "Inserisci il tuo indirizzo email.";
+
+    error.style.display =
+      "block";
+
+    email.focus();
+
+    return;
+
+  }
+
+
+  const emailValida =
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+      dati.email
+    );
+
+  if (!emailValida) {
+
+    error.textContent =
+      "Inserisci un indirizzo email valido.";
+
+    error.style.display =
+      "block";
+
+    email.focus();
+
+    return;
+
+  }
+
+
+  if (!dati.messaggio) {
+
+    error.textContent =
+      "Scrivi un messaggio prima di inviare.";
+
+    error.style.display =
+      "block";
+
+    messaggio.focus();
+
+    return;
+
+  }
+
+
+  if (dati.messaggio.length > 1000) {
+
+    error.textContent =
+      "Il messaggio è troppo lungo.";
+
+    error.style.display =
+      "block";
+
+    return;
+
+  }
+
+
+  /* =======================================================
+     INVIO
+  ======================================================== */
+
+  btn.disabled = true;
+
+  btn.textContent =
+    "Invio in corso...";
+
+
+  try {
+
+    const risposta =
+      await fetch(
+        API_SERVER + "/api/contatti",
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
+
+          credentials:
+            "include",
+
+          body:
+            JSON.stringify(dati)
+        }
+      );
+
+
+    let risultato =
+      null;
+
+
+    try {
+
+      risultato =
+        await risposta.json();
+
+    } catch (_) {
+
+      risultato =
+        null;
+
+    }
+
+
+    if (!risposta.ok) {
+
+      throw new Error(
+        risultato?.errore ||
+        "Si è verificato un errore durante l'invio."
+      );
+
+    }
+
+
+    /* =====================================================
+       SUCCESSO
+    ====================================================== */
+
+    success.textContent =
+      "✓ Il tuo messaggio è stato inviato correttamente allo staff.";
+
+    success.style.display =
+      "block";
+
+
+    error.style.display =
+      "none";
+
+
+    messaggio.value =
+      "";
+
+
+    /*
+     * Manteniamo nickname/email/categoria,
+     * così l'utente può inviare eventualmente
+     * un'altra richiesta senza ricompilare tutto.
+     */
+
+
+    success.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest"
+    });
+
+
+  } catch (errore) {
+
+    console.error(
+      "Errore invio contatto:",
+      errore
+    );
+
+
+    error.textContent =
+      errore.message ||
+      "Errore durante l'invio della richiesta.";
+
+
+    error.style.display =
+      "block";
+
+
+  } finally {
+
+    btn.disabled =
+      false;
+
+    btn.textContent =
+      "Invia richiesta";
+
+  }
+
+}
+
+
+/* =========================================================
+   AVVIO
+========================================================= */
+
+document.addEventListener(
+  "DOMContentLoaded",
+  () => {
+
+    caricaUtente();
+
+  }
+);
+
+</script>
+
+</body>
+</html>
