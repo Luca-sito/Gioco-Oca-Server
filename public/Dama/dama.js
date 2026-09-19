@@ -689,15 +689,11 @@ function aggiornaInterfacciaPartita() {
   if (messaggi) {
     if (stato.fase === "attesa_giocatori") messaggi.textContent = "In attesa dell'avversario…";
     else if (stato.fase === "terminata") messaggi.textContent = "Partita terminata";
-    else if (mioTurno) messaggi.textContent = stato.presaInCorso?.uid === mioUid ? "Continua la presa obbligatoria" : "È il tuo turno: seleziona una pedina";
-    else messaggi.textContent = "Turno del " + nomeColore(stato.turno);
+    else if (mioTurno && stato.presaInCorso?.uid === mioUid) messaggi.textContent = "Continua la presa obbligatoria";
+    else messaggi.textContent = "";
   }
 
-  if (mioTurno && ultimoTurnoSegnalato !== stato.numeroMossa + ":" + stato.turno) {
-    ultimoTurnoSegnalato = stato.numeroMossa + ":" + stato.turno;
-    suonaTuoTurno();
-    mostraMessaggioGiocoGrande("È IL TUO TURNO", { icona: "●", dettaglio: nomeColore(mioColore), durata: 1700 });
-  }
+  ultimoTurnoSegnalato = stato.numeroMossa + ":" + stato.turno;
 }
 
 function render() {
