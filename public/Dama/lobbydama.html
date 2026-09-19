@@ -329,6 +329,36 @@ body.tema-scuro .btn-modalita-partita.attiva{
 #top{
     padding:10px;
 }
+
+/* =========================================================
+   CLASSIFICA TOP GIOCATORI - ICONE PERSONALIZZATE
+========================================================= */
+.top-player{
+    line-height:1.8;
+}
+.top-player-intestazione{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    margin-bottom:2px;
+}
+.top-player-medaglia{
+    width:28px;
+    height:28px;
+    object-fit:contain;
+    flex:0 0 28px;
+}
+.top-player-stat{
+    display:flex;
+    align-items:center;
+    gap:6px;
+}
+.top-player-stat-icona{
+    width:20px;
+    height:20px;
+    object-fit:contain;
+    flex:0 0 20px;
+}
 #online{
     color:#00a000;
     font-size:25px;
@@ -3250,32 +3280,65 @@ async function caricaTopGiocatori() {
       return;
     }
 
+    // Le quattro immagini richieste sono incorporate direttamente
+    // nel file HTML: non servono file esterni aggiuntivi.
+    const iconaVittorie = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAACXBIWXMAAAsTAAALEwEAmpwYAAACR0lEQVR4nO2ZzWoUQRDHf27cBW/qQfGDoK9gTn6cjBd9Bw14k9wC8SDkZvCqUYIiHnWNeIo5JU9gfAS9rb6Ahpg1ybY0VKRo0js7XbO9a5gfFAu9vf+q6qnp6ZqFmpqaVCaAOeAbsA+4BNsHvgILQIuMNIDVxKBjtgocy5XAbMXBO7EHuRL4opzOA81EnSbwUGl9ZgjcATaBbmTVrLXbiuh2xe9ta/C9gsteBa6P9SxJbA5Qt8NOwFlKS5fNqYjDKnCH6J1WYztVCvcbHzs/rk5gMFydwFFNYC/ywMqRQEuN+TiS+KFEpgocWnCH6E2psU6qcFuJrMkpNObQggv0GuLvYOxtqvD1QHwdmAZ21ZjvCyxMKK1d0d8IjhJXLQ6WCh7z54wJnC/Qf2rU53hBEjeN+rciuj0J3nqF/3FNarET7E7PjLrPg92mI35MZVOEL5s/4vQXcDZR5wzwU9X/BTKyolaundDP+vkflMY7MnMZ2FYBLJZIws97on7rdS4xAu4HN97KALuS33U+Br+bYYQsBMFsAS+lDZwETsinb09fyfd6/iPGgBm5mV0J8zfvXcYIv8pvpP3rF/hv4DVwkTHF9873gOUg8GVZ8ZP8R7iKD33ZqRPIwQ3gvTQ/+ozUz/y87/IE90f2keBPqS9Kbp0xWxK9rFQVvFNJZC0b7fwTcKXEa/am9LxrwfnfH9mz0A7azINeuSyNoH1M7n0tbyusHdl0FW8fyjLoblPW9nIlEPu3xmo7uRJYHEISXeBxrgRqao4KfwElGe+k8VCvIQAAAABJRU5ErkJggg==";
+    const iconaPartite = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAACXBIWXMAAAsTAAALEwEAmpwYAAADPElEQVR4nO2ZTUhVQRTHf33sNEgLkYSUxAiihQRF9EmEgVCrsl1Eixa1LdxaUbkpLGjR10Kij2UQfeAiSEQoCBR6PbAWEq5K0LKPJ6LGwHlwGWbuzNx7X13j/WFg7ntzzpz/mXvOnTkDVVRRRZZYAXQA94EC8ENaQX7rkDG5w3LgKDAGLDraOHAKWEkOsAw4BIx6GK63InD8X62IMvwwMGIwbBK4ArQDNdLa5bdJw/gR0aV0/hUcAN4aDJkBeoHVMbK1QDcwZZAfldewYtgJvDJMrIL0OtAQoGuVEPlm0DcM7M/S8O3AU8NEs8AtoDGF7rWyar8M+oeAPWkMV166ZzH8JtBEdmgSnbOG+e5IHAVBZYaXmqI5IdTsIV8PPJZXZFr6dR5yLTLHnDb389BsdVJT8AhoC5A/Y/Dk6QD5NiEdlT8RQmA4Itgjv20CzgGbPeTrhPSUtIeeK7AFOAu0yvMFLSa8MR0RLE/8WZ7ngQeBK+LCRiE5L3N8jLyKZTuUI7wRXboyxg0xcRdYn8LwZss7P+awJREB5fEnwIL2fwm4EZhOG0VmVtO1IHO0VoJAGdss34WfHh+0eomp75a8vzvQlkQEytgrk+qGqPjpA3aIwfXS77N8eYeAfSlt8RI6BnwFurSxncA7x87T1JRMZ0JbEgkV5fmDYbzaSR6Rg4vL8IKM1XefNgdlRqAkz78dB5uDkp0mIjomZEvQIWNMKFoclPkKKA/6oMfwMYxDyeKgzAiopf0SsGcPJVC0OKhiWShrAl0WB1WMgC3okhKwoWIE4rLSkiBQcmSl3BMoOrJS7gl0ObJSHAFX/OQ+C7niJ7UtpgONC7pX4wj4fNUV1iQ90ESPlOc9ZXSv+qxAwaHzYtIjZZJDve7VOAKu+GlLe6hXJYwXgWUV3atJslCL5Yj5LEkRuEZ2kIuWwtY6h1dDCDTFFLZuJyls6aXFAYNiVQ68GnOE7I6MVX0TGoBrltLigMydGVSdctBSlb4kR8coNgCfpKl+FGrsZZHV9Q2mrYm6sAt4XYHy+hu5LMnFBYcislUMrpV+b14uOExXTCYiub5i+m8u+WzXrP3Ae4mLGen35/matYoqWKL4AzqsKy/Kc7+5AAAAAElFTkSuQmCC";
+    const iconaPrimoPosto = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAACXBIWXMAAAsTAAALEwEAmpwYAAADX0lEQVR4nO2YTWwNURTHf6q0aQRJffYRHwkLK6SkQkkkxEYqpIkFCyIWLHzuqyLRIEVi2bwSkYawtGAlVIuNjQ3xkVRLqKClVOt15CbnJSc3d2Ze35uZh7xfchdv7n/O3DNz7/l4UKJEif+a08AgcCpA0wJ8C9HYNANfxb4fJ8XuGQpgAPCAMWCNj2ZQaWpzsLkcyMg9Az6aVWLPEyfypkOMmPEQmODQ3FCaOznYvK30t3w095XG2M+bRcCwMtbo0CwFRpVmY4C9dUr3G1jm0GxXml/AEgrknDL4GqhwaNqU5onPlzJ0Kl27Y34S8EJpWomA6UC/MnrUoUkBP5SmwaHZar3ZxQ7NIaX5DFRH4YBt+IuP4ValeQZMVHNlwFM1f8HnRX1SmsNEiPm0z5Xx8w7NDBW1zNit5nap6yaqzA7Zqq98tmpB6MM14nO4mpTmjSzCOP9SXTc5ICxY7CAmdHi76ZifAnxQmoPAAfXbbJGpjvuuK01XQBAomNUqwXgSFm2OqPn3wDv1+7hDX6dsjsnvWLmmFvTY8bYmS7j1rNEHVIWE1g4SYAHwUz10p5qrlT3e43CgR+Z0udGo5oflLCRCi5XcNgMPHIv2G+YsbbIO91kSZBrwMYeFZlThFjT6JQ8kij6s2fFdygqTdWuAchk1cq1NNPZ9x5JefCXQbS3CLG5ODvfOBdLWvd1xJK4gLlt1zd48bOyThJi1Y5xKhPXW2wtavKmBFoY44alRTwJ0W9vGxuSFDcAlSWR+5UOWtJWFY2WldWBde/6i45DeDbBZAwwprXlGbDSHvH3DVZkfVT1CkAP2VzhBjHSpB5mw6KJKElu1KhPCHGiweu/Y6FMPMuEwjFwdmKfsviUmylTznpEEFZUD5dLkZ7ee7ub+GQcyqlkyz4qFXvWpTfSIyoH5VtVa1EOsyecQd1LkMJqPA2ll1/TViSWysEh0T7Tm70Q/UlYiM/+dJlZKhBVg2ySubwnQXEkqB2Spt8qE/QXY2mPZWktCtKuHjkhVOV6M4yPjPFORUeFoaNI5htaUtW082TqJNjSGWQ4nhsSRBllotqVMyXlIWwfWk8XPpEhUOtrD8TT1bcV48y7qrL8dw8Yj6ez+OlZIPd8pZceojF651pREnI+SsjgLsxIlSsAfoJmpr0gNGo0AAAAASUVORK5CYII=";
+    const iconaSecondoPosto = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAACXBIWXMAAAsTAAALEwEAmpwYAAADnElEQVR4nO1YW0tUURT+MkuRqKjs4gRRkFAPUWFhlAVBvdVEIfRQRBE+VJBdHoICMwLtgvUDZKyHkG5P0UOvZVq95EMv3cHsalhalmk6sWINfGz2Puc4M+dMxHywYM7e315n7T1rr8sB8sgjj/8aDQD6AZz24DQC+ObDMVEP4Kvqd+GU6j2LDNAHIAlgFMAqB6efOBUBdC4FMKJr+hycFaovqZtIG62qROQ+gHEWzjXi3Amg8zbxbzo4d4kj+tPGfACDpKzawikHMEyc9R761hDvN4DFFs5W4vwCsBAZ4jwpfAWgyMJpJs4jxz8laCNei2V+AoBnxGlCFjAVQA8pPWzhxAD8IE7cwtlknOwCC+cgcXoBTM/GBkzFXxyKm4jzBMB4misA8JjmLzoO6jNxapFFyF/7lJRfsHBmUNQS2UlzO2hcososH1d96XDVjMCXa8hxueqI81qNkM2/oHHJAX7BYhtCAoe3G5b5SQA+Emc/gH30LC4y2bLuKnHaPYJAxlhJCSapYdHEIZp/D+AdPR+18CtJ56g+h4orZNBDy2lN1HCbNOQtgBKf0NqKCDAPwE966Xaaq1Af77JsoEvnuNyopvlBvQuRoNFIbhsB3LMY7RK5SxuMy30OEWIKgE8BDB2hws1LejQPRAq+rCn5rmWFZN0yAIUqZTrWrBxz3ZGojS8G0GEYIcbNDrB2DoCEsbYjjMTlhUtGXbMnDR17NSGm9MimIsFa4/T8jJc6yGsTSZIqRIAOw21s2KwNUL9eYinkdjm4CSMLh4rlxoW1+XytR7Q5Y+GXARggjrwjNNT7nH4pdWcfNF80UDkhpcISn3/hZJgbaKcXSVg0wWUz1zSLaPy4ZV2c5sX1QkM3vUi6MBNSYj8HcN0YL9Ro5cq4c0nvm5Bs/xtNUu4xokYFQUwboJSBtstcSBl72CdyRbIBMbLTKL1TnVZJrjYQxIUExxwRqFM/wSBXLhTkEk+jrxPd2ugf0ATldapx0iv9Qc7CKBtyS8MoywlH1ZmgddJXR5bIpDBj1AQonc04HzMSmXw7jayUMAuwcg2jvQ4Rt1pnrLkcVQ5Ioco4UTn1dLHb0LUaEaGFXjqkVeVYIRsfClAYhoIiS0OT0MLMDzHDbZLqOpE2NIKZlk0M6EbiamiqpZTfW3RuwGJ8KXKEYkt7OJamvjkXJ29DpfHZ0U8eaGf3z2GZxvk2DZnDKt06VhdFnM8mCsIszPLIIw/gD4H0y6yhQSxvAAAAAElFTkSuQmCC";
+
     contenitore.innerHTML = dati.giocatori
       .slice(0, 2)
       .map((g, index) => {
 
         const medaglia =
           index === 0
-            ? "🥇"
-            : "🥈";
+            ? iconaPrimoPosto
+            : iconaSecondoPosto;
+
+        const testoPosizione =
+          index === 0
+            ? "Primo posto"
+            : "Secondo posto";
 
         return `
           <div class="top-player">
-            ${medaglia}
-            <b>
-              <a
-                href="/profilo-pubblico.html?nickname=${encodeURIComponent(g.nickname)}"
-                style="color:inherit;"
+            <div class="top-player-intestazione">
+              <img
+                class="top-player-medaglia"
+                src="${medaglia}"
+                alt="${testoPosizione}"
               >
-                ${pulisciTestoHtml(g.nickname)}
-              </a>
-            </b>
 
-            <br>
-            🎯 Vittorie: ${g.vinte}
+              <b>
+                <a
+                  href="/profilo-pubblico.html?nickname=${encodeURIComponent(g.nickname)}"
+                  style="color:inherit;"
+                >
+                  ${pulisciTestoHtml(g.nickname)}
+                </a>
+              </b>
+            </div>
 
-            <br>
-            🎮 Partite: ${g.giocate}
+            <div class="top-player-stat">
+              <img
+                class="top-player-stat-icona"
+                src="${iconaVittorie}"
+                alt=""
+                aria-hidden="true"
+              >
+              <span>Vittorie: ${g.vinte}</span>
+            </div>
+
+            <div class="top-player-stat">
+              <img
+                class="top-player-stat-icona"
+                src="${iconaPartite}"
+                alt=""
+                aria-hidden="true"
+              >
+              <span>Partite: ${g.giocate}</span>
+            </div>
           </div>
 
           <br>
