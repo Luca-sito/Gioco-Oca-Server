@@ -379,20 +379,6 @@ body {
     font-size: 13px;
 }
 
-.btn-danger-con-icona {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-}
-
-.icona-rimozione-account {
-    width: 24px;
-    height: 24px;
-    object-fit: contain;
-    flex-shrink: 0;
-}
-
 /* =========================================================
    PANELLO
    ========================================================= */
@@ -1878,7 +1864,7 @@ body {
                 >
                     <span class="ico">
                         <img
-                            src="LINK_ICONA_RIMOZIONE"
+                            src="https://api.giochisocieta.com/Immagini/Eliminazionedefinitivaaccount.png"
                             alt=""
                         >
                     </span>
@@ -2852,22 +2838,19 @@ body {
 
                     <div class="inline-actions">
 
-                     <button
-                         class="btn btn-danger btn-danger-con-icona"
-                         type="button"
-                         onclick="eliminaAccount()"
-                         >
-                       <img
-                     src="https://api.giochisocieta.com/Immagini/Eliminazionedefinitivaaccount.png"
-                     alt=""
-                     aria-hidden="true"
-                     class="icona-rimozione-account"
-                       >
+                      <button
+    class="nav-item"
+    data-panel="rimozione-account"
+>
+    <img
+        src="https://api.giochisocieta.com/Immagini/Eliminazionedefinitivaaccount.png"
+        alt=""
+        class="nav-item-icon"
+        aria-hidden="true"
+    >
 
-                  <span>
-                   Elimina definitivamente l'account
-                  </span>
-                     </button>
+    <span>Rimozione account</span>
+</button>
 
                     </div>
 
@@ -5353,7 +5336,6 @@ async function eliminaAccount() {
 
 }
 
-
 /* =========================================================
    HOME
    ========================================================= */
@@ -5364,7 +5346,6 @@ function tornaHome() {
         HOME_URL;
 
 }
-
 
 /* =========================================================
    AVVIO
