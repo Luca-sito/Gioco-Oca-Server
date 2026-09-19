@@ -1864,7 +1864,7 @@ body {
                 >
                     <span class="ico">
                         <img
-                            src="https://api.giochisocieta.com/Immagini/Eliminazionedefinitivaaccount.png"
+                            src="LINK_ICONA_RIMOZIONE"
                             alt=""
                         >
                     </span>
@@ -2823,7 +2823,7 @@ body {
                 <div class="card danger-box">
 
                     <h2 class="card-title">
-                        Rimozione account definitiva
+                        Rimozione account
                     </h2>
 
                     <p class="card-subtitle">
@@ -2838,19 +2838,13 @@ body {
 
                     <div class="inline-actions">
 
-                      <button
-    class="nav-item"
-    data-panel="rimozione-account"
->
-    <img
-        src="https://api.giochisocieta.com/Immagini/Eliminazionedefinitivaaccount.png"
-        alt=""
-        class="nav-item-icon"
-        aria-hidden="true"
-    >
-
-    <span>Rimozione account</span>
-</button>
+                        <button
+                            class="btn btn-danger"
+                            type="button"
+                            onclick="eliminaAccount()"
+                        >
+                            Elimina definitivamente l'account
+                        </button>
 
                     </div>
 
@@ -4778,9 +4772,7 @@ avatarSaveBtn.addEventListener(
             datiUtente.avatar =
                 dati.avatar;
 
-
             aggiornaInterfaccia();
-
 
             avatarPreview.innerHTML =
                 `
@@ -4790,19 +4782,15 @@ avatarSaveBtn.addEventListener(
                 >
                 `;
 
-
             avatarFileSelezionato =
                 null;
-
 
             avatarInput.value =
                 "";
 
-
             avatarFileInfo.classList.remove(
                 "show"
             );
-
 
             avatarStatus.textContent =
                 "Avatar aggiornato correttamente.";
@@ -4810,7 +4798,6 @@ avatarSaveBtn.addEventListener(
             avatarStatus.classList.add(
                 "success"
             );
-
 
         } catch (errore) {
 
@@ -4839,7 +4826,6 @@ avatarSaveBtn.addEventListener(
     }
 );
 
-
 /* =========================================================
    ALBUM FOTO
    ========================================================= */
@@ -4862,7 +4848,6 @@ const albumFotoStatus =
 const albumFotoInput =
     document.getElementById("albumFotoInput");
 
-
 async function leggiJsonSicuro(risposta) {
     const tipo =
         risposta.headers.get("content-type") || "";
@@ -4878,13 +4863,11 @@ async function leggiJsonSicuro(risposta) {
     }
 }
 
-
 function fotoPerVisibilita(visibilita) {
     return albumFoto.filter(
         foto => foto.visibilita === visibilita
     );
 }
-
 
 function creaPulsanteAggiungiFoto(visibilita) {
     const button = document.createElement("button");
@@ -4933,7 +4916,6 @@ function creaPulsanteAggiungiFoto(visibilita) {
     return button;
 }
 
-
 function creaCardFotoAlbum(foto) {
     const card = document.createElement("div");
     card.className = "album-photo-card";
@@ -4977,7 +4959,6 @@ function creaCardFotoAlbum(foto) {
     return card;
 }
 
-
 function renderSezioneAlbum(
     visibilita,
     grid,
@@ -5015,7 +4996,6 @@ function renderSezioneAlbum(
     }
 }
 
-
 function renderAlbumFoto() {
     renderSezioneAlbum(
         "pubblica",
@@ -5029,7 +5009,6 @@ function renderAlbumFoto() {
         albumPrivateCounter
     );
 }
-
 
 async function caricaAlbumFoto() {
     if (!datiUtente) {
@@ -5070,7 +5049,6 @@ async function caricaAlbumFoto() {
         renderAlbumFoto();
     }
 }
-
 
 albumFotoInput.addEventListener(
     "change",
@@ -5168,7 +5146,6 @@ albumFotoInput.addEventListener(
     }
 );
 
-
 async function eliminaFotoAlbum(foto) {
     if (!foto || !foto.id) {
         return;
@@ -5241,7 +5218,6 @@ async function eliminaFotoAlbum(foto) {
     }
 }
 
-
 /* =========================================================
    ELIMINAZIONE ACCOUNT
    ========================================================= */
@@ -5273,7 +5249,6 @@ async function eliminaAccount() {
     if (!conferma2) {
         return;
     }
-
 
     const status =
         document.getElementById(
