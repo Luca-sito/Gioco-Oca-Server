@@ -1,100 +1,187 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#111111">
-<title>Dama Italiana | Giochi Società</title>
-<link rel="stylesheet" href="dama.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0d1620">
+  <title>Dama Italiana - Partita</title>
+  <link rel="stylesheet" href="dama.css?v=stile-oca">
 </head>
-<body>
-<header class="topbar">
-  <a class="brand" href="https://solfriniluca1.wixstudio.com/giochisocieta"><i></i>GIOCHI SOCIETÀ</a>
-  <div class="actions">
-    <button id="btnSuoni" class="icon">🔊</button>
-    <button id="btnFullscreen" class="icon desktop">⛶</button>
-    <button id="btnEsci" class="btn dark">Esci</button>
+<body class="caricamento-in-corso">
+
+<div id="overlay-caricamento" aria-live="polite" aria-atomic="true">
+  <div id="caricamento-box">
+    <div id="caricamento-logo">GIOCHI SOCIETA</div>
+    <div id="caricamento-titolo">Preparazione partita</div>
+    <div id="caricamento-spinner" aria-hidden="true"></div>
+    <div id="caricamento-testo">Caricamento grafica…</div>
+    <div id="caricamento-progress" role="progressbar" aria-label="Avanzamento caricamento" aria-valuemin="0" aria-valuemax="100" aria-valuenow="10">
+      <div id="caricamento-progress-bar"></div>
+    </div>
   </div>
-</header>
+</div>
 
-<main class="layout">
-  <section class="card tavolo">
-    <div class="titolo">
-      <div><small>DAMA ITALIANA</small><h1>Partita online</h1></div>
-      <span id="statoConnessione" class="status off">Connessione...</span>
-    </div>
+<div
+  id="overlay-presentazione-sfida"
+  class="presentazione-sfida"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="titolo-presentazione-sfida"
+  aria-hidden="true"
+>
+  <section class="sfida-card">
+    <header class="sfida-header">
+      <div class="sfida-header-pattern" aria-hidden="true"></div>
+      <div class="sfida-marchio">GIOCHI SOCIETÀ</div>
+      <h1 id="titolo-presentazione-sfida">DAMA ITALIANA</h1>
+      <p id="sfida-modalita-testo">Partita classificata · Dama italiana · ELO attivo</p>
+    </header>
 
-    <div id="bannerTurno" class="turno">In attesa della partita</div>
-
-    <div class="boardbox">
-      <div class="letters"><span>a</span><span>b</span><span>c</span><span>d</span><span>e</span><span>f</span><span>g</span><span>h</span></div>
-      <div class="boardrow">
-        <div class="numbers"><span>8</span><span>7</span><span>6</span><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span></div>
-        <div id="damiera" class="board" aria-label="Damiera italiana"></div>
-        <div class="numbers"><span>8</span><span>7</span><span>6</span><span>5</span><span>4</span><span>3</span><span>2</span><span>1</span></div>
+    <div class="sfida-corpo">
+      <div class="sfida-intestazione-partita">
+        <strong>SFIDA ONLINE</strong>
+        <span id="sfida-descrizione-modalita">Giocatori reali · il risultato modifica il rating ELO</span>
       </div>
-      <div class="letters"><span>a</span><span>b</span><span>c</span><span>d</span><span>e</span><span>f</span><span>g</span><span>h</span></div>
+
+      <div id="sfida-giocatori" class="sfida-giocatori" aria-live="polite">
+        <div class="sfida-caricamento">Caricamento giocatori…</div>
+      </div>
+
+      <button type="button" id="btn-entra-partita" class="sfida-entra">
+        ENTRA IN PARTITA
+      </button>
     </div>
 
-    <div class="sotto">
-      <strong id="messaggioGioco">Collegamento al server...</strong>
-      <span id="contatoreMosse">Mossa 0</span>
+    <footer class="sfida-footer">
+      <div class="sfida-footer-box" id="sfida-box-variazione-elo">
+        <span class="sfida-footer-icona" aria-hidden="true">ELO</span>
+        <div class="sfida-footer-testo">
+          <small>VARIAZIONE POSSIBILE</small>
+          <div class="sfida-elo-variazione">
+            <strong id="sfida-elo-sconfitta" class="sfida-negativo">−</strong>
+            <strong id="sfida-elo-vittoria" class="sfida-positivo">+</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="sfida-footer-box">
+        <span class="sfida-footer-icona sfida-footer-stella" aria-hidden="true">★</span>
+        <div class="sfida-footer-testo">
+          <small>MIGLIORE SERIE</small>
+          <strong id="sfida-streak">0</strong>
+        </div>
+      </div>
+
+      <div class="sfida-footer-box">
+        <span class="sfida-footer-icona sfida-footer-win" aria-hidden="true">%</span>
+        <div class="sfida-footer-testo">
+          <small>WIN RATE</small>
+          <strong id="sfida-winrate">0%</strong>
+        </div>
+      </div>
+    </footer>
+
+    <div id="sfida-stato" class="sfida-stato" role="status" aria-live="polite">
+      Preparazione confronto…
     </div>
   </section>
-
-  <aside class="sidebar">
-    <section class="card pannello">
-      <h2>Giocatori</h2>
-      <div id="giocatoreNero" class="player">
-        <span class="mini nero"></span><div><strong id="nomeNero">In attesa...</strong><small id="eloNero">ELO —</small></div><b id="timerNero">--:--</b>
-      </div>
-      <div class="vs">VS</div>
-      <div id="giocatoreBianco" class="player">
-        <span class="mini bianco"></span><div><strong id="nomeBianco">In attesa...</strong><small id="eloBianco">ELO —</small></div><b id="timerBianco">--:--</b>
-      </div>
-    </section>
-
-    <section class="card pannello">
-      <h2>Partita</h2>
-      <div class="riga"><span>Modalità</span><b>Dama italiana</b></div>
-      <div class="riga"><span>Colore</span><b id="mioColore">—</b></div>
-      <div class="riga"><span>Turno</span><b id="turnoCorrente">—</b></div>
-      <div class="riga"><span>Prese</span><b id="miePrese">0</b></div>
-    </section>
-
-    <section class="card pannello chat">
-      <h2>Chat</h2>
-      <div id="chatMessaggi" class="chatlog"></div>
-      <form id="formChat"><input id="inputChat" maxlength="250" placeholder="Scrivi un messaggio..." autocomplete="off"><button>➤</button></form>
-    </section>
-
-    <button id="btnAbbandona" class="btn danger">Abbandona partita</button>
-  </aside>
-</main>
-
-<div id="overlayAttesa" class="overlay visible">
-  <div class="modal">
-    <div class="spinner"></div>
-    <small>DAMA ITALIANA</small>
-    <h2 id="overlayTitolo">Connessione alla partita</h2>
-    <p id="overlayTesto">Stiamo preparando il tavolo da gioco.</p>
-  </div>
 </div>
 
-<div id="overlayFine" class="overlay">
-  <div class="modal">
-    <div id="esitoIcona" class="esito">🏁</div>
-    <small>PARTITA TERMINATA</small>
-    <h2 id="esitoTitolo">Partita conclusa</h2>
-    <p id="esitoTesto"></p>
-    <div class="modalbuttons">
-      <button id="btnRivincita" class="btn gold">Chiedi rivincita</button>
-      <button id="btnLobby" class="btn dark">Torna alla Lobby</button>
+<div id="banner-disconnesso" class="nascosto" role="status" aria-live="assertive">
+  Connessione al server interrotta. Nuovo tentativo in corso…
+</div>
+
+<div id="contenitore-notifiche-gioco" role="status" aria-live="polite" aria-atomic="false"></div>
+
+<main id="scena">
+  <div id="mondo-ruotato">
+    <div id="area-tabellone" aria-label="Damiera italiana">
+      <div id="damiera" role="grid" aria-label="Damiera italiana 8 per 8"></div>
     </div>
   </div>
-</div>
 
-<div id="toasts"></div>
-<script src="dama.js"></script>
+  <div id="flash-messaggio-gioco" role="status" aria-live="assertive" aria-atomic="true">
+    <div class="flash-messaggio-contenuto">
+      <span id="flash-icona-gioco" class="flash-messaggio-icona" aria-hidden="true" hidden></span>
+      <strong id="flash-titolo-gioco" class="flash-messaggio-titolo"></strong>
+      <span id="flash-dettaglio-gioco" class="flash-messaggio-dettaglio" hidden></span>
+    </div>
+  </div>
+
+  <section id="videochiamata" class="nascosto" aria-label="Videochiamata della partita">
+    <div id="controlli-media-locale" aria-label="Controlli della chiamata">
+      <button type="button" id="btn-toggle-microfono-media" class="controllo-media-tondo" onclick="toggleMicrofonoMedia()" aria-pressed="false" aria-label="Disattiva microfono" title="Disattiva microfono"><svg class="icona-media-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14.5a3.5 3.5 0 0 0 3.5-3.5V5a3.5 3.5 0 0 0-7 0v6a3.5 3.5 0 0 0 3.5 3.5Z"/><path d="M5.75 10.75a6.25 6.25 0 0 0 12.5 0M12 17v4M9 21h6"/></svg></button>
+      <div class="videochiamata-intestazione">
+        <strong>🎥 Videochiamata</strong>
+        <span id="stato-media-connessione" role="status" aria-live="polite">Avvio…</span>
+      </div>
+      <button type="button" id="btn-toggle-webcam-media" class="controllo-media-tondo" onclick="toggleWebcamMedia()" aria-pressed="false" aria-label="Disattiva webcam" title="Disattiva webcam"><svg class="icona-media-svg" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="6.5" width="11.5" height="11" rx="2"/><path d="m15 10 5-3v10l-5-3Z"/></svg></button>
+    </div>
+    <div id="griglia-video">
+      <figure id="video-tile-locale" class="video-tile video-locale">
+        <video id="video-locale" autoplay playsinline muted></video>
+        <figcaption>Tu</figcaption>
+      </figure>
+    </div>
+    <button type="button" id="btn-sblocca-media" class="nascosto" onclick="sbloccaRiproduzioneMedia()">🔊 Attiva l'audio / riprova</button>
+  </section>
+
+  <div id="backdrop-giocatori"></div>
+
+  <aside id="pannello-giocatori" aria-label="Giocatori della partita">
+    <div id="riga-turno" aria-live="polite">Caricamento…</div>
+    <div id="lista-giocatori"></div>
+  </aside>
+
+  <div id="giocatori-wrapper">
+    <button type="button" id="btn-giocatori" aria-label="Mostra giocatori" aria-controls="pannello-giocatori" aria-expanded="false"><img class="icona-pulsante-gioco" src="https://api.giochisocieta.com/Immagini/Personemenugioco.png" alt="" aria-hidden="true"></button>
+  </div>
+
+  <div id="menu-wrapper">
+    <button type="button" id="btn-menu" aria-label="Apri menu" aria-controls="pannello-menu" aria-expanded="false"><img class="icona-pulsante-gioco" src="https://api.giochisocieta.com/Immagini/Hamburgerbuttonmenugioco.png" alt="" aria-hidden="true"></button>
+    <div id="pannello-menu" class="nascosto">
+      <button type="button" onclick="apriProfilo()">👤 Profilo</button>
+      <button type="button" onclick="apriImpostazioni()">⚙️ Impostazioni</button>
+      <button type="button" id="btn-toggle-suoni" onclick="toggleSuoni()">🔊 Suoni: On</button>
+      <button type="button" id="btn-toggle-fullscreen" onclick="toggleFullscreen()">⛶ Tutto schermo</button>
+      <button type="button" id="btn-stato-media" disabled>🔇 Videochiamata: non attiva</button>
+      <button type="button" class="voce-pericolo" onclick="abbandonaPartita()">🚪 Abbandona partita</button>
+    </div>
+  </div>
+
+  <div id="messaggi-gioco" role="status" aria-live="polite"></div>
+
+  <div id="overlay-vittoria" class="overlay" role="dialog" aria-modal="true" aria-labelledby="testo-vincitore">
+    <div class="popup-vittoria">
+      <h2 id="testo-vincitore"></h2>
+      <button type="button" onclick="tornaAllaLobby()">Torna alla Lobby</button>
+    </div>
+  </div>
+
+  <div id="overlay-conferma-gioco" class="overlay" role="dialog" aria-modal="true" aria-labelledby="titolo-conferma-gioco" aria-hidden="true">
+    <div class="popup-conferma-gioco">
+      <h2 id="titolo-conferma-gioco">Abbandonare la partita?</h2>
+      <p id="testo-conferma-gioco">Uscirai dalla partita e tornerai alla Lobby.</p>
+      <div class="azioni-conferma-gioco">
+        <button type="button" id="btn-annulla-conferma-gioco">Resta in partita</button>
+        <button type="button" id="btn-conferma-gioco" class="pericolo">Abbandona</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="chat-wrapper">
+    <button type="button" id="btn-chat" aria-label="Apri chat" aria-controls="pannello-chat" aria-expanded="false"><img class="icona-pulsante-gioco" src="https://api.giochisocieta.com/Immagini/Chatmenugioco.png" alt="" aria-hidden="true"><span id="badge-chat-partita" class="badge-chat-partita" style="display:none;">0</span></button>
+    <section id="pannello-chat" class="nascosto" aria-label="Chat della partita">
+      <div id="chat-messaggi" role="log" aria-live="polite" aria-relevant="additions"></div>
+      <div id="chat-input-riga">
+        <label class="solo-lettori-schermo" for="chat-input">Messaggio</label>
+        <input id="chat-input" type="text" maxlength="300" autocomplete="off" placeholder="Scrivi un messaggio" aria-label="Messaggio per la chat">
+        <button type="button" onclick="inviaChatPartita()" aria-label="Invia messaggio">➤</button>
+      </div>
+    </section>
+  </div>
+</main>
+
+<script src="dama.js?v=stile-oca"></script>
 </body>
 </html>
