@@ -3,7 +3,6 @@
   --colore-oro: #ffd700;
   --sfondo: #0d1620;
   --pannello: #121c26;
-  --bordo-damiera: 8px;
 }
 
 * { box-sizing: border-box; }
@@ -1905,12 +1904,8 @@ body.modalita-desktop.media-partita #btn-giocatori {
   .notifica-toast-gioco,
   #flash-messaggio-gioco.visibile,
   .effetto-casella-speciale,
-  .pedina-salta,
-  .dama-pezzo,
-  .dama-pezzo.salto-cattura,
-  .dama-pezzo.catturata {
+  .pedina-salta {
     animation: none !important;
-    transition: none !important;
   }
 
   .effetto-casella-speciale {
@@ -2395,21 +2390,11 @@ body.client-cellulare-audio-only #controlli-media-locale {
   grid-template-rows: repeat(8, 1fr);
   overflow: hidden;
   background: #d9c3a1;
-  border: var(--bordo-damiera) solid #181818;
+  border: 8px solid #181818;
   border-radius: 14px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
   user-select: none;
   touch-action: manipulation;
-}
-
-/* Livello separato e persistente per le pedine: non viene mai
-   ricreato da renderDamiera(), così restano lo stesso elemento
-   e possono scivolare invece di scomparire e ricomparire di scatto. */
-#pedine-dama {
-  position: absolute;
-  z-index: 5;
-  pointer-events: none;
-  inset: var(--bordo-damiera);
 }
 
 .dama-casella {
@@ -2476,43 +2461,18 @@ body.client-cellulare-audio-only #controlli-media-locale {
 }
 
 .dama-pezzo {
-  position: absolute;
-  width: 8.75%; /* = 70% della larghezza di una casella su griglia 8x8 */
+  position: relative;
+  z-index: 4;
+  width: 70%;
   aspect-ratio: 1;
   border-radius: 50%;
   box-shadow: 0 5px 11px rgba(0, 0, 0, 0.34);
   pointer-events: none;
   transform-origin: center;
   transition:
-    left 0.32s cubic-bezier(0.22, 0.72, 0.28, 1),
-    top 0.32s cubic-bezier(0.22, 0.72, 0.28, 1),
     transform 0.18s ease,
     box-shadow 0.18s ease,
     filter 0.18s ease;
-}
-
-/* Salto della pedina quando mangia: si aggiunge, mentre dura,
-   allo scivolamento left/top che la porta verso la casella d'arrivo. */
-@keyframes dama-salto-cattura {
-  0%   { transform: translateY(0) scale(1); }
-  45%  { transform: translateY(-62%) scale(1.1); filter: drop-shadow(0 14px 10px rgba(0, 0, 0, .5)); }
-  100% { transform: translateY(0) scale(1); }
-}
-
-.dama-pezzo.salto-cattura {
-  z-index: 6;
-  animation: dama-salto-cattura 0.34s ease-in-out;
-}
-
-/* Sparizione della pedina catturata. */
-@keyframes dama-pedina-catturata {
-  0%   { opacity: 1; transform: scale(1) rotate(0deg); }
-  30%  { opacity: 1; transform: scale(1.15) rotate(6deg); }
-  100% { opacity: 0; transform: scale(0.15) rotate(35deg); }
-}
-
-.dama-pezzo.catturata {
-  animation: dama-pedina-catturata 0.42s ease-in forwards;
 }
 
 .dama-pezzo.bianco {
@@ -2555,7 +2515,7 @@ body.client-cellulare-audio-only #controlli-media-locale {
   text-shadow: none;
 }
 
-.dama-pezzo.selezionata {
+.dama-casella.selezionata .dama-pezzo {
   transform: translateY(-5%) scale(1.07);
   box-shadow:
     0 0 0 5px #ffd700,
@@ -2589,11 +2549,8 @@ body.modalita-ruotata .dama-pezzo.dama::before {
 }
 
 @media (max-width: 600px) {
-  :root {
-    --bordo-damiera: 5px;
-  }
-
   #damiera {
+    border-width: 5px;
     border-radius: 11px;
   }
 
