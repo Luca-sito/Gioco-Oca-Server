@@ -4773,136 +4773,146 @@ app.post("/api/contatti", limiteContatti, async (req, res) => {
 });
 
 // ============================================================
-// CONTROLLO NOVITÀ VISUALIZZATA
-// La Home Wix passa soltanto l'UID.
-// Questo endpoint restituisce esclusivamente true/false.
+// SISTEMA GENERICO BADGE "NOVITÀ!" PER I GIOCHI
+//
+// - Lo stato è salvato SOLO nel database dell'account.
+// - Nessun localStorage viene usato per ricordare la novità.
+// - Il server è generico: per i giochi futuri NON va modificato.
+// - Una pagina "stanze" segna la propria novità come vista soltanto
+//   dopo il caricamento effettivo della pagina nel browser.
 // ============================================================
 
+const limiteNovitaGiochi = rateLimit({
+  windowMs: 60 * 1000,
+  max: 120,
+  message: { errore: "Troppe richieste. Riprova tra poco." },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+function normalizzaIdNovitaGioco(valore) {
+  const id = typeof valore === "string" ? valore.trim() : "";
+  return /^[A-Za-z0-9_-]{1,100}$/.test(id) ? id : null;
+}
+
+async function accountEsistePerNovita(uid) {
+  if (!db || !uid) return false;
+  const snapshot = await db.ref(`utenti/${uid}/nickname`).once("value");
+  return snapshot.exists();
+}
+
+// Legge lo stato della novità per l'account autenticato.
 app.get(
-    "/api/novita/:idNovita/:uid",
-    async (req, res) => {
+  "/api/novita/stato/:idNovita",
+  limiteNovitaGiochi,
+  richiediAuth,
+  async (req, res) => {
+    res.set("Cache-Control", "no-store");
 
-        if (!db) {
-            return res.status(503).json({
-                errore: "Database non disponibile."
-            });
-        }
-
-        try {
-
-            const idNovita = pulisciTesto(
-                String(req.params.idNovita || ""),
-                100
-            );
-
-            const uid = pulisciTesto(
-                String(req.params.uid || ""),
-                128
-            );
-
-            if (
-             !idNovita ||
-             !/^[a-zA-Z0-9_-]{1,100}$/.test(idNovita) ||
-             !uid ||
-             !/^[a-zA-Z0-9_-]{1,128}$/.test(uid)
-            ) {
-                return res.status(400).json({
-                    errore: "Richiesta non valida."
-                });
-            }
-
-
-            const snapshot = await db
-                .ref(
-                    `utenti/${uid}/novitaViste/${idNovita}`
-                )
-                .once("value");
-
-
-            return res.json({
-                vista: snapshot.val() === true
-            });
-
-        } catch (errore) {
-
-            console.error(
-                "Errore lettura novità:",
-                errore
-            );
-
-            return res.status(500).json({
-                errore:
-                    "Errore durante il controllo della novità."
-            });
-
-        }
-
+    if (!db) {
+      return res.status(503).json({
+        errore: "Database non disponibile."
+      });
     }
+
+    try {
+      const idNovita = normalizzaIdNovitaGioco(req.params.idNovita);
+      const uid = req.utente && req.utente.uid;
+
+      if (!idNovita || !uid) {
+        return res.status(400).json({
+          errore: "Richiesta non valida."
+        });
+      }
+
+      if (!(await accountEsistePerNovita(uid))) {
+        return res.status(401).json({
+          errore: "Sessione account non valida."
+        });
+      }
+
+      const snapshot = await db
+        .ref(`utenti/${uid}/novitaViste/${idNovita}`)
+        .once("value");
+
+      const valore = snapshot.val();
+      const vista = valore === true || Boolean(
+        valore && typeof valore === "object" && valore.vista === true
+      );
+
+      return res.json({
+        ok: true,
+        idNovita,
+        vista
+      });
+    } catch (errore) {
+      console.error("Errore controllo novità gioco:", errore?.message || errore);
+      return res.status(500).json({
+        errore: "Errore durante il controllo della novità."
+      });
+    }
+  }
 );
 
-// ============================================================
-// REGISTRA NOVITÀ COME VISTA
-// Viene chiamato dalla vera pagina del gioco.
-// ============================================================
-
+// Segna la novità come vista per l'account autenticato.
+// È idempotente: richiamarlo più volte non crea duplicati.
 app.post(
-    "/api/novita/:idNovita",
-    richiediAuth,
-    async (req, res) => {
+  "/api/novita/segna-vista/:idNovita",
+  limiteNovitaGiochi,
+  richiediAuth,
+  async (req, res) => {
+    res.set("Cache-Control", "no-store");
 
-        if (!db) {
-            return res.status(503).json({
-                errore: "Database non disponibile."
-            });
-        }
-
-        try {
-
-            const uid =
-                req.utente.uid;
-
-            const idNovita =
-                pulisciTesto(
-                    String(req.params.idNovita || ""),
-                    100
-                );
-
-            if (
-             !idNovita ||
-             !/^[a-zA-Z0-9_-]{1,100}$/.test(idNovita)
-            ) {
-             return res.status(400).json({
-             errore: "Novità non valida."
-            });
-              }
-
-
-            await db
-                .ref(
-                    `utenti/${uid}/novitaViste/${idNovita}`
-                )
-                .set(true);
-
-
-            return res.json({
-                ok: true
-            });
-
-        } catch (errore) {
-
-            console.error(
-                "Errore salvataggio novità:",
-                errore
-            );
-
-            return res.status(500).json({
-                errore:
-                    "Errore durante il salvataggio della novità."
-            });
-
-        }
-
+    if (!db) {
+      return res.status(503).json({
+        errore: "Database non disponibile."
+      });
     }
+
+    try {
+      const idNovita = normalizzaIdNovitaGioco(req.params.idNovita);
+      const uid = req.utente && req.utente.uid;
+
+      if (!idNovita || !uid) {
+        return res.status(400).json({
+          errore: "Richiesta non valida."
+        });
+      }
+
+      if (!(await accountEsistePerNovita(uid))) {
+        return res.status(401).json({
+          errore: "Sessione account non valida."
+        });
+      }
+
+      const riferimento = db.ref(`utenti/${uid}/novitaViste/${idNovita}`);
+      const precedente = await riferimento.once("value");
+      const valorePrecedente = precedente.val();
+      const giaVista = valorePrecedente === true || Boolean(
+        valorePrecedente &&
+        typeof valorePrecedente === "object" &&
+        valorePrecedente.vista === true
+      );
+
+      if (!giaVista) {
+        await riferimento.set({
+          vista: true,
+          vistaIl: Date.now()
+        });
+      }
+
+      return res.json({
+        ok: true,
+        idNovita,
+        vista: true
+      });
+    } catch (errore) {
+      console.error("Errore registrazione novità gioco:", errore?.message || errore);
+      return res.status(500).json({
+        errore: "Errore durante il salvataggio della novità."
+      });
+    }
+  }
 );
 
 // ===== UTENTI BLOCCATI =====
