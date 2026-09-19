@@ -4772,6 +4772,109 @@ app.post("/api/contatti", limiteContatti, async (req, res) => {
   }
 });
 
+// ============================================================
+// NOVITÀ VISUALIZZATE DALL'UTENTE
+// ============================================================
+
+app.get(
+    "/api/novita/:idNovita",
+    richiediAuth,
+    async (req, res) => {
+
+        if (!db) {
+            return res.status(503).json({
+                errore: "Database non disponibile."
+            });
+        }
+
+        try {
+
+            const uid = req.utente.uid;
+
+            const idNovita = pulisciTesto(
+                req.params.idNovita,
+                100
+            );
+
+            if (!idNovita) {
+                return res.status(400).json({
+                    errore: "Novità non valida."
+                });
+            }
+
+            const snapshot = await db
+                .ref(`utenti/${uid}/novitaViste/${idNovita}`)
+                .once("value");
+
+            return res.json({
+                vista: snapshot.val() === true
+            });
+
+        } catch (errore) {
+
+            console.error(
+                "Errore lettura novità:",
+                errore
+            );
+
+            return res.status(500).json({
+                errore:
+                    "Errore durante il controllo della novità."
+            });
+        }
+    }
+);
+
+
+app.post(
+    "/api/novita/:idNovita",
+    richiediAuth,
+    async (req, res) => {
+
+        if (!db) {
+            return res.status(503).json({
+                errore: "Database non disponibile."
+            });
+        }
+
+        try {
+
+            const uid = req.utente.uid;
+
+            const idNovita = pulisciTesto(
+                req.params.idNovita,
+                100
+            );
+
+            if (!idNovita) {
+                return res.status(400).json({
+                    errore: "Novità non valida."
+                });
+            }
+
+            await db
+                .ref(`utenti/${uid}/novitaViste/${idNovita}`)
+                .set(true);
+
+            return res.json({
+                ok: true
+            });
+
+        } catch (errore) {
+
+            console.error(
+                "Errore salvataggio novità:",
+                errore
+            );
+
+            return res.status(500).json({
+                errore:
+                    "Errore durante il salvataggio della novità."
+            });
+        }
+    }
+);
+
 // ===== UTENTI BLOCCATI =====
 app.get("/api/blocchi", richiediAuth, async (req, res) => {
   if (!db) return res.status(503).json({ errore: "Servizio blocchi non disponibile." });
