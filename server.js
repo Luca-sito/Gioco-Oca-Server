@@ -4773,12 +4773,13 @@ app.post("/api/contatti", limiteContatti, async (req, res) => {
 });
 
 // ============================================================
-// NOVITÀ VISUALIZZATE DALL'UTENTE
+// CONTROLLO NOVITÀ VISUALIZZATA
+// La Home Wix passa soltanto l'UID.
+// Questo endpoint restituisce esclusivamente true/false.
 // ============================================================
 
 app.get(
-    "/api/novita/:idNovita",
-    richiediAuth,
+    "/api/novita/:idNovita/:uid",
     async (req, res) => {
 
         if (!db) {
@@ -4789,22 +4790,34 @@ app.get(
 
         try {
 
-            const uid = req.utente.uid;
-
             const idNovita = pulisciTesto(
-                req.params.idNovita,
+                String(req.params.idNovita || ""),
                 100
             );
 
-            if (!idNovita) {
+            const uid = pulisciTesto(
+                String(req.params.uid || ""),
+                128
+            );
+
+            if (
+             !idNovita ||
+             !/^[a-zA-Z0-9_-]{1,100}$/.test(idNovita) ||
+             !uid ||
+             !/^[a-zA-Z0-9_-]{1,128}$/.test(uid)
+            ) {
                 return res.status(400).json({
-                    errore: "Novità non valida."
+                    errore: "Richiesta non valida."
                 });
             }
 
+
             const snapshot = await db
-                .ref(`utenti/${uid}/novitaViste/${idNovita}`)
+                .ref(
+                    `utenti/${uid}/novitaViste/${idNovita}`
+                )
                 .once("value");
+
 
             return res.json({
                 vista: snapshot.val() === true
@@ -4821,10 +4834,16 @@ app.get(
                 errore:
                     "Errore durante il controllo della novità."
             });
+
         }
+
     }
 );
 
+// ============================================================
+// REGISTRA NOVITÀ COME VISTA
+// Viene chiamato dalla vera pagina del gioco.
+// ============================================================
 
 app.post(
     "/api/novita/:idNovita",
@@ -4839,22 +4858,31 @@ app.post(
 
         try {
 
-            const uid = req.utente.uid;
+            const uid =
+                req.utente.uid;
 
-            const idNovita = pulisciTesto(
-                req.params.idNovita,
-                100
-            );
+            const idNovita =
+                pulisciTesto(
+                    String(req.params.idNovita || ""),
+                    100
+                );
 
-            if (!idNovita) {
-                return res.status(400).json({
-                    errore: "Novità non valida."
-                });
-            }
+            if (
+             !idNovita ||
+             !/^[a-zA-Z0-9_-]{1,100}$/.test(idNovita)
+            ) {
+             return res.status(400).json({
+             errore: "Novità non valida."
+            });
+              }
+
 
             await db
-                .ref(`utenti/${uid}/novitaViste/${idNovita}`)
+                .ref(
+                    `utenti/${uid}/novitaViste/${idNovita}`
+                )
                 .set(true);
+
 
             return res.json({
                 ok: true
@@ -4871,7 +4899,9 @@ app.post(
                 errore:
                     "Errore durante il salvataggio della novità."
             });
+
         }
+
     }
 );
 
