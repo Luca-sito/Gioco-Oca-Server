@@ -860,123 +860,6 @@ body {
 
 </head>
 
-<script>
-const ID_NOVITA_GIOCO = "dama_2026";
-
-
-function leggiTokenNovita() {
-
-    try {
-
-        const parametri =
-            new URLSearchParams(
-                window.location.hash.replace(/^#/, "")
-            );
-
-        return (
-            parametri.get("auth_token") ||
-            ""
-        ).trim();
-
-    } catch (errore) {
-
-        return "";
-
-    }
-}
-
-
-async function registraNovitaComeVista() {
-
-    try {
-
-        const token =
-            leggiTokenNovita();
-
-
-        const headers = {
-            "Accept": "application/json"
-        };
-
-
-        if (token) {
-
-            headers.Authorization =
-                "Bearer " + token;
-
-        }
-
-
-        const risposta = await fetch(
-            "/api/novita/" +
-            encodeURIComponent(
-                ID_NOVITA_GIOCO
-            ),
-            {
-                method: "POST",
-                credentials: "include",
-                headers
-            }
-        );
-
-
-        if (!risposta.ok) {
-
-            console.error(
-                "NOVITÀ non registrata:",
-                risposta.status
-            );
-
-            return;
-        }
-
-
-        const risultato =
-            await risposta.json();
-
-
-        console.log(
-            "NOVITÀ registrata:",
-            risultato
-        );
-
-
-        // Solo ORA rimuoviamo il token dall'indirizzo.
-        if (token) {
-
-            history.replaceState(
-                null,
-                "",
-                window.location.pathname +
-                window.location.search
-            );
-
-        }
-
-
-    } catch (errore) {
-
-        console.error(
-            "Errore registrazione NOVITÀ:",
-            errore
-        );
-
-    }
-
-}
-
-
-// Aspettiamo il vero caricamento della pagina.
-window.addEventListener(
-    "load",
-    () => {
-
-        registraNovitaComeVista();
-
-    }
-);
-</script>
-
 <body>
 
 <button
@@ -1414,6 +1297,91 @@ document.addEventListener(
 
 </script>
 
+
+
+
+<!-- =========================================================
+     NOVITÀ GIOCO — REGISTRA SOLO DOPO IL CARICAMENTO REALE
+     ========================================================= -->
+<script>
+(() => {
+    "use strict";
+
+    const ID_NOVITA_GIOCO = "dama_2026";
+    const CHIAVE_TOKEN_AUTH = "giochiSocietaAuthToken";
+
+    function acquisisciTokenAuth() {
+        try {
+            const parametriHash = new URLSearchParams(
+                window.location.hash.replace(/^#/, "")
+            );
+
+            const tokenDaUrl = (parametriHash.get("auth_token") || "").trim();
+
+            if (tokenDaUrl) {
+                sessionStorage.setItem(CHIAVE_TOKEN_AUTH, tokenDaUrl);
+                parametriHash.delete("auth_token");
+
+                const nuovoHash = parametriHash.toString();
+                const nuovoUrl =
+                    window.location.pathname +
+                    window.location.search +
+                    (nuovoHash ? "#" + nuovoHash : "");
+
+                window.history.replaceState(null, "", nuovoUrl);
+                return tokenDaUrl;
+            }
+
+            return (sessionStorage.getItem(CHIAVE_TOKEN_AUTH) || "").trim();
+        } catch (errore) {
+            return "";
+        }
+    }
+
+    async function registraNovitaComeVista() {
+        try {
+            const token = acquisisciTokenAuth();
+            const headers = {
+                "Accept": "application/json"
+            };
+
+            if (token) {
+                headers.Authorization = "Bearer " + token;
+            }
+
+            const risposta = await fetch(
+                "/api/novita/segna-vista/" + encodeURIComponent(ID_NOVITA_GIOCO),
+                {
+                    method: "POST",
+                    credentials: "include",
+                    cache: "no-store",
+                    headers
+                }
+            );
+
+            if (!risposta.ok) {
+                console.warn(
+                    "NOVITÀ: registrazione non riuscita, HTTP",
+                    risposta.status
+                );
+                return;
+            }
+
+            const risultato = await risposta.json().catch(() => null);
+            if (risultato && risultato.ok === true) {
+                console.log("NOVITÀ registrata come vista:", ID_NOVITA_GIOCO);
+            }
+        } catch (errore) {
+            console.warn("NOVITÀ: errore durante la registrazione:", errore);
+        }
+    }
+
+    // Questa è la condizione richiesta: il click dalla Home NON basta.
+    // La registrazione parte soltanto quando stanzedama.html ha terminato
+    // il caricamento nel browser.
+    window.addEventListener("load", registraNovitaComeVista, { once: true });
+})();
+</script>
 
 </body>
 </html>
