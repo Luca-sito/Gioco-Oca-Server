@@ -13,7 +13,7 @@
   }
   body{display:flex;align-items:center;justify-content:center}
   #badgeNovita{
-    display:none; /* nascosto finché la verifica non conferma che va mostrato */
+    display:none;
     align-items:center;
     justify-content:center;
     min-width:86px;
@@ -38,16 +38,31 @@
   "use strict";
 
   const badge = document.getElementById("badgeNovita");
-
-  // ID della novità da controllare. Passalo nell'URL con cui incorpori
-  // questa pagina in Wix, es:
-  //   https://api.giochisocieta.com/novita-badge.html?id=dama_2026
   const parametri = new URLSearchParams(window.location.search);
   const idNovita = parametri.get("id") || "dama_2026";
 
-  function mostra(visibile) {
+  function mostraInternamente(visibile) {
     badge.style.display = visibile ? "inline-flex" : "none";
   }
+
+  // Dice a Wix di espandere (area cliccabile riservata al badge) o
+  // collassare del tutto l'elemento (spazio libero, cliccabile da chi
+  // sta sotto/dietro), invece di limitarsi a nascondere il contenuto
+  // interno dell'iframe.
+  function comunicaVisibilitaAWix(visibile) {
+    try {
+      window.parent.postMessage({ tipo: "novitaVisibilita", visibile }, "*");
+    } catch (e) {}
+  }
+
+  function impostaStato(visibile) {
+    mostraInternamente(visibile);
+    comunicaVisibilitaAWix(visibile);
+  }
+
+  // Appena parte lo script, nel dubbio teniamo l'area COLLASSATA (quindi
+  // già cliccabile) finché non sappiamo se il badge va davvero mostrato.
+  comunicaVisibilitaAWix(false);
 
   function controllaStato() {
     fetch("/api/novita/stato/" + encodeURIComponent(idNovita), {
@@ -61,28 +76,19 @@
       })
       .then(dati => {
         const giaVista = dati && dati.vista === true;
-        mostra(!giaVista);
+        impostaStato(!giaVista);
       })
       .catch(() => {
-        // Utente non loggato, errore di rete, ecc.: per sicurezza mostriamo
-        // comunque il badge piuttosto che nasconderlo per un falso negativo.
-        mostra(true);
+        impostaStato(true);
       });
   }
 
-  // Controllo iniziale al caricamento della pagina.
   controllaStato();
 
-  // FIX "torna indietro col browser": se questa pagina viene ripristinata
-  // dalla bfcache (invece di essere ricaricata da zero), "load" non scatta
-  // di nuovo e il badge resterebbe fermo al vecchio stato. "pageshow" con
-  // persisted=true intercetta esattamente questo caso e rifà il controllo.
   window.addEventListener("pageshow", (evento) => {
     if (evento.persisted) controllaStato();
   });
 
-  // Rete di sicurezza aggiuntiva: se la scheda torna visibile (cambio tab,
-  // ritorno dall'app in background su mobile) rifacciamo comunque il controllo.
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") controllaStato();
   });
