@@ -42,8 +42,6 @@
   // ID della novità da controllare. Passalo nell'URL con cui incorpori
   // questa pagina in Wix, es:
   //   https://api.giochisocieta.com/novita-badge.html?id=dama_2026
-  // Così lo stesso identico file serve per ogni gioco futuro: basta
-  // creare un nuovo HTML Embed in Wix con un ?id= diverso.
   const parametri = new URLSearchParams(window.location.search);
   const idNovita = parametri.get("id") || "dama_2026";
 
@@ -51,27 +49,43 @@
     badge.style.display = visibile ? "inline-flex" : "none";
   }
 
-  // Pagina caricata sullo stesso dominio dell'API: il cookie di sessione
-  // (httpOnly) viene allegato automaticamente dal browser, senza bisogno
-  // di alcun JWT gestito da Wix/Velo.
-  fetch("/api/novita/stato/" + encodeURIComponent(idNovita), {
-    method: "GET",
-    credentials: "include",
-    headers: { "Accept": "application/json" }
-  })
-    .then(risposta => {
-      if (!risposta.ok) throw new Error("HTTP " + risposta.status);
-      return risposta.json();
+  function controllaStato() {
+    fetch("/api/novita/stato/" + encodeURIComponent(idNovita), {
+      method: "GET",
+      credentials: "include",
+      headers: { "Accept": "application/json" }
     })
-    .then(dati => {
-      const giaVista = dati && dati.vista === true;
-      mostra(!giaVista);
-    })
-    .catch(() => {
-      // Utente non loggato, errore di rete, ecc.: per sicurezza mostriamo
-      // comunque il badge piuttosto che nasconderlo per un falso negativo.
-      mostra(true);
-    });
+      .then(risposta => {
+        if (!risposta.ok) throw new Error("HTTP " + risposta.status);
+        return risposta.json();
+      })
+      .then(dati => {
+        const giaVista = dati && dati.vista === true;
+        mostra(!giaVista);
+      })
+      .catch(() => {
+        // Utente non loggato, errore di rete, ecc.: per sicurezza mostriamo
+        // comunque il badge piuttosto che nasconderlo per un falso negativo.
+        mostra(true);
+      });
+  }
+
+  // Controllo iniziale al caricamento della pagina.
+  controllaStato();
+
+  // FIX "torna indietro col browser": se questa pagina viene ripristinata
+  // dalla bfcache (invece di essere ricaricata da zero), "load" non scatta
+  // di nuovo e il badge resterebbe fermo al vecchio stato. "pageshow" con
+  // persisted=true intercetta esattamente questo caso e rifà il controllo.
+  window.addEventListener("pageshow", (evento) => {
+    if (evento.persisted) controllaStato();
+  });
+
+  // Rete di sicurezza aggiuntiva: se la scheda torna visibile (cambio tab,
+  // ritorno dall'app in background su mobile) rifacciamo comunque il controllo.
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") controllaStato();
+  });
 })();
 </script>
 </body>
