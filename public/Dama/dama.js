@@ -759,7 +759,6 @@ function estraiMovimentoConfermato(prima, dopo) {
 async function animaVersoSnapshot(prossimo, istantanea, generazione) {
   const movimento = !istantanea && scacchieraDisegnata
     ? estraiMovimentoConfermato(scacchieraDisegnata, prossimo.scacchiera) : null;
-  const riduciMovimento = !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
   if (movimento) {
     const origine = chiaveCasella(movimento.da.r, movimento.da.c);
     const destinazione = chiaveCasella(movimento.a.r, movimento.a.c);
@@ -771,15 +770,24 @@ async function animaVersoSnapshot(prossimo, istantanea, generazione) {
       const dy = (da.r - a.r) * 100;
       elemento.classList.add("dama-in-animazione");
       impostaPosizionePedina(elemento, movimento.a.r, movimento.a.c);
-      if (!riduciMovimento && typeof elemento.animate === "function") {
+      if (typeof elemento.animate === "function") {
         const presa = movimento.catturate.length > 0;
         const fotogrammi = presa
-          ? [0, .25, .5, .75, 1].map(t => ({
+          ? [0, .2, .4, .6, .8, 1].map(t => ({
               offset: t,
-              transform: "translate(" + (dx * (1 - t)) + "%, " + (dy * (1 - t) - Math.sin(Math.PI * t) * 48) + "%) scale(" + (1 + Math.sin(Math.PI * t) * .12) + ")"
+              transform:
+                "translate(" + (dx * (1 - t)) + "%, " + (dy * (1 - t) - Math.sin(Math.PI * t) * 72) + "%) " +
+                "scale(" + (1 + Math.sin(Math.PI * t) * .16) + ") " +
+                "rotate(" + (Math.sin(Math.PI * t) * 9 * (dx >= 0 ? 1 : -1)) + "deg)"
             }))
-          : [{ transform: "translate(" + dx + "%, " + dy + "%)" }, { transform: "translate(0, 0)" }];
-        const animazione = elemento.animate(fotogrammi, { duration: presa ? 430 : 300, easing: "cubic-bezier(.22,.61,.36,1)" });
+          : [
+              { transform: "translate(" + dx + "%, " + dy + "%)" },
+              { transform: "translate(0, 0)" }
+            ];
+        const animazione = elemento.animate(fotogrammi, {
+          duration: presa ? 620 : 420,
+          easing: presa ? "cubic-bezier(.32,.08,.32,1)" : "cubic-bezier(.32,.05,.14,1)"
+        });
         animazioniPedine.add(animazione);
         try { await animazione.finished; } catch (_) { /* Riconnessione o cambio di orientamento. */ }
         animazioniPedine.delete(animazione);
