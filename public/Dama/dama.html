@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0d1620">
   <title>Dama Italiana - Partita</title>
-  <link rel="stylesheet" href="dama.css?v=stile-oca">
+  <link rel="stylesheet" href="dama.css?v=realistica-20260921">
 </head>
 <body class="caricamento-in-corso">
 
@@ -96,7 +96,21 @@
 <main id="scena">
   <div id="mondo-ruotato">
     <div id="area-tabellone" aria-label="Damiera italiana">
-      <div id="damiera" role="grid" aria-label="Damiera italiana 8 per 8"></div>
+      <section id="prese-avversario" class="dama-raccolta" aria-label="Pedine catturate dall'avversario">
+        <div class="dama-raccolta-intestazione">
+          <span id="prese-avversario-etichetta">Prese dell'avversario</span>
+          <span id="prese-avversario-conteggio" class="dama-conteggio">0</span>
+        </div>
+        <div id="prese-avversario-pedine" class="dama-raccolta-pedine" role="list"></div>
+      </section>
+      <div id="damiera" role="grid" aria-label="Damiera italiana 8 per 8" aria-rowcount="8" aria-colcount="8"></div>
+      <section id="prese-giocatore" class="dama-raccolta" aria-label="Pedine catturate da te">
+        <div class="dama-raccolta-intestazione">
+          <span id="prese-giocatore-etichetta">Le tue prese</span>
+          <span id="prese-giocatore-conteggio" class="dama-conteggio">0</span>
+        </div>
+        <div id="prese-giocatore-pedine" class="dama-raccolta-pedine" role="list"></div>
+      </section>
     </div>
   </div>
 
@@ -182,6 +196,6 @@
   </div>
 </main>
 
-<script src="dama.js?v=stile-oca"></script>
+<script src="dama.js?v=realistica-20260921"></script>
 </body>
 </html>
