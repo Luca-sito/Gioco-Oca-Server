@@ -305,13 +305,9 @@ document.addEventListener("webkitfullscreenchange", aggiornaTestoBottoneFullscre
 function rilevaEImpostaModalitaDesktop() {
   const puntatorePreciso = !!(window.matchMedia && window.matchMedia("(pointer: fine)").matches);
   const eDesktop = puntatorePreciso && window.innerWidth >= 1000;
-  const tipoOrientamento = window.screen && window.screen.orientation ? window.screen.orientation.type : "";
-  const orientamentoVerticale = tipoOrientamento
-    ? tipoOrientamento.startsWith("portrait")
-    : (typeof window.orientation === "number" ? Math.abs(window.orientation % 180) === 0 : window.innerHeight > window.innerWidth);
-  const vaRuotato = !puntatorePreciso && orientamentoVerticale;
   document.body.classList.toggle("modalita-desktop", eDesktop);
-  document.body.classList.toggle("modalita-ruotata", vaRuotato);
+  // La damiera quadrata si adatta al telefono senza ruotare l'intera interfaccia.
+  document.body.classList.remove("modalita-ruotata");
 }
 
 function aggiornaLayoutTabellone() {
@@ -329,11 +325,14 @@ function aggiornaLayoutTabellone() {
   mondo.style.width = larghezzaCanvas + "px";
   mondo.style.height = altezzaCanvas + "px";
 
-  const margineOrizzontale = Math.max(16, larghezzaCanvas * 0.03);
-  const margineVerticale = Math.max(16, altezzaCanvas * 0.06);
+  const orizzontaleCompatto = larghezzaCanvas > altezzaCanvas * 1.35 && altezzaCanvas < 620;
+  const altezzaRaccolta = orizzontaleCompatto ? 40 : larghezzaCanvas < 600 ? 44 : 54;
+  document.documentElement.style.setProperty("--altezza-raccolta", altezzaRaccolta + "px");
+  const margineOrizzontale = larghezzaCanvas < 600 ? 10 : 26;
+  const spazioComandi = orizzontaleCompatto ? 8 : altezzaCanvas < 500 ? 50 : 66;
   const larghezzaDisponibile = larghezzaCanvas - margineOrizzontale * 2;
-  const altezzaDisponibile = altezzaCanvas - margineVerticale * 2;
-  const lato = Math.max(160, Math.min(larghezzaDisponibile, altezzaDisponibile));
+  const altezzaDisponibile = altezzaCanvas - 2 * (altezzaRaccolta + 18 + spazioComandi);
+  const lato = Math.max(120, Math.min(larghezzaDisponibile, altezzaDisponibile, 880));
 
   areaTabellone.style.width = lato + "px";
   areaTabellone.style.height = lato + "px";
@@ -532,52 +531,372 @@ function nomeColore(colore) {
   return colore === "bianco" ? "Bianco" : colore === "nero" ? "Nero" : "—";
 }
 
-function renderDamiera() {
+const posizioniPedine = new Map();
+const caselleDamiera = new Map();
+const animazioniPedine = new Set();
+const pedineInPresa = [];
+let scacchieraDisegnata = null;
+let preseDisegnate = { bianco: [], nero: [] };
+let ultimoStatoRicevuto = stato;
+let codaAnimazioni = Promise.resolve();
+let generazioneAnimazioni = 0;
+let statiInAttesa = 0;
+let attesaSnapshot = true;
+let mossaInAttesa = false;
+let damieraMossaInAttesa = "";
+let timerMossaInAttesa = null;
+let richiestaMosse = null;
+let richiestaMosseSuccessiva = null;
+let versioneMosse = 0;
+let vittoriaMostrata = false;
+
+function chiaveCasella(r, c) { return r + "," + c; }
+function coordinateValide(punto) {
+  return punto && Number.isInteger(punto.r) && Number.isInteger(punto.c)
+    && punto.r >= 0 && punto.r < 8 && punto.c >= 0 && punto.c < 8;
+}
+function stessaCasella(a, b) { return !!a && !!b && a.r === b.r && a.c === b.c; }
+function scacchieraValida(scacchiera) {
+  return Array.isArray(scacchiera) && scacchiera.length === 8
+    && scacchiera.every(riga => Array.isArray(riga) && riga.length === 8
+      && riga.every(pezzo => pezzo === null || (pezzo && (pezzo.colore === "bianco" || pezzo.colore === "nero"))));
+}
+function copiaScacchiera(scacchiera) {
+  return scacchiera.map(riga => riga.map(pezzo => pezzo ? { colore: pezzo.colore, dama: !!pezzo.dama } : null));
+}
+function coordinateVisive(r, c) {
+  // Dama italiana: casella scura in basso a destra; coordinate server invariate.
+  return mioColore === "nero" ? { r: 7 - r, c } : { r, c: 7 - c };
+}
+function impostaPosizionePedina(elemento, r, c) {
+  const visiva = coordinateVisive(r, c);
+  elemento.style.left = (visiva.c * 12.5) + "%";
+  elemento.style.top = (visiva.r * 12.5) + "%";
+  elemento.dataset.r = String(r);
+  elemento.dataset.c = String(c);
+}
+function creaElementoPedina(pezzo) {
+  const elemento = document.createElement("div");
+  elemento.className = "dama-pezzo " + pezzo.colore + (pezzo.dama ? " dama" : "");
+  elemento.setAttribute("aria-hidden", "true");
+  const faccia = document.createElement("span");
+  faccia.className = "dama-faccia";
+  elemento.appendChild(faccia);
+  return elemento;
+}
+function preparaDamiera() {
   const damiera = document.getElementById("damiera");
-  if (!damiera) return;
-  damiera.textContent = "";
-
-  const destinazioni = new Map();
-  for (const mossa of mosseLegali) {
-    const arrivo = mossa.a || mossa.to;
-    if (arrivo) destinazioni.set(arrivo.r + "," + arrivo.c, !!(mossa.presa || mossa.capture));
-  }
-
+  if (!damiera || caselleDamiera.size) return damiera;
   for (let r = 0; r < 8; r++) {
     for (let c = 0; c < 8; c++) {
-      const scura = (r + c) % 2 === 1;
       const casella = document.createElement("button");
       casella.type = "button";
-      casella.className = "dama-casella " + (scura ? "scura" : "chiara");
       casella.setAttribute("role", "gridcell");
-      casella.setAttribute("aria-label", String.fromCharCode(97 + c) + (8 - r));
-
-      if (selezionata && selezionata.r === r && selezionata.c === c) casella.classList.add("selezionata");
-
-      const key = r + "," + c;
-      if (destinazioni.has(key)) casella.classList.add(destinazioni.get(key) ? "destinazione-presa" : "destinazione");
-
-      const ultimo = stato.ultimoMovimento || {};
-      if ((ultimo.da && ultimo.da.r === r && ultimo.da.c === c) || (ultimo.a && ultimo.a.r === r && ultimo.a.c === c)) {
-        casella.classList.add("ultima-mossa");
-      }
-
-      const pezzo = stato.scacchiera?.[r]?.[c];
-      if (pezzo) {
-        const elemento = document.createElement("div");
-        elemento.className = "dama-pezzo " + pezzo.colore + (pezzo.dama ? " dama" : "");
-        elemento.setAttribute("aria-hidden", "true");
-        casella.appendChild(elemento);
-      }
-
-      if (scura) casella.addEventListener("click", () => cliccaCasella(r, c));
-      else casella.disabled = true;
+      casella.dataset.r = String(r);
+      casella.dataset.c = String(c);
+      if ((r + c) % 2 === 1) casella.addEventListener("click", () => cliccaCasella(r, c));
       damiera.appendChild(casella);
+      caselleDamiera.set(chiaveCasella(r, c), casella);
+    }
+  }
+  let strato = document.getElementById("dama-strato-pedine");
+  if (!strato) {
+    strato = document.createElement("div");
+    strato.id = "dama-strato-pedine";
+    strato.setAttribute("aria-hidden", "true");
+    damiera.appendChild(strato);
+  }
+  return damiera;
+}
+function sincronizzaPedine(scacchiera) {
+  preparaDamiera();
+  const strato = document.getElementById("dama-strato-pedine");
+  if (!strato) return;
+  const presenti = new Set();
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const pezzo = scacchiera[r][c];
+      if (!pezzo) continue;
+      const chiave = chiaveCasella(r, c);
+      presenti.add(chiave);
+      let posizione = posizioniPedine.get(chiave);
+      if (!posizione) {
+        posizione = document.createElement("div");
+        posizione.className = "dama-posizione";
+        posizione.appendChild(creaElementoPedina(pezzo));
+        strato.appendChild(posizione);
+        posizioniPedine.set(chiave, posizione);
+      }
+      posizione.firstElementChild.className = "dama-pezzo " + pezzo.colore + (pezzo.dama ? " dama" : "");
+      impostaPosizionePedina(posizione, r, c);
+    }
+  }
+  for (const [chiave, elemento] of posizioniPedine) {
+    if (presenti.has(chiave)) continue;
+    elemento.remove();
+    posizioniPedine.delete(chiave);
+  }
+  scacchieraDisegnata = copiaScacchiera(scacchiera);
+}
+
+function sincronizzaPrese(scacchiera, nuovePrese = [], ricostruisci = false) {
+  if (ricostruisci) preseDisegnate = { bianco: [], nero: [] };
+  for (const pezzo of nuovePrese) {
+    const proprietario = pezzo.colore === "bianco" ? "nero" : "bianco";
+    preseDisegnate[proprietario].push({ colore: pezzo.colore, dama: !!pezzo.dama });
+  }
+  const rimaste = { bianco: 0, nero: 0 };
+  scacchiera.forEach(riga => riga.forEach(pezzo => { if (pezzo) rimaste[pezzo.colore]++; }));
+  for (const proprietario of ["bianco", "nero"]) {
+    const colorePreda = proprietario === "bianco" ? "nero" : "bianco";
+    const ancoraSullaDamiera = pedineInPresa.filter(p => p.pezzo.colore === colorePreda).length;
+    const numeroPrese = Math.max(0, Math.min(12, 12 - rimaste[colorePreda] - ancoraSullaDamiera));
+    preseDisegnate[proprietario] = preseDisegnate[proprietario].slice(0, numeroPrese);
+    while (preseDisegnate[proprietario].length < numeroPrese) {
+      // Uno snapshot non rivela quali pedine fossero già dame al momento della presa.
+      preseDisegnate[proprietario].unshift({ colore: colorePreda, dama: false, tipoSconosciuto: true });
+    }
+  }
+}
+function renderPrese() {
+  const coloreVicino = mioColore || "bianco";
+  const coloreLontano = coloreVicino === "bianco" ? "nero" : "bianco";
+  for (const [lato, colore] of [["giocatore", coloreVicino], ["avversario", coloreLontano]]) {
+    const elenco = preseDisegnate[colore];
+    const giocatore = giocatoriStato().find(g => g.colore === colore);
+    const nome = giocatore?.nome || giocatore?.nickname || nomeColore(colore);
+    const etichetta = document.getElementById("prese-" + lato + "-etichetta");
+    const conteggio = document.getElementById("prese-" + lato + "-conteggio");
+    const raccolta = document.getElementById("prese-" + lato + "-pedine");
+    if (etichetta) etichetta.textContent = lato === "giocatore" && mioColore ? "Le tue prese" : "Prese di " + nome;
+    if (conteggio) conteggio.textContent = String(elenco.length);
+    if (!raccolta) continue;
+    raccolta.setAttribute("aria-label", elenco.length + " pedine catturate da " + nome);
+    const firma = elenco.map(p => p.colore + ":" + p.dama + ":" + !!p.tipoSconosciuto).join("|");
+    if (raccolta.dataset.firma === firma) continue;
+    raccolta.dataset.firma = firma;
+    raccolta.replaceChildren();
+    for (const preda of elenco) {
+      const contenitore = document.createElement("div");
+      contenitore.className = "dama-preda" + (preda.tipoSconosciuto ? " tipo-sconosciuto" : "");
+      contenitore.setAttribute("role", "listitem");
+      contenitore.title = preda.tipoSconosciuto ? "Pedina catturata prima della connessione (tipo non disponibile)"
+        : (preda.dama ? "Dama" : "Pedina") + " " + nomeColore(preda.colore).toLowerCase() + " catturata";
+      contenitore.appendChild(creaElementoPedina(preda));
+      raccolta.appendChild(contenitore);
     }
   }
 }
 
+function renderDamiera() {
+  const damiera = preparaDamiera();
+  if (!damiera) return;
+  if (!scacchieraDisegnata) {
+    sincronizzaPedine(stato.scacchiera);
+    sincronizzaPrese(stato.scacchiera, [], true);
+  }
+  const destinazioni = new Map();
+  for (const mossa of mosseLegali) {
+    const arrivo = mossa.a || mossa.to;
+    if (coordinateValide(arrivo)) destinazioni.set(chiaveCasella(arrivo.r, arrivo.c), !!(mossa.presa || mossa.capture));
+  }
+  const bloccata = statiInAttesa > 0 || mossaInAttesa || attesaSnapshot;
+  damiera.setAttribute("aria-busy", bloccata ? "true" : "false");
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const key = chiaveCasella(r, c);
+      const casella = caselleDamiera.get(key);
+      const visiva = coordinateVisive(r, c);
+      casella.style.gridRow = String(visiva.r + 1);
+      casella.style.gridColumn = String(visiva.c + 1);
+      const scura = (r + c) % 2 === 1;
+      casella.className = "dama-casella " + (scura ? "scura" : "chiara");
+      if (selezionata && selezionata.r === r && selezionata.c === c) casella.classList.add("selezionata");
+      if (destinazioni.has(key)) casella.classList.add(destinazioni.get(key) ? "destinazione-presa" : "destinazione");
+      const ultimo = stato.ultimoMovimento || {};
+      if (stessaCasella(ultimo.da, { r, c }) || stessaCasella(ultimo.a, { r, c })) {
+        casella.classList.add("ultima-mossa");
+      }
+      const pezzo = scacchieraDisegnata[r][c];
+      const numero = scura ? r * 4 + Math.floor(c / 2) + 1 : null;
+      casella.setAttribute("aria-label", (scura ? "Casella " + numero : "Casella chiara")
+        + (pezzo ? ", " + (pezzo.dama ? "dama " : "pedina ") + nomeColore(pezzo.colore).toLowerCase() : ", vuota")
+        + (destinazioni.has(key) ? ", destinazione consentita" : ""));
+      casella.disabled = !scura || bloccata;
+      const posizione = posizioniPedine.get(key);
+      if (posizione) {
+        posizione.classList.toggle("selezionata", stessaCasella(selezionata, { r, c }));
+        if (!posizione.classList.contains("dama-in-animazione")) impostaPosizionePedina(posizione, r, c);
+      }
+    }
+  }
+  renderPrese();
+}
+
+function estraiMovimentoConfermato(prima, dopo) {
+  const sparite = [];
+  const arrivate = [];
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const vecchio = prima[r][c];
+      const nuovo = dopo[r][c];
+      if (vecchio && (!nuovo || vecchio.colore !== nuovo.colore)) sparite.push({ r, c, pezzo: vecchio });
+      if (nuovo && (!vecchio || vecchio.colore !== nuovo.colore)) arrivate.push({ r, c, pezzo: nuovo });
+    }
+  }
+  if (arrivate.length !== 1) return null;
+  const a = arrivate[0];
+  const origini = sparite.filter(p => p.pezzo.colore === a.pezzo.colore);
+  const catturate = sparite.filter(p => p.pezzo.colore !== a.pezzo.colore);
+  if (origini.length !== 1 || catturate.length > 1) return null;
+  const da = origini[0];
+  const distanza = Math.abs(da.r - a.r);
+  if (distanza !== Math.abs(da.c - a.c) || distanza !== (catturate.length ? 2 : 1)) return null;
+  if (catturate.length && (catturate[0].r !== (da.r + a.r) / 2 || catturate[0].c !== (da.c + a.c) / 2)) return null;
+  return { da, a, catturate };
+}
+
+async function animaVersoSnapshot(prossimo, istantanea, generazione) {
+  const movimento = !istantanea && scacchieraDisegnata
+    ? estraiMovimentoConfermato(scacchieraDisegnata, prossimo.scacchiera) : null;
+  const riduciMovimento = !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  if (movimento) {
+    const origine = chiaveCasella(movimento.da.r, movimento.da.c);
+    const destinazione = chiaveCasella(movimento.a.r, movimento.a.c);
+    const elemento = posizioniPedine.get(origine);
+    if (elemento) {
+      const da = coordinateVisive(movimento.da.r, movimento.da.c);
+      const a = coordinateVisive(movimento.a.r, movimento.a.c);
+      const dx = (da.c - a.c) * 100;
+      const dy = (da.r - a.r) * 100;
+      elemento.classList.add("dama-in-animazione");
+      impostaPosizionePedina(elemento, movimento.a.r, movimento.a.c);
+      if (!riduciMovimento && typeof elemento.animate === "function") {
+        const presa = movimento.catturate.length > 0;
+        const fotogrammi = presa
+          ? [0, .25, .5, .75, 1].map(t => ({
+              offset: t,
+              transform: "translate(" + (dx * (1 - t)) + "%, " + (dy * (1 - t) - Math.sin(Math.PI * t) * 48) + "%) scale(" + (1 + Math.sin(Math.PI * t) * .12) + ")"
+            }))
+          : [{ transform: "translate(" + dx + "%, " + dy + "%)" }, { transform: "translate(0, 0)" }];
+        const animazione = elemento.animate(fotogrammi, { duration: presa ? 430 : 300, easing: "cubic-bezier(.22,.61,.36,1)" });
+        animazioniPedine.add(animazione);
+        try { await animazione.finished; } catch (_) { /* Riconnessione o cambio di orientamento. */ }
+        animazioniPedine.delete(animazione);
+      }
+      elemento.classList.remove("dama-in-animazione");
+      if (generazione !== generazioneAnimazioni) return;
+      posizioniPedine.delete(origine);
+      posizioniPedine.set(destinazione, elemento);
+      movimento.catturate.length ? suonaPresa() : suonaMossa();
+    }
+  }
+  if (generazione !== generazioneAnimazioni) return;
+  if (movimento) {
+    for (const catturata of movimento.catturate) {
+      const chiave = chiaveCasella(catturata.r, catturata.c);
+      const elemento = posizioniPedine.get(chiave);
+      if (elemento) {
+        posizioniPedine.delete(chiave);
+        elemento.classList.add("dama-preda-in-attesa");
+      }
+      pedineInPresa.push({ pezzo: catturata.pezzo, elemento });
+    }
+  }
+  // Nella presa multipla italiana le pedine saltate restano fino alla fine della sequenza.
+  const raccolte = [];
+  if (!prossimo.presaInCorso) {
+    for (const catturata of pedineInPresa.splice(0)) {
+      raccolte.push(catturata.pezzo);
+      catturata.elemento?.remove();
+    }
+  }
+  sincronizzaPrese(prossimo.scacchiera, raccolte, istantanea);
+  sincronizzaPedine(prossimo.scacchiera);
+}
+
+function annullaTransizioni() {
+  generazioneAnimazioni++;
+  for (const animazione of animazioniPedine) animazione.cancel();
+  animazioniPedine.clear();
+  codaAnimazioni = Promise.resolve();
+  statiInAttesa = 0;
+  mossaInAttesa = false;
+  clearTimeout(timerMossaInAttesa);
+  richiestaMosse = null;
+  richiestaMosseSuccessiva = null;
+  versioneMosse++;
+  selezionata = null;
+  mosseLegali = [];
+  for (const elemento of posizioniPedine.values()) elemento.classList.remove("dama-in-animazione");
+  for (const catturata of pedineInPresa.splice(0)) catturata.elemento?.remove();
+}
+
+function richiediMosseCasella(da) {
+  if (richiestaMosse) {
+    richiestaMosseSuccessiva = { ...da };
+    return;
+  }
+  richiestaMosse = { ...da, versione: versioneMosse };
+  if (!inviaSocket({ tipo: "dama_richiedi_mosse", partitaId: stato.id || partitaId, da })) {
+    richiestaMosse = null;
+    mostraNotificaGioco("Connessione assente: impossibile verificare le mosse.");
+  }
+}
+
+function accodaStatoPartita(partita, istantanea = false) {
+  const prossimo = { ...ultimoStatoRicevuto, ...partita };
+  if (!scacchieraValida(prossimo.scacchiera)) {
+    mostraNotificaGioco("Stato della damiera non valido: attendo la sincronizzazione.");
+    return;
+  }
+  prossimo.scacchiera = copiaScacchiera(prossimo.scacchiera);
+  ultimoStatoRicevuto = prossimo;
+  if (istantanea) annullaTransizioni();
+  const generazione = generazioneAnimazioni;
+  statiInAttesa++;
+  versioneMosse++;
+  selezionata = null;
+  mosseLegali = [];
+  richiestaMosseSuccessiva = null;
+  renderDamiera();
+  codaAnimazioni = codaAnimazioni.then(async () => {
+    if (generazione !== generazioneAnimazioni) return;
+    const precedenteNumeroMossa = stato.numeroMossa;
+    await animaVersoSnapshot(prossimo, istantanea, generazione);
+    if (generazione !== generazioneAnimazioni) return;
+    stato = prossimo;
+    statiInAttesa--;
+    if (istantanea || prossimo.fase !== "in_corso" || JSON.stringify(prossimo.scacchiera) !== damieraMossaInAttesa) {
+      mossaInAttesa = false;
+      clearTimeout(timerMossaInAttesa);
+    }
+    if (stato.numeroMossa !== precedenteNumeroMossa) avvisoTempoChiave = "";
+    render();
+    if (statiInAttesa) return;
+    if (stato.fase === "in_corso" && stato.presaInCorso?.uid === mioUid && coordinateValide(stato.presaInCorso)) {
+      selezionata = { r: stato.presaInCorso.r, c: stato.presaInCorso.c };
+      renderDamiera();
+      richiediMosseCasella(selezionata);
+    }
+    if (stato.fase === "in_corso" && giocatoriStato().length >= 2 && !presentazioneSfidaGiaVista()) {
+      setTimeout(() => { if (stato.fase === "in_corso") mostraPresentazioneSfida(); }, 260);
+    }
+    if (stato.fase === "terminata" || stato.vincitoreUid || stato.motivoFine) mostraVittoria(stato);
+  }).catch(errore => {
+    if (generazione !== generazioneAnimazioni) return;
+    console.error("Sincronizzazione damiera:", errore);
+    annullaTransizioni();
+    stato = ultimoStatoRicevuto;
+    sincronizzaPedine(stato.scacchiera);
+    sincronizzaPrese(stato.scacchiera, [], true);
+    render();
+    mostraNotificaGioco("Damiera risincronizzata con la partita.");
+  });
+}
+
 function cliccaCasella(r, c) {
+  if (statiInAttesa || mossaInAttesa || attesaSnapshot) return;
   if (stato.fase !== "in_corso" || !mioColore || stato.turno !== mioColore) return;
   const pezzo = stato.scacchiera?.[r]?.[c];
 
@@ -585,9 +904,7 @@ function cliccaCasella(r, c) {
     selezionata = { r, c };
     mosseLegali = [];
     renderDamiera();
-    if (!inviaSocket({ tipo: "dama_richiedi_mosse", partitaId: stato.id || partitaId, da: { r, c } })) {
-      mostraNotificaGioco("Connessione assente: impossibile verificare le mosse.");
-    }
+    richiediMosseCasella({ r, c });
     return;
   }
 
@@ -598,12 +915,20 @@ function cliccaCasella(r, c) {
   });
   if (!scelta) return;
 
-  const eraPresa = !!(scelta.presa || scelta.capture);
   if (!inviaSocket({ tipo: "dama_mossa", partitaId: stato.id || partitaId, da: selezionata, a: { r, c } })) {
     mostraNotificaGioco("Connessione assente: la mossa non è stata inviata.");
     return;
   }
-  eraPresa ? suonaPresa() : suonaMossa();
+  mossaInAttesa = true;
+  damieraMossaInAttesa = JSON.stringify(stato.scacchiera);
+  clearTimeout(timerMossaInAttesa);
+  timerMossaInAttesa = setTimeout(() => {
+    if (!mossaInAttesa) return;
+    mostraNotificaGioco("Conferma della mossa in ritardo: sincronizzazione in corso…");
+    // Una mossa non confermata non viene ritentata: si richiede lo snapshot aggiornato.
+    attesaSnapshot = true;
+    if (!inviaSocket({ tipo: "dama_entra", partitaId: stato.id || partitaId, stanza })) socket?.close();
+  }, 8000);
   selezionata = null;
   mosseLegali = [];
   renderDamiera();
@@ -730,6 +1055,9 @@ function aggiornaCountdownTurno() {
    ========================================================= */
 
 function mostraVittoria(dati = {}) {
+  if (vittoriaMostrata) return;
+  vittoriaMostrata = true;
+  chiudiPresentazioneSfida();
   suonaVittoria();
   const vincitoreUid = dati.vincitoreUid || stato.vincitoreUid || null;
   const vincitore = vincitoreUid ? (stato.giocatori?.[vincitoreUid] || null) : null;
@@ -909,42 +1237,39 @@ function gestisciMessaggioSocket(dati) {
 
   if (dati.tipo === "dama_identita") {
     mioUid = dati.uid || mioUid;
-    mioColore = dati.colore || mioColore;
+    if ((dati.colore === "bianco" || dati.colore === "nero") && dati.colore !== mioColore) {
+      mioColore = dati.colore;
+      renderDamiera();
+    }
     return;
   }
 
   if (dati.tipo === "dama_stato") {
-    const precedenteNumeroMossa = Number(stato.numeroMossa || 0);
-    if (dati.partita) {
-      stato = { ...stato, ...dati.partita };
-      if (Array.isArray(dati.partita.scacchiera)) stato.scacchiera = dati.partita.scacchiera;
-    }
     if (dati.uid) mioUid = dati.uid;
-    if (dati.colore) mioColore = dati.colore;
-
-    selezionata = null;
-    mosseLegali = [];
+    if (dati.colore === "bianco" || dati.colore === "nero") mioColore = dati.colore;
+    if (!dati.partita || !scacchieraValida(dati.partita.scacchiera || ultimoStatoRicevuto.scacchiera)) return;
+    const istantanea = attesaSnapshot;
+    attesaSnapshot = false;
+    accodaStatoPartita(dati.partita, istantanea);
     segnalaStatoInizialeRicevuto();
-    render();
-
-    if (Number(stato.numeroMossa || 0) !== precedenteNumeroMossa) avvisoTempoChiave = "";
-
-    if (stato.presaInCorso && stato.presaInCorso.uid === mioUid) {
-      selezionata = { r: stato.presaInCorso.r, c: stato.presaInCorso.c };
-      renderDamiera();
-      inviaSocket({ tipo: "dama_richiedi_mosse", partitaId: stato.id || partitaId, da: selezionata });
-    }
-
-    if (stato.fase === "in_corso" && giocatoriStato().length >= 2 && !presentazioneSfidaGiaVista()) {
-      setTimeout(mostraPresentazioneSfida, 260);
-    }
-
-    if (stato.fase === "terminata" || stato.vincitoreUid || stato.motivoFine) mostraVittoria(stato);
     return;
   }
 
   if (dati.tipo === "dama_mosse_legali") {
-    mosseLegali = Array.isArray(dati.mosse) ? dati.mosse : [];
+    const richiesta = richiestaMosse;
+    if (!richiesta || (dati.da && !stessaCasella(dati.da, richiesta))) return;
+    richiestaMosse = null;
+    if (!statiInAttesa && !mossaInAttesa && !attesaSnapshot && richiesta.versione === versioneMosse
+      && stessaCasella(selezionata, richiesta) && stato.turno === mioColore) {
+      mosseLegali = Array.isArray(dati.mosse) ? dati.mosse.filter(mossa => {
+        if (!mossa || typeof mossa !== "object") return false;
+        const origine = mossa.da || mossa.from;
+        return mossa && (!origine || stessaCasella(origine, selezionata)) && coordinateValide(mossa.a || mossa.to);
+      }) : [];
+    }
+    const successiva = richiestaMosseSuccessiva;
+    richiestaMosseSuccessiva = null;
+    if (successiva && stessaCasella(successiva, selezionata) && !statiInAttesa && !mossaInAttesa) richiediMosseCasella(successiva);
     renderDamiera();
     return;
   }
@@ -955,11 +1280,10 @@ function gestisciMessaggioSocket(dati) {
   }
 
   if (dati.tipo === "dama_fine") {
-    if (dati.partita) stato = { ...stato, ...dati.partita };
-    if (dati.vincitoreUid) stato.vincitoreUid = dati.vincitoreUid;
-    if (dati.motivo) stato.motivoFine = dati.motivo;
-    render();
-    mostraVittoria(dati);
+    const conclusa = { ...(dati.partita || {}), fase: "terminata" };
+    if (Object.prototype.hasOwnProperty.call(dati, "vincitoreUid")) conclusa.vincitoreUid = dati.vincitoreUid;
+    if (dati.motivo) conclusa.motivoFine = dati.motivo;
+    accodaStatoPartita(conclusa);
     return;
   }
 
@@ -969,6 +1293,12 @@ function gestisciMessaggioSocket(dati) {
   }
 
   if (dati.tipo === "dama_errore") {
+    mossaInAttesa = false;
+    clearTimeout(timerMossaInAttesa);
+    richiestaMosse = null;
+    richiestaMosseSuccessiva = null;
+    mosseLegali = [];
+    renderDamiera();
     const errore = dati.errore || "Operazione non consentita.";
     mostraNotificaGioco(errore);
     const minuscolo = errore.toLowerCase();
@@ -1002,6 +1332,7 @@ function connetti() {
   }
 
   socket.onopen = () => {
+    attesaSnapshot = true;
     impostaStatoConnessione(false);
     aggiornaCaricamento("Sincronizzazione partita…", 70);
     inviaSocket({ tipo: "dama_entra", partitaId: partitaId || null, stanza });
@@ -1022,6 +1353,9 @@ function connetti() {
   socket.onclose = () => {
     socket = null;
     if (paginaInChiusura) return;
+    attesaSnapshot = true;
+    annullaTransizioni();
+    renderDamiera();
     impostaStatoConnessione(true);
     const messaggi = document.getElementById("messaggi-gioco");
     if (messaggi) messaggi.textContent = "Connessione persa — riconnessione in corso…";
@@ -1054,11 +1388,20 @@ async function avvia() {
 
   aggiornaCaricamento("Verifica accesso…", 25);
   try {
-    const risposta = await fetch(ORIGINE_SERVER + "/api/me-menu", {
+    const token = tokenAutenticazione();
+    const opzioni = {
       credentials: "include",
-      cache: "no-store"
-    });
-    if (risposta.status >= 400 && risposta.status < 500 && risposta.status !== 429) {
+      cache: "no-store",
+      headers: token ? { Authorization: "Bearer " + token } : {}
+    };
+    let risposta = await fetch(ORIGINE_SERVER + "/api/me-menu", opzioni);
+    if (token && (risposta.status === 401 || risposta.status === 403)) {
+      risposta = await fetch(ORIGINE_SERVER + "/api/me-menu", { credentials: "include", cache: "no-store" });
+      if (risposta.ok) {
+        try { if (sessionStorage.getItem(CHIAVE_TOKEN_AUTH) === token) sessionStorage.removeItem(CHIAVE_TOKEN_AUTH); } catch (_) {}
+      }
+    }
+    if (risposta.status === 401 || risposta.status === 403) {
       paginaInChiusura = true;
       window.location.href = ORIGINE_SERVER + "/login.html?redirect=" + encodeURIComponent(window.location.href);
       return;
