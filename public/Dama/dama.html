@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0d1620">
   <title>Dama Italiana - Partita</title>
-  <link rel="stylesheet" href="dama.css?v=realistica-20260921">
+  <link rel="stylesheet" href="dama.css?v=correzioni-v2-20260921">
 </head>
 <body class="caricamento-in-corso">
 
@@ -157,6 +157,7 @@
       <button type="button" onclick="apriProfilo()">👤 Profilo</button>
       <button type="button" onclick="apriImpostazioni()">⚙️ Impostazioni</button>
       <button type="button" id="btn-toggle-suoni" onclick="toggleSuoni()">🔊 Suoni: On</button>
+      <button type="button" id="btn-animazioni-dama" onclick="toggleAnimazioniDama()" aria-pressed="true">Animazioni pedine: attive</button>
       <button type="button" id="btn-toggle-fullscreen" onclick="toggleFullscreen()">⛶ Tutto schermo</button>
       <button type="button" id="btn-stato-media" disabled>🔇 Videochiamata: non attiva</button>
       <button type="button" class="voce-pericolo" onclick="abbandonaPartita()">🚪 Abbandona partita</button>
@@ -196,6 +197,6 @@
   </div>
 </main>
 
-<script src="dama.js?v=realistica-20260921"></script>
+<script src="dama.js?v=correzioni-v2-20260921"></script>
 </body>
 </html>
