@@ -329,10 +329,15 @@ function aggiornaLayoutTabellone() {
   const altezzaRaccolta = orizzontaleCompatto ? 40 : larghezzaCanvas < 600 ? 44 : 54;
   document.documentElement.style.setProperty("--altezza-raccolta", altezzaRaccolta + "px");
   const margineOrizzontale = larghezzaCanvas < 600 ? 10 : 26;
-  const spazioComandi = orizzontaleCompatto ? 8 : altezzaCanvas < 500 ? 50 : 66;
+  // I comandi restano nei margini laterali sui display larghi: non sottrarre
+  // due volte la loro altezza a una damiera che non li interseca.
+  const comandiLaterali = larghezzaCanvas - altezzaCanvas > 160;
+  const spazioComandi = comandiLaterali ? 10 : 56;
   const larghezzaDisponibile = larghezzaCanvas - margineOrizzontale * 2;
-  const altezzaDisponibile = altezzaCanvas - 2 * (altezzaRaccolta + 18 + spazioComandi);
-  const lato = Math.max(120, Math.min(larghezzaDisponibile, altezzaDisponibile, 880));
+  const altezzaDisponibile = altezzaCanvas - 2 * (altezzaRaccolta + 12 + spazioComandi);
+  const lato = Math.max(120, Math.min(larghezzaDisponibile, altezzaDisponibile));
+  const puntatorePreciso = !!window.matchMedia?.("(pointer: fine)").matches;
+  document.body.classList.toggle("modalita-desktop", puntatorePreciso && larghezzaCanvas >= 1000 && larghezzaCanvas - lato >= 600);
 
   areaTabellone.style.width = lato + "px";
   areaTabellone.style.height = lato + "px";
@@ -535,6 +540,7 @@ const posizioniPedine = new Map();
 const caselleDamiera = new Map();
 const animazioniPedine = new Set();
 const pedineInPresa = [];
+const preseRinviate = new Map();
 let scacchieraDisegnata = null;
 let preseDisegnate = { bianco: [], nero: [] };
 let ultimoStatoRicevuto = stato;
@@ -549,6 +555,20 @@ let richiestaMosse = null;
 let richiestaMosseSuccessiva = null;
 let versioneMosse = 0;
 let vittoriaMostrata = false;
+let animazioniDamaAttive = true;
+try { animazioniDamaAttive = localStorage.getItem("dama:animazioni") !== "off"; } catch (_) { /* Storage non disponibile. */ }
+function aggiornaBottoneAnimazioniDama() {
+  const bottone = document.getElementById("btn-animazioni-dama");
+  if (!bottone) return;
+  bottone.textContent = "Animazioni pedine: " + (animazioniDamaAttive ? "attive" : "disattivate");
+  bottone.setAttribute("aria-pressed", String(animazioniDamaAttive));
+}
+function toggleAnimazioniDama() {
+  animazioniDamaAttive = !animazioniDamaAttive;
+  try { localStorage.setItem("dama:animazioni", animazioniDamaAttive ? "on" : "off"); } catch (_) { /* Preferenza valida per questa pagina. */ }
+  aggiornaBottoneAnimazioniDama();
+}
+aggiornaBottoneAnimazioniDama();
 
 function chiaveCasella(r, c) { return r + "," + c; }
 function coordinateValide(punto) {
@@ -748,60 +768,97 @@ function estraiMovimentoConfermato(prima, dopo) {
   const a = arrivate[0];
   const origini = sparite.filter(p => p.pezzo.colore === a.pezzo.colore);
   const catturate = sparite.filter(p => p.pezzo.colore !== a.pezzo.colore);
-  if (origini.length !== 1 || catturate.length > 1) return null;
+  const daRappresentare = catturate.filter(p => !preseRinviate.has(chiaveCasella(p.r, p.c)));
+  if (origini.length !== 1) return null;
   const da = origini[0];
-  const distanza = Math.abs(da.r - a.r);
-  if (distanza !== Math.abs(da.c - a.c) || distanza !== (catturate.length ? 2 : 1)) return null;
-  if (catturate.length && (catturate[0].r !== (da.r + a.r) / 2 || catturate[0].c !== (da.c + a.c) / 2)) return null;
-  return { da, a, catturate };
+  const dr = Math.abs(da.r - a.r), dc = Math.abs(da.c - a.c);
+  if (!daRappresentare.length && dr === 1 && dc === 1) {
+    return { da, a, catturate, passi: [{ da, a, presa: false }] };
+  }
+  // Alcuni aggiornamenti conservano la pedina saltata fino alla fine della
+  // presa multipla: il salto esiste anche se la pedina non è ancora sparita.
+  if (!daRappresentare.length && dr === 2 && dc === 2) {
+    const mezzo = prima[(da.r + a.r) / 2][(da.c + a.c) / 2];
+    if (mezzo && mezzo.colore !== da.pezzo.colore) {
+      return { da, a, catturate, passi: [{ da, a, presa: true, preda: { r: (da.r + a.r) / 2, c: (da.c + a.c) / 2, pezzo: mezzo } }] };
+    }
+  }
+  // Un unico snapshot può contenere l'intera presa multipla. Ricostruire solo
+  // un percorso univoco, usando TUTTE e SOLO le pedine effettivamente sparite.
+  // Non decide mosse legali: rappresenta una mossa già approvata dal server.
+  if (!daRappresentare.length || daRappresentare.length > 12) return null;
+  const percorsi = [];
+  function cercaPercorso(punto, rimaste, passi) {
+    if (percorsi.length > 1) return;
+    if (!rimaste.length) {
+      if (stessaCasella(punto, a)) percorsi.push(passi);
+      return;
+    }
+    for (const preda of rimaste) {
+      if (Math.abs(preda.r - punto.r) !== 1 || Math.abs(preda.c - punto.c) !== 1) continue;
+      const arrivo = { r: preda.r * 2 - punto.r, c: preda.c * 2 - punto.c };
+      if (!coordinateValide(arrivo) || (prima[arrivo.r][arrivo.c] && !stessaCasella(arrivo, da))) continue;
+      cercaPercorso(arrivo, rimaste.filter(p => p !== preda), [...passi, { da: punto, a: arrivo, presa: true, preda }]);
+    }
+  }
+  cercaPercorso(da, daRappresentare, []);
+  return percorsi.length === 1 ? { da, a, catturate, passi: percorsi[0] } : null;
 }
 
 async function animaVersoSnapshot(prossimo, istantanea, generazione) {
   const movimento = !istantanea && scacchieraDisegnata
     ? estraiMovimentoConfermato(scacchieraDisegnata, prossimo.scacchiera) : null;
+  // Scivolamento e salto richiesti per il gioco; chi preferisce evitare il
+  // movimento può disabilitarli esplicitamente dal menu (preferenza salvata).
+  const riduciMovimento = !animazioniDamaAttive;
   if (movimento) {
     const origine = chiaveCasella(movimento.da.r, movimento.da.c);
     const destinazione = chiaveCasella(movimento.a.r, movimento.a.c);
     const elemento = posizioniPedine.get(origine);
     if (elemento) {
-      const da = coordinateVisive(movimento.da.r, movimento.da.c);
-      const a = coordinateVisive(movimento.a.r, movimento.a.c);
-      const dx = (da.c - a.c) * 100;
-      const dy = (da.r - a.r) * 100;
-      elemento.classList.add("dama-in-animazione");
-      impostaPosizionePedina(elemento, movimento.a.r, movimento.a.c);
-      if (typeof elemento.animate === "function") {
-        const presa = movimento.catturate.length > 0;
-        const fotogrammi = presa
-          ? [0, .2, .4, .6, .8, 1].map(t => ({
-              offset: t,
-              transform:
-                "translate(" + (dx * (1 - t)) + "%, " + (dy * (1 - t) - Math.sin(Math.PI * t) * 72) + "%) " +
-                "scale(" + (1 + Math.sin(Math.PI * t) * .16) + ") " +
-                "rotate(" + (Math.sin(Math.PI * t) * 9 * (dx >= 0 ? 1 : -1)) + "deg)"
-            }))
-          : [
-              { transform: "translate(" + dx + "%, " + dy + "%)" },
-              { transform: "translate(0, 0)" }
-            ];
-        const animazione = elemento.animate(fotogrammi, {
-          duration: presa ? 620 : 420,
-          easing: presa ? "cubic-bezier(.32,.08,.32,1)" : "cubic-bezier(.32,.05,.14,1)"
-        });
-        animazioniPedine.add(animazione);
-        try { await animazione.finished; } catch (_) { /* Riconnessione o cambio di orientamento. */ }
-        animazioniPedine.delete(animazione);
+      for (const passo of movimento.passi) {
+        const da = coordinateVisive(passo.da.r, passo.da.c);
+        const a = coordinateVisive(passo.a.r, passo.a.c);
+        const dx = (da.c - a.c) * 100;
+        const dy = (da.r - a.r) * 100;
+        elemento.classList.add("dama-in-animazione");
+        impostaPosizionePedina(elemento, passo.a.r, passo.a.c);
+        if (!riduciMovimento && typeof elemento.animate === "function") {
+          const presa = passo.presa;
+          const fotogrammi = presa
+            ? [0, .25, .5, .75, 1].map(t => ({
+                offset: t,
+                transform: "translate(" + (dx * (1 - t)) + "%, " + (dy * (1 - t) - Math.sin(Math.PI * t) * 48) + "%) scale(" + (1 + Math.sin(Math.PI * t) * .12) + ")"
+              }))
+            : [{ transform: "translate(" + dx + "%, " + dy + "%)" }, { transform: "translate(0, 0)" }];
+          const animazione = elemento.animate(fotogrammi, { duration: presa ? 560 : 460, easing: "cubic-bezier(.4,0,.2,1)" });
+          animazioniPedine.add(animazione);
+          try { await animazione.finished; } catch (_) { /* Riconnessione. */ }
+          animazioniPedine.delete(animazione);
+        }
+        elemento.classList.remove("dama-in-animazione");
+        if (generazione !== generazioneAnimazioni) return;
+        passo.presa ? suonaPresa() : suonaMossa();
       }
-      elemento.classList.remove("dama-in-animazione");
-      if (generazione !== generazioneAnimazioni) return;
       posizioniPedine.delete(origine);
       posizioniPedine.set(destinazione, elemento);
-      movimento.catturate.length ? suonaPresa() : suonaMossa();
     }
   }
   if (generazione !== generazioneAnimazioni) return;
   if (movimento) {
-    for (const catturata of movimento.catturate) {
+    for (const passo of movimento.passi) {
+      const preda = passo.preda;
+      if (preda && prossimo.scacchiera[preda.r][preda.c]) preseRinviate.set(chiaveCasella(preda.r, preda.c), preda);
+    }
+  }
+  const tolte = new Map((movimento?.catturate || []).map(p => [chiaveCasella(p.r, p.c), p]));
+  for (const [chiave, preda] of preseRinviate) {
+    if (!prossimo.scacchiera[preda.r][preda.c]) {
+      tolte.set(chiave, preda);
+      preseRinviate.delete(chiave);
+    }
+  }
+  for (const catturata of tolte.values()) {
       const chiave = chiaveCasella(catturata.r, catturata.c);
       const elemento = posizioniPedine.get(chiave);
       if (elemento) {
@@ -809,11 +866,11 @@ async function animaVersoSnapshot(prossimo, istantanea, generazione) {
         elemento.classList.add("dama-preda-in-attesa");
       }
       pedineInPresa.push({ pezzo: catturata.pezzo, elemento });
-    }
   }
   // Nella presa multipla italiana le pedine saltate restano fino alla fine della sequenza.
   const raccolte = [];
   if (!prossimo.presaInCorso) {
+    preseRinviate.clear();
     for (const catturata of pedineInPresa.splice(0)) {
       raccolte.push(catturata.pezzo);
       catturata.elemento?.remove();
@@ -824,6 +881,7 @@ async function animaVersoSnapshot(prossimo, istantanea, generazione) {
 }
 
 function annullaTransizioni() {
+  preseRinviate.clear();
   generazioneAnimazioni++;
   for (const animazione of animazioniPedine) animazione.cancel();
   animazioniPedine.clear();
