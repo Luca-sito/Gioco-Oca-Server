@@ -34,6 +34,12 @@ button{
 button:disabled{
     cursor:not-allowed;
 }
+select:disabled{
+    background:#e5e7eb;
+    color:#555;
+    opacity:1;
+    cursor:not-allowed;
+}
 /* =========================================================
    LAYOUT PRINCIPALE DESKTOP
 ========================================================= */
@@ -1883,12 +1889,15 @@ body.tema-scuro .giocatore-online{
       </div>
 
       <p>Numero giocatori</p>
-      <select id="numeroGiocatori">
+      <select id="numeroGiocatori" disabled aria-label="Numero giocatori fisso: 2">
         <option value="2">2 giocatori</option>
       </select>
       <p>Tempo di mossa</p>
-      <select id="tempo" disabled aria-label="Tempo di mossa fisso">
+      <select id="tempo" aria-label="Tempo di mossa">
         <option value="15" selected>15 secondi</option>
+        <option value="30">30 secondi</option>
+        <option value="60">1 minuto</option>
+        <option value="120">2 minuti</option>
       </select>
 <p>Tipo partita</p>
       <select id="tipoPartita">
@@ -2607,12 +2616,15 @@ CREA TAVOLO
 </div>
 </div>
 <p>Numero giocatori</p>
-<select id="numeroGiocatoriMobile">
+<select id="numeroGiocatoriMobile" disabled aria-label="Numero giocatori fisso: 2">
 <option value="2">2 giocatori</option>
 </select>
 <p>Tempo di mossa</p>
-<select id="tempoMobile" disabled aria-label="Tempo di mossa fisso">
+<select id="tempoMobile" aria-label="Tempo di mossa">
 <option value="15" selected>15 secondi</option>
+<option value="30">30 secondi</option>
+<option value="60">1 minuto</option>
+<option value="120">2 minuti</option>
 </select>
 <p>Tipo partita</p>
 <select id="tipoPartitaMobile">
@@ -2641,16 +2653,21 @@ Crea partita
 selezionaModalitaPartita(modalitaPartitaSelezionata);
 apriMobile();
 }
+function leggiTempoPartita(idElemento) {
+  const tempiValidi = new Set(["15", "30", "60", "120"]);
+  const tempoSelezionato = document.getElementById(idElemento)?.value;
+  return tempiValidi.has(tempoSelezionato) ? tempoSelezionato : "15";
+}
 async function creaPartitaMobile() {
   const tipo = document.getElementById("tipoPartitaMobile").value;
   const mediaAttiva = document.getElementById("mediaPartitaMobile").value === "on";
   if (!(await richiediConsensoMediaSeNecessario(mediaAttiva))) return;
   const inviato = inviaMessaggioSocket({
     tipo: "creaPartita",
-    tempo: "15",
+    tempo: leggiTempoPartita("tempoMobile"),
     classificata: modalitaPartitaSelezionata === "classificata",
     modalita: tipo,
-    maxGiocatori: document.getElementById("numeroGiocatoriMobile").value,
+    maxGiocatori: "2",
     mediaAttiva,
     mediaConsenso: mediaAttiva
   });
@@ -3011,10 +3028,10 @@ async function creaPartita() {
   if (!(await richiediConsensoMediaSeNecessario(mediaAttiva))) return;
   const inviato = inviaMessaggioSocket({
     tipo: "creaPartita",
-    tempo: "15",
+    tempo: leggiTempoPartita("tempo"),
     classificata: modalitaPartitaSelezionata === "classificata",
     modalita: tipo,
-    maxGiocatori: document.getElementById("numeroGiocatori").value,
+    maxGiocatori: "2",
     mediaAttiva,
     mediaConsenso: mediaAttiva
   });
