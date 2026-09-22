@@ -922,6 +922,16 @@ body.client-cellulare-audio-only .pedina {
 }
 
 body.modalita-ruotata #area-tabellone > #area-dadi {
+  /*
+   * Sul cellulare il tabellone viene ruotato di 90°.
+   * Per far apparire i dadi nella zona evidenziata in rosso,
+   * cioè sul LATO SINISTRO VISIBILE del tabellone e centrati
+   * verticalmente, dobbiamo ancorarli al BORDO INFERIORE
+   * del tabellone prima della rotazione.
+   *
+   * Restano quindi dentro al tabellone, a pochi pixel dal bordo,
+   * e mantengono la stessa rotazione di 90° che hanno già ora.
+   */
   top: auto;
   right: auto;
   bottom: 8px;
@@ -1700,6 +1710,8 @@ body.modalita-desktop.media-partita #btn-sblocca-media {
   pointer-events: auto;
 }
 
+/* Con la doppia colonna video il riepilogo giocatori resta compatto;
+   il pulsante accanto lo espande solo quando serve. */
 body.modalita-desktop.media-partita #pannello-giocatori {
   min-width: 210px;
   max-width: min(260px, calc(100vw - 86px));
@@ -1906,44 +1918,156 @@ body.modalita-desktop.media-partita #btn-giocatori {
    CORREZIONE TABELLONE + PEDINE SOLO CELLULARE
 ========================================================= */
 
+/*
+ * Salto specifico per mobile.
+ * Mantiene la pedina centrata sulla casella anche
+ * durante l'animazione.
+ */
 @keyframes salto-pedina-mobile {
-    0% { transform: translate(-50%, -50%) scale(0.58); }
-    40% { transform: translate(-50%, -75%) scale(0.64); }
-    100% { transform: translate(-50%, -50%) scale(0.58); }
+
+    0% {
+        transform:
+            translate(-50%, -50%)
+            scale(0.58);
+    }
+
+    40% {
+        transform:
+            translate(-50%, -75%)
+            scale(0.64);
+    }
+
+    100% {
+        transform:
+            translate(-50%, -50%)
+            scale(0.58);
+    }
 }
 
+
+/* =========================================================
+   SOLO SMARTPHONE
+========================================================= */
 @media (max-width: 600px) {
 
+    /* =====================================================
+       TABELLONE PIÙ GRANDE
+       ===================================================== */
+
     body.modalita-ruotata #area-tabellone {
+
+        /*
+         * Ingrandisce tutto il tabellone mantenendo
+         * esattamente le sue proporzioni.
+         *
+         * 1.10 = +10%
+         */
         transform: scale(1.10);
-        transform-origin: center center;
+
+        transform-origin:
+            center center;
+
+        /*
+         * Nessun margine aggiuntivo.
+         */
         margin: 0;
+
         padding: 0;
     }
 
+
+    /* =====================================================
+       IMMAGINE TABELLONE
+       ===================================================== */
+
     body.modalita-ruotata #immagine-tabellone {
+
         width: 100%;
         height: 100%;
+
+        /*
+         * Angoli molto meno arrotondati:
+         * visivamente il tabellone sfrutta più spazio.
+         */
         border-radius: 4px;
-        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+
+        /*
+         * Ombra ridotta, così non dà l'impressione
+         * di avere grossi margini.
+         */
+        box-shadow:
+            0 4px 14px
+            rgba(0, 0, 0, 0.45);
     }
 
+
+    /* =====================================================
+       CONTENITORE PEDINE
+       ===================================================== */
+
     body.modalita-ruotata #contenitore-pedine {
+
         position: absolute;
+
         top: 0;
         left: 0;
+
         width: 100%;
         height: 100%;
+
+        /*
+         * Garantisce che una pedina non possa essere
+         * disegnata visivamente fuori dal tabellone.
+         */
         overflow: hidden;
+
         border-radius: 4px;
+
         pointer-events: none;
     }
 
+
+    /* =====================================================
+       PEDINE PIÙ PICCOLE E CENTRATE
+       ===================================================== */
+
     body.client-cellulare-audio-only.modalita-ruotata .pedina {
+
         --scala-etichetta: 1.724137931;
-        transform: translate(-50%, -50%) scale(0.58);
-        transform-origin: center center;
-        transition: left 0.24s ease, top 0.24s ease;
+
+        /*
+         * PRIMA:
+         *
+         * translate(-50%, -100%)
+         *
+         * significava che la coordinata della casella
+         * corrispondeva alla parte bassa della pedina.
+         *
+         * ORA:
+         *
+         * translate(-50%, -50%)
+         *
+         * il CENTRO della pedina coincide con il CENTRO
+         * della casella.
+         */
+
+        transform:
+            translate(-50%, -50%)
+            scale(0.58);
+
+        transform-origin:
+            center center;
+
+        /*
+         * Manteniamo fluido lo spostamento.
+         */
+        transition:
+            left 0.24s ease,
+            top 0.24s ease;
+
+        /*
+         * Pedine sempre sopra all'immagine.
+         */
         z-index: 5;
     }
 
@@ -1951,8 +2075,17 @@ body.modalita-desktop.media-partita #btn-giocatori {
         width: 44px;
     }
 
+
+    /* =====================================================
+       ANIMAZIONE SALTO MOBILE
+       ===================================================== */
+
     body.client-cellulare-audio-only.modalita-ruotata .pedina-salta {
-        animation: salto-pedina-mobile 0.22s ease;
+
+        animation:
+            salto-pedina-mobile
+            0.22s
+            ease;
     }
 
 }
@@ -2056,6 +2189,7 @@ body.modalita-desktop.media-partita #btn-sblocca-media {
   bottom: calc(91px + env(safe-area-inset-bottom));
 }
 
+/* Su mobile il pannello resta sopra alla scena ma non assorbe dimensioni eccessive. */
 @media (max-width: 600px) {
   body:not(.modalita-desktop) #videochiamata {
     width: min(108px, calc(100vw - 16px));
@@ -2092,6 +2226,7 @@ body.modalita-desktop.media-partita #btn-sblocca-media {
    CONTROLLI VIDEOCHIAMATA COMPATTI + PULSANTE GIOCATORI BIANCO
    ========================================================= */
 
+/* Persone bianco, coerente con Menu e Chat. */
 #btn-giocatori {
   background: #ffffff;
   color: #111111;
@@ -2101,6 +2236,7 @@ body.modalita-desktop.media-partita #btn-sblocca-media {
 #btn-giocatori:hover { background: #f4f4f4; }
 #btn-giocatori .icona-pulsante-gioco { filter: none; }
 
+/* Barra unica: microfono | Videochiamata / stato | webcam */
 #controlli-media-locale {
   display: flex;
   align-items: center;
@@ -2147,6 +2283,7 @@ body.modalita-desktop.media-partita #btn-sblocca-media {
   cursor: default;
 }
 
+/* Desktop: tutta la barra resta sotto ai dadi, senza due pulsanti larghi. */
 body.modalita-desktop.media-partita #controlli-media-locale {
   position: absolute;
   right: auto;
@@ -2189,10 +2326,12 @@ body.modalita-desktop.media-partita #controlli-media-locale .controllo-media-ton
   font-size: 17px;
 }
 
+/* Annulla la vecchia posizione autonoma dell'intestazione. */
 body.modalita-desktop.media-partita > #videochiamata > .videochiamata-intestazione {
   position: static;
 }
 
+/* Mobile: controlli compatti, senza pulsanti testuali grandi. */
 body:not(.modalita-desktop) #controlli-media-locale {
   display: flex;
   grid-template-columns: none;
@@ -2216,6 +2355,7 @@ body:not(.modalita-desktop) #controlli-media-locale .videochiamata-intestazione 
   padding: 3px 4px;
 }
 
+/* Sul cellulare audio-only resta solo il microfono, come previsto dal gioco. */
 body.client-cellulare-audio-only #controlli-media-locale {
   display: flex;
   grid-template-columns: none;
@@ -2227,7 +2367,7 @@ body.client-cellulare-audio-only #controlli-media-locale {
 
 @media (min-width: 1000px) {
   #area-tabellone {
-    transform: scale(1.12);
+    transform: scale(1.03);
     transform-origin: center center;
   }
 }
@@ -2372,16 +2512,16 @@ body.client-cellulare-audio-only #controlli-media-locale {
 /* Il bordo è il fianco della pedina, la faccia è un disco a parte.
    Anche le pedine nere mantengono incisioni ben leggibili. */
 .dama-pezzo {
-  --disco-bordo: #ada087;
-  --disco-fianco: #a19377;
-  --disco-luce: #fff8e8;
-  --disco-centro: #eadcbf;
-  --disco-ombra: #cbbb9d;
-  --anello-scuro: #7d6842;
-  --anello-luce: #fffdf0;
+  --disco-bordo: #c9bfb1;
+  --disco-fianco: #baaf9e;
+  --disco-luce: #fffdf7;
+  --disco-centro: #f4eee3;
+  --disco-ombra: #d9cebd;
+  --anello-scuro: #bdaf9d;
+  --anello-luce: #fffdf5;
   position: relative;
-  width: 74%;
-  aspect-ratio: 1;
+  width: 82%;
+  aspect-ratio: 1.16;
   border-radius: 50%;
   pointer-events: none;
   transform-origin: center;
@@ -2391,13 +2531,13 @@ body.client-cellulare-audio-only #controlli-media-locale {
 }
 
 .dama-pezzo.nero {
-  --disco-bordo: #181b20;
-  --disco-fianco: #14171b;
-  --disco-luce: #666a71;
-  --disco-centro: #363b42;
-  --disco-ombra: #22272d;
-  --anello-scuro: #000000;
-  --anello-luce: #9aa1aa;
+  --disco-bordo: #090909;
+  --disco-fianco: #0b0b0c;
+  --disco-luce: #4a4a4c;
+  --disco-centro: #202022;
+  --disco-ombra: #111112;
+  --anello-scuro: #050506;
+  --anello-luce: #747477;
 }
 
 .dama-pezzo::before {
@@ -2405,7 +2545,7 @@ body.client-cellulare-audio-only #controlli-media-locale {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  transform: translateY(6%);
+  transform: translateY(13%);
   border: 1px solid var(--disco-bordo);
   background: linear-gradient(90deg, var(--disco-ombra), var(--disco-fianco) 80%);
   box-shadow: 0 2px 0 rgba(0, 0, 0, .28);
@@ -2413,7 +2553,7 @@ body.client-cellulare-audio-only #controlli-media-locale {
 
 .dama-faccia {
   position: absolute;
-  inset: 0;
+  inset: 0 0 9%;
   display: block;
   z-index: 1;
   border-radius: inherit;
@@ -2424,26 +2564,26 @@ body.client-cellulare-audio-only #controlli-media-locale {
     inset 0 -3px 2px rgba(0, 0, 0, .16);
 }
 
-/* Due incisioni concentriche più marcate: ben visibili sia chiare che nere. */
+/* Due incisioni concentriche: ombra dentro, riflesso sul bordo. */
 .dama-faccia::before,
 .dama-faccia::after {
   content: "";
   position: absolute;
   border-radius: 50%;
-  border: clamp(2px, .34vw, 4px) solid var(--anello-scuro);
+  border: clamp(1.5px, .25vw, 3.5px) solid var(--anello-scuro);
   box-shadow:
-    0 1.5px 0 var(--anello-luce),
-    inset 0 2px 3px rgba(0, 0, 0, .5),
-    inset 0 -1.5px 0 var(--anello-luce);
+    0 1px 0 var(--anello-luce),
+    inset 0 1px 2px rgba(0, 0, 0, .35),
+    inset 0 -1px 0 var(--anello-luce);
 }
-.dama-faccia::before { inset: 9%; }
-.dama-faccia::after { inset: 24%; }
+.dama-faccia::before { inset: 10%; }
+.dama-faccia::after { inset: 25%; }
 
 .dama-pezzo.dama {
   box-shadow: 0 7px 1px var(--disco-fianco), 0 10px 3px rgba(0, 0, 0, .48), 0 13px 12px rgba(0, 0, 0, .3);
 }
 .dama-pezzo.dama::before {
-  transform: translateY(12%);
+  transform: translateY(20%);
   box-shadow: 0 2px 0 var(--disco-bordo), 0 4px 0 var(--disco-fianco);
 }
 .dama-pezzo.dama .dama-faccia {
@@ -2474,8 +2614,8 @@ body.client-cellulare-audio-only #controlli-media-locale {
   background: linear-gradient(180deg, rgba(23, 36, 45, .88), rgba(14, 25, 34, .8));
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04);
 }
-#prese-avversario { bottom: calc(100% + 14px); }
-#prese-giocatore { top: calc(100% + 18px); }
+#prese-avversario { bottom: calc(100% + 10px); }
+#prese-giocatore { top: calc(100% + 12px); }
 
 .dama-raccolta-intestazione {
   display: flex;
