@@ -42,6 +42,7 @@ input:focus-visible,
   border: 0;
 }
 
+/* ===== CARICAMENTO ===== */
 #overlay-caricamento {
   position: fixed;
   inset: 0;
@@ -151,6 +152,9 @@ body.caricamento-in-corso #scena * { pointer-events: none !important; }
 
 
 
+/* =========================================================
+   PRESENTAZIONE SFIDA - PRE PARTITA
+   ========================================================= */
 #overlay-presentazione-sfida {
   position: fixed;
   inset: 0;
@@ -437,6 +441,43 @@ body.caricamento-in-corso #scena * { pointer-events: none !important; }
 .sfida-giocatore-destra .sfida-stat-valore { text-align: left; }
 .sfida-giocatore:not(.sfida-giocatore-destra) .sfida-stat-valore { text-align: right; }
 
+.sfida-multi {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 11px;
+}
+
+.sfida-multi-card {
+  min-width: 0;
+  padding: 12px;
+  background: #fff;
+  border: 1px solid #dde1e4;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,.05);
+}
+
+.sfida-multi-card .sfida-identita { min-height: 74px; padding: 0 0 8px; }
+.sfida-multi-card .sfida-avatar { width: 48px; height: 48px; border-radius: 10px; }
+.sfida-multi-card .sfida-nome { font-size: 15px; }
+.sfida-multi-card .sfida-stelle { font-size: 15px; }
+
+.sfida-multi-stat {
+  display: grid;
+  grid-template-columns: 58px 1fr auto;
+  align-items: center;
+  gap: 7px;
+  min-height: 28px;
+  font-size: 11px;
+}
+
+.sfida-multi-stat > span:first-child {
+  color: #6c747b;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.sfida-multi-stat strong { font-variant-numeric: tabular-nums; }
+
 .sfida-entra {
   position: relative;
   z-index: 2;
@@ -615,6 +656,7 @@ body.caricamento-in-corso #scena * { pointer-events: none !important; }
 }
 
 
+/* ===== CONNESSIONE E NOTIFICHE ===== */
 #banner-disconnesso {
   position: fixed;
   top: 0;
@@ -673,6 +715,7 @@ body.disconnesso:not(.modalita-desktop) #messaggi-gioco { top: calc(120px + env(
   to { opacity: 0; transform: translateX(30px); }
 }
 
+/* ===== SCENA E TABELLONE ===== */
 #scena {
   position: fixed;
   inset: 0;
@@ -691,11 +734,277 @@ body.disconnesso:not(.modalita-desktop) #messaggi-gioco { top: calc(120px + env(
   transform-origin: center;
 }
 
+body.modalita-ruotata #mondo-ruotato {
+  transform: translate(-50%, -50%) rotate(90deg);
+}
+
 #area-tabellone {
   position: relative;
   flex: 0 0 auto;
 }
 
+#immagine-tabellone {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 14px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+#contenitore-pedine {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.pedina {
+  --pedina-larghezza: 38px;
+  --pedina-altezza: 54px;
+  --scala-affollamento: 1;
+  position: absolute;
+  width: var(--pedina-larghezza);
+  height: var(--pedina-altezza);
+  transform: translate(-50%, -100%);
+  transform-origin: center bottom;
+  overflow: visible;
+  transition:
+    left 0.24s cubic-bezier(0.22, 0.72, 0.28, 1),
+    top 0.24s cubic-bezier(0.22, 0.72, 0.28, 1);
+}
+
+.pedina::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -3px;
+  width: 76%;
+  height: 10px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(0, 0, 0, 0.62) 0%, rgba(0, 0, 0, 0.22) 52%, transparent 76%);
+  filter: blur(1.5px);
+  opacity: 0.82;
+  transform: translateX(-50%) scale(var(--scala-affollamento));
+  transform-origin: center;
+}
+
+.pedina-interno {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  filter: drop-shadow(0 4px 3px rgba(0, 0, 0, 0.52));
+  transform: scale(var(--scala-affollamento));
+  transform-origin: center bottom;
+  transition: transform 0.22s ease;
+}
+
+.pedina-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.pedina-nickname {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 3px);
+  z-index: 2;
+  display: block;
+  width: max-content;
+  max-width: var(--larghezza-nickname, 68px);
+  padding: 2px 5px;
+  overflow: hidden;
+  color: #ffffff;
+  background: rgba(8, 13, 18, 0.9);
+  border: 1px solid rgba(255, 215, 0, 0.82);
+  border-radius: 999px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.55);
+  font-size: 10px;
+  font-weight: 850;
+  line-height: 1.25;
+  letter-spacing: 0.01em;
+  text-align: center;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+  white-space: nowrap;
+  pointer-events: auto;
+  transform: translateX(-50%);
+}
+
+body.modalita-ruotata .pedina-nickname {
+  left: calc(100% + 4px);
+  top: 50%;
+  transform: rotate(-90deg) scale(var(--scala-etichetta, 1)) translateX(-50%);
+  transform-origin: top left;
+}
+
+body.client-computer .pedina {
+  --pedina-larghezza: 40px;
+  --pedina-altezza: 58px;
+}
+
+body.client-tablet .pedina {
+  --pedina-larghezza: 34px;
+  --pedina-altezza: 50px;
+}
+
+body.client-cellulare-audio-only .pedina {
+  --pedina-larghezza: 26px;
+  --pedina-altezza: 38px;
+}
+
+.pedina-salta { animation: salto-pedina 0.22s ease; }
+
+@keyframes salto-pedina {
+  0% { transform: translate(-50%, -100%) scale(1); }
+  40% { transform: translate(-50%, -130%) scale(1.08); }
+  100% { transform: translate(-50%, -100%) scale(1); }
+}
+
+.effetto-casella-speciale {
+  position: absolute;
+  z-index: 8;
+  width: clamp(42px, 5.2vw, 76px);
+  aspect-ratio: 1;
+  border: 3px solid var(--colore-oro);
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 4px rgba(255, 215, 0, 0.16),
+    0 0 24px 8px rgba(255, 176, 0, 0.72),
+    inset 0 0 16px rgba(255, 232, 119, 0.7);
+  transform: translate(-50%, -50%) scale(0.45);
+  animation: effetto-casella-pulse var(--durata-effetto-casella, 900ms) ease-out both;
+}
+
+.effetto-casella-speciale::before,
+.effetto-casella-speciale::after {
+  content: "";
+  position: absolute;
+  inset: -12px;
+  border: 2px solid rgba(255, 239, 157, 0.76);
+  border-radius: 50%;
+}
+
+.effetto-casella-speciale::after {
+  inset: -22px;
+  border-style: dashed;
+  opacity: 0.62;
+}
+
+@keyframes effetto-casella-pulse {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.38); }
+  18% { opacity: 1; transform: translate(-50%, -50%) scale(1.12); }
+  62% { opacity: 1; transform: translate(-50%, -50%) scale(0.96); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.24); }
+}
+
+/* ===== DADI ===== */
+#area-dadi {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  z-index: 20;
+  display: flex;
+  gap: 16px;
+  padding: 14px 20px;
+  transform: translateX(-50%);
+  background: rgba(10, 16, 22, 0.68);
+  border: 1px solid rgba(255, 215, 0, 0.35);
+  border-radius: 16px;
+  backdrop-filter: blur(3px);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: opacity 0.2s, background 0.2s;
+}
+
+body.modalita-ruotata #area-tabellone > #area-dadi {
+  /*
+   * Sul cellulare il tabellone viene ruotato di 90°.
+   * Per far apparire i dadi nella zona evidenziata in rosso,
+   * cioè sul LATO SINISTRO VISIBILE del tabellone e centrati
+   * verticalmente, dobbiamo ancorarli al BORDO INFERIORE
+   * del tabellone prima della rotazione.
+   *
+   * Restano quindi dentro al tabellone, a pochi pixel dal bordo,
+   * e mantengono la stessa rotazione di 90° che hanno già ora.
+   */
+  top: auto;
+  right: auto;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+#area-dadi.dadi-in-popup {
+  position: static !important;
+  margin: 16px auto 0;
+  transform: none !important;
+}
+
+#area-dadi.disabilitato {
+  opacity: 0.38;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+#area-dadi:not(.disabilitato):hover { background: rgba(10, 16, 22, 0.9); }
+
+.dado-3d {
+  width: 54px;
+  height: 54px;
+  perspective: 600px;
+}
+
+.dado-3d .cubo {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 1.05s cubic-bezier(0.22, 0.85, 0.4, 1);
+  will-change: transform;
+}
+
+.faccia {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  width: 54px;
+  height: 54px;
+  padding: 7px;
+  background: #fdfdfd;
+  border: 2px solid #ccc;
+  border-radius: 3px;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.08);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.faccia-1 { transform: rotateY(0deg) translateZ(27px); }
+.faccia-6 { transform: rotateY(180deg) translateZ(27px); }
+.faccia-3 { transform: rotateX(90deg) translateZ(27px); }
+.faccia-4 { transform: rotateX(-90deg) translateZ(27px); }
+.faccia-2 { transform: rotateY(90deg) translateZ(27px); }
+.faccia-5 { transform: rotateY(-90deg) translateZ(27px); }
+
+.pip {
+  width: 9px;
+  height: 9px;
+  align-self: center;
+  justify-self: center;
+  background: #222;
+  border-radius: 50%;
+}
+
+.pip-rossa { background: #e53935; }
+
+/* ===== GIOCATORI ===== */
 #pannello-giocatori {
   position: absolute;
   top: calc(14px + env(safe-area-inset-top));
@@ -811,6 +1120,7 @@ body.modalita-desktop #backdrop-giocatori { display: none !important; }
 
 body.modalita-desktop #giocatori-wrapper { display: none; }
 
+/* ===== MENU E COMANDI ===== */
 .icona-pulsante-gioco {
   display: block;
   width: 58%;
@@ -913,6 +1223,7 @@ body:not(.modalita-desktop) #messaggi-gioco {
   max-width: calc(100vw - 32px);
 }
 
+/* ===== MESSAGGI E FINESTRA MODALE ===== */
 #flash-messaggio-gioco {
   display: none;
   position: absolute;
@@ -992,6 +1303,7 @@ body:not(.modalita-desktop) #messaggi-gioco {
   display: none;
 }
 
+/* Compatibilità durante il caricamento di una vecchia pagina dalla cache. */
 #flash-messaggio-gioco > span {
   max-width: 88%;
   padding: 18px 22px;
@@ -1076,6 +1388,86 @@ body:not(.modalita-desktop) #messaggi-gioco {
   color: #fff;
 }
 
+.popup-determinazione {
+  display: flex;
+  flex-direction: column;
+  width: min(420px, 100%);
+  max-height: 100%;
+  padding: clamp(18px, 5vw, 26px);
+  overflow: hidden;
+  background: var(--pannello);
+  border: 2px solid var(--colore-oro);
+  border-radius: 14px;
+  text-align: center;
+}
+
+.popup-determinazione h2 { margin: 0 0 6px; color: var(--colore-oro); }
+.sottotitolo-determinazione { min-height: 20px; margin: 0 0 16px; color: #ccc; font-size: 14px; }
+.countdown-determinazione {
+  align-self: center;
+  min-width: 64px;
+  margin: -6px 0 12px;
+  padding: 4px 9px;
+  color: var(--colore-oro);
+  background: rgba(255, 215, 0, 0.12);
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.countdown-determinazione.countdown-scaduto { color: #ff6b6b; background: rgba(255, 107, 107, 0.15); }
+.countdown-determinazione.countdown-fermo { color: #43a047; background: rgba(67, 160, 71, 0.15); }
+#lista-determinazione { min-height: 0; margin-bottom: 4px; overflow-y: auto; }
+
+.determinazione-riga {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+
+.determinazione-riga-attiva { background: rgba(255, 215, 0, 0.12); border: 1px solid rgba(255, 215, 0, 0.4); }
+.determinazione-riga-finale { opacity: 0; transform: translateY(8px); animation: comparsa-riga-finale 0.4s ease forwards; }
+
+@keyframes comparsa-riga-finale { to { opacity: 1; transform: translateY(0); } }
+
+.determinazione-posizione-finale {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  color: #111;
+  background: var(--colore-oro);
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.determinazione-nome { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; text-align: left; font-weight: 700; }
+.determinazione-risultato { flex: 0 0 auto; color: var(--colore-oro); font-size: 15px; font-weight: 700; }
+.determinazione-in-corso { flex: 0 0 auto; color: var(--colore-oro); font-size: 13px; font-weight: 700; animation: pulsa-determinazione 1s ease-in-out infinite; }
+.determinazione-attesa { flex: 0 0 auto; color: #888; font-size: 13px; }
+.determinazione-tag-spareggio { flex: 0 0 auto; font-size: 14px; }
+
+@keyframes pulsa-determinazione {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+#slot-dadi-determinazione {
+  display: flex;
+  flex: 0 0 auto;
+  justify-content: center;
+  padding-top: 6px;
+}
+
+/* ===== VIDEOCHIAMATA DI TAVOLO ===== */
 #videochiamata {
   position: absolute;
   top: calc(84px + env(safe-area-inset-top));
@@ -1169,6 +1561,55 @@ body:not(.modalita-desktop) .videochiamata-intestazione { justify-content: cente
 
 .video-locale { border-color: rgba(255, 215, 0, 0.65); }
 
+.video-tile-mobile-audio {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(145deg, #101820, #070b0f);
+}
+
+.placeholder-mobile-audio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+  height: 100%;
+  padding: 14px 10px 28px;
+  color: #d7dde3;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.icona-cellulare-barrato {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  color: #ffcc54;
+  vertical-align: middle;
+}
+
+.icona-cellulare-barrato svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.stato-media .icona-cellulare-barrato {
+  width: 20px;
+  height: 20px;
+  color: #c9c9c9;
+}
+
+.stato-media.attivo .icona-cellulare-barrato {
+  color: #66d26d;
+}
+
 #btn-sblocca-media {
   width: 100%;
   min-height: 38px;
@@ -1184,6 +1625,134 @@ body:not(.modalita-desktop) .videochiamata-intestazione { justify-content: cente
 
 #btn-sblocca-media.nascosto { display: none; }
 
+/* Desktop: fino a quattro video grandi per lato, senza coprire il tabellone. */
+body.modalita-desktop.media-partita #videochiamata {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: auto;
+  max-height: none;
+  padding: 0;
+  overflow: visible;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  pointer-events: none;
+}
+
+body.modalita-desktop.media-partita #griglia-video {
+  position: absolute;
+  top: calc(88px + env(safe-area-inset-top));
+  right: calc(14px + env(safe-area-inset-right));
+  bottom: calc(18px + env(safe-area-inset-bottom));
+  left: calc(14px + env(safe-area-inset-left));
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, var(--larghezza-colonna-video, 260px)));
+  grid-template-rows: repeat(4, minmax(0, 1fr));
+  grid-auto-flow: row;
+  justify-content: space-between;
+  align-content: stretch;
+  row-gap: 14px;
+  column-gap: 0;
+  overflow: visible;
+  scroll-snap-type: none;
+  pointer-events: none;
+}
+
+body.modalita-desktop.media-partita #griglia-video .video-tile {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  aspect-ratio: auto;
+  border: 2px solid rgba(255, 255, 255, 0.26);
+  border-radius: 14px;
+  box-shadow: 0 7px 24px rgba(0, 0, 0, 0.48);
+}
+
+body.modalita-desktop.media-partita #griglia-video .video-locale {
+  border-color: rgba(255, 215, 0, 0.78);
+}
+
+body.modalita-desktop.media-partita .video-tile figcaption {
+  padding: 16px 10px 7px;
+  font-size: 13px;
+}
+
+body.modalita-desktop.media-partita .videochiamata-intestazione {
+  position: absolute;
+  bottom: calc(10px + env(safe-area-inset-bottom));
+  left: 50%;
+  z-index: 2;
+  max-width: min(440px, 42vw);
+  padding: 6px 11px;
+  transform: translateX(-50%);
+  background: rgba(10, 16, 22, 0.9);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  border-radius: 999px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.32);
+}
+
+body.modalita-desktop.media-partita #btn-sblocca-media {
+  position: absolute;
+  bottom: calc(52px + env(safe-area-inset-bottom));
+  left: 50%;
+  z-index: 3;
+  width: auto;
+  min-width: 190px;
+  max-width: min(360px, 46vw);
+  margin: 0;
+  padding: 9px 15px;
+  transform: translateX(-50%);
+  pointer-events: auto;
+}
+
+/* Con la doppia colonna video il riepilogo giocatori resta compatto;
+   il pulsante accanto lo espande solo quando serve. */
+body.modalita-desktop.media-partita #pannello-giocatori {
+  min-width: 210px;
+  max-width: min(260px, calc(100vw - 86px));
+  padding: 8px 12px;
+}
+
+body.modalita-desktop.media-partita #pannello-giocatori #lista-giocatori {
+  display: none;
+}
+
+body.modalita-desktop.media-partita #pannello-giocatori.aperto #lista-giocatori {
+  display: block;
+}
+
+body.modalita-desktop.media-partita #giocatori-wrapper {
+  top: calc(14px + env(safe-area-inset-top));
+  bottom: auto;
+  left: calc(238px + env(safe-area-inset-left));
+  display: block;
+}
+
+body.modalita-desktop.media-partita #btn-giocatori {
+  width: 44px;
+  height: 44px;
+  font-size: 17px;
+}
+
+@media (max-height: 700px) {
+  body.modalita-desktop.media-partita #griglia-video {
+    top: calc(72px + env(safe-area-inset-top));
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    row-gap: 9px;
+  }
+
+  body.modalita-desktop.media-partita .videochiamata-intestazione {
+    padding: 4px 9px;
+    font-size: 10px;
+  }
+}
+
+/* ===== CHAT ===== */
 #chat-wrapper {
   position: absolute;
   right: calc(14px + env(safe-area-inset-right));
@@ -1264,6 +1833,7 @@ body:not(.modalita-desktop) .videochiamata-intestazione { justify-content: cente
   cursor: pointer;
 }
 
+/* ===== ADATTAMENTO SCHERMI PICCOLI ===== */
 @media (max-width: 600px) {
   #contenitore-notifiche-gioco {
     top: calc(10px + env(safe-area-inset-top));
@@ -1313,6 +1883,9 @@ body:not(.modalita-desktop) .videochiamata-intestazione { justify-content: cente
 
 @media (max-width: 360px) {
   #pannello-menu { width: min(190px, calc(100vw - 20px)); }
+  .determinazione-riga { gap: 7px; padding: 8px 9px; font-size: 13px; }
+  .determinazione-in-corso,
+  .determinazione-attesa { font-size: 12px; }
 }
 
 @media (orientation: landscape) and (max-height: 600px) {
@@ -1329,11 +1902,195 @@ body:not(.modalita-desktop) .videochiamata-intestazione { justify-content: cente
 
   #caricamento-spinner,
   .notifica-toast-gioco,
-  #flash-messaggio-gioco.visibile {
+  #flash-messaggio-gioco.visibile,
+  .effetto-casella-speciale,
+  .pedina-salta {
     animation: none !important;
+  }
+
+  .effetto-casella-speciale {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
   }
 }
 
+/* =========================================================
+   CORREZIONE TABELLONE + PEDINE SOLO CELLULARE
+========================================================= */
+
+/*
+ * Salto specifico per mobile.
+ * Mantiene la pedina centrata sulla casella anche
+ * durante l'animazione.
+ */
+@keyframes salto-pedina-mobile {
+
+    0% {
+        transform:
+            translate(-50%, -50%)
+            scale(0.58);
+    }
+
+    40% {
+        transform:
+            translate(-50%, -75%)
+            scale(0.64);
+    }
+
+    100% {
+        transform:
+            translate(-50%, -50%)
+            scale(0.58);
+    }
+}
+
+
+/* =========================================================
+   SOLO SMARTPHONE
+========================================================= */
+@media (max-width: 600px) {
+
+    /* =====================================================
+       TABELLONE PIÙ GRANDE
+       ===================================================== */
+
+    body.modalita-ruotata #area-tabellone {
+
+        /*
+         * Ingrandisce tutto il tabellone mantenendo
+         * esattamente le sue proporzioni.
+         *
+         * 1.10 = +10%
+         */
+        transform: scale(1.10);
+
+        transform-origin:
+            center center;
+
+        /*
+         * Nessun margine aggiuntivo.
+         */
+        margin: 0;
+
+        padding: 0;
+    }
+
+
+    /* =====================================================
+       IMMAGINE TABELLONE
+       ===================================================== */
+
+    body.modalita-ruotata #immagine-tabellone {
+
+        width: 100%;
+        height: 100%;
+
+        /*
+         * Angoli molto meno arrotondati:
+         * visivamente il tabellone sfrutta più spazio.
+         */
+        border-radius: 4px;
+
+        /*
+         * Ombra ridotta, così non dà l'impressione
+         * di avere grossi margini.
+         */
+        box-shadow:
+            0 4px 14px
+            rgba(0, 0, 0, 0.45);
+    }
+
+
+    /* =====================================================
+       CONTENITORE PEDINE
+       ===================================================== */
+
+    body.modalita-ruotata #contenitore-pedine {
+
+        position: absolute;
+
+        top: 0;
+        left: 0;
+
+        width: 100%;
+        height: 100%;
+
+        /*
+         * Garantisce che una pedina non possa essere
+         * disegnata visivamente fuori dal tabellone.
+         */
+        overflow: hidden;
+
+        border-radius: 4px;
+
+        pointer-events: none;
+    }
+
+
+    /* =====================================================
+       PEDINE PIÙ PICCOLE E CENTRATE
+       ===================================================== */
+
+    body.client-cellulare-audio-only.modalita-ruotata .pedina {
+
+        --scala-etichetta: 1.724137931;
+
+        /*
+         * PRIMA:
+         *
+         * translate(-50%, -100%)
+         *
+         * significava che la coordinata della casella
+         * corrispondeva alla parte bassa della pedina.
+         *
+         * ORA:
+         *
+         * translate(-50%, -50%)
+         *
+         * il CENTRO della pedina coincide con il CENTRO
+         * della casella.
+         */
+
+        transform:
+            translate(-50%, -50%)
+            scale(0.58);
+
+        transform-origin:
+            center center;
+
+        /*
+         * Manteniamo fluido lo spostamento.
+         */
+        transition:
+            left 0.24s ease,
+            top 0.24s ease;
+
+        /*
+         * Pedine sempre sopra all'immagine.
+         */
+        z-index: 5;
+    }
+
+    body.modalita-ruotata .effetto-casella-speciale {
+        width: 44px;
+    }
+
+
+    /* =====================================================
+       ANIMAZIONE SALTO MOBILE
+       ===================================================== */
+
+    body.client-cellulare-audio-only.modalita-ruotata .pedina-salta {
+
+        animation:
+            salto-pedina-mobile
+            0.22s
+            ease;
+    }
+
+}
+
+/* ===== CELLULARE: CHIAMATA SOLO AUDIO ===== */
 body.client-cellulare-audio-only #btn-toggle-webcam-media,
 body.client-cellulare-audio-only #video-tile-locale,
 body.client-cellulare-audio-only #griglia-video {
@@ -1358,6 +2115,128 @@ body.client-cellulare-audio-only:not(.modalita-desktop) #stato-media-connessione
   line-height: 1.2;
 }
 
+/* =========================================================
+   MEDIA ROBUSTI - CONTROLLI LOCALI E MOBILE
+========================================================= */
+#controlli-media-locale {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  margin: 0 0 7px;
+}
+
+#controlli-media-locale button {
+  min-width: 0;
+  min-height: 32px;
+  margin: 0;
+  padding: 5px 6px;
+  color: #fff;
+  background: rgba(255,255,255,.09);
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 7px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.15;
+  cursor: pointer;
+}
+
+#controlli-media-locale button.media-spento {
+  color: #ffd6d6;
+  background: rgba(170, 35, 35, .38);
+  border-color: rgba(255, 110, 110, .42);
+}
+
+body:not(.modalita-desktop) #controlli-media-locale {
+  grid-template-columns: 1fr;
+  gap: 4px;
+  margin-bottom: 5px;
+}
+
+body:not(.modalita-desktop) #controlli-media-locale button {
+  min-height: 27px;
+  padding: 4px 3px;
+  font-size: 8px;
+}
+
+body.modalita-desktop.media-partita #controlli-media-locale {
+  position: absolute;
+  right: 50%;
+  bottom: calc(47px + env(safe-area-inset-bottom));
+  z-index: 4;
+  display: flex;
+  width: max-content;
+  max-width: min(430px, 48vw);
+  margin: 0;
+  transform: translateX(50%);
+  pointer-events: auto;
+}
+
+body.modalita-desktop.media-partita #controlli-media-locale button {
+  min-width: 145px;
+  min-height: 36px;
+  padding: 7px 10px;
+  background: rgba(10, 16, 22, .94);
+  border-color: rgba(255, 215, 0, .28);
+  font-size: 11px;
+}
+
+body.modalita-desktop.media-partita #controlli-media-locale button.media-spento {
+  background: rgba(105, 24, 24, .95);
+  border-color: rgba(255, 110, 110, .45);
+}
+
+body.modalita-desktop.media-partita #btn-sblocca-media {
+  bottom: calc(91px + env(safe-area-inset-bottom));
+}
+
+/* Su mobile il pannello resta sopra alla scena ma non assorbe dimensioni eccessive. */
+@media (max-width: 600px) {
+  body:not(.modalita-desktop) #videochiamata {
+    width: min(108px, calc(100vw - 16px));
+    max-height: min(54vh, calc(var(--altezza-reale, 100vh) - 142px));
+  }
+
+  body:not(.modalita-desktop) #btn-sblocca-media {
+    min-height: 31px;
+    padding: 5px;
+    font-size: 9px;
+  }
+}
+
+/* ===== PULSANTI MENU E CHAT BIANCHI ===== */
+#btn-menu,
+#btn-chat {
+  background: #ffffff;
+  color: #111111;
+  border-color: rgba(0, 0, 0, 0.18);
+  box-shadow: 0 5px 18px rgba(0, 0, 0, 0.28);
+}
+
+#btn-menu:hover,
+#btn-chat:hover {
+  background: #f4f4f4;
+}
+
+#btn-menu .icona-pulsante-gioco,
+#btn-chat .icona-pulsante-gioco {
+  filter: none;
+}
+
+/* =========================================================
+   CONTROLLI VIDEOCHIAMATA COMPATTI + PULSANTE GIOCATORI BIANCO
+   ========================================================= */
+
+/* Persone bianco, coerente con Menu e Chat. */
+#btn-giocatori {
+  background: #ffffff;
+  color: #111111;
+  border-color: rgba(0, 0, 0, 0.18);
+  box-shadow: 0 5px 18px rgba(0, 0, 0, 0.28);
+}
+#btn-giocatori:hover { background: #f4f4f4; }
+#btn-giocatori .icona-pulsante-gioco { filter: none; }
+
+/* Barra unica: microfono | Videochiamata / stato | webcam */
 #controlli-media-locale {
   display: flex;
   align-items: center;
@@ -1404,6 +2283,55 @@ body.client-cellulare-audio-only:not(.modalita-desktop) #stato-media-connessione
   cursor: default;
 }
 
+/* Desktop: tutta la barra resta sotto ai dadi, senza due pulsanti larghi. */
+body.modalita-desktop.media-partita #controlli-media-locale {
+  position: absolute;
+  right: auto;
+  bottom: calc(9px + env(safe-area-inset-bottom));
+  left: 50%;
+  z-index: 4;
+  display: flex;
+  width: max-content;
+  max-width: min(520px, 58vw);
+  margin: 0;
+  transform: translateX(-50%);
+  pointer-events: auto;
+}
+
+body.modalita-desktop.media-partita #controlli-media-locale .videochiamata-intestazione {
+  position: static;
+  left: auto;
+  bottom: auto;
+  transform: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 38px;
+  max-width: min(310px, 38vw);
+  padding: 6px 12px;
+  background: rgba(10, 16, 22, 0.90);
+  border: 1px solid rgba(255, 215, 0, 0.30);
+  border-radius: 999px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.32);
+  white-space: nowrap;
+}
+
+body.modalita-desktop.media-partita #controlli-media-locale .controllo-media-tondo {
+  min-width: 38px;
+  min-height: 38px;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  font-size: 17px;
+}
+
+/* Annulla la vecchia posizione autonoma dell'intestazione. */
+body.modalita-desktop.media-partita > #videochiamata > .videochiamata-intestazione {
+  position: static;
+}
+
+/* Mobile: controlli compatti, senza pulsanti testuali grandi. */
 body:not(.modalita-desktop) #controlli-media-locale {
   display: flex;
   grid-template-columns: none;
@@ -1427,37 +2355,15 @@ body:not(.modalita-desktop) #controlli-media-locale .videochiamata-intestazione 
   padding: 3px 4px;
 }
 
+/* Sul cellulare audio-only resta solo il microfono, come previsto dal gioco. */
 body.client-cellulare-audio-only #controlli-media-locale {
   display: flex;
   grid-template-columns: none;
 }
 
-#btn-menu,
-#btn-chat {
-  background: #ffffff;
-  color: #111111;
-  border-color: rgba(0, 0, 0, 0.18);
-  box-shadow: 0 5px 18px rgba(0, 0, 0, 0.28);
+#risultato-dadi {
+    display: none !important;
 }
-
-#btn-menu:hover,
-#btn-chat:hover {
-  background: #f4f4f4;
-}
-
-#btn-menu .icona-pulsante-gioco,
-#btn-chat .icona-pulsante-gioco {
-  filter: none;
-}
-
-#btn-giocatori {
-  background: #ffffff;
-  color: #111111;
-  border-color: rgba(0, 0, 0, 0.18);
-  box-shadow: 0 5px 18px rgba(0, 0, 0, 0.28);
-}
-#btn-giocatori:hover { background: #f4f4f4; }
-#btn-giocatori .icona-pulsante-gioco { filter: none; }
 
 @media (min-width: 1000px) {
   #area-tabellone {
@@ -1466,5 +2372,350 @@ body.client-cellulare-audio-only #controlli-media-locale {
   }
 }
 
+/* =========================================================
+   DAMA ITALIANA — legno, pedine incise, dame a doppio disco.
+   Le caselle restano ferme; il livello delle pedine è animato
+   dal JavaScript solo dopo la conferma della mossa del server.
+   ========================================================= */
+
+:root {
+  --bordo-damiera: 9px;
+  --altezza-raccolta: 58px;
+}
+
+#scena {
+  background:
+    radial-gradient(ellipse at 50% 40%, rgba(73, 98, 83, .14), transparent 65%),
+    #0d1620;
+}
+
+#area-tabellone {
+  aspect-ratio: 1;
+  isolation: isolate;
+  transform: none;
+}
+
+#damiera {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  grid-template-rows: repeat(8, minmax(0, 1fr));
+  overflow: visible;
+  border: var(--bordo-damiera) solid #4a3020;
+  border-radius: 5px;
+  background: #4a3020;
+  box-shadow:
+    0 0 0 1px #94704a,
+    0 3px 0 2px #241b15,
+    0 8px 0 1px #1b1713,
+    0 18px 35px rgba(0, 0, 0, .5),
+    inset 0 0 0 1px rgba(255, 255, 255, .25);
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+.dama-casella {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  outline: 0;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.dama-casella.chiara {
+  background:
+    repeating-linear-gradient(98deg, transparent 0 7px, rgba(125, 83, 38, .025) 8px 9px),
+    linear-gradient(125deg, #f0e2c2, #dfc99f);
+  cursor: default;
+}
+
+.dama-casella.scura {
+  background:
+    repeating-linear-gradient(98deg, transparent 0 8px, rgba(255, 212, 151, .035) 9px 10px),
+    linear-gradient(125deg, #684735, #493021);
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .dama-casella.scura:hover { filter: brightness(1.09); }
+}
+
+.dama-casella.ultima-mossa::after {
+  content: "";
+  position: absolute;
+  inset: 6%;
+  z-index: 1;
+  border: 2px solid rgba(255, 215, 107, .7);
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+.dama-casella.destinazione::before {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  width: 21%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #ffe28b;
+  box-shadow: 0 0 0 5px rgba(255, 215, 0, .2), 0 2px 4px #1b150b;
+  pointer-events: none;
+}
+
+.dama-casella.destinazione-presa::before {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  width: 73%;
+  aspect-ratio: 1;
+  border: 3px solid #ffe28b;
+  border-radius: 50%;
+  box-shadow: 0 0 12px rgba(255, 215, 0, .25);
+  pointer-events: none;
+}
+
+.dama-casella:not(:disabled):focus-visible {
+  z-index: 3;
+  outline: 3px solid #fff;
+  outline-offset: -4px;
+}
+
+#dama-strato-pedine {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.dama-posizione {
+  position: absolute;
+  width: 12.5%;
+  height: 12.5%;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  transform-origin: center;
+}
+
+.dama-posizione.dama-in-animazione { z-index: 10; will-change: transform; }
+
+/* Il bordo è il fianco della pedina, la faccia è un disco a parte.
+   Anche le pedine nere mantengono incisioni ben leggibili. */
+.dama-pezzo {
+  --disco-bordo: #c9bfb1;
+  --disco-fianco: #baaf9e;
+  --disco-luce: #fffdf7;
+  --disco-centro: #f4eee3;
+  --disco-ombra: #d9cebd;
+  --anello-scuro: #bdaf9d;
+  --anello-luce: #fffdf5;
+  position: relative;
+  width: 82%;
+  aspect-ratio: 1.16;
+  border-radius: 50%;
+  pointer-events: none;
+  transform-origin: center;
+  background: var(--disco-fianco);
+  border: 1px solid var(--disco-bordo);
+  box-shadow: 0 4px 2px rgba(0, 0, 0, .4), 0 7px 9px rgba(0, 0, 0, .28);
+}
+
+.dama-pezzo.nero {
+  --disco-bordo: #090909;
+  --disco-fianco: #0b0b0c;
+  --disco-luce: #4a4a4c;
+  --disco-centro: #202022;
+  --disco-ombra: #111112;
+  --anello-scuro: #050506;
+  --anello-luce: #747477;
+}
+
+.dama-pezzo::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  transform: translateY(13%);
+  border: 1px solid var(--disco-bordo);
+  background: linear-gradient(90deg, var(--disco-ombra), var(--disco-fianco) 80%);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, .28);
+}
+
+.dama-faccia {
+  position: absolute;
+  inset: 0 0 9%;
+  display: block;
+  z-index: 1;
+  border-radius: inherit;
+  border: 1px solid var(--disco-bordo);
+  background: radial-gradient(ellipse at 32% 18%, var(--disco-luce), var(--disco-centro) 54%, var(--disco-ombra));
+  box-shadow:
+    inset 0 2px 1px rgba(255, 255, 255, .45),
+    inset 0 -3px 2px rgba(0, 0, 0, .16);
+}
+
+/* Due incisioni concentriche: ombra dentro, riflesso sul bordo. */
+.dama-faccia::before,
+.dama-faccia::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  border: clamp(1.5px, .25vw, 3.5px) solid var(--anello-scuro);
+  box-shadow:
+    0 1px 0 var(--anello-luce),
+    inset 0 1px 2px rgba(0, 0, 0, .35),
+    inset 0 -1px 0 var(--anello-luce);
+}
+.dama-faccia::before { inset: 10%; }
+.dama-faccia::after { inset: 25%; }
+
+.dama-pezzo.dama {
+  box-shadow: 0 7px 1px var(--disco-fianco), 0 10px 3px rgba(0, 0, 0, .48), 0 13px 12px rgba(0, 0, 0, .3);
+}
+.dama-pezzo.dama::before {
+  transform: translateY(20%);
+  box-shadow: 0 2px 0 var(--disco-bordo), 0 4px 0 var(--disco-fianco);
+}
+.dama-pezzo.dama .dama-faccia {
+  transform: translateY(-9%);
+  box-shadow: 0 3px 0 var(--disco-fianco), inset 0 2px 1px rgba(255, 255, 255, .45), inset 0 -2px 2px rgba(0, 0, 0, .18);
+}
+
+.dama-posizione.selezionata .dama-pezzo,
+.dama-casella.selezionata .dama-pezzo {
+  outline: 3px solid #ffdb68;
+  outline-offset: 3px;
+}
+.dama-posizione.dama-preda-in-attesa {
+  z-index: 0;
+  filter: saturate(.8);
+}
+
+/* Raccolte fuori dalla damiera, una per il giocatore che ha preso.
+   Dodici posti in una sola fila, anche quando il telefono è verticale. */
+.dama-raccolta {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: var(--altezza-raccolta);
+  padding: 4px 8px;
+  border: 1px solid rgba(218, 189, 120, .2);
+  border-radius: 7px;
+  background: linear-gradient(180deg, rgba(23, 36, 45, .88), rgba(14, 25, 34, .8));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04);
+}
+#prese-avversario { bottom: calc(100% + 10px); }
+#prese-giocatore { top: calc(100% + 12px); }
+
+.dama-raccolta-intestazione {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 14px;
+  color: #bdc8cf;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .03em;
+  line-height: 14px;
+}
+.dama-raccolta-intestazione > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dama-conteggio {
+  min-width: 16px;
+  color: #efd796;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.dama-raccolta-pedine {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  width: min(100%, 430px);
+  align-items: center;
+  gap: 2px;
+  height: calc(var(--altezza-raccolta) - 24px);
+}
+.dama-preda {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  max-width: 34px;
+  aspect-ratio: 1;
+  margin: 0;
+}
+.dama-preda .dama-pezzo {
+  width: 82%;
+  box-shadow: 0 2px 2px rgba(0, 0, 0, .45);
+}
+.dama-preda .dama-pezzo.dama { box-shadow: 0 3px 0 var(--disco-fianco), 0 5px 2px rgba(0, 0, 0, .4); }
+.dama-preda .dama-faccia::before,
+.dama-preda .dama-faccia::after { border-width: 1px; }
+
+/* Pannelli originali dell'Oca conservati, senza dadi né rotazione forzata. */
+#area-dadi, #overlay-determinazione { display: none !important; }
+.casella-mini.dama-colore {
+  min-width: 50px;
+  padding: 2px 7px;
+  text-align: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .08);
+}
+#pannello-giocatori { width: 280px; max-width: min(280px, calc(100vw - 28px)); }
+#lista-giocatori .giocatore-card {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  column-gap: 8px;
+  row-gap: 3px;
+  padding: 8px 0;
+}
+#lista-giocatori .avatar-mini { grid-column: 1; grid-row: 1 / 3; }
+#lista-giocatori .giocatore-card > a { grid-column: 2; grid-row: 1; }
+#lista-giocatori .stato-media { grid-column: 2; grid-row: 2; font-size: 11px; }
+#lista-giocatori .countdown-turno { grid-column: 3; grid-row: 1; }
+#lista-giocatori .dama-colore { grid-column: 3; grid-row: 2; font-size: 11px; }
+body:not(.modalita-desktop) #pannello-giocatori {
+  min-width: 0;
+  max-width: calc(100vw - 86px);
+}
+body:not(.modalita-desktop) #pannello-giocatori:not(.aperto) {
+  width: auto;
+  padding: 9px 12px;
+}
+body:not(.modalita-desktop) #pannello-giocatori:not(.aperto) #riga-turno {
+  padding: 0;
+  margin: 0;
+  border: 0;
+}
+body:not(.modalita-desktop) #messaggi-gioco {
+  top: auto;
+  bottom: calc(22px + env(safe-area-inset-bottom));
+  max-width: calc(100vw - 148px);
+}
+
+@media (max-width: 600px) {
+  :root { --bordo-damiera: 5px; }
+  .dama-raccolta { padding-inline: 5px; }
+  .dama-raccolta-pedine { gap: 1px; }
+  .dama-raccolta-intestazione { font-size: 9px; }
+  .dama-pezzo { box-shadow: 0 3px 1px rgba(0,0,0,.4), 0 5px 6px rgba(0,0,0,.28); }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .dama-posizione, .dama-pezzo, .dama-faccia { transition: none !important; }
 }
