@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Othello - Dettagli del gioco | GIOCHI SOCIETA</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: #ffffff;
+  color: #111111;
+  font-family: Arial, Helvetica, sans-serif;
+  line-height: 1.65;
+}
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+.header {
+  background: #111111;
+  color: #ffffff;
+  border-bottom: 4px solid #ffd400;
+  padding: 28px 20px;
+}
+
+.header-inner {
+  width: min(1120px, calc(100% - 32px));
+  margin: 0 auto;
+}
+
+.brand {
+  display: inline-block;
+  color: #ffd400;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: clamp(30px, 5vw, 48px);
+  line-height: 1.1;
+  font-weight: 900;
+}
+
+.header p {
+  margin: 10px 0 0;
+  color: #cccccc;
+  font-size: 15px;
+}
+
+/* =========================================================
+   CONTENITORE
+========================================================= */
+
+.container {
+  width: min(1120px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 45px 0 70px;
+}
+
+/* =========================================================
+   INDICE
+========================================================= */
+
+.indice {
+  background: #111111;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 36px;
+  border-left: 6px solid #ffd400;
+}
+
+.indice h2 {
+  margin: 0 0 14px;
+  color: #ffd400;
+  font-size: 18px;
+}
+
+.indice-griglia {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px 24px;
+}
+
+.indice a {
+  display: block;
+  color: #ffffff;
+  text-decoration: none;
+  padding: 7px 0;
+  font-size: 14px;
+  transition: color 0.2s;
+}
+
+.indice a:hover {
+  color: #ffd400;
+}
+
+/* =========================================================
+   SEZIONI
+========================================================= */
+
+.sezione {
+  margin-bottom: 46px;
+}
+
+.sezione h2 {
+  position: relative;
+  margin: 0 0 18px;
+  padding-bottom: 10px;
+  font-size: 27px;
+  line-height: 1.2;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.sezione h2::after {
+  content: "";
+  display: block;
+  width: 62px;
+  height: 4px;
+  background: #ffd400;
+  margin-top: 10px;
+}
+
+.sezione p {
+  margin: 0 0 16px;
+  font-size: 16px;
+}
+
+.introduzione {
+  background: #f6f6f6;
+  border: 1px solid #dddddd;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 28px;
+}
+
+.introduzione p:last-child {
+  margin-bottom: 0;
+}
+
+/* =========================================================
+   DUE COLONNE (testo + diagramma)
+========================================================= */
+
+.due-colonne {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 28px;
+  align-items: center;
+}
+
+.diagramma-box {
+  background: #ffffff;
+  border: 1px solid #dddddd;
+  border-radius: 16px;
+  padding: 18px;
+  text-align: center;
+}
+
+.diagramma-box svg {
+  width: 100%;
+  height: auto;
+  max-width: 300px;
+  display: block;
+  margin: 0 auto;
+}
+
+.diagramma-didascalia {
+  margin-top: 10px;
+  color: #555555;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.diagramma-doppio {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 10px;
+}
+
+.diagramma-freccia {
+  color: #ffd400;
+  font-size: 30px;
+  font-weight: 900;
+}
+
+/* =========================================================
+   REGOLE
+========================================================= */
+
+.regola {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 18px 0;
+  border-bottom: 1px solid #e4e4e4;
+}
+
+.regola:last-child {
+  border-bottom: none;
+}
+
+.regola-numero {
+  flex: 0 0 42px;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #ffd400;
+  color: #111111;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 15px;
+}
+
+.regola-testo {
+  flex: 1;
+  font-size: 16px;
+}
+
+/* =========================================================
+   BOX EVIDENZA
+========================================================= */
+
+.box-evidenza {
+  background: #111111;
+  color: #ffffff;
+  border-radius: 16px;
+  padding: 26px;
+  border-left: 6px solid #ffd400;
+}
+
+.box-evidenza strong {
+  color: #ffd400;
+}
+
+/* =========================================================
+   GRIGLIA CARD (strategia / materiale)
+========================================================= */
+
+.caselle-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.casella {
+  background: #ffffff;
+  border: 1px solid #dddddd;
+  border-radius: 14px;
+  padding: 18px;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.casella:hover {
+  transform: translateY(-2px);
+  border-color: #ffd400;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+}
+
+.casella-numero {
+  flex: 0 0 48px;
+  width: 48px;
+  height: 48px;
+  background: #111111;
+  color: #ffd400;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.casella-testo {
+  flex: 1;
+  font-size: 15px;
+}
+
+.casella-testo strong {
+  display: block;
+  margin-bottom: 3px;
+  color: #111111;
+}
+
+/* =========================================================
+   TRAGUARDO
+========================================================= */
+
+.traguardo {
+  margin-top: 22px;
+  background: #ffd400;
+  color: #111111;
+  border-radius: 16px;
+  padding: 24px;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.traguardo strong {
+  font-weight: 900;
+}
+
+/* =========================================================
+   FOOTER
+========================================================= */
+
+.footer {
+  background: #111111;
+  color: #aaaaaa;
+  text-align: center;
+  padding: 28px 20px;
+  border-top: 4px solid #ffd400;
+  font-size: 13px;
+}
+
+.footer strong {
+  color: #ffd400;
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 760px) {
+  .container {
+    padding-top: 30px;
+  }
+
+  .caselle-grid,
+  .indice-griglia {
+    grid-template-columns: 1fr;
+  }
+
+  .due-colonne {
+    grid-template-columns: 1fr;
+  }
+
+  .diagramma-box svg {
+    max-width: 230px;
+  }
+
+  .regola {
+    gap: 12px;
+  }
+
+  .regola-numero {
+    flex-basis: 38px;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+  }
+
+  .sezione h2 {
+    font-size: 23px;
+  }
+
+  .sezione p,
+  .regola-testo {
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .header {
+    padding: 22px 16px;
+  }
+
+  .container {
+    width: min(100% - 22px, 1120px);
+  }
+
+  .indice,
+  .introduzione,
+  .box-evidenza,
+  .traguardo {
+    padding: 18px;
+  }
+
+  .casella {
+    padding: 14px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<header class="header">
+  <div class="header-inner">
+    <div class="brand">GIOCHI SOCIETA</div>
+    <h1>OTHELLO</h1>
+    <p>Dettagli, regole e strategie del gioco.</p>
+  </div>
+</header>
+
+<main class="container">
+
+  <nav class="indice">
+    <h2>INDICE</h2>
+    <div class="indice-griglia">
+      <a href="#gioco">Othello</a>
+      <a href="#materiale">Materiale e disposizione iniziale</a>
+      <a href="#regole">Regole del gioco</a>
+      <a href="#cattura">Come si catturano i dischi</a>
+      <a href="#fine">Fine partita e punteggio</a>
+      <a href="#strategia">Consigli strategici</a>
+    </div>
+  </nav>
+
+  <section class="sezione" id="gioco">
+
+    <h2>Othello</h2>
+
+    <div class="introduzione">
+      <p>
+        Si gioca su una tavola quadrata di <strong>8 × 8 caselle</strong>,
+        con <strong>64 dischi bicolore</strong>: bianchi da un lato, neri
+        dall'altro. A ogni mossa si piazza un disco cercando di
+        <strong>"intrappolare"</strong> quelli dell'avversario tra due
+        dischi del proprio colore: quelli intrappolati vengono girati e
+        diventano tuoi.
+      </p>
+      <p>
+        Vince chi, a fine partita, ha più dischi del proprio colore sulla
+        tavola.
+      </p>
+    </div>
+
+  </section>
+
+  <section class="sezione" id="materiale">
+
+    <h2>Materiale e disposizione iniziale</h2>
+
+    <div class="due-colonne">
+      <div>
+        <p>
+          La tavola è composta da 64 caselle verdi, come nella versione
+          digitale del gioco. All'inizio della partita vengono posizionati
+          <strong>4 dischi al centro</strong>, incrociati diagonalmente:
+          2 bianchi e 2 neri.
+        </p>
+        <p>
+          Il <strong>nero muove sempre per primo</strong>.
+        </p>
+      </div>
+
+      <div class="diagramma-box">
+        <svg viewBox="0 0 340 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Disposizione iniziale dei quattro dischi al centro della tavola">
+          <defs>
+            <radialGradient id="discoBianco" cx="35%" cy="30%" r="75%">
+              <stop offset="0%" stop-color="#ffffff"/>
+              <stop offset="65%" stop-color="#e7e2d6"/>
+              <stop offset="100%" stop-color="#cfc7b4"/>
+            </radialGradient>
+            <radialGradient id="discoNero" cx="35%" cy="30%" r="75%">
+              <stop offset="0%" stop-color="#4a4a4a"/>
+              <stop offset="65%" stop-color="#171717"/>
+              <stop offset="100%" stop-color="#050505"/>
+            </radialGradient>
+          </defs>
+          <rect x="10" y="10" width="320" height="320" rx="6" fill="#145235" stroke="#0c2e1c" stroke-width="6"/>
+          <g stroke="#0e3d28" stroke-width="1">
+            <!-- griglia 8x8, cella 40px -->
+            <path d="M50,10 V330 M90,10 V330 M130,10 V330 M170,10 V330 M210,10 V330 M250,10 V330 M290,10 V330
+                     M10,50 H330 M10,90 H330 M10,130 H330 M10,170 H330 M10,210 H330 M10,250 H330 M10,290 H330"/>
+          </g>
+          <!-- centro: righe/colonne indice 3 e 4 -> coordinate 10+3*40=130 e 10+4*40=170, centro cella +20 -->
+          <circle cx="150" cy="150" r="17" fill="url(#discoBianco)" stroke="#b9b09a"/>
+          <circle cx="190" cy="150" r="17" fill="url(#discoNero)" stroke="#000000"/>
+          <circle cx="150" cy="190" r="17" fill="url(#discoNero)" stroke="#000000"/>
+          <circle cx="190" cy="190" r="17" fill="url(#discoBianco)" stroke="#b9b09a"/>
+        </svg>
+        <div class="diagramma-didascalia">I quattro dischi di partenza, al centro della tavola</div>
+      </div>
+    </div>
+
+  </section>
+
+  <section class="sezione" id="regole">
+
+    <h2>Regole del gioco</h2>
+
+    <div>
+
+      <div class="regola">
+        <div class="regola-numero">01</div>
+        <div class="regola-testo">
+          A turno, ogni giocatore piazza un disco del proprio colore su una
+          casella vuota.
+        </div>
+      </div>
+
+      <div class="regola">
+        <div class="regola-numero">02</div>
+        <div class="regola-testo">
+          La mossa è valida solo se, in linea retta (orizzontale, verticale
+          o diagonale), il disco appena piazzato "chiude" uno o più dischi
+          avversari tra sé e un altro disco del proprio colore già presente
+          sulla tavola.
+        </div>
+      </div>
+
+      <div class="regola">
+        <div class="regola-numero">03</div>
+        <div class="regola-testo">
+          Tutti i dischi avversari così intrappolati vengono girati e
+          diventano del colore di chi ha giocato: non escono mai dalla
+          tavola, si limitano a cambiare colore.
+        </div>
+      </div>
+
+      <div class="regola">
+        <div class="regola-numero">04</div>
+        <div class="regola-testo">
+          Se un giocatore non ha nessuna mossa che catturi almeno un disco,
+          <strong>salta il turno</strong> automaticamente e tocca di nuovo
+          all'avversario.
+        </div>
+      </div>
+
+      <div class="regola">
+        <div class="regola-numero">05</div>
+        <div class="regola-testo">
+          La partita finisce quando la tavola è piena oppure quando nessuno
+          dei due giocatori ha più mosse disponibili.
+        </div>
+      </div>
+
+    </div>
+
+  </section>
+
+  <section class="sezione" id="cattura">
+
+    <h2>Come si catturano i dischi</h2>
+
+    <p>
+      Immagina una fila di dischi bianchi con un tuo disco nero già
+      posizionato a un'estremità e una casella vuota all'altra: se piazzi
+      un disco nero in quella casella vuota, tutti i dischi bianchi in
+      mezzo vengono girati e diventano neri.
+    </p>
+
+    <div class="diagramma-box">
+      <div class="diagramma-doppio">
+        <svg viewBox="0 0 260 60" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Prima della mossa: nero, poi tre bianchi, poi una casella vuota">
+          <defs>
+            <radialGradient id="dB1" cx="35%" cy="30%" r="75%">
+              <stop offset="0%" stop-color="#ffffff"/>
+              <stop offset="65%" stop-color="#e7e2d6"/>
+              <stop offset="100%" stop-color="#cfc7b4"/>
+            </radialGradient>
+            <radialGradient id="dN1" cx="35%" cy="30%" r="75%">
+              <stop offset="0%" stop-color="#4a4a4a"/>
+              <stop offset="65%" stop-color="#171717"/>
+              <stop offset="100%" stop-color="#050505"/>
+            </radialGradient>
+          </defs>
+          <rect x="0" y="0" width="260" height="60" rx="6" fill="#145235"/>
+          <g stroke="#0e3d28"><path d="M52,0 V60 M104,0 V60 M156,0 V60 M208,0 V60"/></g>
+          <circle cx="26" cy="30" r="16" fill="url(#dN1)" stroke="#000"/>
+          <circle cx="78" cy="30" r="16" fill="url(#dB1)" stroke="#b9b09a"/>
+          <circle cx="130" cy="30" r="16" fill="url(#dB1)" stroke="#b9b09a"/>
+          <circle cx="182" cy="30" r="16" fill="url(#dB1)" stroke="#b9b09a"/>
+          <circle cx="234" cy="30" r="10" fill="none" stroke="#ffe28b" stroke-width="2" stroke-dasharray="3 3"/>
+        </svg>
+
+        <div class="diagramma-freccia">➜</div>
+
+        <svg viewBox="0 0 260 60" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Dopo la mossa: tutti i dischi diventano neri">
+          <defs>
+            <radialGradient id="dN2" cx="35%" cy="30%" r="75%">
+              <stop offset="0%" stop-color="#4a4a4a"/>
+              <stop offset="65%" stop-color="#171717"/>
+              <stop offset="100%" stop-color="#050505"/>
+            </radialGradient>
+          </defs>
+          <rect x="0" y="0" width="260" height="60" rx="6" fill="#145235"/>
+          <g stroke="#0e3d28"><path d="M52,0 V60 M104,0 V60 M156,0 V60 M208,0 V60"/></g>
+          <circle cx="26" cy="30" r="16" fill="url(#dN2)" stroke="#000"/>
+          <circle cx="78" cy="30" r="16" fill="url(#dN2)" stroke="#000"/>
+          <circle cx="130" cy="30" r="16" fill="url(#dN2)" stroke="#000"/>
+          <circle cx="182" cy="30" r="16" fill="url(#dN2)" stroke="#000"/>
+          <circle cx="234" cy="30" r="16" fill="url(#dN2)" stroke="#000"/>
+        </svg>
+      </div>
+      <div class="diagramma-didascalia">La casella tratteggiata è dove il Nero gioca: i tre dischi Bianchi in mezzo vengono girati</div>
+    </div>
+
+    <p style="margin-top:18px;">
+      La cattura funziona nello stesso modo in <strong>tutte le 8
+      direzioni</strong> (orizzontale, verticale, diagonale) e può avvenire
+      su più linee contemporaneamente con un'unica mossa: se piazzando un
+      disco chiudi file avversarie sia in orizzontale sia in diagonale,
+      vengono girate tutte insieme.
+    </p>
+
+  </section>
+
+  <section class="sezione" id="fine">
+
+    <h2>Fine partita e punteggio</h2>
+
+    <div class="box-evidenza">
+      <strong>Vince il giocatore</strong> che, a fine partita, ha
+      <strong>più dischi del proprio colore</strong> sulla tavola. Se i
+      dischi sono in numero uguale, la partita finisce in parità.
+    </div>
+
+    <div class="traguardo">
+      <strong>Fine partita:</strong>
+      quando la tavola è completa (64 dischi) oppure quando nessuno dei
+      due giocatori può più muovere, si contano i dischi: bianco contro
+      nero.
+    </div>
+
+  </section>
+
+  <section class="sezione" id="strategia">
+
+    <h2>Consigli strategici</h2>
+
+    <p>
+      Avere più dischi non è sempre un vantaggio, soprattutto nella prima
+      parte della partita: conta di più la posizione.
+    </p>
+
+    <div class="caselle-grid">
+
+      <div class="casella">
+        <div class="casella-numero">◆</div>
+        <div class="casella-testo">
+          <strong>Punta agli angoli</strong>
+          I dischi negli angoli non possono più essere catturati da nessuno:
+          sono le posizioni più sicure di tutta la tavola.
+        </div>
+      </div>
+
+      <div class="casella">
+        <div class="casella-numero">✕</div>
+        <div class="casella-testo">
+          <strong>Evita le caselle vicino agli angoli</strong>
+          Giocare nelle caselle diagonalmente adiacenti a un angolo vuoto
+          spesso regala quell'angolo all'avversario.
+        </div>
+      </div>
+
+      <div class="casella">
+        <div class="casella-numero">↻</div>
+        <div class="casella-testo">
+          <strong>Non catturare sempre il massimo</strong>
+          Nelle fasi iniziali conviene spesso giocare "in difesa" e
+          catturare poco, per non offrire mosse comode all'avversario.
+        </div>
+      </div>
+
+      <div class="casella">
+        <div class="casella-numero">⇄</div>
+        <div class="casella-testo">
+          <strong>Controlla la mobilità</strong>
+          Cerca di lasciare all'avversario meno mosse possibili disponibili:
+          spesso conta più della quantità di dischi.
+        </div>
+      </div>
+
+    </div>
+
+  </section>
+
+</main>
+
+<footer class="footer">
+  <strong>GIOCHI SOCIETA</strong> · Dettagli del gioco Othello
+</footer>
+
+</body>
+</html>
