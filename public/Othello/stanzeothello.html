@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+
+<meta charset="UTF-8">
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+>
+
+<title>Othello | Stanze</title>
+
+
+<style>
+
+* {
+    box-sizing: border-box;
+}
+
+
+html,
+body {
+    width: 100%;
+    min-height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+
+body {
+
+    background: #f5f5f5;
+
+    color: #111;
+
+    font-family:
+        Arial,
+        Helvetica,
+        sans-serif;
+
+    line-height: 1.5;
+}
+
+
+.contenitore {
+
+    width: min(
+        100%,
+        980px
+    );
+
+    margin: 0 auto;
+
+    padding:
+        32px 20px 60px;
+}
+
+
+.titolo-gioco-oca {
+
+    position: relative;
+
+    width: 100%;
+
+    margin:
+        0 0 34px;
+
+    padding:
+        18px 10px;
+
+    background:
+        #ffffff;
+
+    border-bottom:
+        3px solid #ff6600;
+
+    border-radius:
+        10px;
+
+    box-shadow:
+        0 2px 8px
+        rgba(
+            0,
+            0,
+            0,
+            .05
+        );
+
+    color:
+        #111;
+
+    font-size:
+        32px;
+
+    font-weight:
+        900;
+
+    line-height:
+        1.2;
+
+    letter-spacing:
+        1px;
+
+    text-align:
+        center;
+}
+
+
+#lista-stanze {
+
+    width: 100%;
+}
+
+
+.stanza-riga {
+
+    display:
+        flex;
+
+    flex-direction:
+        column;
+
+    width: 100%;
+
+    margin-bottom:
+        15px;
+
+    padding:
+        18px 26px;
+
+    background:
+        #ffffff;
+
+    border:
+        1px solid #e0e0e0;
+
+    border-radius:
+        8px;
+
+    cursor:
+        pointer;
+
+    user-select:
+        none;
+
+    transition:
+        .2s ease;
+
+}
+
+
+.stanza-riga:hover {
+
+    transform:
+        translateY(
+            -1px
+        );
+
+    box-shadow:
+        0 4px 12px
+        rgba(
+            0,
+            0,
+            0,
+            .15
+        );
+
+}
+
+
+.stanza-riga-top {
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    width: 100%;
+}
+
+
+.stanza-icona {
+
+    flex-shrink:
+        0;
+
+    margin-right:
+        20px;
+
+    font-size:
+        25px;
+
+    line-height:
+        1;
+}
+
+
+.stanza-info {
+
+    flex:
+        1;
+
+    min-width:
+        0;
+}
+
+
+.stanza-nome {
+
+    margin:
+        0;
+
+    color:
+        #111;
+
+    font-size:
+        20px;
+
+    font-weight:
+        bold;
+
+    line-height:
+        1.25;
+
+}
+
+
+.stanza-sottotitolo {
+
+    margin:
+        2px 0 0;
+
+    color:
+        #888;
+
+    font-size:
+        13px;
+
+    line-height:
+        1.4;
+
+}
+
+
+.stanza-online {
+
+    flex-shrink:
+        0;
+
+    margin-left:
+        15px;
+
+    color:
+        #222;
+
+    font-size:
+        14px;
+
+    font-weight:
+        bold;
+
+    white-space:
+        nowrap;
+
+}
+
+
+.stanza-giocatori {
+
+    display:
+        flex;
+
+    flex-wrap:
+        wrap;
+
+    gap:
+        6px;
+
+    width: 100%;
+
+    margin-top:
+        10px;
+
+    padding-left:
+        45px;
+
+}
+
+
+.chip-giocatore {
+
+    display:
+        inline-flex;
+
+    align-items:
+        center;
+
+    min-height:
+        26px;
+
+    padding:
+        4px 10px;
+
+    background:
+        #f4f4f4;
+
+    border-radius:
+        15px;
+
+    color:
+        #555;
+
+    font-size:
+        12px;
+
+    line-height:
+        1;
+
+}
+
+
+.stato-caricamento {
+
+    padding:
+        20px;
+
+    background:
+        #ffffff;
+
+    border:
+        1px solid #e0e0e0;
+
+    border-radius:
+        8px;
+
+    color:
+        #777;
+
+    font-size:
+        14px;
+
+    text-align:
+        center;
+}
+
+
+.stato-errore {
+
+    padding:
+        20px;
+
+    background:
+        #ffffff;
+
+    border:
+        1px solid #e0e0e0;
+
+    border-radius:
+        8px;
+
+    color:
+        #b44;
+
+    font-size:
+        14px;
+
+    text-align:
+        center;
+}
+
+
+.freccia-indietro-mobile {
+
+    display:
+        none;
+}
+
+
+@media (max-width: 600px) {
+
+    .contenitore {
+
+        padding:
+            18px 10px 40px;
+    }
+
+
+    .titolo-gioco-oca {
+
+        font-size:
+            23px;
+
+        padding:
+            14px 40px;
+
+        margin-bottom:
+            25px;
+
+        border-radius:
+            9px;
+
+        letter-spacing:
+            .7px;
+    }
+
+
+    .stanza-riga {
+
+        padding:
+            17px 15px 15px;
+
+        margin-bottom:
+            12px;
+
+        border-radius:
+            11px;
+    }
+
+
+    .stanza-riga-top {
+
+        display:
+            flex;
+
+        align-items:
+            center;
+
+        min-height:
+            48px;
+    }
+
+
+    .stanza-icona {
+
+        width:
+            45px;
+
+        height:
+            45px;
+
+        min-width:
+            45px;
+
+        display:
+            flex;
+
+        align-items:
+            center;
+
+        justify-content:
+            center;
+
+        margin-right:
+            13px;
+
+        padding:
+            0;
+
+        border-radius:
+            12px;
+
+        background:
+            #f7f7f7;
+
+        font-size:
+            24px;
+
+        line-height:
+            1;
+    }
+
+
+    .stanza-info {
+
+        flex:
+            1;
+
+        min-width:
+            0;
+
+        padding:
+            0;
+    }
+
+
+    .stanza-nome {
+
+        font-size:
+            17px;
+
+        line-height:
+            1.2;
+
+        margin:
+            0;
+    }
+
+
+    .stanza-sottotitolo {
+
+        margin:
+            4px 0 0;
+
+        font-size:
+            11px;
+
+        line-height:
+            1.25;
+    }
+
+
+    .stanza-online {
+
+        display:
+            inline-flex;
+
+        align-items:
+            center;
+
+        justify-content:
+            center;
+
+        min-width:
+            64px;
+
+        height:
+            34px;
+
+        margin-left:
+            9px;
+
+        padding:
+            0 9px;
+
+        border-radius:
+            10px;
+
+        background:
+            #eef8f4;
+
+        color:
+            #106d4d;
+
+        font-size:
+            14px;
+
+        font-weight:
+            800;
+
+        line-height:
+            1;
+
+        white-space:
+            nowrap;
+    }
+
+
+    .stanza-giocatori {
+
+        display:
+            flex;
+
+        flex-wrap:
+            wrap;
+
+        gap:
+            6px;
+
+        margin-top:
+            11px;
+
+        padding-left:
+            58px;
+    }
+
+
+    .chip-giocatore {
+
+        min-height:
+            25px;
+
+        padding:
+            4px 9px;
+
+        border-radius:
+            13px;
+
+        font-size:
+            11px;
+    }
+
+}
+
+
+@media (max-width: 390px) {
+
+    .contenitore {
+
+        padding:
+            15px 8px 35px;
+    }
+
+
+    .titolo-gioco-oca {
+
+        font-size:
+            21px;
+
+        padding:
+            13px 30px;
+
+        margin-bottom:
+            22px;
+    }
+
+
+    .stanza-riga {
+
+        padding:
+            15px 12px 14px;
+
+        border-radius:
+            10px;
+    }
+
+
+    .stanza-riga-top {
+
+        min-height:
+            45px;
+    }
+
+
+    .stanza-icona {
+
+        width:
+            42px;
+
+        height:
+            42px;
+
+        min-width:
+            42px;
+
+        margin-right:
+            10px;
+
+        border-radius:
+            11px;
+
+        font-size:
+            22px;
+    }
+
+
+    .stanza-nome {
+
+        font-size:
+            16px;
+    }
+
+
+    .stanza-sottotitolo {
+
+        font-size:
+            10px;
+    }
+
+
+    .stanza-online {
+
+        min-width:
+            62px;
+
+        height:
+            33px;
+
+        margin-left:
+            7px;
+
+        padding:
+            0 8px;
+
+        font-size:
+            13px;
+
+        border-radius:
+            9px;
+    }
+
+
+    .stanza-giocatori {
+
+        padding-left:
+            52px;
+
+        margin-top:
+            10px;
+    }
+
+}
+
+.pulsante-indietro{
+    position:fixed;
+    top:14px;
+    left:14px;
+    width:46px;
+    height:46px;
+    padding:0;
+    margin:0;
+    border:none;
+    border-radius:50%;
+    background:#ffffff;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    z-index:10000;
+    box-shadow:0 4px 12px rgba(0,0,0,.25);
+    transition:
+        transform .15s ease,
+        background .15s ease,
+        box-shadow .15s ease;
+}
+
+.pulsante-indietro:hover{
+    background:#ff6600;
+    opacity:1;
+    transform:translateX(-2px);
+    box-shadow:0 6px 16px rgba(0,0,0,.30);
+}
+
+.pulsante-indietro:active{
+    transform:scale(.94);
+}
+
+.pulsante-indietro .icona-indietro{
+    width:26px;
+    height:26px;
+    object-fit:contain;
+    display:block;
+    pointer-events:none;
+}
+
+@media(max-width:600px){
+    .pulsante-indietro{
+        top:7px;
+        left:8px;
+        width:36px;
+        height:36px;
+        z-index:10001;
+    }
+
+    .pulsante-indietro .icona-indietro{
+        width:22px;
+        height:22px;
+    }
+}    
+
+</style>
+
+</head>
+
+<body>
+
+<button
+    type="button"
+    class="pulsante-indietro"
+    onclick="window.location.href='https://solfriniluca1.wixstudio.com/giochisocieta/'"
+    aria-label="Torna alla Home"
+    title="Torna alla Home"
+>
+    <img
+        src="https://api.giochisocieta.com/Immagini/Tornaindietro.png"
+        alt=""
+        class="icona-indietro"
+    >
+</button>
+
+<div class="contenitore">
+
+
+    <div class="titolo-gioco-oca">
+        OTHELLO
+    </div>
+
+
+    <div id="lista-stanze">
+
+        <div class="stato-caricamento">
+            Caricamento stanze...
+        </div>
+
+    </div>
+
+
+</div>
+
+
+<script>
+
+const SERVER =
+    "https://api.giochisocieta.com";
+
+
+const stanze = [
+
+    {
+        nome:
+            "BAR",
+
+        icona:
+            "🍺"
+    },
+
+    {
+        nome:
+            "PUB",
+
+        icona:
+            "🍻"
+    },
+
+    {
+        nome:
+            "DISCOPUB",
+
+        icona:
+            "🎧"
+    },
+
+    {
+        nome:
+            "SERATE",
+
+        icona:
+            "🎉"
+    }
+
+];
+
+
+const container =
+    document.getElementById(
+        "lista-stanze"
+    );
+
+
+const online = {};
+
+
+let socket = null;
+
+
+function creaStanze() {
+
+    container.innerHTML = "";
+
+
+    stanze.forEach(
+        stanza => {
+
+
+            const div =
+                document.createElement(
+                    "div"
+                );
+
+
+            div.className =
+                "stanza-riga";
+
+
+            div.innerHTML = `
+
+                <div class="stanza-riga-top">
+
+
+                    <div class="stanza-icona">
+
+                        ${stanza.icona}
+
+                    </div>
+
+
+                    <div class="stanza-info">
+
+                        <p class="stanza-nome">
+
+                            ${stanza.nome}
+
+                        </p>
+
+
+                        <p class="stanza-sottotitolo">
+
+                            Accesso libero
+
+                        </p>
+
+                    </div>
+
+
+                    <div
+                        class="stanza-online"
+                        id="on-${stanza.nome}"
+                    >
+
+                        👤 0
+
+                    </div>
+
+
+                </div>
+
+
+                <div
+                    class="stanza-giocatori"
+                    id="players-${stanza.nome}"
+                >
+
+                </div>
+
+            `;
+
+
+            div.addEventListener(
+                "click",
+                () => {
+
+                    window.location.href =
+                        SERVER +
+                        "/Othello/lobbyothello.html?stanza=" +
+                        encodeURIComponent(
+                            stanza.nome
+                        );
+
+                }
+            );
+
+
+            container.appendChild(
+                div
+            );
+
+
+            online[
+                stanza.nome
+            ] =
+                document.getElementById(
+                    "on-" +
+                    stanza.nome
+                );
+
+        }
+    );
+
+}
+
+
+creaStanze();
+
+
+function collegaWebSocket() {
+
+    try {
+
+
+        socket =
+            new WebSocket(
+                "wss://api.giochisocieta.com/?gioco=othello"
+            );
+
+
+        socket.onopen = () => {
+
+
+            console.log(
+                "WebSocket connesso"
+            );
+
+
+            socket.send(
+                JSON.stringify({
+
+                    tipo:
+                        "richiediConteggio",
+
+                    gioco:
+                        "othello"
+
+                })
+            );
+
+        };
+
+
+        socket.onmessage = (
+            evento
+        ) => {
+
+
+            try {
+
+
+                const dati =
+                    JSON.parse(
+                        evento.data
+                    );
+
+
+                if (
+                    dati.tipo ===
+                    "conteggioStanze" &&
+                    dati.gioco === "othello"
+                ) {
+
+
+                    for (
+                        const stanza
+                        in dati.stanze
+                    ) {
+
+
+                        if (
+                            online[
+                                stanza
+                            ]
+                        ) {
+
+
+                            online[
+                                stanza
+                            ].innerHTML =
+                                "👤 " +
+                                dati.stanze[
+                                    stanza
+                                ];
+
+                        }
+
+                    }
+
+                }
+
+
+            } catch (errore) {
+
+                console.error(
+                    "Errore nella lettura del messaggio WebSocket:",
+                    errore
+                );
+
+            }
+
+        };
+
+
+        socket.onerror = (
+            errore
+        ) => {
+
+            console.warn(
+                "WebSocket non disponibile",
+                errore
+            );
+
+        };
+
+
+        socket.onclose = () => {
+
+            console.log(
+                "WebSocket disconnesso"
+            );
+
+        };
+
+    }
+        
+
+    catch (errore) {
+
+        console.error(
+            "Impossibile creare il WebSocket:",
+            errore
+        );
+
+    }
+
+}
+
+
+collegaWebSocket();
+
+
+document.addEventListener(
+    "visibilitychange",
+    () => {
+
+
+        if (
+            document.visibilityState ===
+            "visible"
+        ) {
+
+
+            if (
+                !socket ||
+                socket.readyState !==
+                WebSocket.OPEN
+            ) {
+
+                collegaWebSocket();
+
+            }
+
+        }
+
+    }
+);
+
+</script>
+
+
+
+
+<script>
+(() => {
+    "use strict";
+
+    const ID_NOVITA_GIOCO = "othello_2026";
+    const CHIAVE_TOKEN_AUTH = "giochiSocietaAuthToken";
+
+    function acquisisciTokenAuth() {
+        try {
+            const parametriHash = new URLSearchParams(
+                window.location.hash.replace(/^#/, "")
+            );
+
+            const tokenDaUrl = (parametriHash.get("auth_token") || "").trim();
+
+            if (tokenDaUrl) {
+                sessionStorage.setItem(CHIAVE_TOKEN_AUTH, tokenDaUrl);
+                parametriHash.delete("auth_token");
+
+                const nuovoHash = parametriHash.toString();
+                const nuovoUrl =
+                    window.location.pathname +
+                    window.location.search +
+                    (nuovoHash ? "#" + nuovoHash : "");
+
+                window.history.replaceState(null, "", nuovoUrl);
+                return tokenDaUrl;
+            }
+
+            return (sessionStorage.getItem(CHIAVE_TOKEN_AUTH) || "").trim();
+        } catch (errore) {
+            return "";
+        }
+    }
+
+    async function registraNovitaComeVista() {
+        try {
+            const token = acquisisciTokenAuth();
+            const headers = {
+                "Accept": "application/json"
+            };
+
+            if (token) {
+                headers.Authorization = "Bearer " + token;
+            }
+
+            const risposta = await fetch(
+                "/api/novita/segna-vista/" + encodeURIComponent(ID_NOVITA_GIOCO),
+                {
+                    method: "POST",
+                    credentials: "include",
+                    cache: "no-store",
+                    headers
+                }
+            );
+
+            if (!risposta.ok) {
+                console.warn(
+                    "NOVITÀ: registrazione non riuscita, HTTP",
+                    risposta.status
+                );
+                return;
+            }
+
+            const risultato = await risposta.json().catch(() => null);
+            if (risultato && risultato.ok === true) {
+                console.log("NOVITÀ registrata come vista:", ID_NOVITA_GIOCO);
+            }
+        } catch (errore) {
+            console.warn("NOVITÀ: errore durante la registrazione:", errore);
+        }
+    }
+
+    window.addEventListener("load", registraNovitaComeVista, { once: true });
+})();
+</script>
+
+</body>
+</html>
