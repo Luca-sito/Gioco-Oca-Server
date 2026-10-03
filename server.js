@@ -9741,6 +9741,22 @@ wss.on("connection", (socket, request) => {
         }
       }
 
+      // I messaggi di Othello vengono gestiti prima della logica del Gioco
+      // dell'Oca, esattamente come quelli della Dama: stesso account/server,
+      // ma stanze, partite ed ELO restano completamente separati.
+      if (othelloMessaggioAppartieneAlGioco(giocoRichiestoSocket, dati)) {
+        const gestitoOthello = await othelloGestisciMessaggioSocket({
+          socket,
+          socketId,
+          tipoDispositivo,
+          uid,
+          datiTokenIniziali,
+          giocoRichiestoSocket,
+          dati
+        });
+        if (gestitoOthello) return;
+      }
+
       // I messaggi della Dama vengono gestiti prima della logica del Gioco
       // dell'Oca. In questo modo le due logiche condividono account e server,
       // ma partite, stanze ed ELO restano completamente separate.
@@ -10411,6 +10427,13 @@ inviaAllaStanza(stanzaAttuale, {
 
 socket.on("close", async () => {
   try {
+    // Se questa connessione appartiene a Othello, la pulizia viene eseguita dal
+    // modulo Othello e non entra nella gestione delle stanze del Gioco dell'Oca.
+    if (await othelloChiudiSocket(socketId, socket)) {
+      delete socketsPerId[socketId];
+      return;
+    }
+
     // Se questa connessione appartiene alla Dama, la pulizia viene eseguita dal
     // modulo Dama e non entra nella gestione delle stanze del Gioco dell'Oca.
     if (await damaChiudiSocket(socketId, socket)) {
@@ -10473,3 +10496,4 @@ server.listen(PORT, () => {
       console.error("Errore ripristino partite da Firebase:", errore.message);
     });
 });
+
