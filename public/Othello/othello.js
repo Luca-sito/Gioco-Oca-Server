@@ -39,14 +39,11 @@ let mossaInAttesa = false;
 let timerMossaInAttesa = null;
 let vittoriaMostrata = false;
 
-/* FIX: gli stati WebSocket devono essere applicati in sequenza.
-   Prima potevano essere eseguite contemporaneamente più chiamate async
-   ad applicaStatoPartita(); uno stato più recente invalidava quello precedente
-   lasciando animazioniDaAttendere bloccato sopra zero per sempre. */
-let codaApplicazioneStato = Promise.resolve();
-
 /* =========================================================
-   MOTORE DI REGOLE OTHELLO
+   MOTORE DI REGOLE OTHELLO (pubblico: nessuna informazione nascosta,
+   quindi il client può calcolare le mosse legali senza chiederle al
+   server — il server resta comunque l'autorità che valida la mossa
+   inviata e restituisce lo stato ufficiale).
    ========================================================= */
 
 const DIREZIONI_OTHELLO = [
@@ -65,7 +62,7 @@ function tavolaInizialeOthello() {
 }
 
 function catturePerCella(tavola, r, c, colore) {
-  if (!tavolaValida(tavola) || !colore || tavola[r]?.[c]) return [];
+  if (!colore || tavola[r][c]) return [];
   const avversario = colore === "nero" ? "bianco" : "nero";
   let totali = [];
   for (const [dr, dc] of DIREZIONI_OTHELLO) {
@@ -83,7 +80,6 @@ function catturePerCella(tavola, r, c, colore) {
 }
 
 function mosseLegaliPer(tavola, colore) {
-  if (!tavolaValida(tavola)) return [];
   const mosse = [];
   for (let r = 0; r < 8; r++) {
     for (let c = 0; c < 8; c++) {
@@ -96,7 +92,6 @@ function mosseLegaliPer(tavola, colore) {
 
 function contaDischi(tavola) {
   let nero = 0, bianco = 0;
-  if (!tavolaValida(tavola)) return { nero: 0, bianco: 0 };
   for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
     if (tavola[r][c] === "nero") nero++;
     else if (tavola[r][c] === "bianco") bianco++;
@@ -134,10 +129,7 @@ let stato = {
   vincitoreUid: null,
   motivoFine: null
 };
-let ultimoStatoRicevuto = {
-  ...stato,
-  tavola: copiaTavola(stato.tavola)
-};
+let ultimoStatoRicevuto = stato;
 let attesaSnapshot = true;
 
 /* =========================================================
@@ -600,18 +592,18 @@ const posizioniDischi = new Map();
 const caselleTavola = new Map();
 let tavolaDisegnata = null;
 let animazioniDaAttendere = 0;
-/* Le animazioni dei dischi fanno parte integrante dell'esperienza Othello.
-   Non vengono disattivate e non esiste più un percorso di gioco che le salti. */
-const animazioniDischiAttive = true;
+let animazioniDaAttendereGenerazione = 0;
+let animazioniDischiAttive = true;
+try { animazioniDischiAttive = localStorage.getItem("othello:animazioni") !== "off"; } catch (_) {}
 function aggiornaBottoneAnimazioniOthello() {
   const bottone = document.getElementById("btn-animazioni-othello");
   if (!bottone) return;
-  bottone.textContent = "Animazioni dischi: attive";
-  bottone.setAttribute("aria-pressed", "true");
+  bottone.textContent = "Animazioni dischi: " + (animazioniDischiAttive ? "attive" : "disattivate");
+  bottone.setAttribute("aria-pressed", String(animazioniDischiAttive));
 }
 function toggleAnimazioniOthello() {
-  /* Compatibilità con eventuali onclick presenti nell'HTML: le animazioni
-     sono obbligatorie per questa modalità e restano sempre attive. */
+  animazioniDischiAttive = !animazioniDischiAttive;
+  try { localStorage.setItem("othello:animazioni", animazioniDischiAttive ? "on" : "off"); } catch (_) {}
   aggiornaBottoneAnimazioniOthello();
 }
 aggiornaBottoneAnimazioniOthello();
@@ -619,6 +611,8 @@ aggiornaBottoneAnimazioniOthello();
 function chiaveCasella(r, c) { return r + "," + c; }
 
 function coordinateVisive(r, c) {
+  // Prospettiva: chi gioca col Bianco vede la tavola ruotata di 180°,
+  // così ciascuno ha sempre le proprie file in basso.
   return mioColore === "bianco" ? { r: 7 - r, c: 7 - c } : { r, c };
 }
 
@@ -666,7 +660,6 @@ function impostaPosizioneDisco(elemento, r, c) {
 }
 
 function sincronizzaDischiIstantaneo(tavolaStato) {
-  if (!tavolaValida(tavolaStato)) return;
   preparaTavola();
   const strato = document.getElementById("othello-strato-dischi");
   if (!strato) return;
@@ -690,7 +683,7 @@ function sincronizzaDischiIstantaneo(tavolaStato) {
 function renderTavola() {
   const tavola = preparaTavola();
   if (!tavola) return;
-  if (!tavolaDisegnata || !tavolaValida(tavolaDisegnata)) sincronizzaDischiIstantaneo(stato.tavola);
+  if (!tavolaDisegnata) sincronizzaDischiIstantaneo(stato.tavola);
 
   const inCorso = stato.fase === "in_corso";
   const mioTurno = inCorso && !!mioColore && stato.turno === mioColore;
@@ -741,133 +734,19 @@ function distanzaScacchi(a, b) {
   return Math.max(Math.abs(a.r - b.r), Math.abs(a.c - b.c));
 }
 
-function ottieniTimeoutAnimazioneDisco(disco) {
-  try {
-    const stile = getComputedStyle(disco);
-    const durate = String(stile.animationDuration || "0s")
-      .split(",")
-      .map(v => {
-        const valore = String(v).trim();
-        if (valore.endsWith("ms")) return parseFloat(valore) || 0;
-        return (parseFloat(valore) || 0) * 1000;
-      });
-    const ritardi = String(stile.animationDelay || "0s")
-      .split(",")
-      .map(v => {
-        const valore = String(v).trim();
-        if (valore.endsWith("ms")) return parseFloat(valore) || 0;
-        return (parseFloat(valore) || 0) * 1000;
-      });
-    const durataMassima = Math.max(...durate, 0);
-    const ritardoMassimo = Math.max(...ritardi, 0);
-    /* Il timeout è soltanto un watchdog: l'animazione CSS resta obbligatoria;
-       serve esclusivamente a non lasciare il gioco appeso se il browser non
-       inoltra animationend. */
-    return Math.max(900, durataMassima + ritardoMassimo + 350);
-  } catch (_) {
-    return 1600;
-  }
-}
-
-function creaDiscoDaStatoPrecedente(r, c, colore) {
-  const strato = document.getElementById("othello-strato-dischi");
-  if (!strato) throw new Error("Strato dischi Othello non disponibile.");
-  const key = chiaveCasella(r, c);
-  let posizione = posizioniDischi.get(key);
-  if (posizione) return posizione;
-
-  posizione = document.createElement("div");
-  posizione.className = "othello-posizione";
-  posizione.appendChild(creaFacciaDisco(colore));
-  strato.appendChild(posizione);
-  impostaPosizioneDisco(posizione, r, c);
-  posizioniDischi.set(key, posizione);
-  return posizione;
-}
-
-function animaSingoloFlip(posizione, coloreFinale, ritardoMs = 0) {
-  const disco = posizione?.querySelector(".othello-disco");
-  if (!disco) return Promise.reject(new Error("Disco Othello mancante durante il flip."));
-
-  const classeFlip = coloreFinale === "bianco" ? "girando-a-bianco" : "girando-a-nero";
-
-  return new Promise(resolve => {
-    let conclusa = false;
-    let timerWatchdog = null;
-    let timerAvvio = null;
-
-    const termina = () => {
-      if (conclusa) return;
-      conclusa = true;
-      if (timerWatchdog) clearTimeout(timerWatchdog);
-      if (timerAvvio) clearTimeout(timerAvvio);
-      disco.classList.remove("animatione-inesistente");
-      disco.classList.remove(classeFlip);
-      disco.dataset.colore = coloreFinale;
-      posizione.classList.remove("in-animazione");
-      disco.removeEventListener("animationend", termina);
-      disco.removeEventListener("animationcancel", riavviaSeAnnullata);
-      resolve();
-    };
-
-    const riavviaSeAnnullata = () => {
-      if (conclusa) return;
-      disco.classList.remove(classeFlip);
-      void disco.offsetWidth;
-      disco.classList.add(classeFlip);
-      timerWatchdog = setTimeout(termina, ottieniTimeoutAnimazioneDisco(disco));
-    };
-
-    timerAvvio = setTimeout(() => {
-      if (conclusa) return;
-      posizione.classList.add("in-animazione");
-      suonaFlip(0);
-
-      disco.addEventListener("animationend", termina, { once: true });
-      disco.addEventListener("animationcancel", riavviaSeAnnullata);
-
-      /* Forza un nuovo ciclo CSS anche se lo stesso disco ha appena terminato
-         un'animazione precedente. */
-      disco.classList.remove(classeFlip);
-      void disco.offsetWidth;
-      disco.classList.add(classeFlip);
-
-      timerWatchdog = setTimeout(termina, ottieniTimeoutAnimazioneDisco(disco));
-    }, Math.max(0, Number(ritardoMs) || 0));
-  });
-}
-
-async function animaVersoTavola(prossimaTavola, istantanea) {
-  if (!tavolaValida(prossimaTavola)) {
-    throw new Error("Stato tavola Othello non valido.");
-  }
-
-  /* Solo lo snapshot iniziale può essere applicato senza animazione: non c'è
-     ancora una mossa precedente da rappresentare visivamente. */
-  if (istantanea || !tavolaDisegnata) {
+async function animaVersoTavola(prossimaTavola, istantanea, generazione) {
+  if (istantanea || !tavolaDisegnata || !animazioniDischiAttive) {
     sincronizzaDischiIstantaneo(prossimaTavola);
     return;
   }
 
-  if (!animazioniDischiAttive) {
-    throw new Error("Le animazioni Othello devono rimanere attive.");
-  }
-
-  const strato = document.getElementById("othello-strato-dischi");
-  if (!strato) throw new Error("Strato dischi Othello non disponibile.");
-
   const { nuove, girati } = estraiDifferenzeTavola(tavolaDisegnata, prossimaTavola);
-
-  /* Se un disco che deve girare non è presente nel DOM, lo ricreiamo dal colore
-     precedente e poi eseguiamo comunque il flip 3D. In questo modo non si crea
-     più la pedina fantasma a metà animazione. */
-  for (const cella of girati) {
-    const precedenteColore = tavolaDisegnata[cella.r][cella.c];
-    creaDiscoDaStatoPrecedente(cella.r, cella.c, precedenteColore);
-  }
+  const strato = document.getElementById("othello-strato-dischi");
+  if (!strato) { sincronizzaDischiIstantaneo(prossimaTavola); return; }
 
   const centro = nuove[0] || girati[0] || { r: 3.5, c: 3.5 };
 
+  // Piazza il disco appena giocato con una piccola "caduta"
   for (const cella of nuove) {
     const key = chiaveCasella(cella.r, cella.c);
     if (posizioniDischi.has(key)) continue;
@@ -880,13 +759,35 @@ async function animaVersoTavola(prossimaTavola, istantanea) {
     if (cella === nuove[0]) suonaPosa();
   }
 
+  // Flip a cascata: più lontano dal punto giocato, più tardi gira.
   const flipPromesse = girati.map(cella => {
-    const posizione = creaDiscoDaStatoPrecedente(cella.r, cella.c, tavolaDisegnata[cella.r][cella.c]);
+    const key = chiaveCasella(cella.r, cella.c);
+    const posizione = posizioniDischi.get(key);
+    if (!posizione) return Promise.resolve();
+    const disco = posizione.querySelector(".othello-disco");
+    if (!disco) return Promise.resolve();
     const ritardo = Math.max(0, distanzaScacchi(centro, cella) - 1) * 70;
-    return animaSingoloFlip(posizione, cella.colore, ritardo);
+    const classeFlip = cella.colore === "bianco" ? "girando-a-bianco" : "girando-a-nero";
+    return new Promise(resolve => {
+      setTimeout(() => {
+        if (generazione !== animazioniDaAttendereGenerazione) { resolve(); return; }
+        posizione.classList.add("in-animazione");
+        suonaFlip(0);
+        const conclusa = () => {
+          disco.classList.remove(classeFlip);
+          disco.dataset.colore = cella.colore;
+          posizione.classList.remove("in-animazione");
+          disco.removeEventListener("animationend", conclusa);
+          resolve();
+        };
+        disco.addEventListener("animationend", conclusa, { once: true });
+        disco.classList.add(classeFlip);
+      }, ritardo);
+    });
   });
 
   await Promise.all(flipPromesse);
+  if (generazione !== animazioniDaAttendereGenerazione) return;
   tavolaDisegnata = copiaTavola(prossimaTavola);
 }
 
@@ -1043,118 +944,66 @@ function aggiornaCountdownTurno() {
    APPLICAZIONE STATO / SOCKET
    ========================================================= */
 
-/*
- * FIX PRINCIPALE:
- * applicaStatoPartita() non esegue più due animazioni contemporaneamente.
- * Ogni snapshot ricevuto entra in una coda Promise e viene applicato dopo
- * che quello precedente ha terminato l'animazione.
- */
-function applicaStatoPartita(partita, istantanea = false) {
-  const snapshot = partita && typeof partita === "object"
-    ? {
-        ...partita,
-        tavola: Array.isArray(partita.tavola) ? copiaTavola(partita.tavola) : partita.tavola,
-        giocatori: { ...(partita.giocatori || {}) }
-      }
-    : partita;
-
-  /* Un solo flusso di animazione alla volta. È la parte fondamentale della
-     correzione: un nuovo snapshot non interrompe mai il flip precedente e non
-     può lasciare il contatore del blocco in uno stato incoerente. */
-  codaApplicazioneStato = codaApplicazioneStato
-    .catch(errore => console.error("Coda stato Othello precedente:", errore))
-    .then(() => applicaStatoPartitaInCoda(snapshot, istantanea))
-    .catch(errore => {
-      console.error("Applicazione stato Othello non riuscita:", errore);
-      /* La coda resta viva anche dopo un errore inatteso. */
-    });
-
-  return codaApplicazioneStato;
-}
-
-async function applicaStatoPartitaInCoda(partita, istantanea = false) {
-  if (!partita || typeof partita !== "object") return;
-
+async function applicaStatoPartita(partita, istantanea = false) {
   const prossimo = { ...ultimoStatoRicevuto, ...partita };
   if (!tavolaValida(prossimo.tavola)) {
     mostraNotificaGioco("Stato della tavola non valido: attendo la sincronizzazione.");
     return;
   }
   prossimo.tavola = copiaTavola(prossimo.tavola);
+  ultimoStatoRicevuto = prossimo;
 
-  const precedenteNumeroMossa = Number(stato.numeroMossa || 0);
+  const generazione = ++animazioniDaAttendereGenerazione;
+  animazioniDaAttendere++;
+  const precedenteNumeroMossa = stato.numeroMossa;
   const turnoPrecedente = stato.turno;
-  const numeroNuovo = Number(prossimo.numeroMossa || 0);
-  const ultimoNumeroRicevuto = Number(ultimoStatoRicevuto.numeroMossa || 0);
-
-  /* Uno snapshot vecchio non deve mai sovrascrivere uno stato più recente.
-     Una terminazione, però, ha priorità anche se arriva con lo stesso numero
-     di mossa: contiene l'esito ufficiale del server. */
-  if (!istantanea && prossimo.fase !== "terminata" && numeroNuovo < ultimoNumeroRicevuto) {
-    return;
-  }
-
-  ultimoStatoRicevuto = {
-    ...prossimo,
-    tavola: copiaTavola(prossimo.tavola),
-    giocatori: { ...(prossimo.giocatori || {}) }
-  };
-
-  const deveAnimare = !istantanea && !!tavolaDisegnata;
-  animazioniDaAttendere = deveAnimare ? 1 : 0;
-
-  /* Il turno logico viene aggiornato subito, ma il click resta bloccato finché
-     l'animazione non è completamente terminata. */
-  stato = prossimo;
-
-  if (numeroNuovo !== precedenteNumeroMossa || prossimo.fase !== stato.fase) {
-    mossaInAttesa = false;
-    clearTimeout(timerMossaInAttesa);
-    timerMossaInAttesa = null;
-    if (numeroNuovo !== precedenteNumeroMossa) avvisoTempoChiave = "";
-  }
-
-  renderPunteggio();
-  renderPannelloGiocatori();
-  aggiornaInterfacciaPartita();
 
   try {
-    await animaVersoTavola(prossimo.tavola, istantanea);
-  } finally {
-    /* Il contatore appartiene a questa singola voce di coda. Deve tornare a
-       zero quando il flip è realmente concluso o quando l'animazione ha
-       segnalato un errore. */
-    animazioniDaAttendere = 0;
+    await animaVersoTavola(prossimo.tavola, istantanea, generazione);
+  } catch (errore) {
+    console.error("Animazione tavola Othello:", errore);
+    sincronizzaDischiIstantaneo(prossimo.tavola);
+  }
+  if (generazione !== animazioniDaAttendereGenerazione) return;
+
+  stato = prossimo;
+  animazioniDaAttendere--;
+
+  if (istantanea || prossimo.fase !== "in_corso") {
+    mossaInAttesa = false;
+    clearTimeout(timerMossaInAttesa);
+  }
+  if (stato.numeroMossa !== precedenteNumeroMossa) {
+    mossaInAttesa = false;
+    clearTimeout(timerMossaInAttesa);
+    avvisoTempoChiave = "";
   }
 
-  tavolaDisegnata = copiaTavola(prossimo.tavola);
   render();
+
+  if (animazioniDaAttendere) return;
 
   if (
     stato.fase === "in_corso" &&
     stato.turno === turnoPrecedente &&
-    numeroNuovo !== precedenteNumeroMossa &&
+    stato.numeroMossa !== precedenteNumeroMossa &&
     giocatoriStato().length >= 2
   ) {
     const chiNonMuove = giocatoriStato().find(g => g.colore !== stato.turno);
     mostraMessaggioGiocoGrande(
       (chiNonMuove?.nome || chiNonMuove?.nickname || "L'avversario") + " non ha mosse disponibili",
-      {
-        dettaglio: "Tocca ancora a " + (stato.turno === mioColore ? "te" : nomeColore(stato.turno).toLowerCase()),
-        icona: "⏭️",
-        durata: 2400
-      }
+      { dettaglio: "Tocca ancora a " + (stato.turno === mioColore ? "te" : nomeColore(stato.turno).toLowerCase()), icona: "⏭️", durata: 2400 }
     );
   }
 
-  if (stato.fase === "in_corso" && stato.turno === mioColore && numeroNuovo !== precedenteNumeroMossa) {
+  if (stato.fase === "in_corso" && stato.turno === mioColore && stato.numeroMossa !== precedenteNumeroMossa) {
     suonaTuoTurno();
   }
 
   if (stato.fase === "in_corso" && giocatoriStato().length >= 2 && !presentazioneSfidaGiaVista()) {
     setTimeout(() => { if (stato.fase === "in_corso") mostraPresentazioneSfida(); }, 260);
   }
-  if (stato.fase === "terminata" || (stato.vincitoreUid !== undefined && stato.motivoFine)) mostraVittoria(stato);
+  if (stato.fase === "terminata" || stato.vincitoreUid !== undefined && stato.motivoFine) mostraVittoria(stato);
 }
 
 function cliccaCasella(r, c) {
@@ -1407,7 +1256,6 @@ function gestisciMessaggioSocket(dati) {
   if (dati.tipo === "othello_errore") {
     mossaInAttesa = false;
     clearTimeout(timerMossaInAttesa);
-    timerMossaInAttesa = null;
     renderTavola();
     const errore = dati.errore || "Operazione non consentita.";
     mostraNotificaGioco(errore);
@@ -1464,8 +1312,6 @@ function connetti() {
     socket = null;
     if (paginaInChiusura) return;
     attesaSnapshot = true;
-    /* Una eventuale animazione già iniziata viene lasciata terminare dal
-       flusso serializzato; il nuovo snapshot verrà applicato in coda. */
     impostaStatoConnessione(true);
     const messaggi = document.getElementById("messaggi-gioco");
     if (messaggi) messaggi.textContent = "Connessione persa — riconnessione in corso…";
@@ -1612,8 +1458,6 @@ window.addEventListener("beforeunload", () => {
   paginaInChiusura = true;
   clearTimeout(timerRiconnessione);
   clearTimeout(timerChiusuraPresentazioneSfida);
-  clearTimeout(timerMossaInAttesa);
-  animazioniDaAttendere = 0;
   try { socket?.close(); } catch (_) {}
 });
 
