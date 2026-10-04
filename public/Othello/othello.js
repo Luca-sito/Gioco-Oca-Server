@@ -2,16 +2,17 @@
 
 /* =========================================================
    OTHELLO / REVERSI
-   Client:
-   - il server resta autorità dello stato ufficiale
-   - il client calcola le mosse legali localmente
-   - gli snapshot vecchi non possono sovrascrivere quelli nuovi
-   - una sola animazione può essere attiva alla volta
-   - le riconnessioni invalidano le operazioni asincrone precedenti
-   ========================================================= */
+   =========================================================
+   NOTE IMPORTANTI
 
-/* =========================================================
-   CONFIGURAZIONE
+   - Il server rimane l'autorità definitiva dello stato.
+   - Il client calcola le mosse legali solo per l'interfaccia.
+   - La tavola visualizzata viene sempre sincronizzata con
+     lo stato ufficiale ricevuto dal server.
+   - Le animazioni NON possono bloccare permanentemente
+     la possibilità di giocare.
+   - Una risposta WebSocket più vecchia non deve sovrascrivere
+     uno stato più recente.
    ========================================================= */
 
 const origineConfigurata =
@@ -39,9 +40,18 @@ const URL_WEBSOCKET = ORIGINE_SERVER
   .replace(/^https:/, "wss:");
 
 const params = new URLSearchParams(window.location.search);
-const partitaId = params.get("partita") || params.get("id") || "";
-const stanza = params.get("stanza") || "othello";
-const CHIAVE_TOKEN_AUTH = "giochiSocietaAuthToken";
+
+const partitaId =
+  params.get("partita") ||
+  params.get("id") ||
+  "";
+
+const stanza =
+  params.get("stanza") ||
+  "othello";
+
+const CHIAVE_TOKEN_AUTH =
+  "giochiSocietaAuthToken";
 
 /* =========================================================
    VARIABILI GLOBALI
@@ -50,7 +60,6 @@ const CHIAVE_TOKEN_AUTH = "giochiSocietaAuthToken";
 let socket = null;
 let timerRiconnessione = null;
 let paginaInChiusura = false;
-let generazioneSocket = 0;
 
 let mioUid = null;
 let mioColore = null;
@@ -62,6 +71,7 @@ let messaggiChatNonLetti = 0;
 
 let graficaCaricata = false;
 let statoInizialeRicevuto = false;
+
 let timerMassimoCaricamento = null;
 let percentualeCaricamento = 10;
 
@@ -75,150 +85,73 @@ let timerMossaInAttesa = null;
 
 let vittoriaMostrata = false;
 
-/* =========================================================
-   STATO
-   ========================================================= */
+/*
+ * Numero/versione locale dello stato.
+ *
+ * Serve soprattutto per evitare che due messaggi WebSocket
+ * arrivati quasi contemporaneamente provochino una regressione
+ * visuale.
+ */
+let versioneStatoLocale = 0;
 
-const DIREZIONI_OTHELLO = [
-  [-1, -1], [-1, 0], [-1, 1],
-  [0, -1],           [0, 1],
-  [1, -1],  [1, 0],  [1, 1]
-];
+/*
+ * Ultimo numero di mossa ufficiale ricevuto.
+ */
+let ultimoNumeroMossaApplicato = 0;
 
-function tavolaInizialeOthello() {
-  const t = Array.from({ length: 8 }, () => Array(8).fill(null));
-
-  t[3][3] = "bianco";
-  t[3][4] = "nero";
-  t[4][3] = "nero";
-  t[4][4] = "bianco";
-
-  return t;
-}
-
-let stato = {
-  id: partitaId || null,
-  stanza,
-  fase: "attesa_giocatori",
-  iniziata: false,
-  turno: "nero",
-  tavola: tavolaInizialeOthello(),
-  giocatori: {},
-  numeroMossa: 0,
-  ultimoMovimento: null,
-  scadenzaTurno: null,
-  durataTurnoMs: null,
-  classificata: true,
-  vincitoreUid: null,
-  motivoFine: null
-};
-
-let ultimoStatoRicevuto = copiaStato(stato);
+/*
+ * Snapshot che stiamo aspettando dopo una riconnessione.
+ */
 let attesaSnapshot = true;
-
-/* =========================================================
-   UTILITÀ STATO
-   ========================================================= */
-
-function copiaTavola(tavola) {
-  return tavola.map(riga => riga.slice());
-}
-
-function copiaStato(s) {
-  return {
-    ...s,
-    tavola: tavolaValida(s?.tavola)
-      ? copiaTavola(s.tavola)
-      : tavolaInizialeOthello(),
-    giocatori: s?.giocatori && typeof s.giocatori === "object"
-      ? { ...s.giocatori }
-      : {}
-  };
-}
-
-function numeroMossaValido(valore) {
-  const n = Number(valore);
-  return Number.isSafeInteger(n) && n >= 0 ? n : null;
-}
-
-function tavolaValida(tavola) {
-  return Array.isArray(tavola) &&
-    tavola.length === 8 &&
-    tavola.every(riga =>
-      Array.isArray(riga) &&
-      riga.length === 8 &&
-      riga.every(cella =>
-        cella === null ||
-        cella === "nero" ||
-        cella === "bianco"
-      )
-    );
-}
-
-function statoBaseValido(partita) {
-  if (!partita || typeof partita !== "object") return false;
-
-  if (!tavolaValida(partita.tavola)) return false;
-
-  if (
-    partita.turno !== "nero" &&
-    partita.turno !== "bianco"
-  ) {
-    return false;
-  }
-
-  const fasi = [
-    "attesa_giocatori",
-    "in_corso",
-    "terminata"
-  ];
-
-  if (partita.fase && !fasi.includes(partita.fase)) {
-    return false;
-  }
-
-  return true;
-}
-
-function statoObsoleto(prossimo, precedente) {
-  const nuovo = numeroMossaValido(prossimo.numeroMossa);
-  const vecchio = numeroMossaValido(precedente.numeroMossa);
-
-  if (nuovo === null || vecchio === null) return false;
-
-  return nuovo < vecchio;
-}
-
-function stessoSnapshot(a, b) {
-  const na = numeroMossaValido(a?.numeroMossa);
-  const nb = numeroMossaValido(b?.numeroMossa);
-
-  if (na !== null && nb !== null && na !== nb) {
-    return false;
-  }
-
-  return JSON.stringify(a?.tavola) === JSON.stringify(b?.tavola) &&
-    a?.turno === b?.turno &&
-    a?.fase === b?.fase;
-}
 
 /* =========================================================
    REGOLE OTHELLO
    ========================================================= */
 
+const DIREZIONI_OTHELLO = [
+  [-1, -1],
+  [-1, 0],
+  [-1, 1],
+  [0, -1],
+  [0, 1],
+  [1, -1],
+  [1, 0],
+  [1, 1]
+];
+
+function tavolaInizialeOthello() {
+  const tavola = Array.from(
+    { length: 8 },
+    () => Array(8).fill(null)
+  );
+
+  tavola[3][3] = "bianco";
+  tavola[3][4] = "nero";
+  tavola[4][3] = "nero";
+  tavola[4][4] = "bianco";
+
+  return tavola;
+}
+
+function coloreOpposto(colore) {
+  return colore === "nero"
+    ? "bianco"
+    : colore === "bianco"
+      ? "nero"
+      : null;
+}
+
+function cellaValida(r, c) {
+  return r >= 0 && r < 8 && c >= 0 && c < 8;
+}
+
 function catturePerCella(tavola, r, c, colore) {
-  if (
-    !tavolaValida(tavola) ||
-    !colore ||
-    !tavola[r] ||
-    tavola[r][c]
-  ) {
-    return [];
-  }
+  if (!tavolaValida(tavola)) return [];
+  if (!cellaValida(r, c)) return [];
+  if (tavola[r][c] !== null) return [];
+  if (colore !== "nero" && colore !== "bianco") return [];
 
-  const avversario =
-    colore === "nero" ? "bianco" : "nero";
-
+  const avversario = coloreOpposto(colore);
   const totali = [];
 
   for (const [dr, dc] of DIREZIONI_OTHELLO) {
@@ -228,10 +161,7 @@ function catturePerCella(tavola, r, c, colore) {
     const linea = [];
 
     while (
-      rr >= 0 &&
-      rr < 8 &&
-      cc >= 0 &&
-      cc < 8 &&
+      cellaValida(rr, cc) &&
       tavola[rr][cc] === avversario
     ) {
       linea.push({ r: rr, c: cc });
@@ -241,10 +171,7 @@ function catturePerCella(tavola, r, c, colore) {
 
     if (
       linea.length > 0 &&
-      rr >= 0 &&
-      rr < 8 &&
-      cc >= 0 &&
-      cc < 8 &&
+      cellaValida(rr, cc) &&
       tavola[rr][cc] === colore
     ) {
       totali.push(...linea);
@@ -261,14 +188,10 @@ function mosseLegaliPer(tavola, colore) {
 
   for (let r = 0; r < 8; r++) {
     for (let c = 0; c < 8; c++) {
-      const catture = catturePerCella(
-        tavola,
-        r,
-        c,
-        colore
-      );
+      const catture =
+        catturePerCella(tavola, r, c, colore);
 
-      if (catture.length) {
+      if (catture.length > 0) {
         mosse.push({
           r,
           c,
@@ -289,15 +212,130 @@ function contaDischi(tavola) {
     return { nero: 0, bianco: 0 };
   }
 
-  for (const riga of tavola) {
-    for (const cella of riga) {
-      if (cella === "nero") nero++;
-      else if (cella === "bianco") bianco++;
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      if (tavola[r][c] === "nero") {
+        nero++;
+      } else if (tavola[r][c] === "bianco") {
+        bianco++;
+      }
     }
   }
 
   return { nero, bianco };
 }
+
+function contaCaselleVuote(tavola) {
+  if (!tavolaValida(tavola)) return 0;
+
+  let vuote = 0;
+
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      if (!tavola[r][c]) vuote++;
+    }
+  }
+
+  return vuote;
+}
+
+function tavolaValida(tavola) {
+  return (
+    Array.isArray(tavola) &&
+    tavola.length === 8 &&
+    tavola.every(
+      riga =>
+        Array.isArray(riga) &&
+        riga.length === 8 &&
+        riga.every(
+          cella =>
+            cella === null ||
+            cella === "nero" ||
+            cella === "bianco"
+        )
+    )
+  );
+}
+
+function copiaTavola(tavola) {
+  return tavola.map(riga => riga.slice());
+}
+
+function tavoleUguali(a, b) {
+  if (!tavolaValida(a) || !tavolaValida(b)) {
+    return false;
+  }
+
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      if (a[r][c] !== b[r][c]) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+/*
+ * Applica localmente una mossa.
+ *
+ * Non sostituisce la validazione server:
+ * serve per poter verificare che lo stato ricevuto abbia
+ * effettivamente la forma prevista.
+ */
+function applicaMossaLocale(tavola, r, c, colore) {
+  const catture =
+    catturePerCella(tavola, r, c, colore);
+
+  if (!catture.length) {
+    return null;
+  }
+
+  const nuova = copiaTavola(tavola);
+
+  nuova[r][c] = colore;
+
+  for (const cella of catture) {
+    nuova[cella.r][cella.c] = colore;
+  }
+
+  return nuova;
+}
+
+/* =========================================================
+   STATO
+   ========================================================= */
+
+let stato = {
+  id: partitaId || null,
+  stanza,
+
+  fase: "attesa_giocatori",
+  iniziata: false,
+
+  turno: "nero",
+
+  tavola: tavolaInizialeOthello(),
+
+  giocatori: {},
+
+  numeroMossa: 0,
+  ultimoMovimento: null,
+
+  scadenzaTurno: null,
+  durataTurnoMs: null,
+
+  classificata: true,
+
+  vincitoreUid: null,
+  motivoFine: null
+};
+
+let ultimoStatoRicevuto = {
+  ...stato,
+  tavola: copiaTavola(stato.tavola)
+};
 
 /* =========================================================
    TOKEN / SOCKET
@@ -305,9 +343,10 @@ function contaDischi(tavola) {
 
 function tokenAutenticazione() {
   try {
-    const hash = new URLSearchParams(
-      location.hash.replace(/^#/, "")
-    );
+    const hash =
+      new URLSearchParams(
+        location.hash.replace(/^#/, "")
+      );
 
     const daUrl = hash.get("auth_token");
 
@@ -324,26 +363,30 @@ function tokenAutenticazione() {
         "",
         location.pathname +
           location.search +
-          (hash.toString()
-            ? "#" + hash.toString()
-            : "")
+          (
+            hash.toString()
+              ? "#" + hash.toString()
+              : ""
+          )
       );
 
       return daUrl;
     }
 
-    return sessionStorage.getItem(
-      CHIAVE_TOKEN_AUTH
-    ) || "";
+    return (
+      sessionStorage.getItem(
+        CHIAVE_TOKEN_AUTH
+      ) || ""
+    );
   } catch (_) {
     return "";
   }
 }
 
-function inviaSocket(dati, ws = socket) {
+function inviaSocket(dati) {
   if (
-    !ws ||
-    ws.readyState !== WebSocket.OPEN
+    !socket ||
+    socket.readyState !== WebSocket.OPEN
   ) {
     return false;
   }
@@ -351,11 +394,14 @@ function inviaSocket(dati, ws = socket) {
   try {
     const token = tokenAutenticazione();
 
-    const payload = token
-      ? { ...dati, token }
-      : dati;
+    socket.send(
+      JSON.stringify(
+        token
+          ? { ...dati, token }
+          : dati
+      )
+    );
 
-    ws.send(JSON.stringify(payload));
     return true;
   } catch (errore) {
     console.error(
@@ -369,7 +415,9 @@ function inviaSocket(dati, ws = socket) {
 
 function impostaStatoConnessione(disconnesso) {
   const banner =
-    document.getElementById("banner-disconnesso");
+    document.getElementById(
+      "banner-disconnesso"
+    );
 
   if (banner) {
     banner.classList.toggle(
@@ -388,9 +436,14 @@ function impostaStatoConnessione(disconnesso) {
    CARICAMENTO
    ========================================================= */
 
-function aggiornaCaricamento(testo, percentuale) {
+function aggiornaCaricamento(
+  testo,
+  percentuale
+) {
   const testoEl =
-    document.getElementById("caricamento-testo");
+    document.getElementById(
+      "caricamento-testo"
+    );
 
   const barra =
     document.getElementById(
@@ -407,13 +460,14 @@ function aggiornaCaricamento(testo, percentuale) {
   }
 
   if (Number.isFinite(percentuale)) {
-    percentualeCaricamento = Math.max(
-      percentualeCaricamento,
+    percentualeCaricamento =
       Math.max(
-        0,
-        Math.min(100, percentuale)
-      )
-    );
+        percentualeCaricamento,
+        Math.max(
+          0,
+          Math.min(100, percentuale)
+        )
+      );
 
     if (barra) {
       barra.style.width =
@@ -454,15 +508,20 @@ function terminaCaricamento(testoFinale) {
   );
 
   if (timerMassimoCaricamento) {
-    clearTimeout(timerMassimoCaricamento);
+    clearTimeout(
+      timerMassimoCaricamento
+    );
+
     timerMassimoCaricamento = null;
   }
 
-  setTimeout(() => {
-    overlay.classList.add(
-      "caricamento-finito"
-    );
-  }, 180);
+  setTimeout(
+    () =>
+      overlay.classList.add(
+        "caricamento-finito"
+      ),
+    180
+  );
 }
 
 function verificaFineCaricamento() {
@@ -490,7 +549,9 @@ function segnalaGraficaCaricata() {
 }
 
 function segnalaStatoInizialeRicevuto() {
-  if (statoInizialeRicevuto) return;
+  if (statoInizialeRicevuto) {
+    return;
+  }
 
   statoInizialeRicevuto = true;
 
@@ -498,7 +559,9 @@ function segnalaStatoInizialeRicevuto() {
     graficaCaricata
       ? "Partita pronta"
       : "Caricamento tavola…",
-    graficaCaricata ? 100 : 85
+    graficaCaricata
+      ? 100
+      : 85
   );
 
   verificaFineCaricamento();
@@ -525,13 +588,14 @@ function mostraNotificaGioco(testo) {
   toast.className =
     "notifica-toast-gioco";
 
-  toast.textContent = String(testo || "");
+  toast.textContent = testo;
 
   contenitore.appendChild(toast);
 
-  setTimeout(() => {
-    toast.remove();
-  }, 5000);
+  setTimeout(
+    () => toast.remove(),
+    5000
+  );
 }
 
 let timerFlashMessaggio = null;
@@ -560,11 +624,15 @@ function mostraMessaggioGiocoGrande(
       "flash-icona-gioco"
     );
 
-  if (!overlay || !titolo) return;
+  if (!overlay || !titolo || !testo) {
+    return;
+  }
 
-  clearTimeout(timerFlashMessaggio);
+  clearTimeout(
+    timerFlashMessaggio
+  );
 
-  titolo.textContent = String(testo || "");
+  titolo.textContent = testo;
 
   if (dettaglio) {
     dettaglio.textContent =
@@ -592,18 +660,24 @@ function mostraMessaggioGiocoGrande(
     durata + "ms"
   );
 
-  overlay.classList.remove("visibile");
+  overlay.classList.remove(
+    "visibile"
+  );
 
   void overlay.offsetWidth;
 
-  overlay.classList.add("visibile");
+  overlay.classList.add(
+    "visibile"
+  );
 
   timerFlashMessaggio =
-    setTimeout(() => {
-      overlay.classList.remove(
-        "visibile"
-      );
-    }, durata);
+    setTimeout(
+      () =>
+        overlay.classList.remove(
+          "visibile"
+        ),
+      durata
+    );
 }
 
 /* =========================================================
@@ -642,7 +716,8 @@ function ottieniContestoAudio() {
   }
 
   if (
-    contestoAudio.state === "suspended"
+    contestoAudio.state ===
+    "suspended"
   ) {
     const p =
       contestoAudio.resume();
@@ -788,10 +863,36 @@ function suonaTuoTurno() {
 }
 
 function suonaVittoria() {
-  suonaTono(523, 130, "sine", 0.13, 0);
-  suonaTono(659, 130, "sine", 0.13, 130);
-  suonaTono(784, 130, "sine", 0.13, 260);
-  suonaTono(1047, 260, "sine", 0.14, 390);
+  suonaTono(
+    523,
+    130,
+    "sine",
+    0.13
+  );
+
+  suonaTono(
+    659,
+    130,
+    "sine",
+    0.13,
+    130
+  );
+
+  suonaTono(
+    784,
+    130,
+    "sine",
+    0.13,
+    260
+  );
+
+  suonaTono(
+    1047,
+    260,
+    "sine",
+    0.14,
+    390
+  );
 }
 
 function suonaMessaggioChat() {
@@ -822,7 +923,9 @@ function impostaSuoni(attivi) {
   try {
     localStorage.setItem(
       "suoniAttivi",
-      suoniAttivi ? "on" : "off"
+      suoniAttivi
+        ? "on"
+        : "off"
     );
   } catch (_) {}
 
@@ -851,16 +954,15 @@ function aggiornaTestoBottoneSuoni() {
 }
 
 /* =========================================================
-   FULLSCREEN
+   FULLSCREEN / LAYOUT
    ========================================================= */
 
 function toggleFullscreen() {
   try {
-    const fullscreen =
-      document.fullscreenElement ||
-      document.webkitFullscreenElement;
-
-    if (!fullscreen) {
+    if (
+      !document.fullscreenElement &&
+      !document.webkitFullscreenElement
+    ) {
       const elemento =
         document.documentElement;
 
@@ -868,12 +970,13 @@ function toggleFullscreen() {
         elemento.requestFullscreen ||
         elemento.webkitRequestFullscreen ||
         elemento.mozRequestFullScreen ||
-        elemento.msRequestFullScreen;
+        elemento.msRequestFullscreen;
 
       if (!richiesta) {
         mostraNotificaGioco(
           "Il tuo browser non supporta lo schermo intero."
         );
+
         return;
       }
 
@@ -882,13 +985,14 @@ function toggleFullscreen() {
 
       if (
         risultato &&
-        typeof risultato.catch === "function"
+        typeof risultato.catch ===
+          "function"
       ) {
-        risultato.catch(() => {
+        risultato.catch(() =>
           mostraNotificaGioco(
             "Non è stato possibile attivare lo schermo intero."
-          );
-        });
+          )
+        );
       }
     } else {
       const esci =
@@ -917,8 +1021,10 @@ function aggiornaTestoBottoneFullscreen() {
   if (!b) return;
 
   b.textContent =
-    document.fullscreenElement ||
-    document.webkitFullscreenElement
+    (
+      document.fullscreenElement ||
+      document.webkitFullscreenElement
+    )
       ? "🡼 Esci da tutto schermo"
       : "⛶ Tutto schermo";
 }
@@ -932,10 +1038,6 @@ document.addEventListener(
   "webkitfullscreenchange",
   aggiornaTestoBottoneFullscreen
 );
-
-/* =========================================================
-   LAYOUT
-   ========================================================= */
 
 function rilevaEImpostaModalitaDesktop() {
   const puntatorePreciso =
@@ -1008,30 +1110,26 @@ function aggiornaLayoutTabellone() {
       : 26;
 
   const spazioRaccolte =
-    2 * (altezzaRaccolta + 12);
+    2 *
+    (altezzaRaccolta + 12);
 
   const larghezzaDisponibile =
-    Math.max(
-      120,
-      larghezzaFinestra -
-        margineOrizzontale * 2
-    );
+    larghezzaFinestra -
+    margineOrizzontale * 2;
 
   const altezzaDisponibile =
+    altezzaReale -
+    spazioRaccolte -
+    56;
+
+  const lato =
     Math.max(
       120,
-      altezzaReale -
-        spazioRaccolte -
-        56
+      Math.min(
+        larghezzaDisponibile,
+        altezzaDisponibile
+      )
     );
-
-  const lato = Math.max(
-    120,
-    Math.min(
-      larghezzaDisponibile,
-      altezzaDisponibile
-    )
-  );
 
   const puntatorePreciso =
     !!window.matchMedia?.(
@@ -1057,7 +1155,9 @@ let timerDebounceResize = null;
 function gestisciResize() {
   rilevaEImpostaModalitaDesktop();
 
-  clearTimeout(timerDebounceResize);
+  clearTimeout(
+    timerDebounceResize
+  );
 
   timerDebounceResize =
     setTimeout(
@@ -1068,6 +1168,7 @@ function gestisciResize() {
 
 function inizializzaGestioneLayout() {
   rilevaEImpostaModalitaDesktop();
+
   aggiornaLayoutTabellone();
 
   window.addEventListener(
@@ -1103,8 +1204,7 @@ function inizializzaGestioneLayout() {
 
 function chiavePresentazioneSfida() {
   return (
-    "giochi-societa:othello:" +
-    "presentazione-sfida:" +
+    "giochi-societa:othello:presentazione-sfida:" +
     (partitaId || "sconosciuta")
   );
 }
@@ -1131,12 +1231,10 @@ function marcaPresentazioneSfidaVista() {
 }
 
 function iniziale(nome) {
-  return (
-    (nome || "?")
-      .trim()
-      .charAt(0)
-      .toUpperCase() || "?"
-  );
+  return (nome || "?")
+    .trim()
+    .charAt(0)
+    .toUpperCase();
 }
 
 function coloreDaNome(nome) {
@@ -1153,10 +1251,13 @@ function coloreDaNome(nome) {
 
   let somma = 0;
 
-  const testo = nome || "?";
-
-  for (let i = 0; i < testo.length; i++) {
-    somma += testo.charCodeAt(i);
+  for (
+    let i = 0;
+    i < (nome || "?").length;
+    i++
+  ) {
+    somma +=
+      nome.charCodeAt(i);
   }
 
   return colori[
@@ -1171,7 +1272,7 @@ function escapeHtml(valore) {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
+    .replace(/\"/g, "&quot;")
     .replace(/'/g, "&#039;");
 }
 
@@ -1214,7 +1315,8 @@ function htmlAvatar(giocatore) {
     );
 
   if (
-    typeof giocatore.avatar === "string" &&
+    typeof giocatore.avatar ===
+      "string" &&
     giocatore.avatar.trim()
   ) {
     return `
@@ -1250,21 +1352,17 @@ function probabilitaVittoriaElo(
   eloA,
   eloB
 ) {
-  const a =
-    Number.isFinite(Number(eloA))
-      ? Number(eloA)
-      : 1500;
-
-  const b =
-    Number.isFinite(Number(eloB))
-      ? Number(eloB)
-      : 1500;
-
-  return 1 / (
-    1 +
-    Math.pow(
-      10,
-      (b - a) / 400
+  return (
+    1 /
+    (
+      1 +
+      Math.pow(
+        10,
+        (
+          Number(eloB) -
+          Number(eloA)
+        ) / 400
+      )
     )
   );
 }
@@ -1284,34 +1382,41 @@ function variazioniElo(
       : 1500;
 
   const p =
-    probabilitaVittoriaElo(a, b);
-
-  const vittoria =
-    Math.round(32 * (1 - p));
-
-  const sconfitta =
-    Math.round(32 * (0 - p));
+    probabilitaVittoriaElo(
+      a,
+      b
+    );
 
   return {
-    vittoria,
-    sconfitta
+    vittoria:
+      Math.max(
+        100,
+        Math.round(
+          a + 32 * (1 - p)
+        )
+      ) -
+      Math.round(a),
+
+    sconfitta:
+      Math.max(
+        100,
+        Math.round(
+          a + 32 * (0 - p)
+        )
+      ) -
+      Math.round(a)
   };
 }
 
 function giocatoriStato() {
-  if (
-    !stato.giocatori ||
-    typeof stato.giocatori !== "object"
-  ) {
-    return [];
-  }
-
   return Object.entries(
-    stato.giocatori
-  ).map(([uid, g]) => ({
-    uid,
-    ...(g || {})
-  }));
+    stato.giocatori || {}
+  ).map(
+    ([uid, g]) => ({
+      uid,
+      ...(g || {})
+    })
+  );
 }
 
 function disegnaPresentazioneSfida() {
@@ -1342,7 +1447,10 @@ function disegnaPresentazioneSfida() {
       g => g.colore === "bianco"
     ) || elenco[1];
 
-  const card = (g, lato) => {
+  const card = (
+    g,
+    lato
+  ) => {
     const destra =
       lato === "destra"
         ? " sfida-giocatore-destra"
@@ -1511,8 +1619,13 @@ function disegnaPresentazioneSfida() {
       "sfida-winrate"
     );
 
-  if (streak) streak.textContent = "—";
-  if (wr) wr.textContent = "—";
+  if (streak) {
+    streak.textContent = "—";
+  }
+
+  if (wr) {
+    wr.textContent = "—";
+  }
 }
 
 function mostraPresentazioneSfida() {
@@ -1585,17 +1698,21 @@ function mostraPresentazioneSfida() {
   );
 
   timerChiusuraPresentazioneSfida =
-    setTimeout(() => {
-      chiudiPresentazioneSfida();
-    }, 6000);
+    setTimeout(
+      () =>
+        chiudiPresentazioneSfida(),
+      6000
+    );
 
-  setTimeout(() => {
-    document
-      .getElementById(
-        "btn-entra-partita"
-      )
-      ?.focus();
-  }, 0);
+  setTimeout(
+    () =>
+      document
+        .getElementById(
+          "btn-entra-partita"
+        )
+        ?.focus(),
+    0
+  );
 }
 
 function chiudiPresentazioneSfida() {
@@ -1607,7 +1724,9 @@ function chiudiPresentazioneSfida() {
     timerChiusuraPresentazioneSfida
   );
 
-  timerChiusuraPresentazioneSfida = null;
+  timerChiusuraPresentazioneSfida =
+    null;
+
   presentazioneSfidaAperta = false;
 
   marcaPresentazioneSfidaVista();
@@ -1635,7 +1754,8 @@ document
   )
   ?.addEventListener(
     "click",
-    chiudiPresentazioneSfida
+    () =>
+      chiudiPresentazioneSfida()
   );
 
 /* =========================================================
@@ -1648,13 +1768,22 @@ function nomeColore(colore) {
   return "—";
 }
 
-const posizioniDischi = new Map();
-const caselleTavola = new Map();
+const posizioniDischi =
+  new Map();
+
+const caselleTavola =
+  new Map();
 
 let tavolaDisegnata = null;
 
-let animazioneCorrente = null;
-let animazioneGenerazione = 0;
+/*
+ * IMPORTANTE:
+ *
+ * Non usiamo più un contatore di animazioni che può rimanere
+ * bloccato per colpa di animationend mancanti o di snapshot
+ * concorrenti.
+ */
+let animazioneTavolaId = 0;
 
 let animazioniDischiAttive = true;
 
@@ -1702,16 +1831,19 @@ function toggleAnimazioniOthello() {
     );
   } catch (_) {}
 
-  if (!animazioniDischiAttive) {
-    annullaAnimazioneDischi();
-    if (stato.tavola) {
-      sincronizzaDischiIstantaneo(
-        stato.tavola
-      );
-    }
-  }
-
   aggiornaBottoneAnimazioniOthello();
+
+  /*
+   * Se l'utente disattiva le animazioni,
+   * sincronizziamo immediatamente la tavola.
+   */
+  if (!animazioniDischiAttive) {
+    sincronizzaDischiIstantaneo(
+      stato.tavola
+    );
+
+    renderTavola();
+  }
 }
 
 aggiornaBottoneAnimazioniOthello();
@@ -1721,6 +1853,9 @@ function chiaveCasella(r, c) {
 }
 
 function coordinateVisive(r, c) {
+  /*
+   * Il Bianco vede la tavola ruotata di 180°.
+   */
   return mioColore === "bianco"
     ? {
         r: 7 - r,
@@ -1770,57 +1905,42 @@ function preparaTavola() {
 
   if (!tavola) return null;
 
-  if (caselleTavola.size) {
-    return tavola;
-  }
+  if (!caselleTavola.size) {
+    for (let r = 0; r < 8; r++) {
+      for (let c = 0; c < 8; c++) {
+        const casella =
+          document.createElement(
+            "button"
+          );
 
-  for (let r = 0; r < 8; r++) {
-    for (let c = 0; c < 8; c++) {
-      const casella =
-        document.createElement(
-          "button"
+        casella.type = "button";
+
+        casella.setAttribute(
+          "role",
+          "gridcell"
         );
 
-      casella.type = "button";
-      casella.setAttribute(
-        "role",
-        "gridcell"
-      );
+        casella.dataset.r =
+          String(r);
 
-      casella.dataset.r =
-        String(r);
+        casella.dataset.c =
+          String(c);
 
-      casella.dataset.c =
-        String(c);
+        casella.addEventListener(
+          "click",
+          () =>
+            cliccaCasella(r, c)
+        );
 
-      casella.addEventListener(
-        "click",
-        () => cliccaCasella(r, c)
-      );
+        tavola.appendChild(
+          casella
+        );
 
-      casella.addEventListener(
-        "keydown",
-        evento => {
-          if (
-            evento.key !== "Enter" &&
-            evento.key !== " "
-          ) {
-            return;
-          }
-
-          evento.preventDefault();
-          cliccaCasella(r, c);
-        }
-      );
-
-      tavola.appendChild(
-        casella
-      );
-
-      caselleTavola.set(
-        chiaveCasella(r, c),
-        casella
-      );
+        caselleTavola.set(
+          chiaveCasella(r, c),
+          casella
+        );
+      }
     }
   }
 
@@ -1831,7 +1951,9 @@ function preparaTavola() {
 
   if (!strato) {
     strato =
-      document.createElement("div");
+      document.createElement(
+        "div"
+      );
 
     strato.id =
       "othello-strato-dischi";
@@ -1864,6 +1986,24 @@ function impostaPosizioneDisco(
     visiva.r * 12.5 + "%";
 }
 
+/*
+ * Sincronizzazione completa e immediata.
+ *
+ * Questa è la funzione più importante della correzione.
+ *
+ * NON si limita a cambiare tavolaDisegnata:
+ * ricostruisce realmente tutti i dischi DOM.
+ *
+ * In questo modo se il server manda:
+ *
+ * 4 dischi -> 6 dischi -> 8 dischi
+ *
+ * il browser mostra realmente:
+ *
+ * 4 -> 6 -> 8
+ *
+ * e non rimane fermo sui quattro iniziali.
+ */
 function sincronizzaDischiIstantaneo(
   tavolaStato
 ) {
@@ -1880,7 +2020,14 @@ function sincronizzaDischiIstantaneo(
 
   if (!strato) return;
 
-  strato.innerHTML = "";
+  /*
+   * Ricostruzione completa.
+   *
+   * È leggermente più semplice e molto più robusta
+   * rispetto a cercare di mantenere elementi DOM vecchi
+   * quando arrivano snapshot concorrenti.
+   */
+  strato.replaceChildren();
 
   posizioniDischi.clear();
 
@@ -1889,16 +2036,26 @@ function sincronizzaDischiIstantaneo(
       const colore =
         tavolaStato[r][c];
 
-      if (!colore) continue;
+      if (
+        colore !== "nero" &&
+        colore !== "bianco"
+      ) {
+        continue;
+      }
 
       const posizione =
-        document.createElement("div");
+        document.createElement(
+          "div"
+        );
 
       posizione.className =
         "othello-posizione";
 
+      const disco =
+        creaFacciaDisco(colore);
+
       posizione.appendChild(
-        creaFacciaDisco(colore)
+        disco
       );
 
       strato.appendChild(
@@ -1922,42 +2079,25 @@ function sincronizzaDischiIstantaneo(
     copiaTavola(tavolaStato);
 }
 
-function annullaAnimazioneDischi() {
-  animazioneGenerazione++;
-
-  if (animazioneCorrente) {
-    animazioneCorrente.abort =
-      true;
-
-    animazioneCorrente =
-      null;
-  }
-
-  const strato =
-    document.getElementById(
-      "othello-strato-dischi"
-    );
-
-  if (strato) {
-    strato
-      .querySelectorAll(
-        ".in-animazione, .appena-giocato"
-      )
-      .forEach(el => {
-        el.classList.remove(
-          "in-animazione",
-          "appena-giocato"
-        );
-      });
-  }
-}
-
+/*
+ * Restituisce le differenze tra due tavole.
+ */
 function estraiDifferenzeTavola(
   precedente,
   prossima
 ) {
   const nuove = [];
   const girati = [];
+
+  if (
+    !tavolaValida(precedente) ||
+    !tavolaValida(prossima)
+  ) {
+    return {
+      nuove,
+      girati
+    };
+  }
 
   for (let r = 0; r < 8; r++) {
     for (let c = 0; c < 8; c++) {
@@ -2004,36 +2144,31 @@ function distanzaScacchi(a, b) {
   );
 }
 
-function attendi(ms, controllo) {
-  return new Promise(resolve => {
-    const timer =
-      setTimeout(() => {
-        resolve(
-          !controllo ||
-          controllo()
-        );
-      }, ms);
-
-    if (
-      controllo &&
-      controllo.__timers
-    ) {
-      controllo.__timers.push(
-        timer
-      );
-    }
-  });
-}
-
+/*
+ * Aggiornamento animato.
+ *
+ * Fondamentale:
+ * alla fine viene sempre eseguita una sincronizzazione
+ * completa della tavola.
+ *
+ * Quindi anche se una animationend non arriva,
+ * la tavola non rimane corrotta.
+ */
 async function animaVersoTavola(
   prossimaTavola,
   istantanea
 ) {
-  const generazione =
-    ++animazioneGenerazione;
+  if (!tavolaValida(prossimaTavola)) {
+    return;
+  }
 
-  annullaAnimazioneDischi();
+  const idAnimazione =
+    ++animazioneTavolaId;
 
+  /*
+   * Primo stato:
+   * sincronizzazione diretta.
+   */
   if (
     istantanea ||
     !tavolaDisegnata ||
@@ -2046,27 +2181,72 @@ async function animaVersoTavola(
     return;
   }
 
-  const precedente =
-    copiaTavola(
-      tavolaDisegnata
+  /*
+   * Se la tavola DOM non coincide più con
+   * tavolaDisegnata, la ricostruiamo.
+   */
+  if (
+    !tavoleUguali(
+      tavolaDisegnata,
+      stato.tavola
+    )
+  ) {
+    sincronizzaDischiIstantaneo(
+      stato.tavola
     );
+  }
+
+  const precedente =
+    tavolaDisegnata
+      ? copiaTavola(
+          tavolaDisegnata
+        )
+      : null;
+
+  if (!precedente) {
+    sincronizzaDischiIstantaneo(
+      prossimaTavola
+    );
+
+    return;
+  }
 
   const {
     nuove,
     girati
-  } = estraiDifferenzeTavola(
-    precedente,
-    prossimaTavola
-  );
+  } =
+    estraiDifferenzeTavola(
+      precedente,
+      prossimaTavola
+    );
 
-  if (
-    !nuove.length &&
-    !girati.length
-  ) {
+  /*
+   * Se la differenza è troppo strana per essere
+   * un normale movimento Othello, facciamo
+   * semplicemente una sincronizzazione completa.
+   */
+  const numeroDifferenze =
+    nuove.length +
+    girati.length;
+
+  if (numeroDifferenze === 0) {
     tavolaDisegnata =
       copiaTavola(
         prossimaTavola
       );
+
+    return;
+  }
+
+  /*
+   * Se ci sono troppe differenze,
+   * potrebbe trattarsi di una riconnessione
+   * o di uno snapshot completo.
+   */
+  if (numeroDifferenze > 20) {
+    sincronizzaDischiIstantaneo(
+      prossimaTavola
+    );
 
     return;
   }
@@ -2084,352 +2264,232 @@ async function animaVersoTavola(
     return;
   }
 
-  const controllo = {
-    abort: false,
-    __timers: []
-  };
-
-  animazioneCorrente =
-    controllo;
-
-  const ancoraValida = () =>
-    !controllo.abort &&
-    generazione ===
-      animazioneGenerazione;
-
-  try {
-    const centro =
-      nuove[0] ||
-      girati[0] || {
-        r: 3.5,
-        c: 3.5
-      };
-
-    for (const cella of nuove) {
-      if (!ancoraValida()) {
-        return;
-      }
-
-      const key =
-        chiaveCasella(
-          cella.r,
-          cella.c
-        );
-
-      let posizione =
-        posizioniDischi.get(key);
-
-      if (!posizione) {
-        posizione =
-          document.createElement(
-            "div"
-          );
-
-        posizione.className =
-          "othello-posizione appena-giocato";
-
-        posizione.appendChild(
-          creaFacciaDisco(
-            cella.colore
-          )
-        );
-
-        strato.appendChild(
-          posizione
-        );
-
-        impostaPosizioneDisco(
-          posizione,
-          cella.r,
-          cella.c
-        );
-
-        posizioniDischi.set(
-          key,
-          posizione
-        );
-
-        if (
-          cella === nuove[0]
-        ) {
-          suonaPosa();
-        }
-      }
-    }
-
-    for (
-      const cella of girati
-    ) {
-      if (!ancoraValida()) {
-        return;
-      }
-
-      const posizione =
-        posizioniDischi.get(
-          chiaveCasella(
-            cella.r,
-            cella.c
-          )
-        );
-
-      if (!posizione) {
-        sincronizzaDischiIstantaneo(
-          prossimaTavola
-        );
-
-        return;
-      }
-
-      const disco =
-        posizione.querySelector(
-          ".othello-disco"
-        );
-
-      if (!disco) continue;
-
-      const ritardo =
-        Math.max(
-          0,
-          distanzaScacchi(
-            centro,
-            cella
-          ) - 1
-        ) * 70;
-
-      const ok =
-        await new Promise(
-          resolve => {
-            const timer =
-              setTimeout(() => {
-                if (
-                  !ancoraValida()
-                ) {
-                  resolve(false);
-                  return;
-                }
-
-                posizione.classList.add(
-                  "in-animazione"
-                );
-
-                const classeFlip =
-                  cella.colore ===
-                  "bianco"
-                    ? "girando-a-bianco"
-                    : "girando-a-nero";
-
-                suonaFlip(0);
-
-                let conclusa =
-                  false;
-
-                const termina =
-                  () => {
-                    if (conclusa) return;
-
-                    conclusa = true;
-
-                    disco.classList.remove(
-                      classeFlip
-                    );
-
-                    disco.dataset.colore =
-                      cella.colore;
-
-                    posizione.classList.remove(
-                      "in-animazione"
-                    );
-
-                    resolve(
-                      ancoraValida()
-                    );
-                  };
-
-                disco.addEventListener(
-                  "animationend",
-                  termina,
-                  {
-                    once: true
-                  }
-                );
-
-                disco.classList.add(
-                  classeFlip
-                );
-
-                /*
-                 * Fallback: se animationend non
-                 * arriva perché il CSS viene
-                 * modificato/disabilitato.
-                 */
-                setTimeout(
-                  termina,
-                  700
-                );
-              }, ritardo);
-
-            controllo.__timers.push(
-              timer
-            );
-          }
-        );
-
-      if (!ok) return;
-    }
-
-    if (!ancoraValida()) {
-      return;
-    }
-
-    tavolaDisegnata =
-      copiaTavola(
-        prossimaTavola
-      );
-  } finally {
-    if (
-      animazioneCorrente ===
-      controllo
-    ) {
-      animazioneCorrente =
-        null;
-    }
-
-    controllo.__timers.forEach(
-      clearTimeout
-    );
-  }
-}
-
-/* =========================================================
-   RENDER TAVOLA
-   ========================================================= */
-
-function renderTavola() {
-  const tavola =
-    preparaTavola();
-
-  if (!tavola) return;
-
-  if (!tavolaDisegnata) {
-    sincronizzaDischiIstantaneo(
-      stato.tavola
-    );
-  }
-
-  const inCorso =
-    stato.fase === "in_corso";
-
-  const mioTurno =
-    inCorso &&
-    !!mioColore &&
-    stato.turno === mioColore;
-
-  const destinazioni =
-    new Map();
-
-  if (
-    mioTurno &&
-    !mossaInAttesa &&
-    !animazioneCorrente
-  ) {
-    for (
-      const mossa of
-      mosseLegaliCorrenti
-    ) {
-      destinazioni.set(
-        chiaveCasella(
-          mossa.r,
-          mossa.c
-        ),
-        true
-      );
-    }
-  }
-
-  const bloccata =
-    !!animazioneCorrente ||
-    mossaInAttesa ||
-    attesaSnapshot;
-
-  tavola.setAttribute(
-    "aria-busy",
-    bloccata
-      ? "true"
-      : "false"
-  );
-
+  /*
+   * Assicuriamoci che tutti i dischi precedenti
+   * esistano davvero nel DOM.
+   */
   for (let r = 0; r < 8; r++) {
     for (let c = 0; c < 8; c++) {
+      const colore =
+        precedente[r][c];
+
+      if (!colore) continue;
+
       const key =
         chiaveCasella(r, c);
 
-      const casella =
-        caselleTavola.get(key);
-
-      if (!casella) continue;
-
-      const visiva =
-        coordinateVisive(r, c);
-
-      casella.style.gridRow =
-        String(visiva.r + 1);
-
-      casella.style.gridColumn =
-        String(visiva.c + 1);
-
-      const giocabile =
-        destinazioni.has(key) &&
-        !bloccata;
-
-      casella.className =
-        "othello-casella" +
-        (
-          giocabile
-            ? " giocabile destinazione"
-            : ""
+      if (!posizioniDischi.has(key)) {
+        sincronizzaDischiIstantaneo(
+          precedente
         );
 
-      const ultimo =
-        stato.ultimoMovimento ||
-        {};
-
-      if (
-        ultimo.a &&
-        ultimo.a.r === r &&
-        ultimo.a.c === c
-      ) {
-        casella.classList.add(
-          "ultima-mossa"
-        );
+        break;
       }
-
-      const occupata =
-        tavolaDisegnata?.[r]?.[c];
-
-      casella.setAttribute(
-        "aria-label",
-        "Casella " +
-          (r * 8 + c + 1) +
-          (
-            occupata
-              ? ", disco " +
-                nomeColore(
-                  occupata
-                ).toLowerCase()
-              : ", vuota"
-          ) +
-          (
-            giocabile
-              ? ", mossa disponibile"
-              : ""
-          )
-      );
-
-      casella.disabled =
-        bloccata ||
-        !giocabile;
     }
   }
+
+  /*
+   * Inserimento dei nuovi dischi.
+   */
+  for (const cella of nuove) {
+    const key =
+      chiaveCasella(
+        cella.r,
+        cella.c
+      );
+
+    let posizione =
+      posizioniDischi.get(key);
+
+    if (!posizione) {
+      posizione =
+        document.createElement(
+          "div"
+        );
+
+      posizione.className =
+        "othello-posizione appena-giocato";
+
+      posizione.appendChild(
+        creaFacciaDisco(
+          cella.colore
+        )
+      );
+
+      strato.appendChild(
+        posizione
+      );
+
+      impostaPosizioneDisco(
+        posizione,
+        cella.r,
+        cella.c
+      );
+
+      posizioniDischi.set(
+        key,
+        posizione
+      );
+
+      suonaPosa();
+    }
+  }
+
+  /*
+   * Flip.
+   *
+   * Non attendiamo indefinitamente animationend.
+   * Usiamo un tempo massimo di sicurezza.
+   */
+  const centro =
+    nuove[0] ||
+    girati[0] || {
+      r: 3.5,
+      c: 3.5
+    };
+
+  const promesseFlip =
+    girati.map(
+      (
+        cella,
+        indice
+      ) =>
+        new Promise(resolve => {
+          if (
+            idAnimazione !==
+            animazioneTavolaId
+          ) {
+            resolve();
+            return;
+          }
+
+          const key =
+            chiaveCasella(
+              cella.r,
+              cella.c
+            );
+
+          const posizione =
+            posizioniDischi.get(
+              key
+            );
+
+          if (!posizione) {
+            resolve();
+            return;
+          }
+
+          const disco =
+            posizione.querySelector(
+              ".othello-disco"
+            );
+
+          if (!disco) {
+            resolve();
+            return;
+          }
+
+          const ritardo =
+            Math.max(
+              0,
+              distanzaScacchi(
+                centro,
+                cella
+              ) - 1
+            ) * 70;
+
+          const classeFlip =
+            cella.colore === "bianco"
+              ? "girando-a-bianco"
+              : "girando-a-nero";
+
+          let conclusa = false;
+
+          const completa = () => {
+            if (conclusa) return;
+
+            conclusa = true;
+
+            disco.classList.remove(
+              "girando-a-bianco",
+              "girando-a-nero"
+            );
+
+            disco.dataset.colore =
+              cella.colore;
+
+            posizione.classList.remove(
+              "in-animazione"
+            );
+
+            resolve();
+          };
+
+          setTimeout(() => {
+            if (
+              idAnimazione !==
+              animazioneTavolaId
+            ) {
+              completa();
+              return;
+            }
+
+            posizione.classList.add(
+              "in-animazione"
+            );
+
+            suonaFlip(0);
+
+            disco.addEventListener(
+              "animationend",
+              completa,
+              {
+                once: true
+              }
+            );
+
+            disco.classList.add(
+              classeFlip
+            );
+
+            /*
+             * Fallback:
+             * se il CSS non genera animationend,
+             * non restiamo bloccati.
+             */
+            setTimeout(
+              completa,
+              1200
+            );
+          }, ritardo + indice * 10);
+        })
+    );
+
+  await Promise.all(
+    promesseFlip
+  );
+
+  /*
+   * Se nel frattempo è arrivato un nuovo snapshot,
+   * NON tocchiamo la tavola più recente.
+   */
+  if (
+    idAnimazione !==
+    animazioneTavolaId
+  ) {
+    return;
+  }
+
+  /*
+   * PUNTO CHIAVE:
+   * sincronizzazione finale completa.
+   *
+   * Questo risolve il problema:
+   * "vedo solo i quattro dischi iniziali".
+   */
+  sincronizzaDischiIstantaneo(
+    prossimaTavola
+  );
 }
 
 /* =========================================================
@@ -2438,7 +2498,9 @@ function renderTavola() {
 
 function renderPunteggio() {
   const conteggio =
-    contaDischi(stato.tavola);
+    contaDischi(
+      stato.tavola
+    );
 
   const mioConteggio =
     mioColore === "bianco"
@@ -2446,9 +2508,9 @@ function renderPunteggio() {
       : conteggio.nero;
 
   const avversarioColore =
-    mioColore === "bianco"
-      ? "nero"
-      : "bianco";
+    coloreOpposto(
+      mioColore
+    );
 
   const avversarioConteggio =
     mioColore === "bianco"
@@ -2457,7 +2519,9 @@ function renderPunteggio() {
 
   const giocatore =
     giocatoriStato().find(
-      g => g.colore === mioColore
+      g =>
+        g.colore ===
+        mioColore
     );
 
   const avversario =
@@ -2518,7 +2582,9 @@ function renderPunteggio() {
 
   if (cAvversario) {
     cAvversario.textContent =
-      String(avversarioConteggio);
+      String(
+        avversarioConteggio
+      );
   }
 
   const dGiocatore =
@@ -2547,7 +2613,7 @@ function renderPunteggio() {
 }
 
 /* =========================================================
-   GIOCATORI
+   PANNELLO GIOCATORI
    ========================================================= */
 
 function creaAvatarMini(
@@ -2555,17 +2621,19 @@ function creaAvatarMini(
   avatar
 ) {
   if (
-    typeof avatar === "string" &&
+    typeof avatar ===
+      "string" &&
     avatar.trim()
   ) {
     const immagine =
-      document.createElement("img");
+      document.createElement(
+        "img"
+      );
 
     immagine.className =
       "avatar-mini";
 
-    immagine.src =
-      avatar;
+    immagine.src = avatar;
 
     immagine.alt =
       "Avatar di " +
@@ -2578,7 +2646,9 @@ function creaAvatarMini(
   }
 
   const inizialeEl =
-    document.createElement("div");
+    document.createElement(
+      "div"
+    );
 
   inizialeEl.className =
     "avatar-mini";
@@ -2610,26 +2680,31 @@ function renderPannelloGiocatori() {
   const giocatori =
     giocatoriStato().sort(
       (a, b) => {
-        if (a.colore === b.colore) {
+        if (
+          a.colore ===
+          b.colore
+        ) {
           return 0;
         }
 
-        return a.colore === "nero"
+        return a.colore ===
+          "nero"
           ? -1
           : 1;
       }
     );
 
-  for (
-    const giocatore of giocatori
-  ) {
+  for (const giocatore of giocatori) {
     const attivo =
-      stato.fase === "in_corso" &&
+      stato.fase ===
+        "in_corso" &&
       giocatore.colore ===
         stato.turno;
 
     const card =
-      document.createElement("div");
+      document.createElement(
+        "div"
+      );
 
     card.className =
       "giocatore-card" +
@@ -2642,29 +2717,35 @@ function renderPannelloGiocatori() {
     card.appendChild(
       creaAvatarMini(
         giocatore.nome ||
-        giocatore.nickname,
+          giocatore.nickname,
         giocatore.avatar
       )
     );
 
     const link =
-      document.createElement("a");
+      document.createElement(
+        "a"
+      );
 
     link.href =
       "/profilo-pubblico.html?nickname=" +
       encodeURIComponent(
         giocatore.nome ||
-        giocatore.nickname ||
-        ""
+          giocatore.nickname ||
+          ""
       );
 
     link.target = "_blank";
     link.rel = "noopener";
 
-    link.style.color = "inherit";
+    link.style.color =
+      "inherit";
+
     link.style.textDecoration =
       "none";
-    link.style.flexGrow = "1";
+
+    link.style.flexGrow =
+      "1";
 
     link.textContent =
       giocatore.nome ||
@@ -2685,7 +2766,9 @@ function renderPannelloGiocatori() {
       "ELO " +
       (
         Number.isFinite(
-          Number(giocatore.elo)
+          Number(
+            giocatore.elo
+          )
         )
           ? Math.round(
               Number(
@@ -2737,8 +2820,24 @@ function renderPannelloGiocatori() {
       colore
     );
 
-    lista.appendChild(card);
+    lista.appendChild(
+      card
+    );
   }
+}
+
+/* =========================================================
+   TURNI
+   ========================================================= */
+
+function eMioTurno() {
+  return (
+    stato.fase ===
+      "in_corso" &&
+    !!mioColore &&
+    stato.turno ===
+      mioColore
+  );
 }
 
 function aggiornaInterfacciaPartita() {
@@ -2752,13 +2851,8 @@ function aggiornaInterfacciaPartita() {
       "messaggi-gioco"
     );
 
-  const inCorso =
-    stato.fase === "in_corso";
-
   const mioTurno =
-    inCorso &&
-    !!mioColore &&
-    stato.turno === mioColore;
+    eMioTurno();
 
   if (rigaTurno) {
     if (
@@ -2796,10 +2890,11 @@ function aggiornaInterfacciaPartita() {
         "Partita terminata";
     } else if (
       mioTurno &&
-      !mosseLegaliCorrenti.length
+      mosseLegaliCorrenti.length ===
+        0
     ) {
       messaggi.textContent =
-        "Nessuna mossa disponibile: passa il turno";
+        "Nessuna mossa disponibile: attendo il passaggio del turno";
     } else {
       messaggi.textContent =
         "";
@@ -2807,9 +2902,176 @@ function aggiornaInterfacciaPartita() {
   }
 }
 
+/* =========================================================
+   RENDER
+   ========================================================= */
+
+function renderTavola() {
+  const tavola =
+    preparaTavola();
+
+  if (!tavola) return;
+
+  /*
+   * Se non abbiamo una rappresentazione DOM,
+   * la creiamo SEMPRE.
+   */
+  if (!tavolaDisegnata) {
+    sincronizzaDischiIstantaneo(
+      stato.tavola
+    );
+  }
+
+  const inCorso =
+    stato.fase ===
+    "in_corso";
+
+  const mioTurno =
+    inCorso &&
+    !!mioColore &&
+    stato.turno ===
+      mioColore;
+
+  const destinazioni =
+    new Map();
+
+  /*
+   * Le destinazioni sono mostrate solo quando:
+   * - è il mio turno;
+   * - non sto aspettando la conferma della mossa;
+   * - è arrivato lo snapshot iniziale;
+   */
+  if (
+    mioTurno &&
+    !mossaInAttesa &&
+    !attesaSnapshot
+  ) {
+    for (
+      const mossa of
+      mosseLegaliCorrenti
+    ) {
+      destinazioni.set(
+        chiaveCasella(
+          mossa.r,
+          mossa.c
+        ),
+        true
+      );
+    }
+  }
+
+  /*
+   * NON blocchiamo la tavola mentre un'animazione
+   * grafica sta finendo.
+   *
+   * Questo è fondamentale per evitare il bug:
+   * "tocca a me ma non posso cliccare".
+   */
+  const bloccata =
+    mossaInAttesa ||
+    attesaSnapshot;
+
+  tavola.setAttribute(
+    "aria-busy",
+    bloccata
+      ? "true"
+      : "false"
+  );
+
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const key =
+        chiaveCasella(
+          r,
+          c
+        );
+
+      const casella =
+        caselleTavola.get(
+          key
+        );
+
+      if (!casella) continue;
+
+      const visiva =
+        coordinateVisive(
+          r,
+          c
+        );
+
+      casella.style.gridRow =
+        String(
+          visiva.r + 1
+        );
+
+      casella.style.gridColumn =
+        String(
+          visiva.c + 1
+        );
+
+      const giocabile =
+        destinazioni.has(key) &&
+        !bloccata;
+
+      casella.className =
+        "othello-casella" +
+        (
+          giocabile
+            ? " giocabile destinazione"
+            : ""
+        );
+
+      const ultimo =
+        stato.ultimoMovimento ||
+        {};
+
+      if (
+        ultimo.a &&
+        ultimo.a.r === r &&
+        ultimo.a.c === c
+      ) {
+        casella.classList.add(
+          "ultima-mossa"
+        );
+      }
+
+      const occupata =
+        stato.tavola?.[r]?.[c] ||
+        null;
+
+      casella.setAttribute(
+        "aria-label",
+        "Casella " +
+          (r * 8 + c + 1) +
+          (
+            occupata
+              ? ", disco " +
+                nomeColore(
+                  occupata
+                ).toLowerCase()
+              : ", vuota"
+          ) +
+          (
+            giocabile
+              ? ", mossa disponibile"
+              : ""
+          )
+      );
+
+      casella.disabled =
+        bloccata ||
+        !giocabile;
+    }
+  }
+}
+
 function render() {
+  /*
+   * Ricalcolo SEMPRE dal vero stato corrente.
+   */
   mosseLegaliCorrenti =
-    stato.fase === "in_corso" &&
+    stato.fase ===
+      "in_corso" &&
     mioColore
       ? mosseLegaliPer(
           stato.tavola,
@@ -2837,7 +3099,8 @@ function aggiornaCountdownTurno() {
 
   if (
     !stato.scadenzaTurno ||
-    stato.fase !== "in_corso"
+    stato.fase !==
+      "in_corso"
   ) {
     el.textContent =
       "⏱ --s";
@@ -2861,9 +3124,10 @@ function aggiornaCountdownTurno() {
     Math.max(
       0,
       Math.ceil(
-        (scadenza -
-          Date.now()) /
-          1000
+        (
+          scadenza -
+          Date.now()
+        ) / 1000
       )
     );
 
@@ -2885,8 +3149,10 @@ function aggiornaCountdownTurno() {
   if (
     secondi <= 10 &&
     secondi > 0 &&
-    avvisoTempoChiave !== chiave &&
-    stato.turno === mioColore
+    avvisoTempoChiave !==
+      chiave &&
+    stato.turno ===
+      mioColore
   ) {
     avvisoTempoChiave =
       chiave;
@@ -2896,39 +3162,65 @@ function aggiornaCountdownTurno() {
 }
 
 /* =========================================================
-   APPLICAZIONE STATO
+   STATO UFFICIALE
    ========================================================= */
 
-let codaStato = Promise.resolve();
-
-function applicaStatoPartita(
-  partita,
-  istantanea = false
+/*
+ * Determina se un nuovo stato è più recente del precedente.
+ *
+ * Non usiamo solamente numeroMossa perché alcuni server
+ * possono inviare snapshot con stesso numero di mossa ma
+ * informazioni aggiornate su turno/fase/timer.
+ */
+function statoRicevutoUtilizzabile(
+  prossimo
 ) {
-  /*
-   * Serializziamo l'applicazione degli snapshot.
-   * Questo evita che due `await` contemporanei
-   * modifichino lo stato in ordine sbagliato.
-   */
-  codaStato =
-    codaStato
-      .catch(() => {})
-      .then(() =>
-        applicaStatoPartitaInterno(
-          partita,
-          istantanea
-        )
-      );
+  const vecchio =
+    ultimoStatoRicevuto;
 
-  return codaStato;
+  const nuovoNumero =
+    Number.isFinite(
+      Number(
+        prossimo.numeroMossa
+      )
+    )
+      ? Number(
+          prossimo.numeroMossa
+        )
+      : null;
+
+  const vecchioNumero =
+    Number.isFinite(
+      Number(
+        vecchio.numeroMossa
+      )
+    )
+      ? Number(
+          vecchio.numeroMossa
+        )
+      : null;
+
+  if (
+    nuovoNumero !== null &&
+    vecchioNumero !== null &&
+    nuovoNumero <
+      vecchioNumero
+  ) {
+    return false;
+  }
+
+  return true;
 }
 
-async function applicaStatoPartitaInterno(
-  partita,
-  istantanea = false
+function normalizzaStatoRicevuto(
+  partita
 ) {
-  if (!partita || typeof partita !== "object") {
-    return;
+  if (
+    !partita ||
+    typeof partita !==
+      "object"
+  ) {
+    return null;
   }
 
   const prossimo = {
@@ -2936,32 +3228,12 @@ async function applicaStatoPartitaInterno(
     ...partita
   };
 
-  if (!statoBaseValido(prossimo)) {
-    mostraNotificaGioco(
-      "Stato della partita non valido: attendo la sincronizzazione."
-    );
-
-    return;
-  }
-
   if (
-    !istantanea &&
-    statoObsoleto(
-      prossimo,
-      ultimoStatoRicevuto
+    !tavolaValida(
+      prossimo.tavola
     )
   ) {
-    return;
-  }
-
-  if (
-    !istantanea &&
-    stessoSnapshot(
-      prossimo,
-      ultimoStatoRicevuto
-    )
-  ) {
-    return;
+    return null;
   }
 
   prossimo.tavola =
@@ -2970,47 +3242,144 @@ async function applicaStatoPartitaInterno(
     );
 
   /*
-   * Lo stato viene considerato autorevole
-   * prima dell'animazione.
+   * Valori sicuri per fase e turno.
    */
-  const precedente =
-    copiaStato(stato);
-
-  ultimoStatoRicevuto =
-    copiaStato(prossimo);
-
-  stato =
-    copiaStato(prossimo);
-
-  if (istantanea) {
-    annullaAnimazioneDischi();
-    tavolaDisegnata = null;
+  if (
+    prossimo.fase !==
+      "attesa_giocatori" &&
+    prossimo.fase !==
+      "in_corso" &&
+    prossimo.fase !==
+      "terminata"
+  ) {
+    prossimo.fase =
+      "attesa_giocatori";
   }
 
   if (
-    mioColore &&
-    mioColore !== stato.turno
+    prossimo.turno !==
+      "nero" &&
+    prossimo.turno !==
+      "bianco"
   ) {
-    /* nessuna azione */
+    prossimo.turno =
+      "nero";
+  }
+
+  if (
+    !prossimo.giocatori ||
+    typeof prossimo.giocatori !==
+      "object"
+  ) {
+    prossimo.giocatori = {};
+  }
+
+  if (
+    !Number.isFinite(
+      Number(
+        prossimo.numeroMossa
+      )
+    )
+  ) {
+    prossimo.numeroMossa = 0;
+  } else {
+    prossimo.numeroMossa =
+      Number(
+        prossimo.numeroMossa
+      );
+  }
+
+  return prossimo;
+}
+
+async function applicaStatoPartita(
+  partita,
+  istantanea = false
+) {
+  const prossimo =
+    normalizzaStatoRicevuto(
+      partita
+    );
+
+  if (!prossimo) {
+    mostraNotificaGioco(
+      "Stato della tavola non valido: attendo la sincronizzazione."
+    );
+
+    return;
+  }
+
+  if (
+    !statoRicevutoUtilizzabile(
+      prossimo
+    )
+  ) {
+    return;
   }
 
   const numeroPrecedente =
-    numeroMossaValido(
-      precedente.numeroMossa
+    Number(
+      stato.numeroMossa || 0
     );
 
-  const numeroNuovo =
-    numeroMossaValido(
-      stato.numeroMossa
+  const turnoPrecedente =
+    stato.turno;
+
+  const fasePrecedente =
+    stato.fase;
+
+  const tavolaPrecedente =
+    tavolaDisegnata
+      ? copiaTavola(
+          tavolaDisegnata
+        )
+      : copiaTavola(
+          stato.tavola
+        );
+
+  /*
+   * Salviamo immediatamente l'ultimo stato ufficiale.
+   *
+   * Questo è importante:
+   * la UI deve poter essere ridisegnata anche mentre
+   * un'animazione è in corso.
+   */
+  ultimoStatoRicevuto =
+    prossimo;
+
+  versioneStatoLocale++;
+
+  const versioneCorrente =
+    versioneStatoLocale;
+
+  /*
+   * Aggiorniamo subito lo stato logico.
+   *
+   * Non aspettiamo la fine dell'animazione.
+   *
+   * Questo risolve direttamente il problema per cui
+   * il turno successivo risultava bloccato.
+   */
+  stato =
+    prossimo;
+
+  ultimoNumeroMossaApplicato =
+    Math.max(
+      ultimoNumeroMossaApplicato,
+      Number(
+        stato.numeroMossa || 0
+      )
     );
 
-  const numeroCambiato =
-    numeroNuovo !== null &&
-    numeroPrecedente !== null &&
-    numeroNuovo !==
-      numeroPrecedente;
-
-  if (numeroCambiato) {
+  /*
+   * Una risposta ufficiale relativa alla mossa
+   * chiude l'attesa.
+   */
+  if (
+    stato.numeroMossa !==
+    numeroPrecedente ||
+    istantanea
+  ) {
     mossaInAttesa = false;
 
     clearTimeout(
@@ -3024,49 +3393,74 @@ async function applicaStatoPartitaInterno(
       "";
   }
 
-  if (
-    istantanea ||
-    stato.fase !== "in_corso"
-  ) {
-    mossaInAttesa = false;
-
-    clearTimeout(
-      timerMossaInAttesa
-    );
-
-    timerMossaInAttesa =
-      null;
-  }
-
+  /*
+   * Render logico IMMEDIATO.
+   *
+   * Quindi il nuovo turno è disponibile
+   * anche se la grafica sta ancora facendo il flip.
+   */
   render();
 
   /*
-   * L'animazione è puramente visuale:
-   * non blocca la validità dello stato.
+   * La tavola visuale viene aggiornata separatamente.
    */
-  await animaVersoTavola(
-    stato.tavola,
-    istantanea
-  );
+  try {
+    await animaVersoTavola(
+      stato.tavola,
+      istantanea
+    );
+  } catch (errore) {
+    console.error(
+      "Animazione tavola Othello:",
+      errore
+    );
+
+    /*
+     * Fallback assoluto.
+     */
+    sincronizzaDischiIstantaneo(
+      stato.tavola
+    );
+  }
 
   /*
-   * Se nel frattempo è arrivato un altro
-   * snapshot, non tocchiamo più il DOM.
+   * Se nel frattempo è arrivato uno stato più nuovo,
+   * non facciamo altre operazioni sullo stato corrente.
    */
   if (
-    ultimoStatoRicevuto.numeroMossa !==
-    stato.numeroMossa
+    versioneCorrente !==
+    versioneStatoLocale
   ) {
     return;
   }
 
+  /*
+   * Assicuriamoci comunque che la grafica corrisponda
+   * allo stato ufficiale.
+   */
+  if (
+    !tavoleUguali(
+      tavolaDisegnata,
+      stato.tavola
+    )
+  ) {
+    sincronizzaDischiIstantaneo(
+      stato.tavola
+    );
+  }
+
   render();
 
+  /*
+   * Messaggio passaggio turno.
+   */
   if (
-    stato.fase === "in_corso" &&
-    numeroCambiato &&
+    stato.fase ===
+      "in_corso" &&
     stato.turno ===
-      precedente.turno &&
+      turnoPrecedente &&
+    stato.numeroMossa !==
+      numeroPrecedente &&
     giocatoriStato().length >= 2
   ) {
     const chiNonMuove =
@@ -3076,40 +3470,62 @@ async function applicaStatoPartitaInterno(
           stato.turno
       );
 
-    mostraMessaggioGiocoGrande(
-      (
-        chiNonMuove?.nome ||
-        chiNonMuove?.nickname ||
-        "L'avversario"
-      ) +
-        " non ha mosse disponibili",
-      {
-        dettaglio:
-          "Tocca ancora a " +
-          (
-            stato.turno ===
-            mioColore
-              ? "te"
-              : nomeColore(
-                  stato.turno
-                ).toLowerCase()
-          ),
-        icona: "⏭️",
-        durata: 2400
-      }
-    );
+    if (
+      chiNonMuove &&
+      mosseLegaliPer(
+        stato.tavola,
+        chiNonMuove.colore
+      ).length === 0
+    ) {
+      mostraMessaggioGiocoGrande(
+        (
+          chiNonMuove.nome ||
+          chiNonMuove.nickname ||
+          "L'avversario"
+        ) +
+          " non ha mosse disponibili",
+        {
+          dettaglio:
+            "Il turno passa a " +
+            (
+              stato.turno ===
+              mioColore
+                ? "te"
+                : nomeColore(
+                    stato.turno
+                  ).toLowerCase()
+            ),
+          icona: "⏭️",
+          durata: 2400
+        }
+      );
+    }
   }
 
+  /*
+   * Suono turno.
+   */
   if (
-    stato.fase === "in_corso" &&
-    stato.turno === mioColore &&
-    numeroCambiato
+    stato.fase ===
+      "in_corso" &&
+    stato.turno ===
+      mioColore &&
+    (
+      stato.numeroMossa !==
+        numeroPrecedente ||
+      fasePrecedente !==
+        "in_corso"
+    )
   ) {
     suonaTuoTurno();
   }
 
+  /*
+   * Presentazione sfida.
+   */
   if (
-    stato.fase === "in_corso" &&
+    stato.fase ===
+      "in_corso" &&
     giocatoriStato().length >= 2 &&
     !presentazioneSfidaGiaVista()
   ) {
@@ -3123,57 +3539,94 @@ async function applicaStatoPartitaInterno(
     }, 260);
   }
 
+  /*
+   * Fine partita.
+   */
   if (
-    stato.fase === "terminata"
+    stato.fase ===
+      "terminata"
   ) {
-    mostraVittoria(stato);
+    mostraVittoria(
+      stato
+    );
   }
 }
 
 /* =========================================================
-   MOSSA
+   CLICK CASELLA
    ========================================================= */
 
 function cliccaCasella(r, c) {
-  if (
-    animazioneCorrente ||
-    mossaInAttesa ||
-    attesaSnapshot
-  ) {
+  /*
+   * Non si può cliccare se:
+   * - non abbiamo snapshot;
+   * - stiamo aspettando la conferma server;
+   * - non è il nostro turno;
+   * - la partita non è in corso.
+   */
+  if (attesaSnapshot) {
+    return;
+  }
+
+  if (mossaInAttesa) {
     return;
   }
 
   if (
-    stato.fase !== "in_corso" ||
-    !mioColore ||
-    stato.turno !== mioColore
+    stato.fase !==
+    "in_corso"
   ) {
     return;
   }
+
+  if (!mioColore) {
+    return;
+  }
+
+  if (
+    stato.turno !==
+    mioColore
+  ) {
+    return;
+  }
+
+  /*
+   * Ricalcoliamo le mosse dal vero stato,
+   * invece di fidarci solamente dell'array grafico.
+   */
+  const mosse =
+    mosseLegaliPer(
+      stato.tavola,
+      mioColore
+    );
+
+  mosseLegaliCorrenti =
+    mosse;
 
   const mossa =
-    mosseLegaliCorrenti.find(
+    mosse.find(
       m =>
         m.r === r &&
         m.c === c
     );
 
-  if (!mossa) return;
+  if (!mossa) {
+    return;
+  }
 
-  const ws = socket;
+  const inviato =
+    inviaSocket({
+      tipo: "othello_mossa",
+      partitaId:
+        stato.id ||
+        partitaId,
+      a: {
+        r,
+        c
+      }
+    });
 
-  if (
-    !inviaSocket(
-      {
-        tipo: "othello_mossa",
-        partitaId:
-          stato.id ||
-          partitaId,
-        a: { r, c }
-      },
-      ws
-    )
-  ) {
+  if (!inviato) {
     mostraNotificaGioco(
       "Connessione assente: la mossa non è stata inviata."
     );
@@ -3181,6 +3634,9 @@ function cliccaCasella(r, c) {
     return;
   }
 
+  /*
+   * Blocchiamo solo fino alla risposta del server.
+   */
   mossaInAttesa = true;
 
   clearTimeout(
@@ -3197,30 +3653,28 @@ function cliccaCasella(r, c) {
         "Conferma della mossa in ritardo: sincronizzazione in corso…"
       );
 
+      /*
+       * NON blocchiamo definitivamente la partita.
+       * Richiediamo semplicemente uno snapshot.
+       */
       attesaSnapshot = true;
 
-      if (
-        !inviaSocket(
-          {
-            tipo: "othello_entra",
-            partitaId:
-              stato.id ||
-              partitaId,
-            stanza
-          },
-          ws
-        )
-      ) {
+      renderTavola();
+
+      const reinvio =
+        inviaSocket({
+          tipo: "othello_entra",
+          partitaId:
+            stato.id ||
+            partitaId,
+          stanza
+        });
+
+      if (!reinvio) {
         try {
-          if (
-            socket === ws
-          ) {
-            ws.close();
-          }
+          socket?.close();
         } catch (_) {}
       }
-
-      renderTavola();
     }, 8000);
 
   renderTavola();
@@ -3244,9 +3698,12 @@ function mostraVittoria(
   suonaVittoria();
 
   const vincitoreUid =
-    dati.vincitoreUid ??
-    stato.vincitoreUid ??
-    null;
+    Object.prototype.hasOwnProperty.call(
+      dati,
+      "vincitoreUid"
+    )
+      ? dati.vincitoreUid
+      : stato.vincitoreUid;
 
   const vincitore =
     vincitoreUid
@@ -3276,7 +3733,8 @@ function mostraVittoria(
         conteggio.bianco +
         ")";
     } else if (
-      vincitoreUid === mioUid
+      vincitoreUid ===
+      mioUid
     ) {
       testo.textContent =
         "🎉 Hai vinto! (" +
@@ -3365,17 +3823,23 @@ function aggiungiMessaggioChatPartita(
   if (!box) return;
 
   const riga =
-    document.createElement("div");
+    document.createElement(
+      "div"
+    );
 
   riga.className =
     "chat-msg";
 
   const autore =
-    document.createElement("b");
+    document.createElement(
+      "b"
+    );
 
   autore.textContent =
-    (nome || "Giocatore") +
-    ":";
+    (
+      nome ||
+      "Giocatore"
+    ) + ":";
 
   riga.append(
     autore,
@@ -3426,7 +3890,8 @@ function inviaChatPartita() {
       partitaId:
         stato.id ||
         partitaId,
-      messaggio: testo
+      messaggio:
+        testo
     })
   ) {
     input.value = "";
@@ -3570,7 +4035,8 @@ function tornaAllaLobby() {
    CONFERMA ABBANDONO
    ========================================================= */
 
-let risolviConfermaGioco = null;
+let risolviConfermaGioco =
+  null;
 
 function chiudiConfermaGioco(
   esito
@@ -3640,11 +4106,17 @@ function chiediConfermaGioco({
     !annulla ||
     !conferma
   ) {
-    return Promise.resolve(false);
+    return Promise.resolve(
+      false
+    );
   }
 
-  if (risolviConfermaGioco) {
-    chiudiConfermaGioco(false);
+  if (
+    risolviConfermaGioco
+  ) {
+    chiudiConfermaGioco(
+      false
+    );
   }
 
   if (titoloEl) {
@@ -3672,36 +4144,38 @@ function chiediConfermaGioco({
     "false"
   );
 
-  return new Promise(resolve => {
-    risolviConfermaGioco =
-      resolve;
+  return new Promise(
+    resolve => {
+      risolviConfermaGioco =
+        resolve;
 
-    annulla.onclick =
-      () =>
-        chiudiConfermaGioco(
-          false
-        );
-
-    conferma.onclick =
-      () =>
-        chiudiConfermaGioco(
-          true
-        );
-
-    overlay.onclick =
-      evento => {
-        if (
-          evento.target ===
-          overlay
-        ) {
+      annulla.onclick =
+        () =>
           chiudiConfermaGioco(
             false
           );
-        }
-      };
 
-    annulla.focus();
-  });
+      conferma.onclick =
+        () =>
+          chiudiConfermaGioco(
+            true
+          );
+
+      overlay.onclick =
+        evento => {
+          if (
+            evento.target ===
+            overlay
+          ) {
+            chiudiConfermaGioco(
+              false
+            );
+          }
+        };
+
+      annulla.focus();
+    }
+  );
 }
 
 async function abbandonaPartita() {
@@ -3723,7 +4197,8 @@ async function abbandonaPartita() {
 
   if (
     !inviaSocket({
-      tipo: "othello_abbandona",
+      tipo:
+        "othello_abbandona",
       partitaId:
         stato.id ||
         partitaId
@@ -3767,45 +4242,51 @@ function sbloccaRiproduzioneMedia() {
    ========================================================= */
 
 function gestisciMessaggioSocket(
-  dati,
-  ws
+  dati
 ) {
   if (
     !dati ||
-    typeof dati !== "object"
+    typeof dati !==
+      "object"
   ) {
     return;
   }
 
-  /*
-   * Se è arrivato un messaggio da una
-   * connessione vecchia, ignoralo.
-   */
-  if (ws && socket !== ws) {
-    return;
-  }
+  /* -------------------------------------------------------
+     IDENTITÀ
+     ------------------------------------------------------- */
 
   if (
     dati.tipo ===
     "othello_identita"
   ) {
     if (dati.uid) {
-      mioUid = dati.uid;
+      mioUid =
+        dati.uid;
     }
 
     if (
-      dati.colore === "nero" ||
-      dati.colore === "bianco"
+      dati.colore ===
+        "nero" ||
+      dati.colore ===
+        "bianco"
     ) {
       if (
-        mioColore !==
-        dati.colore
+        dati.colore !==
+        mioColore
       ) {
         mioColore =
           dati.colore;
 
-        tavolaDisegnata =
-          null;
+        /*
+         * La tavola va riposizionata perché il Bianco
+         * vede la scacchiera ruotata.
+         */
+        if (tavolaDisegnata) {
+          sincronizzaDischiIstantaneo(
+            stato.tavola
+          );
+        }
 
         render();
       }
@@ -3814,25 +4295,33 @@ function gestisciMessaggioSocket(
     return;
   }
 
+  /* -------------------------------------------------------
+     STATO
+     ------------------------------------------------------- */
+
   if (
     dati.tipo ===
     "othello_stato"
   ) {
     if (dati.uid) {
-      mioUid = dati.uid;
+      mioUid =
+        dati.uid;
     }
 
     if (
-      dati.colore === "nero" ||
-      dati.colore === "bianco"
+      dati.colore ===
+        "nero" ||
+      dati.colore ===
+        "bianco"
     ) {
-      if (
-        mioColore !==
-        dati.colore
-      ) {
-        mioColore =
-          dati.colore;
+      const coloreCambiato =
+        dati.colore !==
+        mioColore;
 
+      mioColore =
+        dati.colore;
+
+      if (coloreCambiato) {
         tavolaDisegnata =
           null;
       }
@@ -3841,26 +4330,31 @@ function gestisciMessaggioSocket(
     if (
       !dati.partita ||
       !tavolaValida(
-        dati.partita.tavola
+        dati.partita.tavola ||
+          ultimoStatoRicevuto.tavola
       )
     ) {
       return;
     }
 
-    const istantanea =
-      attesaSnapshot;
-
+    /*
+     * Questo è uno snapshot ufficiale.
+     */
     attesaSnapshot = false;
 
     applicaStatoPartita(
       dati.partita,
-      istantanea
+      false
     );
 
     segnalaStatoInizialeRicevuto();
 
     return;
   }
+
+  /* -------------------------------------------------------
+     CHAT
+     ------------------------------------------------------- */
 
   if (
     dati.tipo ===
@@ -3875,6 +4369,10 @@ function gestisciMessaggioSocket(
 
     return;
   }
+
+  /* -------------------------------------------------------
+     FINE PARTITA
+     ------------------------------------------------------- */
 
   if (
     dati.tipo ===
@@ -3900,12 +4398,34 @@ function gestisciMessaggioSocket(
         dati.motivo;
     }
 
+    /*
+     * Se il messaggio di fine contiene una tavola,
+     * la usiamo.
+     *
+     * Altrimenti manteniamo quella già ricevuta.
+     */
+    if (
+      !tavolaValida(
+        conclusa.tavola
+      )
+    ) {
+      conclusa.tavola =
+        copiaTavola(
+          stato.tavola
+        );
+    }
+
     applicaStatoPartita(
-      conclusa
+      conclusa,
+      false
     );
 
     return;
   }
+
+  /* -------------------------------------------------------
+     RIVINCITA
+     ------------------------------------------------------- */
 
   if (
     dati.tipo ===
@@ -3918,6 +4438,10 @@ function gestisciMessaggioSocket(
 
     return;
   }
+
+  /* -------------------------------------------------------
+     ERRORE SERVER
+     ------------------------------------------------------- */
 
   if (
     dati.tipo ===
@@ -3963,11 +4487,16 @@ function gestisciMessaggioSocket(
     return;
   }
 
+  /* -------------------------------------------------------
+     SESSIONE
+     ------------------------------------------------------- */
+
   if (
     dati.tipo ===
     "sessioneScaduta"
   ) {
-    paginaInChiusura = true;
+    paginaInChiusura =
+      true;
 
     window.location.href =
       ORIGINE_SERVER +
@@ -3978,21 +4507,9 @@ function gestisciMessaggioSocket(
   }
 }
 
-function programmaRiconnessione() {
-  if (paginaInChiusura) {
-    return;
-  }
-
-  clearTimeout(
-    timerRiconnessione
-  );
-
-  timerRiconnessione =
-    setTimeout(
-      connetti,
-      1800
-    );
-}
+/* =========================================================
+   CONNESSIONE
+   ========================================================= */
 
 function connetti() {
   clearTimeout(
@@ -4015,9 +4532,15 @@ function connetti() {
     return;
   }
 
+  /*
+   * Ogni nuova connessione richiede uno snapshot.
+   */
+  attesaSnapshot = true;
+
   const q =
     new URLSearchParams({
-      gioco: "othello",
+      gioco:
+        "othello",
       stanza
     });
 
@@ -4038,13 +4561,8 @@ function connetti() {
     );
   }
 
-  const miaGenerazione =
-    ++generazioneSocket;
-
-  let ws;
-
   try {
-    ws =
+    socket =
       new WebSocket(
         URL_WEBSOCKET +
           "/?" +
@@ -4060,37 +4578,17 @@ function connetti() {
       true
     );
 
-    programmaRiconnessione();
+    timerRiconnessione =
+      setTimeout(
+        connetti,
+        1800
+      );
 
     return;
   }
 
-  socket = ws;
-
-  ws.onopen = () => {
-    /*
-     * Una nuova connessione significa
-     * che vogliamo uno snapshot autorevole.
-     */
-    if (
-      socket !== ws ||
-      miaGenerazione !==
-        generazioneSocket
-    ) {
-      return;
-    }
-
+  socket.onopen = () => {
     attesaSnapshot = true;
-
-    mossaInAttesa =
-      false;
-
-    clearTimeout(
-      timerMossaInAttesa
-    );
-
-    timerMossaInAttesa =
-      null;
 
     impostaStatoConnessione(
       false
@@ -4101,80 +4599,65 @@ function connetti() {
       70
     );
 
-    inviaSocket(
-      {
-        tipo: "othello_entra",
-        partitaId:
-          partitaId ||
-          null,
-        stanza
-      },
-      ws
-    );
+    inviaSocket({
+      tipo:
+        "othello_entra",
+      partitaId:
+        partitaId || null,
+      stanza
+    });
   };
 
-  ws.onmessage = evento => {
-    if (
-      socket !== ws ||
-      miaGenerazione !==
-        generazioneSocket
-    ) {
-      return;
-    }
+  socket.onmessage =
+    evento => {
+      let dati;
 
-    let dati;
-
-    try {
-      dati =
-        JSON.parse(
-          evento.data
+      try {
+        dati =
+          JSON.parse(
+            evento.data
+          );
+      } catch (errore) {
+        console.error(
+          "Messaggio WebSocket non valido:",
+          errore
         );
-    } catch (errore) {
-      console.error(
-        "Messaggio WebSocket non valido:",
-        errore
+
+        return;
+      }
+
+      gestisciMessaggioSocket(
+        dati
       );
+    };
 
-      return;
-    }
-
-    gestisciMessaggioSocket(
-      dati,
-      ws
-    );
-  };
-
-  ws.onerror = () => {
+  socket.onerror = () => {
     /*
      * onclose gestisce la riconnessione.
-     * Non facciamo due riconnessioni.
      */
   };
 
-  ws.onclose = () => {
-    if (
-      socket !== ws ||
-      miaGenerazione !==
-        generazioneSocket
-    ) {
-      return;
-    }
-
+  socket.onclose = () => {
+    /*
+     * Evitiamo di chiudere per errore una nuova connessione.
+     */
     socket = null;
 
     if (paginaInChiusura) {
       return;
     }
 
+    attesaSnapshot =
+      true;
+
+    impostaStatoConnessione(
+      true
+    );
+
     /*
-     * Qualsiasi operazione asincrona
-     * precedente non deve più considerarsi
-     * autorevole.
+     * Durante la riconnessione non permettiamo
+     * nuove mosse.
      */
-    ++generazioneSocket;
-
-    attesaSnapshot = true;
-
     mossaInAttesa =
       false;
 
@@ -4185,11 +4668,7 @@ function connetti() {
     timerMossaInAttesa =
       null;
 
-    annullaAnimazioneDischi();
-
-    impostaStatoConnessione(
-      true
-    );
+    renderTavola();
 
     const messaggi =
       document.getElementById(
@@ -4201,7 +4680,15 @@ function connetti() {
         "Connessione persa — riconnessione in corso…";
     }
 
-    programmaRiconnessione();
+    clearTimeout(
+      timerRiconnessione
+    );
+
+    timerRiconnessione =
+      setTimeout(
+        connetti,
+        1800
+      );
   };
 }
 
@@ -4214,6 +4701,10 @@ async function avvia() {
 
   aggiornaTestoBottoneSuoni();
 
+  /*
+   * Render iniziale:
+   * mostra i quattro dischi standard.
+   */
   render();
 
   if (!partitaId) {
@@ -4275,15 +4766,20 @@ async function avvia() {
       tokenAutenticazione();
 
     const opzioni = {
-      credentials: "include",
-      cache: "no-store",
-      headers: token
-        ? {
-            Authorization:
-              "Bearer " +
-              token
-          }
-        : {}
+      credentials:
+        "include",
+
+      cache:
+        "no-store",
+
+      headers:
+        token
+          ? {
+              Authorization:
+                "Bearer " +
+                token
+            }
+          : {}
     };
 
     let risposta =
@@ -4314,7 +4810,7 @@ async function avvia() {
           }
         );
 
-      if (risposta.ok) {
+      if (resposta.ok) {
         try {
           if (
             sessionStorage.getItem(
@@ -4330,8 +4826,10 @@ async function avvia() {
     }
 
     if (
-      risposta.status === 401 ||
-      risposta.status === 403
+      resposta.status ===
+        401 ||
+      resposta.status ===
+        403
     ) {
       paginaInChiusura =
         true;
@@ -4346,7 +4844,7 @@ async function avvia() {
       return;
     }
 
-    if (risposta.ok) {
+    if (resposta.ok) {
       const profilo =
         await risposta.json();
 
@@ -4359,6 +4857,10 @@ async function avvia() {
       }
     }
   } catch (errore) {
+    /*
+     * Il WebSocket può comunque autenticare
+     * e identificare il giocatore.
+     */
     console.warn(
       "Verifica HTTP non disponibile, provo il WebSocket:",
       errore
@@ -4392,9 +4894,7 @@ if (btnMenu) {
           "pannello-menu"
         );
 
-      if (!pannello) {
-        return;
-      }
+      if (!pannello) return;
 
       const staPerAprirsi =
         pannello.classList.contains(
@@ -4407,9 +4907,9 @@ if (btnMenu) {
       }
 
       const aperto =
-        !pannello.classList.toggle(
+        pannello.classList.toggle(
           "nascosto"
-        );
+        ) === false;
 
       btnMenu.setAttribute(
         "aria-expanded",
@@ -4429,22 +4929,12 @@ if (btnMenu) {
 
 document.addEventListener(
   "click",
-  evento => {
-    /*
-     * Non chiudere il menu quando il click
-     * parte direttamente dal bottone.
-     */
-    if (
-      evento.target.closest?.(
-        "#btn-menu"
-      )
-    ) {
-      return;
-    }
-
-    chiudiMenu();
-  }
+  chiudiMenu
 );
+
+/* ---------------------------------------------------------
+   GIOCATORI
+   --------------------------------------------------------- */
 
 const btnGiocatori =
   document.getElementById(
@@ -4512,6 +5002,10 @@ document
     chiudiPannelloGiocatori
   );
 
+/* ---------------------------------------------------------
+   CHAT
+   --------------------------------------------------------- */
+
 const btnChat =
   document.getElementById(
     "btn-chat"
@@ -4540,9 +5034,9 @@ if (btnChat) {
       }
 
       const aperto =
-        !pannello.classList.toggle(
+        pannello.classList.toggle(
           "nascosto"
-        );
+        ) === false;
 
       btnChat.setAttribute(
         "aria-expanded",
@@ -4585,7 +5079,8 @@ document
     "keydown",
     evento => {
       if (
-        evento.key === "Enter" &&
+        evento.key ===
+          "Enter" &&
         !evento.isComposing
       ) {
         evento.preventDefault();
@@ -4595,11 +5090,16 @@ document
     }
   );
 
+/* ---------------------------------------------------------
+   ESC
+   --------------------------------------------------------- */
+
 document.addEventListener(
   "keydown",
   evento => {
     if (
-      evento.key !== "Escape"
+      evento.key !==
+      "Escape"
     ) {
       return;
     }
@@ -4618,77 +5118,37 @@ document.addEventListener(
   }
 );
 
-/* =========================================================
-   LIFECYCLE PAGINA
-   ========================================================= */
-
-function chiudiConnessionePagina() {
-  paginaInChiusura = true;
-
-  clearTimeout(
-    timerRiconnessione
-  );
-
-  clearTimeout(
-    timerMossaInAttesa
-  );
-
-  clearTimeout(
-    timerChiusuraPresentazioneSfida
-  );
-
-  annullaAnimazioneDischi();
-
-  try {
-    socket?.close();
-  } catch (_) {}
-
-  socket = null;
-}
-
-window.addEventListener(
-  "pagehide",
-  chiudiConnessionePagina
-);
+/* ---------------------------------------------------------
+   USCITA
+   --------------------------------------------------------- */
 
 window.addEventListener(
   "beforeunload",
-  chiudiConnessionePagina
-);
+  () => {
+    paginaInChiusura =
+      true;
 
-window.addEventListener(
-  "pageshow",
-  evento => {
-    /*
-     * Se la pagina è stata ripristinata
-     * dalla BFCache, ristabiliamo la
-     * connessione.
-     */
-    if (
-      evento.persisted
-    ) {
-      paginaInChiusura =
-        false;
+    clearTimeout(
+      timerRiconnessione
+    );
 
-      attesaSnapshot =
-        true;
+    clearTimeout(
+      timerChiusuraPresentazioneSfida
+    );
 
-      vittoriaMostrata =
-        false;
+    clearTimeout(
+      timerMossaInAttesa
+    );
 
-      tavolaDisegnata =
-        null;
-
-      ++generazioneSocket;
-
-      connetti();
-    }
+    try {
+      socket?.close();
+    } catch (_) {}
   }
 );
 
-/* =========================================================
-   TIMER GLOBALE
-   ========================================================= */
+/* ---------------------------------------------------------
+   TIMER UI
+   --------------------------------------------------------- */
 
 setInterval(
   aggiornaCountdownTurno,
@@ -4696,7 +5156,7 @@ setInterval(
 );
 
 /* =========================================================
-   AVVIO
+   AVVIO DEFINITIVO
    ========================================================= */
 
 avvia();
