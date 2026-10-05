@@ -39,6 +39,11 @@ let mossaInAttesa = false;
 let timerMossaInAttesa = null;
 let vittoriaMostrata = false;
 
+// Identità e sincronizzazione: il colore canonico è sempre quello
+// presente in stato.giocatori[mioUid].colore. Un eventuale colore
+// separato inviato dal WebSocket viene usato solo come fallback iniziale.
+let ultimoNumeroMossaAccettato = -1;
+
 /* =========================================================
    MOTORE DI REGOLE OTHELLO (pubblico: nessuna informazione nascosta,
    quindi il client può calcolare le mosse legali senza chiederle al
@@ -107,6 +112,42 @@ function tavolaValida(tavola) {
 
 function copiaTavola(tavola) {
   return tavola.map(riga => riga.slice());
+}
+
+function coloreValido(colore) {
+  return colore === "nero" || colore === "bianco";
+}
+
+function avversarioDi(colore) {
+  return colore === "nero" ? "bianco" : colore === "bianco" ? "nero" : null;
+}
+
+function coloreUtenteDaPartita(partita = stato) {
+  const scheda = mioUid && partita?.giocatori ? partita.giocatori[mioUid] : null;
+  if (scheda && coloreValido(scheda.colore)) return scheda.colore;
+  return coloreValido(mioColore) ? mioColore : null;
+}
+
+function sincronizzaIdentitaDaPartita(partita, coloreFallback = null) {
+  const canonico = coloreUtenteDaPartita(partita);
+  if (canonico) {
+    if (mioColore && mioColore !== canonico) {
+      console.warn("Othello: colore locale corretto dal colore canonico della partita", {
+        precedente: mioColore,
+        corretto: canonico,
+        uid: mioUid
+      });
+    }
+    mioColore = canonico;
+    return canonico;
+  }
+
+  if (coloreValido(coloreFallback)) {
+    mioColore = coloreFallback;
+    return mioColore;
+  }
+
+  return null;
 }
 
 /* =========================================================
@@ -600,17 +641,17 @@ let animazioniDaAttendereGenerazione = 0;
 // Tempo massimo di attesa per un'animazione: se animationend non scatta
 // (scheda in background, CSS mancante...) la tavola viene comunque sbloccata.
 const TIMEOUT_ANIMAZIONE_MS = 2500;
-let animazioniDischiAttive = true;
-try { animazioniDischiAttive = localStorage.getItem("othello:animazioni") !== "off"; } catch (_) {}
+// Le animazioni dei dischi sono parte integrante della grafica di Othello.
+// Rimangono quindi sempre attive; il pulsante resta solo per compatibilità
+// con eventuali onclick già presenti nell'HTML.
+const animazioniDischiAttive = true;
 function aggiornaBottoneAnimazioniOthello() {
   const bottone = document.getElementById("btn-animazioni-othello");
   if (!bottone) return;
-  bottone.textContent = "Animazioni dischi: " + (animazioniDischiAttive ? "attive" : "disattivate");
-  bottone.setAttribute("aria-pressed", String(animazioniDischiAttive));
+  bottone.textContent = "Animazioni dischi: attive";
+  bottone.setAttribute("aria-pressed", "true");
 }
 function toggleAnimazioniOthello() {
-  animazioniDischiAttive = !animazioniDischiAttive;
-  try { localStorage.setItem("othello:animazioni", animazioniDischiAttive ? "on" : "off"); } catch (_) {}
   aggiornaBottoneAnimazioniOthello();
 }
 aggiornaBottoneAnimazioniOthello();
@@ -618,9 +659,9 @@ aggiornaBottoneAnimazioniOthello();
 function chiaveCasella(r, c) { return r + "," + c; }
 
 function coordinateVisive(r, c) {
-  // Prospettiva: chi gioca col Bianco vede la tavola ruotata di 180°,
-  // così ciascuno ha sempre le proprie file in basso.
-  return mioColore === "bianco" ? { r: 7 - r, c: 7 - c } : { r, c };
+  // Prospettiva: il Bianco vede la tavola ruotata di 180°.
+  const coloreLocale = coloreUtenteDaPartita(stato);
+  return coloreLocale === "bianco" ? { r: 7 - r, c: 7 - c } : { r, c };
 }
 
 function creaFacciaDisco(colore) {
@@ -693,7 +734,8 @@ function renderTavola() {
   if (!tavolaDisegnata) sincronizzaDischiIstantaneo(stato.tavola);
 
   const inCorso = stato.fase === "in_corso";
-  const mioTurno = inCorso && !!mioColore && stato.turno === mioColore;
+  const coloreLocale = coloreUtenteDaPartita(stato);
+  const mioTurno = inCorso && !!coloreLocale && stato.turno === coloreLocale;
   const destinazioni = new Map();
   if (mioTurno && !mossaInAttesa && animazioniDaAttendere === 0) {
     for (const mossa of mosseLegaliCorrenti) destinazioni.set(chiaveCasella(mossa.r, mossa.c), true);
@@ -781,11 +823,18 @@ async function animaVersoTavola(prossimaTavola, istantanea, generazione) {
         posizione.classList.add("in-animazione");
         suonaFlip(0);
         let finito = false;
+        let timerFallback = null;
         const conclusa = () => {
           if (finito) return;
           finito = true;
+          if (timerFallback) clearTimeout(timerFallback);
           disco.classList.remove(classeFlip);
-          disco.dataset.colore = cella.colore;
+          // Se nel frattempo è arrivato uno stato più recente, questo elemento
+          // è probabilmente già stato rimosso dal DOM: non deve poter riscrivere
+          // il colore di una tavola nuova.
+          if (generazione === animazioniDaAttendereGenerazione) {
+            disco.dataset.colore = cella.colore;
+          }
           posizione.classList.remove("in-animazione");
           disco.removeEventListener("animationend", conclusa);
           resolve();
@@ -793,7 +842,7 @@ async function animaVersoTavola(prossimaTavola, istantanea, generazione) {
         disco.addEventListener("animationend", conclusa, { once: true });
         disco.classList.add(classeFlip);
         // Rete di sicurezza: se animationend non scatta, chiudo comunque il flip.
-        setTimeout(conclusa, 1500);
+        timerFallback = setTimeout(conclusa, 1500);
       }, ritardo);
     });
   });
@@ -809,16 +858,17 @@ async function animaVersoTavola(prossimaTavola, istantanea, generazione) {
 
 function renderPunteggio() {
   const conteggio = contaDischi(stato.tavola);
-  const mioConteggio = mioColore === "bianco" ? conteggio.bianco : conteggio.nero;
-  const avversarioColore = mioColore === "bianco" ? "nero" : "bianco";
-  const avversarioConteggio = mioColore === "bianco" ? conteggio.nero : conteggio.bianco;
+  const coloreLocale = coloreUtenteDaPartita(stato);
+  const mioConteggio = coloreLocale === "bianco" ? conteggio.bianco : coloreLocale === "nero" ? conteggio.nero : 0;
+  const avversarioColore = avversarioDi(coloreLocale);
+  const avversarioConteggio = coloreLocale === "bianco" ? conteggio.nero : coloreLocale === "nero" ? conteggio.bianco : 0;
 
-  const giocatore = giocatoriStato().find(g => g.colore === mioColore);
+  const giocatore = giocatoriStato().find(g => g.colore === coloreLocale);
   const avversario = giocatoriStato().find(g => g.colore === avversarioColore);
 
   const etGiocatore = document.getElementById("punteggio-giocatore-etichetta");
   const etAvversario = document.getElementById("punteggio-avversario-etichetta");
-  if (etGiocatore) etGiocatore.textContent = mioColore ? "Tu (" + nomeColore(mioColore) + ")" : "Tu";
+  if (etGiocatore) etGiocatore.textContent = coloreLocale ? "Tu (" + nomeColore(coloreLocale) + ")" : "Tu";
   if (etAvversario) etAvversario.textContent = avversario ? (avversario.nome || avversario.nickname || nomeColore(avversarioColore)) : "Avversario";
 
   const cGiocatore = document.getElementById("punteggio-giocatore-conteggio");
@@ -828,7 +878,7 @@ function renderPunteggio() {
 
   const dGiocatore = document.getElementById("punteggio-giocatore-disco");
   const dAvversario = document.getElementById("punteggio-avversario-disco");
-  if (dGiocatore) dGiocatore.classList.toggle("bianco", mioColore === "bianco");
+  if (dGiocatore) dGiocatore.classList.toggle("bianco", coloreLocale === "bianco");
   if (dAvversario) dAvversario.classList.toggle("bianco", avversarioColore === "bianco");
 }
 
@@ -905,7 +955,8 @@ function aggiornaInterfacciaPartita() {
   const rigaTurno = document.getElementById("riga-turno");
   const messaggi = document.getElementById("messaggi-gioco");
   const inCorso = stato.fase === "in_corso";
-  const mioTurno = inCorso && !!mioColore && stato.turno === mioColore;
+  const coloreLocale = coloreUtenteDaPartita(stato);
+  const mioTurno = inCorso && !!coloreLocale && stato.turno === coloreLocale;
 
   if (rigaTurno) {
     if (stato.fase === "attesa_giocatori") rigaTurno.textContent = "⏳ In attesa dell'avversario…";
@@ -922,7 +973,9 @@ function aggiornaInterfacciaPartita() {
 }
 
 function render() {
-  mosseLegaliCorrenti = (stato.fase === "in_corso" && mioColore) ? mosseLegaliPer(stato.tavola, mioColore) : [];
+  const coloreLocale = coloreUtenteDaPartita(stato);
+  if (coloreLocale) mioColore = coloreLocale;
+  mosseLegaliCorrenti = (stato.fase === "in_corso" && coloreLocale) ? mosseLegaliPer(stato.tavola, coloreLocale) : [];
   renderTavola();
   renderPunteggio();
   renderPannelloGiocatori();
@@ -946,7 +999,7 @@ function aggiornaCountdownTurno() {
   el.classList.toggle("countdown-scaduto", secondi <= 5);
 
   const chiave = stato.numeroMossa + ":" + stato.turno;
-  if (secondi <= 10 && secondi > 0 && avvisoTempoChiave !== chiave && stato.turno === mioColore) {
+  if (secondi <= 10 && secondi > 0 && avvisoTempoChiave !== chiave && stato.turno === coloreUtenteDaPartita(stato)) {
     avvisoTempoChiave = chiave;
     suonaAvvisoTempo();
   }
@@ -957,60 +1010,91 @@ function aggiornaCountdownTurno() {
    ========================================================= */
 
 async function applicaStatoPartita(partita, istantanea = false) {
-  const prossimo = { ...ultimoStatoRicevuto, ...partita };
-  if (!tavolaValida(prossimo.tavola)) {
+  if (!partita || typeof partita !== "object") return false;
+  if (!tavolaValida(partita.tavola)) {
     mostraNotificaGioco("Stato della tavola non valido: attendo la sincronizzazione.");
-    return;
+    attesaSnapshot = true;
+    return false;
   }
-  prossimo.tavola = copiaTavola(prossimo.tavola);
+
+  const prossimo = { ...ultimoStatoRicevuto, ...partita };
+  prossimo.tavola = copiaTavola(partita.tavola);
+
+  const numeroMossaIngresso = Number.isFinite(Number(prossimo.numeroMossa))
+    ? Number(prossimo.numeroMossa)
+    : 0;
+  const numeroMossaCorrente = Number.isFinite(Number(stato.numeroMossa))
+    ? Number(stato.numeroMossa)
+    : 0;
+
+  // Sullo stesso WebSocket i messaggi sono ordinati. In caso di riconnessioni,
+  // però, può arrivare in ritardo uno snapshot vecchio: non deve sovrascrivere
+  // uno stato più avanzato già visualizzato.
+  if (!istantanea && numeroMossaIngresso < Math.max(numeroMossaCorrente, ultimoNumeroMossaAccettato)) {
+    console.warn("Othello: ignorato stato arretrato", {
+      ricevuto: numeroMossaIngresso,
+      corrente: numeroMossaCorrente,
+      accettato: ultimoNumeroMossaAccettato
+    });
+    return false;
+  }
+
   ultimoStatoRicevuto = prossimo;
+  sincronizzaIdentitaDaPartita(prossimo);
 
-  // Se il server non ha mandato il colore, lo ricavo dalla scheda del giocatore.
-  const miaScheda = mioUid && prossimo.giocatori ? prossimo.giocatori[mioUid] : null;
-  if (miaScheda && (miaScheda.colore === "nero" || miaScheda.colore === "bianco") && miaScheda.colore !== mioColore) {
-    mioColore = miaScheda.colore;
-    tavolaDisegnata = null;
-  }
-
-  // Se un'animazione precedente è ancora in corso la interrompo: lo stato più
-  // recente vince e la tavola viene allineata subito, senza animare.
   const interrompeAnimazione = animazioniDaAttendere > 0;
   const generazione = ++animazioniDaAttendereGenerazione;
   animazioniDaAttendere = 1;
-  const precedenteNumeroMossa = stato.numeroMossa;
+  const precedenteNumeroMossa = numeroMossaCorrente;
   const turnoPrecedente = stato.turno;
 
   let timerSicurezza = null;
   try {
-    const animazione = animaVersoTavola(prossimo.tavola, istantanea || interrompeAnimazione, generazione).then(() => true);
-    const scaduto = new Promise(resolve => { timerSicurezza = setTimeout(() => resolve(false), TIMEOUT_ANIMAZIONE_MS); });
+    const animazione = animaVersoTavola(
+      prossimo.tavola,
+      istantanea || interrompeAnimazione || !tavolaPrecedente,
+      generazione
+    ).then(() => true);
+
+    const scaduto = new Promise(resolve => {
+      timerSicurezza = setTimeout(() => resolve(false), TIMEOUT_ANIMAZIONE_MS);
+    });
+
     const finita = await Promise.race([animazione, scaduto]);
-    if (!finita && generazione === animazioniDaAttendereGenerazione) sincronizzaDischiIstantaneo(prossimo.tavola);
+    if (!finita && generazione === animazioniDaAttendereGenerazione) {
+      sincronizzaDischiIstantaneo(prossimo.tavola);
+    }
   } catch (errore) {
     console.error("Animazione tavola Othello:", errore);
-    if (generazione === animazioniDaAttendereGenerazione) sincronizzaDischiIstantaneo(prossimo.tavola);
+    if (generazione === animazioniDaAttendereGenerazione) {
+      sincronizzaDischiIstantaneo(prossimo.tavola);
+    }
   } finally {
     clearTimeout(timerSicurezza);
   }
 
-  // È arrivato uno stato più recente: sarà lui a completare l'aggiornamento e a sbloccare la tavola.
-  if (generazione !== animazioniDaAttendereGenerazione) return;
+  // Un messaggio più recente ha già preso il controllo della tavola.
+  if (generazione !== animazioniDaAttendereGenerazione) return false;
 
   stato = prossimo;
+  ultimoStatoRicevuto = prossimo;
+  ultimoNumeroMossaAccettato = Math.max(ultimoNumeroMossaAccettato, numeroMossaIngresso);
+  sincronizzaIdentitaDaPartita(stato);
   animazioniDaAttendere = 0;
 
-  if (istantanea || prossimo.fase !== "in_corso") {
+  if (istantanea || prossimo.fase !== "in_corso" || stato.numeroMossa !== precedenteNumeroMossa) {
     mossaInAttesa = false;
     clearTimeout(timerMossaInAttesa);
   }
   if (stato.numeroMossa !== precedenteNumeroMossa) {
-    mossaInAttesa = false;
-    clearTimeout(timerMossaInAttesa);
     avvisoTempoChiave = "";
   }
 
   render();
 
+  // Se dopo una mossa il turno ufficiale resta allo stesso colore, significa
+  // che l'avversario non ha mosse legali e deve passare. Il server applica
+  // questa regola senza cambiare il colore del turno.
   if (
     stato.fase === "in_corso" &&
     stato.turno === turnoPrecedente &&
@@ -1020,23 +1104,35 @@ async function applicaStatoPartita(partita, istantanea = false) {
     const chiNonMuove = giocatoriStato().find(g => g.colore !== stato.turno);
     mostraMessaggioGiocoGrande(
       (chiNonMuove?.nome || chiNonMuove?.nickname || "L'avversario") + " non ha mosse disponibili",
-      { dettaglio: "Tocca ancora a " + (stato.turno === mioColore ? "te" : nomeColore(stato.turno).toLowerCase()), icona: "⏭️", durata: 2400 }
+      { dettaglio: "Tocca ancora a " + (stato.turno === coloreUtenteDaPartita(stato) ? "te" : nomeColore(stato.turno).toLowerCase()), icona: "⏭️", durata: 2400 }
     );
   }
 
-  if (stato.fase === "in_corso" && stato.turno === mioColore && stato.numeroMossa !== precedenteNumeroMossa) {
+  if (
+    stato.fase === "in_corso" &&
+    stato.turno === coloreUtenteDaPartita(stato) &&
+    stato.numeroMossa !== precedenteNumeroMossa
+  ) {
     suonaTuoTurno();
   }
 
   if (stato.fase === "in_corso" && giocatoriStato().length >= 2 && !presentazioneSfidaGiaVista()) {
-    setTimeout(() => { if (stato.fase === "in_corso") mostraPresentazioneSfida(); }, 260);
+    setTimeout(() => {
+      if (stato.fase === "in_corso") mostraPresentazioneSfida();
+    }, 260);
   }
-  if (stato.fase === "terminata" || stato.vincitoreUid !== undefined && stato.motivoFine) mostraVittoria(stato);
+
+  if (stato.fase === "terminata" || (stato.vincitoreUid !== undefined && stato.motivoFine)) {
+    mostraVittoria(stato);
+  }
+
+  return true;
 }
 
 function cliccaCasella(r, c) {
   if (animazioniDaAttendere || mossaInAttesa || attesaSnapshot) return;
-  if (stato.fase !== "in_corso" || !mioColore || stato.turno !== mioColore) return;
+  const coloreLocale = coloreUtenteDaPartita(stato);
+  if (stato.fase !== "in_corso" || !coloreLocale || stato.turno !== coloreLocale) return;
   const mossa = mosseLegaliCorrenti.find(m => m.r === r && m.c === c);
   if (!mossa) return;
 
@@ -1241,7 +1337,8 @@ function gestisciMessaggioSocket(dati) {
 
   if (dati.tipo === "othello_identita") {
     mioUid = dati.uid || mioUid;
-    if ((dati.colore === "nero" || dati.colore === "bianco") && dati.colore !== mioColore) {
+    // Prima di avere lo snapshot completo il colore separato è solo un fallback.
+    if (coloreValido(dati.colore) && !coloreUtenteDaPartita(stato)) {
       mioColore = dati.colore;
       tavolaDisegnata = null;
       render();
@@ -1251,15 +1348,17 @@ function gestisciMessaggioSocket(dati) {
 
   if (dati.tipo === "othello_stato") {
     if (dati.uid) mioUid = dati.uid;
-    if ((dati.colore === "nero" || dati.colore === "bianco") && dati.colore !== mioColore) {
-      mioColore = dati.colore;
-      tavolaDisegnata = null;
-    }
-    if (!dati.partita || !tavolaValida(dati.partita.tavola || ultimoStatoRicevuto.tavola)) return;
+    if (!dati.partita || !tavolaValida(dati.partita.tavola)) return;
+
     const istantanea = attesaSnapshot;
+    // La tavola ricevuta è completa e valida: da questo momento il client può
+    // usare lo stato ufficiale. animazioniDaAttendere/mossaInAttesa impediscono
+    // comunque di cliccare finché l'aggiornamento visuale non è terminato.
     attesaSnapshot = false;
-    applicaStatoPartita(dati.partita, istantanea);
-    segnalaStatoInizialeRicevuto();
+    applicaStatoPartita(dati.partita, istantanea).then(ok => {
+      if (!ok && istantanea) attesaSnapshot = true;
+      if (ok) segnalaStatoInizialeRicevuto();
+    });
     return;
   }
 
@@ -1284,9 +1383,16 @@ function gestisciMessaggioSocket(dati) {
   if (dati.tipo === "othello_errore") {
     mossaInAttesa = false;
     clearTimeout(timerMossaInAttesa);
+    attesaSnapshot = true;
     renderTavola();
     const errore = dati.errore || "Operazione non consentita.";
     mostraNotificaGioco(errore);
+
+    // Un errore di mossa può indicare che il client è rimasto indietro.
+    // Chiediamo immediatamente lo stato ufficiale invece di continuare
+    // sulla copia locale potenzialmente vecchia.
+    inviaSocket({ tipo: "othello_entra", partitaId: stato.id || partitaId, stanza });
+
     const minuscolo = errore.toLowerCase();
     if (minuscolo.includes("non trovata") || minuscolo.includes("non fai parte")) setTimeout(tornaAllaLobby, 2200);
     return;
@@ -1308,8 +1414,10 @@ function connetti() {
   if (token) q.set("token", token);
   if (partitaId) q.set("partita", partitaId);
 
+  let ws;
   try {
-    socket = new WebSocket(URL_WEBSOCKET + "/?" + q.toString());
+    ws = new WebSocket(URL_WEBSOCKET + "/?" + q.toString());
+    socket = ws;
   } catch (errore) {
     console.error("Apertura WebSocket non riuscita:", errore);
     impostaStatoConnessione(true);
@@ -1317,32 +1425,50 @@ function connetti() {
     return;
   }
 
-  socket.onopen = () => {
+  ws.onopen = () => {
+    // Il nuovo socket deve sempre ricevere uno snapshot completo prima di
+    // poter accettare input dell'utente.
     attesaSnapshot = true;
+    mossaInAttesa = false;
+    clearTimeout(timerMossaInAttesa);
     impostaStatoConnessione(false);
     aggiornaCaricamento("Sincronizzazione partita…", 70);
-    inviaSocket({ tipo: "othello_entra", partitaId: partitaId || null, stanza });
+
+    if (socket === ws) {
+      inviaSocket({ tipo: "othello_entra", partitaId: partitaId || null, stanza });
+    }
   };
 
-  socket.onmessage = evento => {
+  ws.onmessage = evento => {
+    // Un socket vecchio non deve mai poter riscrivere lo stato del socket nuovo.
+    if (socket !== ws) return;
+
     let dati;
-    try { dati = JSON.parse(evento.data); }
-    catch (errore) {
+    try {
+      dati = JSON.parse(evento.data);
+    } catch (errore) {
       console.error("Messaggio WebSocket non valido:", errore);
       return;
     }
     gestisciMessaggioSocket(dati);
   };
 
-  socket.onerror = () => {};
+  ws.onerror = () => {};
 
-  socket.onclose = () => {
+  ws.onclose = () => {
+    if (socket !== ws) return;
+
     socket = null;
     if (paginaInChiusura) return;
+
     attesaSnapshot = true;
+    mossaInAttesa = false;
+    clearTimeout(timerMossaInAttesa);
     impostaStatoConnessione(true);
+
     const messaggi = document.getElementById("messaggi-gioco");
     if (messaggi) messaggi.textContent = "Connessione persa — riconnessione in corso…";
+
     clearTimeout(timerRiconnessione);
     timerRiconnessione = setTimeout(connetti, 1800);
   };
