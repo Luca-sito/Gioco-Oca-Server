@@ -591,8 +591,15 @@ function nomeColore(colore) {
 const posizioniDischi = new Map();
 const caselleTavola = new Map();
 let tavolaDisegnata = null;
+// 0 = tavola libera, 1 = animazione dell'ULTIMO stato ricevuto in corso.
+// (Prima era un contatore incrementato a ogni stato ma decrementato solo
+// dall'ultimo: se arrivavano due stati ravvicinati restava > 0 per sempre
+// e la tavola rimaneva bloccata.)
 let animazioniDaAttendere = 0;
 let animazioniDaAttendereGenerazione = 0;
+// Tempo massimo di attesa per un'animazione: se animationend non scatta
+// (scheda in background, CSS mancante...) la tavola viene comunque sbloccata.
+const TIMEOUT_ANIMAZIONE_MS = 2500;
 let animazioniDischiAttive = true;
 try { animazioniDischiAttive = localStorage.getItem("othello:animazioni") !== "off"; } catch (_) {}
 function aggiornaBottoneAnimazioniOthello() {
@@ -773,7 +780,10 @@ async function animaVersoTavola(prossimaTavola, istantanea, generazione) {
         if (generazione !== animazioniDaAttendereGenerazione) { resolve(); return; }
         posizione.classList.add("in-animazione");
         suonaFlip(0);
+        let finito = false;
         const conclusa = () => {
+          if (finito) return;
+          finito = true;
           disco.classList.remove(classeFlip);
           disco.dataset.colore = cella.colore;
           posizione.classList.remove("in-animazione");
@@ -782,6 +792,8 @@ async function animaVersoTavola(prossimaTavola, istantanea, generazione) {
         };
         disco.addEventListener("animationend", conclusa, { once: true });
         disco.classList.add(classeFlip);
+        // Rete di sicurezza: se animationend non scatta, chiudo comunque il flip.
+        setTimeout(conclusa, 1500);
       }, ritardo);
     });
   });
@@ -953,21 +965,39 @@ async function applicaStatoPartita(partita, istantanea = false) {
   prossimo.tavola = copiaTavola(prossimo.tavola);
   ultimoStatoRicevuto = prossimo;
 
+  // Se il server non ha mandato il colore, lo ricavo dalla scheda del giocatore.
+  const miaScheda = mioUid && prossimo.giocatori ? prossimo.giocatori[mioUid] : null;
+  if (miaScheda && (miaScheda.colore === "nero" || miaScheda.colore === "bianco") && miaScheda.colore !== mioColore) {
+    mioColore = miaScheda.colore;
+    tavolaDisegnata = null;
+  }
+
+  // Se un'animazione precedente è ancora in corso la interrompo: lo stato più
+  // recente vince e la tavola viene allineata subito, senza animare.
+  const interrompeAnimazione = animazioniDaAttendere > 0;
   const generazione = ++animazioniDaAttendereGenerazione;
-  animazioniDaAttendere++;
+  animazioniDaAttendere = 1;
   const precedenteNumeroMossa = stato.numeroMossa;
   const turnoPrecedente = stato.turno;
 
+  let timerSicurezza = null;
   try {
-    await animaVersoTavola(prossimo.tavola, istantanea, generazione);
+    const animazione = animaVersoTavola(prossimo.tavola, istantanea || interrompeAnimazione, generazione).then(() => true);
+    const scaduto = new Promise(resolve => { timerSicurezza = setTimeout(() => resolve(false), TIMEOUT_ANIMAZIONE_MS); });
+    const finita = await Promise.race([animazione, scaduto]);
+    if (!finita && generazione === animazioniDaAttendereGenerazione) sincronizzaDischiIstantaneo(prossimo.tavola);
   } catch (errore) {
     console.error("Animazione tavola Othello:", errore);
-    sincronizzaDischiIstantaneo(prossimo.tavola);
+    if (generazione === animazioniDaAttendereGenerazione) sincronizzaDischiIstantaneo(prossimo.tavola);
+  } finally {
+    clearTimeout(timerSicurezza);
   }
+
+  // È arrivato uno stato più recente: sarà lui a completare l'aggiornamento e a sbloccare la tavola.
   if (generazione !== animazioniDaAttendereGenerazione) return;
 
   stato = prossimo;
-  animazioniDaAttendere--;
+  animazioniDaAttendere = 0;
 
   if (istantanea || prossimo.fase !== "in_corso") {
     mossaInAttesa = false;
@@ -980,8 +1010,6 @@ async function applicaStatoPartita(partita, istantanea = false) {
   }
 
   render();
-
-  if (animazioniDaAttendere) return;
 
   if (
     stato.fase === "in_corso" &&
