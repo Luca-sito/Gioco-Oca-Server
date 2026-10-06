@@ -5,6 +5,7 @@
    Il nero muove sempre per primo. Niente dadi né fase "Chi inizia".
    I dischi catturati NON escono dalla tavola: si limitano a
    girare colore con un flip 3D, come nel gioco reale.
+   Videochiamata di tavolo integrata (stessa logica dell'Oca).
    ========================================================= */
 
 const origineConfigurata = typeof window.GIOCO_SERVER_URL === "string" ? window.GIOCO_SERVER_URL.trim() : "";
@@ -39,16 +40,10 @@ let mossaInAttesa = false;
 let timerMossaInAttesa = null;
 let vittoriaMostrata = false;
 
-// Identità e sincronizzazione: il colore canonico è sempre quello
-// presente in stato.giocatori[mioUid].colore. Un eventuale colore
-// separato inviato dal WebSocket viene usato solo come fallback iniziale.
 let ultimoNumeroMossaAccettato = -1;
 
 /* =========================================================
-   MOTORE DI REGOLE OTHELLO (pubblico: nessuna informazione nascosta,
-   quindi il client può calcolare le mosse legali senza chiederle al
-   server — il server resta comunque l'autorità che valida la mossa
-   inviata e restituisce lo stato ufficiale).
+   MOTORE DI REGOLE OTHELLO
    ========================================================= */
 
 const DIREZIONI_OTHELLO = [
@@ -141,12 +136,10 @@ function sincronizzaIdentitaDaPartita(partita, coloreFallback = null) {
     mioColore = canonico;
     return canonico;
   }
-
   if (coloreValido(coloreFallback)) {
     mioColore = coloreFallback;
     return mioColore;
   }
-
   return null;
 }
 
@@ -415,6 +408,7 @@ function aggiornaLayoutTabellone() {
   const mondo = document.getElementById("mondo-ruotato");
   if (!areaTabellone || !mondo) return;
 
+  const videoDesktopAttivo = document.body.classList.contains("modalita-desktop") && document.body.classList.contains("media-partita");
   const larghezzaFinestra = window.visualViewport ? window.visualViewport.width : window.innerWidth;
   const altezzaReale = window.visualViewport ? window.visualViewport.height : window.innerHeight;
   document.documentElement.style.setProperty("--altezza-reale", altezzaReale + "px");
@@ -422,13 +416,30 @@ function aggiornaLayoutTabellone() {
   mondo.style.width = larghezzaFinestra + "px";
   mondo.style.height = altezzaReale + "px";
 
-  const altezzaRaccolta = larghezzaFinestra < 600 ? 46 : 54;
+  const altezzaRaccolta = larghezzaFinestra < 600 ? 38 : 46;
   document.documentElement.style.setProperty("--altezza-raccolta", altezzaRaccolta + "px");
-  const margineOrizzontale = larghezzaFinestra < 600 ? 10 : 26;
-  const spazioRaccolte = 2 * (altezzaRaccolta + 12);
-  const larghezzaDisponibile = larghezzaFinestra - margineOrizzontale * 2;
-  const altezzaDisponibile = altezzaReale - spazioRaccolte - 56;
+  const margineOrizzontale = Math.max(10, larghezzaFinestra * 0.015);
+  const spazioRaccolte = 2 * (altezzaRaccolta + 6);
+  let larghezzaDisponibile = larghezzaFinestra - margineOrizzontale * 2;
+  const altezzaDisponibile = altezzaReale - spazioRaccolte - 20;
+
+  if (videoDesktopAttivo) {
+    const larghezzaColonnaDesiderata = Math.min(340, Math.max(160, larghezzaFinestra * 0.16));
+    const distanzaDalTabellone = Math.max(12, larghezzaFinestra * 0.012);
+    larghezzaDisponibile = Math.max(320, larghezzaFinestra - (larghezzaColonnaDesiderata + distanzaDalTabellone) * 2);
+  }
+
   const lato = Math.max(120, Math.min(larghezzaDisponibile, altezzaDisponibile));
+
+  if (videoDesktopAttivo) {
+    const spazioLaterale = (larghezzaFinestra - lato) / 2;
+    const margineEsterno = Math.max(14, larghezzaFinestra * 0.012);
+    const larghezzaColonnaVideo = Math.max(120, Math.min(340, spazioLaterale - margineEsterno - 10));
+    document.documentElement.style.setProperty("--larghezza-colonna-video", larghezzaColonnaVideo + "px");
+  } else {
+    document.documentElement.style.removeProperty("--larghezza-colonna-video");
+  }
+
   const puntatorePreciso = !!window.matchMedia?.("(pointer: fine)").matches;
   document.body.classList.toggle("modalita-desktop", puntatorePreciso && larghezzaFinestra >= 1000 && larghezzaFinestra - lato >= 600);
 
@@ -452,6 +463,880 @@ function inizializzaGestioneLayout() {
   requestAnimationFrame(() => {
     aggiornaLayoutTabellone();
     segnalaGraficaCaricata();
+  });
+}
+
+/* =========================================================
+   VIDEOCHIAMATA DI TAVOLO — stessa logica del Gioco dell'Oca
+   ========================================================= */
+
+const mediaRichiestaDaLobby = params.get("media") === "1";
+
+function rilevaTipoDispositivoMediaLocale() {
+  const ua = String(navigator.userAgent || "");
+  if (/iPad/i.test(ua) || (/Android/i.test(ua) && !/Mobile/i.test(ua))) return "tablet";
+  if (/iPhone|iPod/i.test(ua) || (/Android/i.test(ua) && /Mobile/i.test(ua))) return "cellulare";
+  return "computer";
+}
+
+const tipoDispositivoMediaLocale = rilevaTipoDispositivoMediaLocale();
+const clientCellulareAudioOnly = tipoDispositivoMediaLocale === "cellulare";
+document.body.classList.toggle("client-cellulare-audio-only", clientCellulareAudioOnly);
+document.body.classList.toggle("client-tablet", tipoDispositivoMediaLocale === "tablet");
+document.body.classList.toggle("client-computer", tipoDispositivoMediaLocale === "computer");
+
+let mediaPartitaAttiva = false;
+let flussoMediaLocale = null;
+let avvioMediaInCorso = null;
+let mediaProntoSegnalato = false;
+let mediaRichiedeRiprovaManuale = false;
+let puliziaMediaInCorso = false;
+let connessioniPeer = {};
+let elementiVideoRemoti = {};
+let candidatiIceInAttesa = {};
+let timerRiprovaPeer = {};
+let timerDisconnessionePeer = {};
+let partecipantiMediaPronti = new Set();
+let partecipantiMediaInfo = new Map();
+const nomiPartecipantiMedia = new Map();
+let CONFIGURAZIONE_ICE = {
+  iceServers: [
+    { urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302", "stun:stun2.l.google.com:19302"] }
+  ],
+  iceCandidatePoolSize: 4,
+  bundlePolicy: "max-bundle"
+};
+
+const VINCOLI_AUDIO = {
+  echoCancellation: true,
+  noiseSuppression: true,
+  autoGainControl: true
+};
+
+const VINCOLI_MEDIA = {
+  audio: VINCOLI_AUDIO,
+  video: {
+    width: { ideal: 320, max: 640 },
+    height: { ideal: 240, max: 480 },
+    frameRate: { ideal: 15, max: 20 },
+    facingMode: { ideal: "user" }
+  }
+};
+
+function normalizzaTipoDispositivoMedia(tipo) {
+  if (tipo === "cellulare" || tipo === "tablet" || tipo === "computer") return tipo;
+  return "computer";
+}
+
+function descrittoreMediaPerUid(uid) {
+  const salvato = partecipantiMediaInfo.get(uid);
+  if (salvato) return salvato;
+  const giocatore = giocatoriStato().find(g => g && g.uid === uid);
+  const tipoDispositivo = normalizzaTipoDispositivoMedia(giocatore && giocatore.tipoDispositivo);
+  return {
+    uid,
+    tipoDispositivo,
+    videoDisponibile: tipoDispositivo !== "cellulare"
+  };
+}
+
+function peerSupportaVideo(uid) {
+  const info = descrittoreMediaPerUid(uid);
+  return info.tipoDispositivo !== "cellulare" && info.videoDisponibile !== false;
+}
+
+function streamLocaleMediaPronto(stream) {
+  if (!stream) return false;
+  const audioVivo = stream.getAudioTracks().some(t => t.readyState === "live");
+  if (!audioVivo) return false;
+  if (clientCellulareAudioOnly) return true;
+  return stream.getVideoTracks().some(t => t.readyState === "live");
+}
+
+function aspettaWebRtc(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function nomeErroreMediaPartita(errore) {
+  return String(errore && errore.name ? errore.name : "");
+}
+
+function descriviErroreMediaPartita(errore) {
+  const nome = nomeErroreMediaPartita(errore);
+  if (nome === "NotAllowedError" || nome === "SecurityError" || nome === "PermissionDeniedError") {
+    return clientCellulareAudioOnly
+      ? "Permesso negato: abilita il microfono nelle impostazioni del browser."
+      : "Permesso negato: abilita webcam e microfono nelle impostazioni del browser.";
+  }
+  if (nome === "NotFoundError" || nome === "DevicesNotFoundError") {
+    return clientCellulareAudioOnly ? "Microfono non trovato." : "Webcam o microfono non trovati.";
+  }
+  if (nome === "NotReadableError" || nome === "TrackStartError") {
+    return clientCellulareAudioOnly
+      ? "Il microfono è occupato da un'altra app o scheda."
+      : "Webcam o microfono sono occupati da un'altra app o scheda.";
+  }
+  if (nome === "OverconstrainedError" || nome === "ConstraintNotSatisfiedError") {
+    return clientCellulareAudioOnly
+      ? "Il dispositivo non supporta le impostazioni audio richieste."
+      : "Il dispositivo non supporta le impostazioni video richieste.";
+  }
+  if (nome === "AbortError") {
+    return clientCellulareAudioOnly
+      ? "Apertura del microfono interrotta dal browser."
+      : "Apertura di webcam o microfono interrotta dal browser.";
+  }
+  return clientCellulareAudioOnly ? "Microfono non disponibile." : "Webcam o microfono non disponibili.";
+}
+
+function aggiornaNomiPartecipanti(dati) {
+  if (!dati || !Array.isArray(dati.giocatori)) return;
+  dati.giocatori.forEach(giocatore => {
+    const uidGiocatore = giocatore && (giocatore.id || giocatore.uid);
+    if (!uidGiocatore) return;
+    nomiPartecipantiMedia.set(uidGiocatore, giocatore.nome || "Giocatore");
+    if (!partecipantiMediaInfo.has(uidGiocatore) && giocatore.tipoDispositivo) {
+      const tipoDispositivo = normalizzaTipoDispositivoMedia(giocatore.tipoDispositivo);
+      partecipantiMediaInfo.set(uidGiocatore, {
+        uid: uidGiocatore,
+        tipoDispositivo,
+        videoDisponibile: tipoDispositivo !== "cellulare"
+      });
+    }
+  });
+  Object.entries(elementiVideoRemoti).forEach(([uidGiocatore, elementi]) => {
+    if (elementi && elementi.didascalia) {
+      elementi.didascalia.textContent = nomiPartecipantiMedia.get(uidGiocatore) || "Giocatore";
+    }
+  });
+}
+
+function aggiornaConfigurazioneIce(configurazione) {
+  if (!configurazione || !Array.isArray(configurazione.iceServers)) return;
+  const iceServers = configurazione.iceServers.slice(0, 6).filter(server => {
+    const urls = Array.isArray(server && server.urls) ? server.urls : [server && server.urls];
+    return urls.length > 0 && urls.every(url => typeof url === "string" && /^(stun|stuns|turn|turns):/i.test(url));
+  }).map(server => ({
+    urls: server.urls,
+    ...(typeof server.username === "string" ? { username: server.username } : {}),
+    ...(typeof server.credential === "string" ? { credential: server.credential } : {})
+  }));
+  if (iceServers.length) {
+    CONFIGURAZIONE_ICE = {
+      iceServers,
+      iceCandidatePoolSize: 4,
+      bundlePolicy: "max-bundle"
+    };
+  }
+}
+
+function aggiornaInterfacciaMedia(testo, errore) {
+  const layoutMediaEraAttivo = document.body.classList.contains("media-partita");
+  document.body.classList.toggle("media-partita", mediaPartitaAttiva);
+  document.body.classList.toggle("client-cellulare-audio-only", clientCellulareAudioOnly);
+  if (layoutMediaEraAttivo !== mediaPartitaAttiva) requestAnimationFrame(aggiornaLayoutTabellone);
+
+  const pannello = document.getElementById("videochiamata");
+  const statoTesto = document.getElementById("stato-media-connessione");
+  const voceMenu = document.getElementById("btn-stato-media");
+  if (pannello) pannello.classList.toggle("nascosto", !mediaPartitaAttiva);
+  if (statoTesto) {
+    statoTesto.textContent = testo || (mediaPartitaAttiva ? "Collegamento…" : "Non attiva");
+    statoTesto.style.color = errore ? "#ff8a80" : "";
+  }
+  if (voceMenu) {
+    if (!mediaPartitaAttiva) {
+      voceMenu.textContent = "🔇 Videochiamata: non attiva";
+    } else if (clientCellulareAudioOnly) {
+      voceMenu.textContent = errore ? "⚠️ Microfono: verifica necessaria" : "🎙️ Chiamata audio attiva";
+    } else {
+      voceMenu.textContent = errore ? "⚠️ Webcam/microfono: verifica necessaria" : "🎥 Webcam e microfono attivi";
+    }
+    voceMenu.classList.toggle("media-attiva", mediaPartitaAttiva && !errore);
+  }
+  aggiornaControlliMediaLocale();
+}
+
+function aggiornaControlliMediaLocale() {
+  const tracciaAudio = flussoMediaLocale && flussoMediaLocale.getAudioTracks().find(t => t.readyState === "live");
+  const tracciaVideo = flussoMediaLocale && flussoMediaLocale.getVideoTracks().find(t => t.readyState === "live");
+  const btnMic = document.getElementById("btn-toggle-microfono-media");
+  const btnCam = document.getElementById("btn-toggle-webcam-media");
+  const tileLocale = document.getElementById("video-tile-locale");
+
+  if (btnMic) {
+    const acceso = !!(tracciaAudio && tracciaAudio.enabled);
+    btnMic.disabled = !tracciaAudio;
+    btnMic.textContent = acceso ? "🎙️" : "🔇";
+    btnMic.setAttribute("aria-pressed", acceso ? "false" : "true");
+    btnMic.setAttribute("aria-label", acceso ? "Disattiva microfono" : "Attiva microfono");
+    btnMic.title = acceso ? "Disattiva microfono" : "Attiva microfono";
+    btnMic.classList.toggle("media-spento", !!tracciaAudio && !acceso);
+  }
+
+  if (btnCam) {
+    btnCam.hidden = clientCellulareAudioOnly;
+    btnCam.setAttribute("aria-hidden", clientCellulareAudioOnly ? "true" : "false");
+    if (!clientCellulareAudioOnly) {
+      const acceso = !!(tracciaVideo && tracciaVideo.enabled);
+      btnCam.disabled = !tracciaVideo;
+      btnCam.textContent = acceso ? "📷" : "🚫";
+      btnCam.setAttribute("aria-pressed", acceso ? "false" : "true");
+      btnCam.setAttribute("aria-label", acceso ? "Disattiva webcam" : "Attiva webcam");
+      btnCam.title = acceso ? "Disattiva webcam" : "Attiva webcam";
+      btnCam.classList.toggle("media-spento", !!tracciaVideo && !acceso);
+    }
+  }
+
+  if (tileLocale) tileLocale.hidden = clientCellulareAudioOnly;
+}
+
+function toggleMicrofonoMedia() {
+  const traccia = flussoMediaLocale && flussoMediaLocale.getAudioTracks().find(t => t.readyState === "live");
+  if (!traccia) {
+    mostraNotificaGioco(clientCellulareAudioOnly
+      ? "Microfono non disponibile. Usa 'Riprova microfono'."
+      : "Microfono non disponibile. Usa 'Riprova webcam e microfono'.");
+    return;
+  }
+  traccia.enabled = !traccia.enabled;
+  aggiornaControlliMediaLocale();
+}
+
+function toggleWebcamMedia() {
+  if (clientCellulareAudioOnly) return;
+  const traccia = flussoMediaLocale && flussoMediaLocale.getVideoTracks().find(t => t.readyState === "live");
+  if (!traccia) {
+    mostraNotificaGioco("Webcam non disponibile. Usa 'Riprova webcam e microfono'.");
+    return;
+  }
+  traccia.enabled = !traccia.enabled;
+  aggiornaControlliMediaLocale();
+}
+
+function impostaMediaPartitaAttiva(attiva) {
+  if (attiva !== true) {
+    mediaPartitaAttiva = false;
+    mediaProntoSegnalato = false;
+    mediaRichiedeRiprovaManuale = false;
+    partecipantiMediaPronti.clear();
+    partecipantiMediaInfo.clear();
+    if (flussoMediaLocale) {
+      const streamDaChiudere = flussoMediaLocale;
+      flussoMediaLocale = null;
+      streamDaChiudere.getTracks().forEach(traccia => {
+        traccia.onended = null;
+        try { traccia.stop(); } catch (e) {}
+      });
+    }
+    Object.keys(connessioniPeer).forEach(chiudiConnessioneMedia);
+    Object.values(timerRiprovaPeer).forEach(clearTimeout);
+    Object.values(timerDisconnessionePeer).forEach(clearTimeout);
+    timerRiprovaPeer = {};
+    timerDisconnessionePeer = {};
+    const locale = document.getElementById("video-locale");
+    if (locale) locale.srcObject = null;
+    aggiornaInterfacciaMedia("Non attiva", false);
+    return;
+  }
+
+  mediaPartitaAttiva = true;
+  if (mediaRichiedeRiprovaManuale) {
+    aggiornaInterfacciaMedia(
+      clientCellulareAudioOnly ? "Autorizzazione microfono da verificare" : "Autorizzazione o dispositivo da verificare",
+      true
+    );
+    return;
+  }
+  aggiornaInterfacciaMedia(
+    flussoMediaLocale ? "Collegata" : (clientCellulareAudioOnly ? "Avvio microfono…" : "Avvio webcam e microfono…"),
+    false
+  );
+  gestisciPromessaWebRtc(inizializzaMediaPartita());
+}
+
+function segnalaMediaPronto() {
+  if (!mediaPartitaAttiva || !flussoMediaLocale || mediaProntoSegnalato) return;
+  if (!streamLocaleMediaPronto(flussoMediaLocale)) return;
+  const videoDisponibile = !clientCellulareAudioOnly &&
+    flussoMediaLocale.getVideoTracks().some(t => t.readyState === "live");
+  if (inviaSocket({
+    tipo: "mediaPronto",
+    partitaId: stato.id || partitaId,
+    attivo: true,
+    tipoDispositivo: tipoDispositivoMediaLocale,
+    videoDisponibile
+  })) {
+    mediaProntoSegnalato = true;
+  }
+}
+
+function gestisciInterruzioneMediaLocale() {
+  if (puliziaMediaInCorso || !flussoMediaLocale) return;
+  if (streamLocaleMediaPronto(flussoMediaLocale)) return;
+
+  const streamDaChiudere = flussoMediaLocale;
+  flussoMediaLocale = null;
+  streamDaChiudere.getTracks().forEach(traccia => {
+    traccia.onended = null;
+    try { if (traccia.readyState === "live") traccia.stop(); } catch (e) {}
+  });
+  mediaProntoSegnalato = false;
+  mediaRichiedeRiprovaManuale = true;
+  inviaSocket({ tipo: "mediaPronto", partitaId: stato.id || partitaId, attivo: false });
+  partecipantiMediaPronti.delete(mioUid);
+  partecipantiMediaInfo.delete(mioUid);
+  Object.keys(connessioniPeer).forEach(chiudiConnessioneMedia);
+  const locale = document.getElementById("video-locale");
+  if (locale) locale.srcObject = null;
+  aggiornaInterfacciaMedia(clientCellulareAudioOnly ? "Microfono scollegato" : "Webcam o microfono scollegati", true);
+  const riprova = document.getElementById("btn-sblocca-media");
+  if (riprova) {
+    riprova.textContent = clientCellulareAudioOnly ? "Riprova microfono" : "Riprova webcam e microfono";
+    riprova.classList.remove("nascosto");
+  }
+}
+
+async function ottieniFlussoMediaRobusto() {
+  const tentativiVincoli = clientCellulareAudioOnly
+    ? [
+        { audio: VINCOLI_AUDIO, video: false },
+        { audio: { echoCancellation: true, noiseSuppression: true }, video: false },
+        { audio: true, video: false }
+      ]
+    : [
+        VINCOLI_MEDIA,
+        { audio: { echoCancellation: true, noiseSuppression: true }, video: { facingMode: { ideal: "user" } } },
+        { audio: true, video: true }
+      ];
+  let ultimoErrore = null;
+
+  for (let indice = 0; indice < tentativiVincoli.length; indice++) {
+    const vincoli = tentativiVincoli[indice];
+    for (let tentativoOccupato = 0; tentativoOccupato < 3; tentativoOccupato++) {
+      try {
+        return await navigator.mediaDevices.getUserMedia(vincoli);
+      } catch (errore) {
+        ultimoErrore = errore;
+        const nome = nomeErroreMediaPartita(errore);
+        const vincoliTroppoStretti = nome === "OverconstrainedError" || nome === "ConstraintNotSatisfiedError";
+        const dispositivoTemporaneamenteOccupato = nome === "NotReadableError" || nome === "TrackStartError" || nome === "AbortError";
+        if (vincoliTroppoStretti) break;
+        if (dispositivoTemporaneamenteOccupato && tentativoOccupato < 2) {
+          await aspettaWebRtc(450 + tentativoOccupato * 550);
+          continue;
+        }
+        throw errore;
+      }
+    }
+  }
+  throw ultimoErrore || new Error(clientCellulareAudioOnly
+    ? "Impossibile aprire il microfono"
+    : "Impossibile aprire webcam e microfono");
+}
+
+async function inizializzaMediaPartita() {
+  if (!mediaPartitaAttiva || paginaInChiusura) return false;
+  if (flussoMediaLocale && streamLocaleMediaPronto(flussoMediaLocale)) {
+    segnalaMediaPronto();
+    aggiornaControlliMediaLocale();
+    return true;
+  }
+  if (avvioMediaInCorso) return avvioMediaInCorso;
+
+  avvioMediaInCorso = (async () => {
+    try {
+      if (!window.isSecureContext || !navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== "function") {
+        throw new DOMException("getUserMedia non disponibile", "NotSupportedError");
+      }
+      if (typeof RTCPeerConnection !== "function") {
+        throw new DOMException("WebRTC non disponibile", "NotSupportedError");
+      }
+      const policy = document.permissionsPolicy || document.featurePolicy;
+      if (policy && typeof policy.allowsFeature === "function") {
+        const microfonoConsentito = policy.allowsFeature("microphone");
+        const webcamConsentita = clientCellulareAudioOnly || policy.allowsFeature("camera");
+        if (!microfonoConsentito || !webcamConsentita) {
+          throw new DOMException(
+            clientCellulareAudioOnly
+              ? "Il contenitore iframe non autorizza il microfono"
+              : "Il contenitore iframe non autorizza camera/microfono",
+            "NotAllowedError"
+          );
+        }
+      }
+
+      const stream = await ottieniFlussoMediaRobusto();
+      if (!mediaPartitaAttiva || paginaInChiusura) {
+        stream.getTracks().forEach(traccia => traccia.stop());
+        return false;
+      }
+
+      const audio = stream.getAudioTracks().find(t => t.readyState === "live");
+      const video = stream.getVideoTracks().find(t => t.readyState === "live");
+      if (!audio || (!clientCellulareAudioOnly && !video)) {
+        stream.getTracks().forEach(traccia => traccia.stop());
+        throw new DOMException(
+          clientCellulareAudioOnly ? "È necessaria una traccia audio" : "Sono necessarie entrambe le tracce",
+          "NotFoundError"
+        );
+      }
+
+      flussoMediaLocale = stream;
+      mediaRichiedeRiprovaManuale = false;
+      stream.getTracks().forEach(traccia => {
+        traccia.onended = gestisciInterruzioneMediaLocale;
+      });
+
+      const videoLocale = document.getElementById("video-locale");
+      if (videoLocale) {
+        if (clientCellulareAudioOnly) {
+          videoLocale.srcObject = null;
+        } else {
+          videoLocale.srcObject = stream;
+          videoLocale.muted = true;
+          videoLocale.playsInline = true;
+          videoLocale.play().catch(() => {});
+        }
+      }
+
+      const riprova = document.getElementById("btn-sblocca-media");
+      if (riprova) riprova.classList.add("nascosto");
+      aggiornaControlliMediaLocale();
+      aggiornaInterfacciaMedia("In attesa degli altri giocatori…", false);
+      segnalaMediaPronto();
+      return true;
+    } catch (errore) {
+      console.warn(clientCellulareAudioOnly ? "Avvio microfono non riuscito:" : "Avvio webcam/microfono non riuscito:", errore);
+      mediaRichiedeRiprovaManuale = true;
+      mediaProntoSegnalato = false;
+      inviaSocket({ tipo: "mediaPronto", partitaId: stato.id || partitaId, attivo: false });
+      const dettaglio = descriviErroreMediaPartita(errore);
+      aggiornaInterfacciaMedia(dettaglio, true);
+      mostraNotificaGioco(dettaglio + " La partita attenderà finché non riprovi.");
+      const riprova = document.getElementById("btn-sblocca-media");
+      if (riprova) {
+        riprova.textContent = clientCellulareAudioOnly ? "Riprova microfono" : "Riprova webcam e microfono";
+        riprova.classList.remove("nascosto");
+      }
+      aggiornaControlliMediaLocale();
+      return false;
+    } finally {
+      avvioMediaInCorso = null;
+    }
+  })();
+  return avvioMediaInCorso;
+}
+
+function creaIconaCellulareBarratoElemento() {
+  const contenitore = document.createElement("span");
+  contenitore.className = "icona-cellulare-barrato";
+  contenitore.setAttribute("aria-hidden", "true");
+  contenitore.innerHTML = `
+    <svg viewBox="0 0 28 28" focusable="false">
+      <rect x="8" y="3.5" width="12" height="21" rx="2.4" fill="none" stroke="currentColor" stroke-width="2"/>
+      <line x1="11.5" y1="21" x2="16.5" y2="21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+      <line x1="4" y1="24" x2="24" y2="4" stroke="currentColor" stroke-width="2.7" stroke-linecap="round"/>
+    </svg>`;
+  return contenitore;
+}
+
+function creaElementiVideoRemoto(altroUid) {
+  if (elementiVideoRemoti[altroUid]) return elementiVideoRemoti[altroUid];
+
+  const info = descrittoreMediaPerUid(altroUid);
+  const remotoCellulare = info.tipoDispositivo === "cellulare";
+  const mostraVideo = !clientCellulareAudioOnly && peerSupportaVideo(altroUid);
+
+  const figura = document.createElement("figure");
+  figura.className = "video-tile" + (mostraVideo ? "" : " video-tile-mobile-audio");
+  figura.dataset.uid = altroUid;
+
+  let video = null;
+  let placeholder = null;
+
+  if (mostraVideo) {
+    video = document.createElement("video");
+    video.autoplay = true;
+    video.playsInline = true;
+    video.muted = true;
+    figura.appendChild(video);
+  } else {
+    placeholder = document.createElement("div");
+    placeholder.className = "placeholder-mobile-audio";
+    if (remotoCellulare) {
+      placeholder.appendChild(creaIconaCellulareBarratoElemento());
+      const testo = document.createElement("span");
+      testo.textContent = "Da cellulare · solo audio";
+      placeholder.appendChild(testo);
+    } else {
+      const testo = document.createElement("span");
+      testo.textContent = "Solo audio";
+      placeholder.appendChild(testo);
+    }
+    figura.appendChild(placeholder);
+  }
+
+  const audio = document.createElement("audio");
+  audio.autoplay = true;
+  audio.preload = "auto";
+  figura.appendChild(audio);
+
+  const didascalia = document.createElement("figcaption");
+  const giocatoreNoto = giocatoriStato().find(g => g.uid === altroUid);
+  didascalia.textContent = nomiPartecipantiMedia.get(altroUid) || (giocatoreNoto && (giocatoreNoto.nome || giocatoreNoto.nickname)) || "Giocatore";
+  figura.appendChild(didascalia);
+
+  const griglia = document.getElementById("griglia-video");
+  if (griglia) griglia.appendChild(figura);
+
+  elementiVideoRemoti[altroUid] = {
+    figura,
+    video,
+    audio,
+    didascalia,
+    placeholder,
+    streamAudioRemoto: new MediaStream(),
+    streamVideoRemoto: new MediaStream()
+  };
+  return elementiVideoRemoti[altroUid];
+}
+
+function mostraPulsanteSbloccoAudio(testo) {
+  const pulsante = document.getElementById("btn-sblocca-media");
+  if (!pulsante) return;
+  if (testo) pulsante.textContent = testo;
+  pulsante.classList.remove("nascosto");
+}
+
+function tentaRiproduzioneElementoMedia(elemento) {
+  if (!elemento || typeof elemento.play !== "function") return Promise.resolve(false);
+  return elemento.play().then(() => true).catch(() => {
+    mostraPulsanteSbloccoAudio("🔊 Attiva l'audio");
+    return false;
+  });
+}
+
+function chiudiPeerSenzaRimuovereTile(altroUid) {
+  if (timerRiprovaPeer[altroUid]) { clearTimeout(timerRiprovaPeer[altroUid]); delete timerRiprovaPeer[altroUid]; }
+  if (timerDisconnessionePeer[altroUid]) { clearTimeout(timerDisconnessionePeer[altroUid]); delete timerDisconnessionePeer[altroUid]; }
+  const pc = connessioniPeer[altroUid];
+  delete connessioniPeer[altroUid];
+  if (pc && pc.connectionState !== "closed") {
+    try { pc.onicecandidate = null; pc.ontrack = null; pc.onconnectionstatechange = null; pc.oniceconnectionstatechange = null; pc.close(); } catch (e) {}
+  }
+  delete candidatiIceInAttesa[altroUid];
+}
+
+function creaConnessionePeer(altroUid) {
+  const esistente = connessioniPeer[altroUid];
+  if (esistente && esistente.connectionState !== "closed" && esistente.connectionState !== "failed") return esistente;
+  if (!flussoMediaLocale) throw new Error("Stream locale non pronto");
+
+  const pc = new RTCPeerConnection(CONFIGURAZIONE_ICE);
+  const peerAccettaVideo = peerSupportaVideo(altroUid);
+
+  flussoMediaLocale.getTracks().forEach(traccia => {
+    if (traccia.kind === "video" && !peerAccettaVideo) return;
+    const sender = pc.addTrack(traccia, flussoMediaLocale);
+    if (traccia.kind === "video" && sender && typeof sender.getParameters === "function") {
+      const parametri = sender.getParameters();
+      if (!parametri.encodings || !parametri.encodings.length) parametri.encodings = [{}];
+      parametri.encodings[0].maxBitrate = 260000;
+      parametri.encodings[0].maxFramerate = 20;
+      sender.setParameters(parametri).catch(() => {});
+    }
+  });
+
+  pc.onicecandidate = evento => {
+    if (evento.candidate) {
+      inviaSocket({
+        tipo: "webrtc-ice-candidate",
+        partitaId: stato.id || partitaId,
+        destinatarioUid: altroUid,
+        candidate: evento.candidate.toJSON ? evento.candidate.toJSON() : evento.candidate
+      });
+    }
+  };
+
+  pc.ontrack = evento => {
+    if (!evento || !evento.track) return;
+    const elementi = creaElementiVideoRemoto(altroUid);
+
+    if (evento.track.kind === "audio") {
+      if (!elementi.streamAudioRemoto.getTracks().some(t => t.id === evento.track.id)) {
+        elementi.streamAudioRemoto.addTrack(evento.track);
+      }
+      elementi.audio.srcObject = elementi.streamAudioRemoto;
+      evento.track.onended = () => {
+        try { elementi.streamAudioRemoto.removeTrack(evento.track); } catch (e) {}
+      };
+      tentaRiproduzioneElementoMedia(elementi.audio);
+      return;
+    }
+
+    if (evento.track.kind === "video") {
+      if (clientCellulareAudioOnly || !elementi.video || !peerSupportaVideo(altroUid)) return;
+      if (!elementi.streamVideoRemoto.getTracks().some(t => t.id === evento.track.id)) {
+        elementi.streamVideoRemoto.addTrack(evento.track);
+      }
+      elementi.video.srcObject = elementi.streamVideoRemoto;
+      evento.track.onended = () => {
+        try { elementi.streamVideoRemoto.removeTrack(evento.track); } catch (e) {}
+      };
+      tentaRiproduzioneElementoMedia(elementi.video);
+    }
+  };
+
+  const gestisciStatoConnessione = () => {
+    const statoConn = pc.connectionState;
+    const statoIce = pc.iceConnectionState;
+    if (statoConn === "connected" || statoIce === "connected" || statoIce === "completed") {
+      if (timerDisconnessionePeer[altroUid]) clearTimeout(timerDisconnessionePeer[altroUid]);
+      delete timerDisconnessionePeer[altroUid];
+      aggiornaInterfacciaMedia(`${partecipantiMediaPronti.size} partecipanti collegati`, false);
+      return;
+    }
+    if (statoConn === "failed" || statoIce === "failed") {
+      chiudiPeerSenzaRimuovereTile(altroUid);
+      pianificaRiprovaConnessioneMedia(altroUid, 900);
+      return;
+    }
+    if (statoConn === "disconnected" || statoIce === "disconnected") {
+      if (!timerDisconnessionePeer[altroUid]) {
+        timerDisconnessionePeer[altroUid] = setTimeout(() => {
+          delete timerDisconnessionePeer[altroUid];
+          const attuale = connessioniPeer[altroUid];
+          if (attuale === pc && (pc.connectionState === "disconnected" || pc.iceConnectionState === "disconnected")) {
+            chiudiPeerSenzaRimuovereTile(altroUid);
+            pianificaRiprovaConnessioneMedia(altroUid, 600);
+          }
+        }, 6500);
+      }
+    }
+  };
+  pc.onconnectionstatechange = gestisciStatoConnessione;
+  pc.oniceconnectionstatechange = gestisciStatoConnessione;
+  pc.onicecandidateerror = evento => console.warn("ICE candidate error:", evento && evento.errorText ? evento.errorText : evento);
+
+  connessioniPeer[altroUid] = pc;
+  return pc;
+}
+
+async function avviaConnessioneMedia(altroUid, riavvioIce = false) {
+  if (!flussoMediaLocale || !partecipantiMediaPronti.has(altroUid) || !mioUid) return;
+  if (String(mioUid) >= String(altroUid)) return;
+
+  let pc = connessioniPeer[altroUid];
+  if (pc && pc.connectionState === "connected" && !riavvioIce) return;
+  if (pc && pc.signalingState !== "stable") return;
+  if (!pc || pc.connectionState === "closed" || pc.connectionState === "failed") pc = creaConnessionePeer(altroUid);
+
+  const offerta = await pc.createOffer(riavvioIce ? { iceRestart: true } : undefined);
+  if (pc.signalingState !== "stable") return;
+  await pc.setLocalDescription(offerta);
+  inviaSocket({ tipo: "webrtc-offer", partitaId: stato.id || partitaId, destinatarioUid: altroUid, sdp: pc.localDescription });
+}
+
+async function applicaCandidatiIceInAttesa(altroUid) {
+  const pc = connessioniPeer[altroUid];
+  if (!pc || !pc.remoteDescription) return;
+  const candidati = candidatiIceInAttesa[altroUid] || [];
+  delete candidatiIceInAttesa[altroUid];
+  for (const candidate of candidati.slice(0, 100)) {
+    try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); }
+    catch (errore) { console.warn("Candidato ICE ignorato:", errore); }
+  }
+}
+
+async function gestisciOffertaRicevuta(mittenteUid, sdp) {
+  if (!mediaPartitaAttiva || !flussoMediaLocale || !partecipantiMediaPronti.has(mittenteUid) || !sdp) return;
+  if (sdp.type !== "offer") return;
+
+  let pc = connessioniPeer[mittenteUid];
+  if (pc && pc.signalingState !== "stable") {
+    chiudiPeerSenzaRimuovereTile(mittenteUid);
+    pc = null;
+  }
+  if (!pc) pc = creaConnessionePeer(mittenteUid);
+
+  await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+  await applicaCandidatiIceInAttesa(mittenteUid);
+  const risposta = await pc.createAnswer();
+  await pc.setLocalDescription(risposta);
+  inviaSocket({ tipo: "webrtc-answer", partitaId: stato.id || partitaId, destinatarioUid: mittenteUid, sdp: pc.localDescription });
+}
+
+async function gestisciRispostaRicevuta(mittenteUid, sdp) {
+  const pc = connessioniPeer[mittenteUid];
+  if (!pc || !sdp || sdp.type !== "answer") return;
+  if (pc.signalingState !== "have-local-offer") return;
+  await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+  await applicaCandidatiIceInAttesa(mittenteUid);
+}
+
+async function gestisciCandidatoRicevuto(mittenteUid, candidate) {
+  if (!candidate || typeof candidate !== "object") return;
+  const pc = connessioniPeer[mittenteUid];
+  if (!pc || !pc.remoteDescription) {
+    if (!candidatiIceInAttesa[mittenteUid]) candidatiIceInAttesa[mittenteUid] = [];
+    if (candidatiIceInAttesa[mittenteUid].length < 100) candidatiIceInAttesa[mittenteUid].push(candidate);
+    return;
+  }
+  try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); }
+  catch (errore) { console.warn("Candidato ICE ignorato:", errore); }
+}
+
+function chiudiConnessioneMedia(altroUid) {
+  chiudiPeerSenzaRimuovereTile(altroUid);
+  const elementi = elementiVideoRemoti[altroUid];
+  if (elementi) {
+    if (elementi.video) elementi.video.srcObject = null;
+    if (elementi.audio) elementi.audio.srcObject = null;
+    try {
+      elementi.streamAudioRemoto.getTracks().forEach(t => elementi.streamAudioRemoto.removeTrack(t));
+      elementi.streamVideoRemoto.getTracks().forEach(t => elementi.streamVideoRemoto.removeTrack(t));
+    } catch (e) {}
+    elementi.figura.remove();
+    delete elementiVideoRemoti[altroUid];
+  }
+}
+
+function pianificaRiprovaConnessioneMedia(altroUid, ritardoMs = 1800) {
+  if (!altroUid || timerRiprovaPeer[altroUid] || !mioUid || String(mioUid) >= String(altroUid)) return;
+  if (!mediaPartitaAttiva || !flussoMediaLocale || !partecipantiMediaPronti.has(altroUid)) return;
+  timerRiprovaPeer[altroUid] = setTimeout(() => {
+    delete timerRiprovaPeer[altroUid];
+    if (partecipantiMediaPronti.has(altroUid)) gestisciPromessaWebRtc(avviaConnessioneMedia(altroUid, true));
+  }, Math.max(400, Number(ritardoMs) || 1800));
+}
+
+function normalizzaDescrittorePartecipanteMedia(valore) {
+  if (!valore || typeof valore !== "object" || typeof valore.uid !== "string") return null;
+  const tipoDispositivo = normalizzaTipoDispositivoMedia(valore.tipoDispositivo);
+  return {
+    uid: valore.uid,
+    tipoDispositivo,
+    videoDisponibile: tipoDispositivo !== "cellulare" && valore.videoDisponibile !== false
+  };
+}
+
+function gestisciStatoMedia(dati) {
+  impostaMediaPartitaAttiva(dati.mediaAttiva === true);
+  if (!mediaPartitaAttiva) return;
+
+  const infoPrecedenti = partecipantiMediaInfo;
+  const descrittori = Array.isArray(dati.partecipantiMedia)
+    ? dati.partecipantiMedia.map(normalizzaDescrittorePartecipanteMedia).filter(Boolean)
+    : [];
+
+  if (descrittori.length) {
+    partecipantiMediaInfo = new Map(descrittori.map(info => [info.uid, info]));
+    partecipantiMediaPronti = new Set(descrittori.map(info => info.uid));
+  } else {
+    partecipantiMediaPronti = new Set(
+      Array.isArray(dati.partecipanti)
+        ? dati.partecipanti.filter(uid => typeof uid === "string")
+        : []
+    );
+    partecipantiMediaInfo = new Map(
+      Array.from(partecipantiMediaPronti).map(uid => {
+        const info = descrittoreMediaPerUid(uid);
+        return [uid, info];
+      })
+    );
+  }
+
+  Object.keys(connessioniPeer).forEach(uid => {
+    if (!partecipantiMediaPronti.has(uid)) {
+      chiudiConnessioneMedia(uid);
+      return;
+    }
+    const prima = infoPrecedenti.get(uid);
+    const dopo = partecipantiMediaInfo.get(uid);
+    if (prima && dopo && (
+      prima.tipoDispositivo !== dopo.tipoDispositivo ||
+      prima.videoDisponibile !== dopo.videoDisponibile
+    )) {
+      chiudiConnessioneMedia(uid);
+    }
+  });
+  Object.keys(elementiVideoRemoti).forEach(uid => {
+    if (!partecipantiMediaPronti.has(uid)) chiudiConnessioneMedia(uid);
+  });
+
+  const quanti = partecipantiMediaPronti.size;
+  aggiornaInterfacciaMedia(quanti > 1 ? `${quanti} partecipanti collegati` : "In attesa degli altri giocatori…", false);
+
+  if (flussoMediaLocale && mioUid && !partecipantiMediaPronti.has(mioUid)) {
+    mediaProntoSegnalato = false;
+    segnalaMediaPronto();
+    return;
+  }
+  if (!flussoMediaLocale || !mioUid || !partecipantiMediaPronti.has(mioUid)) return;
+
+  partecipantiMediaPronti.forEach(altroUid => {
+    if (altroUid !== mioUid && String(mioUid) < String(altroUid)) {
+      gestisciPromessaWebRtc(avviaConnessioneMedia(altroUid));
+    }
+  });
+  renderPannelloGiocatori();
+}
+
+async function sbloccaRiproduzioneMedia() {
+  if (!flussoMediaLocale) {
+    mediaRichiedeRiprovaManuale = false;
+    if (!(await inizializzaMediaPartita())) return;
+  }
+
+  const elementiDaRiprodurre = Object.values(elementiVideoRemoti)
+    .flatMap(elementi => [elementi.audio, elementi.video])
+    .filter(Boolean);
+  const risultati = await Promise.allSettled(elementiDaRiprodurre.map(elemento => elemento.play()));
+  const fallita = risultati.some(risultato => risultato.status === "rejected");
+  const pulsante = document.getElementById("btn-sblocca-media");
+  if (pulsante) {
+    pulsante.textContent = fallita ? "🔊 Attiva l'audio" : "🔊 Audio attivo";
+    pulsante.classList.toggle("nascosto", !fallita);
+  }
+}
+
+document.addEventListener("pointerdown", () => {
+  if (!mediaPartitaAttiva || !flussoMediaLocale) return;
+  const audioRemoti = Object.values(elementiVideoRemoti).map(elementi => elementi.audio).filter(Boolean);
+  audioRemoti.forEach(audio => audio.play().catch(() => mostraPulsanteSbloccoAudio("🔊 Attiva l'audio")));
+}, { passive: true });
+
+function pulisciMediaPagina() {
+  if (puliziaMediaInCorso) return;
+  puliziaMediaInCorso = true;
+  paginaInChiusura = true;
+  clearTimeout(timerRiconnessione);
+  clearTimeout(timerChiusuraPresentazioneSfida);
+  if (mediaProntoSegnalato) inviaSocket({ tipo: "mediaPronto", partitaId: stato.id || partitaId, attivo: false });
+  if (flussoMediaLocale) {
+    flussoMediaLocale.getTracks().forEach(traccia => {
+      traccia.onended = null;
+      try { traccia.stop(); } catch (e) {}
+    });
+  }
+  flussoMediaLocale = null;
+  Object.keys(connessioniPeer).forEach(chiudiConnessioneMedia);
+  Object.values(timerRiprovaPeer).forEach(clearTimeout);
+  Object.values(timerDisconnessionePeer).forEach(clearTimeout);
+  timerRiprovaPeer = {};
+  timerDisconnessionePeer = {};
+  partecipantiMediaPronti.clear();
+  partecipantiMediaInfo.clear();
+  aggiornaControlliMediaLocale();
+  try { socket?.close(); } catch (e) {}
+}
+window.addEventListener("pagehide", pulisciMediaPagina);
+
+function gestisciPromessaWebRtc(promessa) {
+  Promise.resolve(promessa).catch(errore => {
+    console.error("Errore WebRTC:", errore);
+    mostraNotificaGioco("La connessione audio/video non è riuscita.");
   });
 }
 
@@ -632,18 +1517,9 @@ function nomeColore(colore) {
 const posizioniDischi = new Map();
 const caselleTavola = new Map();
 let tavolaDisegnata = null;
-// 0 = tavola libera, 1 = animazione dell'ULTIMO stato ricevuto in corso.
-// (Prima era un contatore incrementato a ogni stato ma decrementato solo
-// dall'ultimo: se arrivavano due stati ravvicinati restava > 0 per sempre
-// e la tavola rimaneva bloccata.)
 let animazioniDaAttendere = 0;
 let animazioniDaAttendereGenerazione = 0;
-// Tempo massimo di attesa per un'animazione: se animationend non scatta
-// (scheda in background, CSS mancante...) la tavola viene comunque sbloccata.
 const TIMEOUT_ANIMAZIONE_MS = 2500;
-// Le animazioni dei dischi sono parte integrante della grafica di Othello.
-// Rimangono quindi sempre attive; il pulsante resta solo per compatibilità
-// con eventuali onclick già presenti nell'HTML.
 const animazioniDischiAttive = true;
 function aggiornaBottoneAnimazioniOthello() {
   const bottone = document.getElementById("btn-animazioni-othello");
@@ -659,7 +1535,6 @@ aggiornaBottoneAnimazioniOthello();
 function chiaveCasella(r, c) { return r + "," + c; }
 
 function coordinateVisive(r, c) {
-  // Prospettiva: il Bianco vede la tavola ruotata di 180°.
   const coloreLocale = coloreUtenteDaPartita(stato);
   return coloreLocale === "bianco" ? { r: 7 - r, c: 7 - c } : { r, c };
 }
@@ -795,7 +1670,6 @@ async function animaVersoTavola(prossimaTavola, istantanea, generazione) {
 
   const centro = nuove[0] || girati[0] || { r: 3.5, c: 3.5 };
 
-  // Piazza il disco appena giocato con una piccola "caduta"
   for (const cella of nuove) {
     const key = chiaveCasella(cella.r, cella.c);
     if (posizioniDischi.has(key)) continue;
@@ -808,7 +1682,6 @@ async function animaVersoTavola(prossimaTavola, istantanea, generazione) {
     if (cella === nuove[0]) suonaPosa();
   }
 
-  // Flip a cascata: più lontano dal punto giocato, più tardi gira.
   const flipPromesse = girati.map(cella => {
     const key = chiaveCasella(cella.r, cella.c);
     const posizione = posizioniDischi.get(key);
@@ -829,9 +1702,6 @@ async function animaVersoTavola(prossimaTavola, istantanea, generazione) {
           finito = true;
           if (timerFallback) clearTimeout(timerFallback);
           disco.classList.remove(classeFlip);
-          // Se nel frattempo è arrivato uno stato più recente, questo elemento
-          // è probabilmente già stato rimosso dal DOM: non deve poter riscrivere
-          // il colore di una tavola nuova.
           if (generazione === animazioniDaAttendereGenerazione) {
             disco.dataset.colore = cella.colore;
           }
@@ -841,7 +1711,6 @@ async function animaVersoTavola(prossimaTavola, istantanea, generazione) {
         };
         disco.addEventListener("animationend", conclusa, { once: true });
         disco.classList.add(classeFlip);
-        // Rete di sicurezza: se animationend non scatta, chiudo comunque il flip.
         timerFallback = setTimeout(conclusa, 1500);
       }, ritardo);
     });
@@ -1027,9 +1896,6 @@ async function applicaStatoPartita(partita, istantanea = false) {
     ? Number(stato.numeroMossa)
     : 0;
 
-  // Sullo stesso WebSocket i messaggi sono ordinati. In caso di riconnessioni,
-  // però, può arrivare in ritardo uno snapshot vecchio: non deve sovrascrivere
-  // uno stato più avanzato già visualizzato.
   if (!istantanea && numeroMossaIngresso < Math.max(numeroMossaCorrente, ultimoNumeroMossaAccettato)) {
     console.warn("Othello: ignorato stato arretrato", {
       ricevuto: numeroMossaIngresso,
@@ -1047,6 +1913,7 @@ async function applicaStatoPartita(partita, istantanea = false) {
   animazioniDaAttendere = 1;
   const precedenteNumeroMossa = numeroMossaCorrente;
   const turnoPrecedente = stato.turno;
+  const tavolaPrecedente = tavolaDisegnata;
 
   let timerSicurezza = null;
   try {
@@ -1073,7 +1940,6 @@ async function applicaStatoPartita(partita, istantanea = false) {
     clearTimeout(timerSicurezza);
   }
 
-  // Un messaggio più recente ha già preso il controllo della tavola.
   if (generazione !== animazioniDaAttendereGenerazione) return false;
 
   stato = prossimo;
@@ -1092,9 +1958,6 @@ async function applicaStatoPartita(partita, istantanea = false) {
 
   render();
 
-  // Se dopo una mossa il turno ufficiale resta allo stesso colore, significa
-  // che l'avversario non ha mosse legali e deve passare. Il server applica
-  // questa regola senza cambiare il colore del turno.
   if (
     stato.fase === "in_corso" &&
     stato.turno === turnoPrecedente &&
@@ -1159,6 +2022,7 @@ function mostraVittoria(dati = {}) {
   if (vittoriaMostrata) return;
   vittoriaMostrata = true;
   chiudiPresentazioneSfida();
+  impostaMediaPartitaAttiva(false);
   suonaVittoria();
   const vincitoreUid = dati.vincitoreUid || stato.vincitoreUid || null;
   const vincitore = vincitoreUid ? (stato.giocatori?.[vincitoreUid] || null) : null;
@@ -1324,10 +2188,6 @@ async function abbandonaPartita() {
   setTimeout(tornaAllaLobby, 120);
 }
 
-function toggleMicrofonoMedia() { mostraNotificaGioco("La videochiamata non è attiva in questa partita di Othello."); }
-function toggleWebcamMedia() { mostraNotificaGioco("La videochiamata non è attiva in questa partita di Othello."); }
-function sbloccaRiproduzioneMedia() { mostraNotificaGioco("La videochiamata non è attiva in questa partita di Othello."); }
-
 /* =========================================================
    WEBSOCKET OTHELLO
    ========================================================= */
@@ -1335,9 +2195,11 @@ function sbloccaRiproduzioneMedia() { mostraNotificaGioco("La videochiamata non 
 function gestisciMessaggioSocket(dati) {
   if (!dati || typeof dati !== "object") return;
 
+  aggiornaNomiPartecipanti(dati);
+  if (typeof dati.mediaAttiva === "boolean") impostaMediaPartitaAttiva(dati.mediaAttiva);
+
   if (dati.tipo === "othello_identita") {
     mioUid = dati.uid || mioUid;
-    // Prima di avere lo snapshot completo il colore separato è solo un fallback.
     if (coloreValido(dati.colore) && !coloreUtenteDaPartita(stato)) {
       mioColore = dati.colore;
       tavolaDisegnata = null;
@@ -1351,9 +2213,6 @@ function gestisciMessaggioSocket(dati) {
     if (!dati.partita || !tavolaValida(dati.partita.tavola)) return;
 
     const istantanea = attesaSnapshot;
-    // La tavola ricevuta è completa e valida: da questo momento il client può
-    // usare lo stato ufficiale. animazioniDaAttendere/mossaInAttesa impediscono
-    // comunque di cliccare finché l'aggiornamento visuale non è terminato.
     attesaSnapshot = false;
     applicaStatoPartita(dati.partita, istantanea).then(ok => {
       if (!ok && istantanea) attesaSnapshot = true;
@@ -1380,6 +2239,12 @@ function gestisciMessaggioSocket(dati) {
     return;
   }
 
+  if (dati.tipo === "statoMedia") { gestisciStatoMedia(dati); return; }
+  if (dati.tipo === "configMedia") { aggiornaConfigurazioneIce(dati.configurazioneIce); return; }
+  if (dati.tipo === "webrtc-offer") { gestisciPromessaWebRtc(gestisciOffertaRicevuta(dati.mittenteUid, dati.sdp)); return; }
+  if (dati.tipo === "webrtc-answer") { gestisciPromessaWebRtc(gestisciRispostaRicevuta(dati.mittenteUid, dati.sdp)); return; }
+  if (dati.tipo === "webrtc-ice-candidate") { gestisciPromessaWebRtc(gestisciCandidatoRicevuto(dati.mittenteUid, dati.candidate)); return; }
+
   if (dati.tipo === "othello_errore") {
     mossaInAttesa = false;
     clearTimeout(timerMossaInAttesa);
@@ -1388,9 +2253,6 @@ function gestisciMessaggioSocket(dati) {
     const errore = dati.errore || "Operazione non consentita.";
     mostraNotificaGioco(errore);
 
-    // Un errore di mossa può indicare che il client è rimasto indietro.
-    // Chiediamo immediatamente lo stato ufficiale invece di continuare
-    // sulla copia locale potenzialmente vecchia.
     inviaSocket({ tipo: "othello_entra", partitaId: stato.id || partitaId, stanza });
 
     const minuscolo = errore.toLowerCase();
@@ -1426,8 +2288,6 @@ function connetti() {
   }
 
   ws.onopen = () => {
-    // Il nuovo socket deve sempre ricevere uno snapshot completo prima di
-    // poter accettare input dell'utente.
     attesaSnapshot = true;
     mossaInAttesa = false;
     clearTimeout(timerMossaInAttesa);
@@ -1440,7 +2300,6 @@ function connetti() {
   };
 
   ws.onmessage = evento => {
-    // Un socket vecchio non deve mai poter riscrivere lo stato del socket nuovo.
     if (socket !== ws) return;
 
     let dati;
@@ -1609,11 +2468,9 @@ document.addEventListener("keydown", evento => {
 });
 
 window.addEventListener("beforeunload", () => {
-  paginaInChiusura = true;
-  clearTimeout(timerRiconnessione);
-  clearTimeout(timerChiusuraPresentazioneSfida);
-  try { socket?.close(); } catch (_) {}
+  pulisciMediaPagina();
 });
 
+aggiornaInterfacciaMedia(mediaRichiestaDaLobby ? "Verifica impostazioni del tavolo…" : "Non attiva", false);
 setInterval(aggiornaCountdownTurno, 250);
 avvia();
