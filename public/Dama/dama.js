@@ -305,9 +305,13 @@ document.addEventListener("webkitfullscreenchange", aggiornaTestoBottoneFullscre
 function rilevaEImpostaModalitaDesktop() {
   const puntatorePreciso = !!(window.matchMedia && window.matchMedia("(pointer: fine)").matches);
   const eDesktop = puntatorePreciso && window.innerWidth >= 1000;
+  const tipoOrientamento = window.screen && window.screen.orientation ? window.screen.orientation.type : "";
+  const orientamentoVerticale = tipoOrientamento
+    ? tipoOrientamento.startsWith("portrait")
+    : (typeof window.orientation === "number" ? Math.abs(window.orientation % 180) === 0 : window.innerHeight > window.innerWidth);
+  const vaRuotato = !puntatorePreciso && orientamentoVerticale;
   document.body.classList.toggle("modalita-desktop", eDesktop);
-  // La damiera quadrata si adatta al telefono senza ruotare l'intera interfaccia.
-  document.body.classList.remove("modalita-ruotata");
+  document.body.classList.toggle("modalita-ruotata", vaRuotato);
 }
 
 function aggiornaLayoutTabellone() {
@@ -325,19 +329,11 @@ function aggiornaLayoutTabellone() {
   mondo.style.width = larghezzaCanvas + "px";
   mondo.style.height = altezzaCanvas + "px";
 
-  const orizzontaleCompatto = larghezzaCanvas > altezzaCanvas * 1.35 && altezzaCanvas < 620;
-  const altezzaRaccolta = orizzontaleCompatto ? 40 : larghezzaCanvas < 600 ? 44 : 54;
-  document.documentElement.style.setProperty("--altezza-raccolta", altezzaRaccolta + "px");
-  const margineOrizzontale = larghezzaCanvas < 600 ? 10 : 26;
-  // I comandi restano nei margini laterali sui display larghi: non sottrarre
-  // due volte la loro altezza a una damiera che non li interseca.
-  const comandiLaterali = larghezzaCanvas - altezzaCanvas > 160;
-  const spazioComandi = comandiLaterali ? 10 : 56;
+  const margineOrizzontale = Math.max(16, larghezzaCanvas * 0.03);
+  const margineVerticale = Math.max(16, altezzaCanvas * 0.06);
   const larghezzaDisponibile = larghezzaCanvas - margineOrizzontale * 2;
-  const altezzaDisponibile = altezzaCanvas - 2 * (altezzaRaccolta + 12 + spazioComandi);
-  const lato = Math.max(120, Math.min(larghezzaDisponibile, altezzaDisponibile));
-  const puntatorePreciso = !!window.matchMedia?.("(pointer: fine)").matches;
-  document.body.classList.toggle("modalita-desktop", puntatorePreciso && larghezzaCanvas >= 1000 && larghezzaCanvas - lato >= 600);
+  const altezzaDisponibile = altezzaCanvas - margineVerticale * 2;
+  const lato = Math.max(160, Math.min(larghezzaDisponibile, altezzaDisponibile));
 
   areaTabellone.style.width = lato + "px";
   areaTabellone.style.height = lato + "px";
@@ -536,433 +532,52 @@ function nomeColore(colore) {
   return colore === "bianco" ? "Bianco" : colore === "nero" ? "Nero" : "—";
 }
 
-const posizioniPedine = new Map();
-const caselleDamiera = new Map();
-const animazioniPedine = new Set();
-const pedineInPresa = [];
-const preseRinviate = new Map();
-let scacchieraDisegnata = null;
-let preseDisegnate = { bianco: [], nero: [] };
-let ultimoStatoRicevuto = stato;
-let codaAnimazioni = Promise.resolve();
-let generazioneAnimazioni = 0;
-let statiInAttesa = 0;
-let attesaSnapshot = true;
-let mossaInAttesa = false;
-let damieraMossaInAttesa = "";
-let timerMossaInAttesa = null;
-let richiestaMosse = null;
-let richiestaMosseSuccessiva = null;
-let versioneMosse = 0;
-let vittoriaMostrata = false;
-let animazioniDamaAttive = true;
-try { animazioniDamaAttive = localStorage.getItem("dama:animazioni") !== "off"; } catch (_) { /* Storage non disponibile. */ }
-function aggiornaBottoneAnimazioniDama() {
-  const bottone = document.getElementById("btn-animazioni-dama");
-  if (!bottone) return;
-  bottone.textContent = "Animazioni pedine: " + (animazioniDamaAttive ? "attive" : "disattivate");
-  bottone.setAttribute("aria-pressed", String(animazioniDamaAttive));
-}
-function toggleAnimazioniDama() {
-  animazioniDamaAttive = !animazioniDamaAttive;
-  try { localStorage.setItem("dama:animazioni", animazioniDamaAttive ? "on" : "off"); } catch (_) { /* Preferenza valida per questa pagina. */ }
-  aggiornaBottoneAnimazioniDama();
-}
-aggiornaBottoneAnimazioniDama();
-
-function chiaveCasella(r, c) { return r + "," + c; }
-function coordinateValide(punto) {
-  return punto && Number.isInteger(punto.r) && Number.isInteger(punto.c)
-    && punto.r >= 0 && punto.r < 8 && punto.c >= 0 && punto.c < 8;
-}
-function stessaCasella(a, b) { return !!a && !!b && a.r === b.r && a.c === b.c; }
-function scacchieraValida(scacchiera) {
-  return Array.isArray(scacchiera) && scacchiera.length === 8
-    && scacchiera.every(riga => Array.isArray(riga) && riga.length === 8
-      && riga.every(pezzo => pezzo === null || (pezzo && (pezzo.colore === "bianco" || pezzo.colore === "nero"))));
-}
-function copiaScacchiera(scacchiera) {
-  return scacchiera.map(riga => riga.map(pezzo => pezzo ? { colore: pezzo.colore, dama: !!pezzo.dama } : null));
-}
-function coordinateVisive(r, c) {
-  // Dama italiana: casella scura in basso a destra; coordinate server invariate.
-  return mioColore === "nero" ? { r: 7 - r, c } : { r, c: 7 - c };
-}
-function impostaPosizionePedina(elemento, r, c) {
-  const visiva = coordinateVisive(r, c);
-  elemento.style.left = (visiva.c * 12.5) + "%";
-  elemento.style.top = (visiva.r * 12.5) + "%";
-  elemento.dataset.r = String(r);
-  elemento.dataset.c = String(c);
-}
-function creaElementoPedina(pezzo) {
-  const elemento = document.createElement("div");
-  elemento.className = "dama-pezzo " + pezzo.colore + (pezzo.dama ? " dama" : "");
-  elemento.setAttribute("aria-hidden", "true");
-  const faccia = document.createElement("span");
-  faccia.className = "dama-faccia";
-  elemento.appendChild(faccia);
-  return elemento;
-}
-function preparaDamiera() {
-  const damiera = document.getElementById("damiera");
-  if (!damiera || caselleDamiera.size) return damiera;
-  for (let r = 0; r < 8; r++) {
-    for (let c = 0; c < 8; c++) {
-      const casella = document.createElement("button");
-      casella.type = "button";
-      casella.setAttribute("role", "gridcell");
-      casella.dataset.r = String(r);
-      casella.dataset.c = String(c);
-      if ((r + c) % 2 === 1) casella.addEventListener("click", () => cliccaCasella(r, c));
-      damiera.appendChild(casella);
-      caselleDamiera.set(chiaveCasella(r, c), casella);
-    }
-  }
-  let strato = document.getElementById("dama-strato-pedine");
-  if (!strato) {
-    strato = document.createElement("div");
-    strato.id = "dama-strato-pedine";
-    strato.setAttribute("aria-hidden", "true");
-    damiera.appendChild(strato);
-  }
-  return damiera;
-}
-function sincronizzaPedine(scacchiera) {
-  preparaDamiera();
-  const strato = document.getElementById("dama-strato-pedine");
-  if (!strato) return;
-  const presenti = new Set();
-  for (let r = 0; r < 8; r++) {
-    for (let c = 0; c < 8; c++) {
-      const pezzo = scacchiera[r][c];
-      if (!pezzo) continue;
-      const chiave = chiaveCasella(r, c);
-      presenti.add(chiave);
-      let posizione = posizioniPedine.get(chiave);
-      if (!posizione) {
-        posizione = document.createElement("div");
-        posizione.className = "dama-posizione";
-        posizione.appendChild(creaElementoPedina(pezzo));
-        strato.appendChild(posizione);
-        posizioniPedine.set(chiave, posizione);
-      }
-      posizione.firstElementChild.className = "dama-pezzo " + pezzo.colore + (pezzo.dama ? " dama" : "");
-      impostaPosizionePedina(posizione, r, c);
-    }
-  }
-  for (const [chiave, elemento] of posizioniPedine) {
-    if (presenti.has(chiave)) continue;
-    elemento.remove();
-    posizioniPedine.delete(chiave);
-  }
-  scacchieraDisegnata = copiaScacchiera(scacchiera);
-}
-
-function sincronizzaPrese(scacchiera, nuovePrese = [], ricostruisci = false) {
-  if (ricostruisci) preseDisegnate = { bianco: [], nero: [] };
-  for (const pezzo of nuovePrese) {
-    const proprietario = pezzo.colore === "bianco" ? "nero" : "bianco";
-    preseDisegnate[proprietario].push({ colore: pezzo.colore, dama: !!pezzo.dama });
-  }
-  const rimaste = { bianco: 0, nero: 0 };
-  scacchiera.forEach(riga => riga.forEach(pezzo => { if (pezzo) rimaste[pezzo.colore]++; }));
-  for (const proprietario of ["bianco", "nero"]) {
-    const colorePreda = proprietario === "bianco" ? "nero" : "bianco";
-    const ancoraSullaDamiera = pedineInPresa.filter(p => p.pezzo.colore === colorePreda).length;
-    const numeroPrese = Math.max(0, Math.min(12, 12 - rimaste[colorePreda] - ancoraSullaDamiera));
-    preseDisegnate[proprietario] = preseDisegnate[proprietario].slice(0, numeroPrese);
-    while (preseDisegnate[proprietario].length < numeroPrese) {
-      // Uno snapshot non rivela quali pedine fossero già dame al momento della presa.
-      preseDisegnate[proprietario].unshift({ colore: colorePreda, dama: false, tipoSconosciuto: true });
-    }
-  }
-}
-function renderPrese() {
-  const coloreVicino = mioColore || "bianco";
-  const coloreLontano = coloreVicino === "bianco" ? "nero" : "bianco";
-  for (const [lato, colore] of [["giocatore", coloreVicino], ["avversario", coloreLontano]]) {
-    const elenco = preseDisegnate[colore];
-    const giocatore = giocatoriStato().find(g => g.colore === colore);
-    const nome = giocatore?.nome || giocatore?.nickname || nomeColore(colore);
-    const etichetta = document.getElementById("prese-" + lato + "-etichetta");
-    const conteggio = document.getElementById("prese-" + lato + "-conteggio");
-    const raccolta = document.getElementById("prese-" + lato + "-pedine");
-    if (etichetta) etichetta.textContent = lato === "giocatore" && mioColore ? "Le tue prese" : "Prese di " + nome;
-    if (conteggio) conteggio.textContent = String(elenco.length);
-    if (!raccolta) continue;
-    raccolta.setAttribute("aria-label", elenco.length + " pedine catturate da " + nome);
-    const firma = elenco.map(p => p.colore + ":" + p.dama + ":" + !!p.tipoSconosciuto).join("|");
-    if (raccolta.dataset.firma === firma) continue;
-    raccolta.dataset.firma = firma;
-    raccolta.replaceChildren();
-    for (const preda of elenco) {
-      const contenitore = document.createElement("div");
-      contenitore.className = "dama-preda" + (preda.tipoSconosciuto ? " tipo-sconosciuto" : "");
-      contenitore.setAttribute("role", "listitem");
-      contenitore.title = preda.tipoSconosciuto ? "Pedina catturata prima della connessione (tipo non disponibile)"
-        : (preda.dama ? "Dama" : "Pedina") + " " + nomeColore(preda.colore).toLowerCase() + " catturata";
-      contenitore.appendChild(creaElementoPedina(preda));
-      raccolta.appendChild(contenitore);
-    }
-  }
-}
-
 function renderDamiera() {
-  const damiera = preparaDamiera();
+  const damiera = document.getElementById("damiera");
   if (!damiera) return;
-  if (!scacchieraDisegnata) {
-    sincronizzaPedine(stato.scacchiera);
-    sincronizzaPrese(stato.scacchiera, [], true);
-  }
+  damiera.textContent = "";
+
   const destinazioni = new Map();
   for (const mossa of mosseLegali) {
     const arrivo = mossa.a || mossa.to;
-    if (coordinateValide(arrivo)) destinazioni.set(chiaveCasella(arrivo.r, arrivo.c), !!(mossa.presa || mossa.capture));
+    if (arrivo) destinazioni.set(arrivo.r + "," + arrivo.c, !!(mossa.presa || mossa.capture));
   }
-  const bloccata = statiInAttesa > 0 || mossaInAttesa || attesaSnapshot;
-  damiera.setAttribute("aria-busy", bloccata ? "true" : "false");
+
   for (let r = 0; r < 8; r++) {
     for (let c = 0; c < 8; c++) {
-      const key = chiaveCasella(r, c);
-      const casella = caselleDamiera.get(key);
-      const visiva = coordinateVisive(r, c);
-      casella.style.gridRow = String(visiva.r + 1);
-      casella.style.gridColumn = String(visiva.c + 1);
       const scura = (r + c) % 2 === 1;
+      const casella = document.createElement("button");
+      casella.type = "button";
       casella.className = "dama-casella " + (scura ? "scura" : "chiara");
+      casella.setAttribute("role", "gridcell");
+      casella.setAttribute("aria-label", String.fromCharCode(97 + c) + (8 - r));
+
       if (selezionata && selezionata.r === r && selezionata.c === c) casella.classList.add("selezionata");
+
+      const key = r + "," + c;
       if (destinazioni.has(key)) casella.classList.add(destinazioni.get(key) ? "destinazione-presa" : "destinazione");
+
       const ultimo = stato.ultimoMovimento || {};
-      if (stessaCasella(ultimo.da, { r, c }) || stessaCasella(ultimo.a, { r, c })) {
+      if ((ultimo.da && ultimo.da.r === r && ultimo.da.c === c) || (ultimo.a && ultimo.a.r === r && ultimo.a.c === c)) {
         casella.classList.add("ultima-mossa");
       }
-      const pezzo = scacchieraDisegnata[r][c];
-      const numero = scura ? r * 4 + Math.floor(c / 2) + 1 : null;
-      casella.setAttribute("aria-label", (scura ? "Casella " + numero : "Casella chiara")
-        + (pezzo ? ", " + (pezzo.dama ? "dama " : "pedina ") + nomeColore(pezzo.colore).toLowerCase() : ", vuota")
-        + (destinazioni.has(key) ? ", destinazione consentita" : ""));
-      casella.disabled = !scura || bloccata;
-      const posizione = posizioniPedine.get(key);
-      if (posizione) {
-        posizione.classList.toggle("selezionata", stessaCasella(selezionata, { r, c }));
-        if (!posizione.classList.contains("dama-in-animazione")) impostaPosizionePedina(posizione, r, c);
+
+      const pezzo = stato.scacchiera?.[r]?.[c];
+      if (pezzo) {
+        const elemento = document.createElement("div");
+        elemento.className = "dama-pezzo " + pezzo.colore + (pezzo.dama ? " dama" : "");
+        elemento.setAttribute("aria-hidden", "true");
+        casella.appendChild(elemento);
       }
-    }
-  }
-  renderPrese();
-}
 
-function estraiMovimentoConfermato(prima, dopo) {
-  const sparite = [];
-  const arrivate = [];
-  for (let r = 0; r < 8; r++) {
-    for (let c = 0; c < 8; c++) {
-      const vecchio = prima[r][c];
-      const nuovo = dopo[r][c];
-      if (vecchio && (!nuovo || vecchio.colore !== nuovo.colore)) sparite.push({ r, c, pezzo: vecchio });
-      if (nuovo && (!vecchio || vecchio.colore !== nuovo.colore)) arrivate.push({ r, c, pezzo: nuovo });
+      if (scura) casella.addEventListener("click", () => cliccaCasella(r, c));
+      else casella.disabled = true;
+      damiera.appendChild(casella);
     }
   }
-  if (arrivate.length !== 1) return null;
-  const a = arrivate[0];
-  const origini = sparite.filter(p => p.pezzo.colore === a.pezzo.colore);
-  const catturate = sparite.filter(p => p.pezzo.colore !== a.pezzo.colore);
-  const daRappresentare = catturate.filter(p => !preseRinviate.has(chiaveCasella(p.r, p.c)));
-  if (origini.length !== 1) return null;
-  const da = origini[0];
-  const dr = Math.abs(da.r - a.r), dc = Math.abs(da.c - a.c);
-  if (!daRappresentare.length && dr === 1 && dc === 1) {
-    return { da, a, catturate, passi: [{ da, a, presa: false }] };
-  }
-  // Alcuni aggiornamenti conservano la pedina saltata fino alla fine della
-  // presa multipla: il salto esiste anche se la pedina non è ancora sparita.
-  if (!daRappresentare.length && dr === 2 && dc === 2) {
-    const mezzo = prima[(da.r + a.r) / 2][(da.c + a.c) / 2];
-    if (mezzo && mezzo.colore !== da.pezzo.colore) {
-      return { da, a, catturate, passi: [{ da, a, presa: true, preda: { r: (da.r + a.r) / 2, c: (da.c + a.c) / 2, pezzo: mezzo } }] };
-    }
-  }
-  // Un unico snapshot può contenere l'intera presa multipla. Ricostruire solo
-  // un percorso univoco, usando TUTTE e SOLO le pedine effettivamente sparite.
-  // Non decide mosse legali: rappresenta una mossa già approvata dal server.
-  if (!daRappresentare.length || daRappresentare.length > 12) return null;
-  const percorsi = [];
-  function cercaPercorso(punto, rimaste, passi) {
-    if (percorsi.length > 1) return;
-    if (!rimaste.length) {
-      if (stessaCasella(punto, a)) percorsi.push(passi);
-      return;
-    }
-    for (const preda of rimaste) {
-      if (Math.abs(preda.r - punto.r) !== 1 || Math.abs(preda.c - punto.c) !== 1) continue;
-      const arrivo = { r: preda.r * 2 - punto.r, c: preda.c * 2 - punto.c };
-      if (!coordinateValide(arrivo) || (prima[arrivo.r][arrivo.c] && !stessaCasella(arrivo, da))) continue;
-      cercaPercorso(arrivo, rimaste.filter(p => p !== preda), [...passi, { da: punto, a: arrivo, presa: true, preda }]);
-    }
-  }
-  cercaPercorso(da, daRappresentare, []);
-  return percorsi.length === 1 ? { da, a, catturate, passi: percorsi[0] } : null;
-}
-
-async function animaVersoSnapshot(prossimo, istantanea, generazione) {
-  const movimento = !istantanea && scacchieraDisegnata
-    ? estraiMovimentoConfermato(scacchieraDisegnata, prossimo.scacchiera) : null;
-  // Scivolamento e salto richiesti per il gioco; chi preferisce evitare il
-  // movimento può disabilitarli esplicitamente dal menu (preferenza salvata).
-  const riduciMovimento = !animazioniDamaAttive;
-  if (movimento) {
-    const origine = chiaveCasella(movimento.da.r, movimento.da.c);
-    const destinazione = chiaveCasella(movimento.a.r, movimento.a.c);
-    const elemento = posizioniPedine.get(origine);
-    if (elemento) {
-      for (const passo of movimento.passi) {
-        const da = coordinateVisive(passo.da.r, passo.da.c);
-        const a = coordinateVisive(passo.a.r, passo.a.c);
-        const dx = (da.c - a.c) * 100;
-        const dy = (da.r - a.r) * 100;
-        elemento.classList.add("dama-in-animazione");
-        impostaPosizionePedina(elemento, passo.a.r, passo.a.c);
-        if (!riduciMovimento && typeof elemento.animate === "function") {
-          const presa = passo.presa;
-          const fotogrammi = presa
-            ? [0, .25, .5, .75, 1].map(t => ({
-                offset: t,
-                transform: "translate(" + (dx * (1 - t)) + "%, " + (dy * (1 - t) - Math.sin(Math.PI * t) * 48) + "%) scale(" + (1 + Math.sin(Math.PI * t) * .12) + ")"
-              }))
-            : [{ transform: "translate(" + dx + "%, " + dy + "%)" }, { transform: "translate(0, 0)" }];
-          const animazione = elemento.animate(fotogrammi, { duration: presa ? 560 : 460, easing: "cubic-bezier(.4,0,.2,1)" });
-          animazioniPedine.add(animazione);
-          try { await animazione.finished; } catch (_) { /* Riconnessione. */ }
-          animazioniPedine.delete(animazione);
-        }
-        elemento.classList.remove("dama-in-animazione");
-        if (generazione !== generazioneAnimazioni) return;
-        passo.presa ? suonaPresa() : suonaMossa();
-      }
-      posizioniPedine.delete(origine);
-      posizioniPedine.set(destinazione, elemento);
-    }
-  }
-  if (generazione !== generazioneAnimazioni) return;
-  if (movimento) {
-    for (const passo of movimento.passi) {
-      const preda = passo.preda;
-      if (preda && prossimo.scacchiera[preda.r][preda.c]) preseRinviate.set(chiaveCasella(preda.r, preda.c), preda);
-    }
-  }
-  const tolte = new Map((movimento?.catturate || []).map(p => [chiaveCasella(p.r, p.c), p]));
-  for (const [chiave, preda] of preseRinviate) {
-    if (!prossimo.scacchiera[preda.r][preda.c]) {
-      tolte.set(chiave, preda);
-      preseRinviate.delete(chiave);
-    }
-  }
-  for (const catturata of tolte.values()) {
-      const chiave = chiaveCasella(catturata.r, catturata.c);
-      const elemento = posizioniPedine.get(chiave);
-      if (elemento) {
-        posizioniPedine.delete(chiave);
-        elemento.classList.add("dama-preda-in-attesa");
-      }
-      pedineInPresa.push({ pezzo: catturata.pezzo, elemento });
-  }
-  // Nella presa multipla italiana le pedine saltate restano fino alla fine della sequenza.
-  const raccolte = [];
-  if (!prossimo.presaInCorso) {
-    preseRinviate.clear();
-    for (const catturata of pedineInPresa.splice(0)) {
-      raccolte.push(catturata.pezzo);
-      catturata.elemento?.remove();
-    }
-  }
-  sincronizzaPrese(prossimo.scacchiera, raccolte, istantanea);
-  sincronizzaPedine(prossimo.scacchiera);
-}
-
-function annullaTransizioni() {
-  preseRinviate.clear();
-  generazioneAnimazioni++;
-  for (const animazione of animazioniPedine) animazione.cancel();
-  animazioniPedine.clear();
-  codaAnimazioni = Promise.resolve();
-  statiInAttesa = 0;
-  mossaInAttesa = false;
-  clearTimeout(timerMossaInAttesa);
-  richiestaMosse = null;
-  richiestaMosseSuccessiva = null;
-  versioneMosse++;
-  selezionata = null;
-  mosseLegali = [];
-  for (const elemento of posizioniPedine.values()) elemento.classList.remove("dama-in-animazione");
-  for (const catturata of pedineInPresa.splice(0)) catturata.elemento?.remove();
-}
-
-function richiediMosseCasella(da) {
-  if (richiestaMosse) {
-    richiestaMosseSuccessiva = { ...da };
-    return;
-  }
-  richiestaMosse = { ...da, versione: versioneMosse };
-  if (!inviaSocket({ tipo: "dama_richiedi_mosse", partitaId: stato.id || partitaId, da })) {
-    richiestaMosse = null;
-    mostraNotificaGioco("Connessione assente: impossibile verificare le mosse.");
-  }
-}
-
-function accodaStatoPartita(partita, istantanea = false) {
-  const prossimo = { ...ultimoStatoRicevuto, ...partita };
-  if (!scacchieraValida(prossimo.scacchiera)) {
-    mostraNotificaGioco("Stato della damiera non valido: attendo la sincronizzazione.");
-    return;
-  }
-  prossimo.scacchiera = copiaScacchiera(prossimo.scacchiera);
-  ultimoStatoRicevuto = prossimo;
-  if (istantanea) annullaTransizioni();
-  const generazione = generazioneAnimazioni;
-  statiInAttesa++;
-  versioneMosse++;
-  selezionata = null;
-  mosseLegali = [];
-  richiestaMosseSuccessiva = null;
-  renderDamiera();
-  codaAnimazioni = codaAnimazioni.then(async () => {
-    if (generazione !== generazioneAnimazioni) return;
-    const precedenteNumeroMossa = stato.numeroMossa;
-    await animaVersoSnapshot(prossimo, istantanea, generazione);
-    if (generazione !== generazioneAnimazioni) return;
-    stato = prossimo;
-    statiInAttesa--;
-    if (istantanea || prossimo.fase !== "in_corso" || JSON.stringify(prossimo.scacchiera) !== damieraMossaInAttesa) {
-      mossaInAttesa = false;
-      clearTimeout(timerMossaInAttesa);
-    }
-    if (stato.numeroMossa !== precedenteNumeroMossa) avvisoTempoChiave = "";
-    render();
-    if (statiInAttesa) return;
-    if (stato.fase === "in_corso" && stato.presaInCorso?.uid === mioUid && coordinateValide(stato.presaInCorso)) {
-      selezionata = { r: stato.presaInCorso.r, c: stato.presaInCorso.c };
-      renderDamiera();
-      richiediMosseCasella(selezionata);
-    }
-    if (stato.fase === "in_corso" && giocatoriStato().length >= 2 && !presentazioneSfidaGiaVista()) {
-      setTimeout(() => { if (stato.fase === "in_corso") mostraPresentazioneSfida(); }, 260);
-    }
-    if (stato.fase === "terminata" || stato.vincitoreUid || stato.motivoFine) mostraVittoria(stato);
-  }).catch(errore => {
-    if (generazione !== generazioneAnimazioni) return;
-    console.error("Sincronizzazione damiera:", errore);
-    annullaTransizioni();
-    stato = ultimoStatoRicevuto;
-    sincronizzaPedine(stato.scacchiera);
-    sincronizzaPrese(stato.scacchiera, [], true);
-    render();
-    mostraNotificaGioco("Damiera risincronizzata con la partita.");
-  });
 }
 
 function cliccaCasella(r, c) {
-  if (statiInAttesa || mossaInAttesa || attesaSnapshot) return;
   if (stato.fase !== "in_corso" || !mioColore || stato.turno !== mioColore) return;
   const pezzo = stato.scacchiera?.[r]?.[c];
 
@@ -970,7 +585,9 @@ function cliccaCasella(r, c) {
     selezionata = { r, c };
     mosseLegali = [];
     renderDamiera();
-    richiediMosseCasella({ r, c });
+    if (!inviaSocket({ tipo: "dama_richiedi_mosse", partitaId: stato.id || partitaId, da: { r, c } })) {
+      mostraNotificaGioco("Connessione assente: impossibile verificare le mosse.");
+    }
     return;
   }
 
@@ -981,20 +598,12 @@ function cliccaCasella(r, c) {
   });
   if (!scelta) return;
 
+  const eraPresa = !!(scelta.presa || scelta.capture);
   if (!inviaSocket({ tipo: "dama_mossa", partitaId: stato.id || partitaId, da: selezionata, a: { r, c } })) {
     mostraNotificaGioco("Connessione assente: la mossa non è stata inviata.");
     return;
   }
-  mossaInAttesa = true;
-  damieraMossaInAttesa = JSON.stringify(stato.scacchiera);
-  clearTimeout(timerMossaInAttesa);
-  timerMossaInAttesa = setTimeout(() => {
-    if (!mossaInAttesa) return;
-    mostraNotificaGioco("Conferma della mossa in ritardo: sincronizzazione in corso…");
-    // Una mossa non confermata non viene ritentata: si richiede lo snapshot aggiornato.
-    attesaSnapshot = true;
-    if (!inviaSocket({ tipo: "dama_entra", partitaId: stato.id || partitaId, stanza })) socket?.close();
-  }, 8000);
+  eraPresa ? suonaPresa() : suonaMossa();
   selezionata = null;
   mosseLegali = [];
   renderDamiera();
@@ -1080,11 +689,15 @@ function aggiornaInterfacciaPartita() {
   if (messaggi) {
     if (stato.fase === "attesa_giocatori") messaggi.textContent = "In attesa dell'avversario…";
     else if (stato.fase === "terminata") messaggi.textContent = "Partita terminata";
-    else if (mioTurno && stato.presaInCorso?.uid === mioUid) messaggi.textContent = "Continua la presa obbligatoria";
-    else messaggi.textContent = "";
+    else if (mioTurno) messaggi.textContent = stato.presaInCorso?.uid === mioUid ? "Continua la presa obbligatoria" : "È il tuo turno: seleziona una pedina";
+    else messaggi.textContent = "Turno del " + nomeColore(stato.turno);
   }
 
-  ultimoTurnoSegnalato = stato.numeroMossa + ":" + stato.turno;
+  if (mioTurno && ultimoTurnoSegnalato !== stato.numeroMossa + ":" + stato.turno) {
+    ultimoTurnoSegnalato = stato.numeroMossa + ":" + stato.turno;
+    suonaTuoTurno();
+    mostraMessaggioGiocoGrande("È IL TUO TURNO", { icona: "●", dettaglio: nomeColore(mioColore), durata: 1700 });
+  }
 }
 
 function render() {
@@ -1121,9 +734,6 @@ function aggiornaCountdownTurno() {
    ========================================================= */
 
 function mostraVittoria(dati = {}) {
-  if (vittoriaMostrata) return;
-  vittoriaMostrata = true;
-  chiudiPresentazioneSfida();
   suonaVittoria();
   const vincitoreUid = dati.vincitoreUid || stato.vincitoreUid || null;
   const vincitore = vincitoreUid ? (stato.giocatori?.[vincitoreUid] || null) : null;
@@ -1288,11 +898,397 @@ async function abbandonaPartita() {
   setTimeout(tornaAllaLobby, 120);
 }
 
-/* La sezione video resta identica graficamente all'Oca. Il backend Dama attuale
-   dichiara mediaAttiva:false, quindi i controlli restano disabilitati. */
-function toggleMicrofonoMedia() { mostraNotificaGioco("La videochiamata non è attiva in questa partita di Dama."); }
-function toggleWebcamMedia() { mostraNotificaGioco("La videochiamata non è attiva in questa partita di Dama."); }
-function sbloccaRiproduzioneMedia() { mostraNotificaGioco("La videochiamata non è attiva in questa partita di Dama."); }
+/* =========================================================
+   VIDEOCHIAMATA — SOLO MEDIA WEBRTC
+   Questo modulo non tocca la logica, lo stato o il rendering della Dama.
+   ========================================================= */
+const DamaMedia = (() => {
+  let attiva = false;
+  let streamLocale = null;
+  let avvio = null;
+  let pronto = false;
+  let peers = Object.create(null);
+  let remote = Object.create(null);
+  let iceInAttesa = Object.create(null);
+  let retry = Object.create(null);
+  let disconnessioni = Object.create(null);
+  let partecipanti = new Set();
+  let configurazioneIce = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+  let puliziaInCorso = false;
+
+  const VINCOLI = {
+    audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+    video: {
+      width: { ideal: 320, max: 640 },
+      height: { ideal: 240, max: 480 },
+      frameRate: { ideal: 15, max: 20 },
+      facingMode: { ideal: "user" }
+    }
+  };
+
+  function statoTesto(testo, errore = false) {
+    const pannello = document.getElementById("videochiamata");
+    const statoEl = document.getElementById("stato-media-connessione");
+    const voce = document.getElementById("btn-stato-media");
+    if (pannello) pannello.classList.toggle("nascosto", !attiva);
+    if (statoEl) {
+      statoEl.textContent = testo || (attiva ? "Collegamento…" : "Non attiva");
+      statoEl.style.color = errore ? "#ff8a80" : "";
+    }
+    if (voce) {
+      voce.textContent = attiva
+        ? (errore ? "⚠️ Webcam/microfono: verifica necessaria" : "🎥 Webcam e microfono attivi")
+        : "🔇 Videochiamata: non attiva";
+    }
+    aggiornaControlli();
+  }
+
+  function aggiornaControlli() {
+    const audio = streamLocale?.getAudioTracks().find(t => t.readyState === "live") || null;
+    const video = streamLocale?.getVideoTracks().find(t => t.readyState === "live") || null;
+    const mic = document.getElementById("btn-toggle-microfono-media");
+    const cam = document.getElementById("btn-toggle-webcam-media");
+    if (mic) {
+      const on = !!(audio && audio.enabled);
+      mic.disabled = !audio;
+      mic.setAttribute("aria-pressed", on ? "false" : "true");
+      mic.setAttribute("aria-label", on ? "Disattiva microfono" : "Attiva microfono");
+      mic.setAttribute("title", on ? "Disattiva microfono" : "Attiva microfono");
+      mic.classList.toggle("media-spento", !!audio && !on);
+    }
+    if (cam) {
+      const on = !!(video && video.enabled);
+      cam.disabled = !video;
+      cam.setAttribute("aria-pressed", on ? "false" : "true");
+      cam.setAttribute("aria-label", on ? "Disattiva webcam" : "Attiva webcam");
+      cam.setAttribute("title", on ? "Disattiva webcam" : "Attiva webcam");
+      cam.classList.toggle("media-spento", !!video && !on);
+    }
+  }
+
+  function erroreNome(e) { return String(e?.name || ""); }
+  function descriviErrore(e) {
+    const n = erroreNome(e);
+    if (["NotAllowedError", "SecurityError", "PermissionDeniedError"].includes(n)) return "Permesso negato: abilita webcam e microfono nel browser.";
+    if (["NotFoundError", "DevicesNotFoundError"].includes(n)) return "Webcam o microfono non trovati.";
+    if (["NotReadableError", "TrackStartError"].includes(n)) return "Webcam o microfono occupati da un'altra app o scheda.";
+    if (["OverconstrainedError", "ConstraintNotSatisfiedError"].includes(n)) return "Il dispositivo non supporta le impostazioni video richieste.";
+    return "Webcam o microfono non disponibili.";
+  }
+
+  async function getStream() {
+    const tentativi = [
+      VINCOLI,
+      { audio: { echoCancellation: true, noiseSuppression: true }, video: { facingMode: { ideal: "user" } } },
+      { audio: true, video: true }
+    ];
+    let ultimo = null;
+    for (const vincoli of tentativi) {
+      try { return await navigator.mediaDevices.getUserMedia(vincoli); }
+      catch (e) {
+        ultimo = e;
+        const n = erroreNome(e);
+        if (n === "OverconstrainedError" || n === "ConstraintNotSatisfiedError") continue;
+        if (n === "NotReadableError" || n === "TrackStartError" || n === "AbortError") {
+          await new Promise(r => setTimeout(r, 350));
+          continue;
+        }
+        break;
+      }
+    }
+    throw ultimo || new Error("getUserMedia non disponibile");
+  }
+
+  function chiudiPeer(uid, rimuoviTile = false) {
+    if (retry[uid]) { clearTimeout(retry[uid]); delete retry[uid]; }
+    if (disconnessioni[uid]) { clearTimeout(disconnessioni[uid]); delete disconnessioni[uid]; }
+    const pc = peers[uid];
+    delete peers[uid];
+    delete iceInAttesa[uid];
+    try { pc?.close(); } catch (_) {}
+    if (rimuoviTile) {
+      const el = remote[uid];
+      if (el) {
+        try { el.video.srcObject = null; } catch (_) {}
+        try { el.audio.srcObject = null; } catch (_) {}
+        try { el.stream.getTracks().forEach(t => el.stream.removeTrack(t)); } catch (_) {}
+        el.figura.remove();
+        delete remote[uid];
+      }
+    }
+  }
+
+  function creaTile(uid) {
+    if (remote[uid]) return remote[uid];
+    const figura = document.createElement("figure");
+    figura.className = "video-tile";
+    figura.dataset.uid = uid;
+    const video = document.createElement("video");
+    video.autoplay = true;
+    video.playsInline = true;
+    video.muted = true;
+    const audio = document.createElement("audio");
+    audio.autoplay = true;
+    audio.preload = "auto";
+    const didascalia = document.createElement("figcaption");
+    const giocatore = stato?.giocatori?.[uid];
+    didascalia.textContent = giocatore?.nome || giocatore?.nickname || "Giocatore";
+    const stream = new MediaStream();
+    figura.append(video, audio, didascalia);
+    document.getElementById("griglia-video")?.appendChild(figura);
+    remote[uid] = { figura, video, audio, didascalia, stream };
+    return remote[uid];
+  }
+
+  function riproduci(el) {
+    if (!el?.play) return;
+    el.play().catch(() => {
+      const b = document.getElementById("btn-sblocca-media");
+      if (b) { b.textContent = "🔊 Attiva l'audio"; b.classList.remove("nascosto"); }
+    });
+  }
+
+  function creaPeer(uid) {
+    const esistente = peers[uid];
+    if (esistente && esistente.connectionState !== "closed" && esistente.connectionState !== "failed") return esistente;
+    if (!streamLocale) throw new Error("Stream locale non pronto");
+    const pc = new RTCPeerConnection(configurazioneIce);
+    streamLocale.getTracks().forEach(track => pc.addTrack(track, streamLocale));
+
+    pc.onicecandidate = e => {
+      if (!e.candidate) return;
+      inviaSocket({
+        tipo: "webrtc-ice-candidate",
+        partitaId,
+        destinatarioUid: uid,
+        candidate: e.candidate.toJSON ? e.candidate.toJSON() : e.candidate
+      });
+    };
+
+    pc.ontrack = e => {
+      const el = creaTile(uid);
+      if (!el.stream.getTracks().some(t => t.id === e.track.id)) el.stream.addTrack(e.track);
+      el.video.srcObject = el.stream;
+      el.audio.srcObject = el.stream;
+      riproduci(el.video);
+      riproduci(el.audio);
+      e.track.onended = () => { try { el.stream.removeTrack(e.track); } catch (_) {} };
+    };
+
+    const statoPc = () => {
+      if (pc.connectionState === "connected" || pc.iceConnectionState === "connected" || pc.iceConnectionState === "completed") {
+        if (disconnessioni[uid]) { clearTimeout(disconnessioni[uid]); delete disconnessioni[uid]; }
+        statoTesto(`${partecipanti.size} partecipanti collegati`);
+        return;
+      }
+      if (pc.connectionState === "failed" || pc.iceConnectionState === "failed") {
+        chiudiPeer(uid, false);
+        pianificaRetry(uid, 900);
+      } else if (pc.connectionState === "disconnected" || pc.iceConnectionState === "disconnected") {
+        if (!disconnessioni[uid]) {
+          disconnessioni[uid] = setTimeout(() => {
+            delete disconnessioni[uid];
+            const attuale = peers[uid];
+            if (attuale === pc && (pc.connectionState === "disconnected" || pc.iceConnectionState === "disconnected")) {
+              chiudiPeer(uid, false);
+              pianificaRetry(uid, 700);
+            }
+          }, 6000);
+        }
+      }
+    };
+    pc.onconnectionstatechange = statoPc;
+    pc.oniceconnectionstatechange = statoPc;
+    peers[uid] = pc;
+    return pc;
+  }
+
+  function pianificaRetry(uid, ms) {
+    if (retry[uid] || !attiva || !streamLocale || !partecipanti.has(uid) || !mioUid || String(mioUid) >= String(uid)) return;
+    retry[uid] = setTimeout(() => {
+      delete retry[uid];
+      avviaOfferta(uid, true).catch(() => {});
+    }, Math.max(500, ms || 1200));
+  }
+
+  async function avviaOfferta(uid, restartIce = false) {
+    if (!attiva || !streamLocale || !partecipanti.has(uid) || !mioUid || String(mioUid) >= String(uid)) return;
+    let pc = peers[uid];
+    if (pc && pc.connectionState === "connected" && !restartIce) return;
+    if (pc && pc.signalingState !== "stable") return;
+    if (!pc || pc.connectionState === "closed" || pc.connectionState === "failed") pc = creaPeer(uid);
+    const offer = await pc.createOffer(restartIce ? { iceRestart: true } : undefined);
+    if (pc.signalingState !== "stable") return;
+    await pc.setLocalDescription(offer);
+    inviaSocket({ tipo: "webrtc-offer", partitaId, destinatarioUid: uid, sdp: pc.localDescription });
+  }
+
+  async function applicaIce(uid) {
+    const pc = peers[uid];
+    if (!pc?.remoteDescription) return;
+    const lista = iceInAttesa[uid] || [];
+    delete iceInAttesa[uid];
+    for (const c of lista.slice(0, 100)) {
+      try { await pc.addIceCandidate(new RTCIceCandidate(c)); } catch (_) {}
+    }
+  }
+
+  async function offerta(uid, sdp) {
+    if (!attiva || !streamLocale || !partecipanti.has(uid) || !sdp || sdp.type !== "offer") return;
+    let pc = peers[uid];
+    if (pc && pc.signalingState !== "stable") { chiudiPeer(uid, false); pc = null; }
+    if (!pc) pc = creaPeer(uid);
+    await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+    await applicaIce(uid);
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    inviaSocket({ tipo: "webrtc-answer", partitaId, destinatarioUid: uid, sdp: pc.localDescription });
+  }
+
+  async function risposta(uid, sdp) {
+    const pc = peers[uid];
+    if (!pc || !sdp || sdp.type !== "answer" || pc.signalingState !== "have-local-offer") return;
+    await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+    await applicaIce(uid);
+  }
+
+  async function candidato(uid, candidate) {
+    if (!candidate || typeof candidate !== "object") return;
+    const pc = peers[uid];
+    if (!pc || !pc.remoteDescription) {
+      if (!iceInAttesa[uid]) iceInAttesa[uid] = [];
+      if (iceInAttesa[uid].length < 100) iceInAttesa[uid].push(candidate);
+      return;
+    }
+    try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch (_) {}
+  }
+
+  async function avviaLocale() {
+    if (!attiva || paginaInChiusura) return false;
+    if (streamLocale && streamLocale.getAudioTracks().some(t => t.readyState === "live") && streamLocale.getVideoTracks().some(t => t.readyState === "live")) {
+      pronto = true;
+      aggiornaControlli();
+      inviaPronto();
+      return true;
+    }
+    if (avvio) return avvio;
+    avvio = (async () => {
+      try {
+        if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia || typeof RTCPeerConnection !== "function") throw new DOMException("WebRTC non disponibile", "NotSupportedError");
+        const stream = await getStream();
+        if (!attiva || paginaInChiusura) { stream.getTracks().forEach(t => t.stop()); return false; }
+        if (!stream.getAudioTracks().length || !stream.getVideoTracks().length) throw new DOMException("Tracce audio/video mancanti", "NotFoundError");
+        streamLocale = stream;
+        pronto = true;
+        stream.getTracks().forEach(t => { t.onended = () => { pronto = false; inviaPronto(false); statoTesto("Webcam o microfono scollegati", true); const b = document.getElementById("btn-sblocca-media"); if (b) { b.textContent = "Riprova webcam e microfono"; b.classList.remove("nascosto"); } }; });
+        const locale = document.getElementById("video-locale");
+        if (locale) { locale.srcObject = stream; locale.muted = true; locale.playsInline = true; locale.play().catch(() => {}); }
+        const b = document.getElementById("btn-sblocca-media");
+        if (b) b.classList.add("nascosto");
+        aggiornaControlli();
+        statoTesto("In attesa dell'avversario…");
+        inviaPronto();
+        return true;
+      } catch (e) {
+        pronto = false;
+        inviaPronto(false);
+        const msg = descriviErrore(e);
+        statoTesto(msg, true);
+        const b = document.getElementById("btn-sblocca-media");
+        if (b) { b.textContent = "Riprova webcam e microfono"; b.classList.remove("nascosto"); }
+        return false;
+      } finally { avvio = null; }
+    })();
+    return avvio;
+  }
+
+  function inviaPronto(attivo = true) {
+    if (!partitaId || !socket || socket.readyState !== WebSocket.OPEN) return;
+    inviaSocket({ tipo: "mediaPronto", partitaId, attivo: !!attivo });
+  }
+
+  function riceviStato(dati) {
+    attiva = dati.mediaAttiva === true;
+    if (!attiva) {
+      pulisci(false);
+      statoTesto("Non attiva");
+      return;
+    }
+    partecipanti = new Set(Array.isArray(dati.partecipanti) ? dati.partecipanti.filter(v => typeof v === "string") : []);
+    Object.keys(peers).forEach(uid => { if (!partecipanti.has(uid)) chiudiPeer(uid, true); });
+    Object.keys(remote).forEach(uid => { if (!partecipanti.has(uid)) chiudiPeer(uid, true); });
+    statoTesto(partecipanti.size > 1 ? `${partecipanti.size} partecipanti collegati` : "Avvio webcam e microfono…");
+    if (!streamLocale) { avviaLocale(); return; }
+    if (!partecipanti.has(mioUid)) { pronto = true; inviaPronto(true); return; }
+    partecipanti.forEach(uid => { if (uid !== mioUid && String(mioUid) < String(uid)) avviaOfferta(uid).catch(() => {}); });
+  }
+
+  function riceviConfig(config) {
+    if (!config || !Array.isArray(config.iceServers)) return;
+    const servers = config.iceServers.slice(0, 6).filter(s => {
+      const urls = Array.isArray(s?.urls) ? s.urls : [s?.urls];
+      return urls.length && urls.every(u => typeof u === "string" && /^(stun|stuns|turn|turns):/i.test(u));
+    }).map(s => ({ urls: s.urls, ...(typeof s.username === "string" ? { username: s.username } : {}), ...(typeof s.credential === "string" ? { credential: s.credential } : {}) }));
+    if (servers.length) configurazioneIce = { iceServers: servers, iceCandidatePoolSize: 4, bundlePolicy: "max-bundle" };
+  }
+
+  async function sblocca() {
+    if (!streamLocale) await avviaLocale();
+    const els = Object.values(remote).flatMap(x => [x.video, x.audio]);
+    const risultati = await Promise.allSettled(els.map(x => x.play()));
+    const fallita = risultati.some(r => r.status === "rejected");
+    const b = document.getElementById("btn-sblocca-media");
+    if (b) { b.textContent = fallita ? "🔊 Attiva l'audio" : "🔊 Audio attivo"; b.classList.toggle("nascosto", !fallita); }
+  }
+
+  function pulisci(perPagina = false) {
+    if (puliziaInCorso && perPagina) return;
+    if (perPagina) puliziaInCorso = true;
+    if (pronto) inviaPronto(false);
+    pronto = false;
+    Object.keys(retry).forEach(k => clearTimeout(retry[k]));
+    Object.keys(disconnessioni).forEach(k => clearTimeout(disconnessioni[k]));
+    retry = Object.create(null);
+    disconnessioni = Object.create(null);
+    Object.keys(peers).forEach(uid => chiudiPeer(uid, true));
+    peers = Object.create(null);
+    remote = Object.create(null);
+    iceInAttesa = Object.create(null);
+    if (streamLocale) streamLocale.getTracks().forEach(t => { t.onended = null; try { t.stop(); } catch (_) {} });
+    streamLocale = null;
+    const locale = document.getElementById("video-locale");
+    if (locale) locale.srcObject = null;
+    document.getElementById("griglia-video")?.querySelectorAll(".video-tile:not(.video-locale)").forEach(el => el.remove());
+    if (!perPagina) {
+      attiva = false;
+      partecipanti.clear();
+      statoTesto("Non attiva");
+    } else {
+      aggiornaControlli();
+    }
+  }
+
+  document.addEventListener("pointerdown", () => {
+    if (!attiva) return;
+    Object.values(remote).forEach(x => x.audio?.play?.().catch(() => {}));
+  }, { passive: true });
+
+  return { statoTesto, riceviStato, riceviConfig, offerta, risposta, candidato, sblocca, pulisci, aggiornaControlli };
+})();
+
+function toggleMicrofonoMedia() {
+  const track = DamaMedia && document.getElementById("video-locale")?.srcObject?.getAudioTracks?.().find(t => t.readyState === "live");
+  if (!track) { mostraNotificaGioco("Microfono non disponibile."); return; }
+  track.enabled = !track.enabled;
+  DamaMedia.aggiornaControlli();
+}
+function toggleWebcamMedia() {
+  const track = DamaMedia && document.getElementById("video-locale")?.srcObject?.getVideoTracks?.().find(t => t.readyState === "live");
+  if (!track) { mostraNotificaGioco("Webcam non disponibile."); return; }
+  track.enabled = !track.enabled;
+  DamaMedia.aggiornaControlli();
+}
+function sbloccaRiproduzioneMedia() { DamaMedia.sblocca(); }
 
 /* =========================================================
    WEBSOCKET DAMA
@@ -1301,41 +1297,69 @@ function sbloccaRiproduzioneMedia() { mostraNotificaGioco("La videochiamata non 
 function gestisciMessaggioSocket(dati) {
   if (!dati || typeof dati !== "object") return;
 
+  if (dati.tipo === "configMedia") {
+    DamaMedia.riceviConfig(dati.configurazioneIce);
+    return;
+  }
+
+  if (dati.tipo === "statoMedia") {
+    DamaMedia.riceviStato(dati);
+    return;
+  }
+
+  if (dati.tipo === "webrtc-offer") {
+    gestisciPromessaWebRtc(DamaMedia.offerta(dati.mittenteUid, dati.sdp));
+    return;
+  }
+
+  if (dati.tipo === "webrtc-answer") {
+    gestisciPromessaWebRtc(DamaMedia.risposta(dati.mittenteUid, dati.sdp));
+    return;
+  }
+
+  if (dati.tipo === "webrtc-ice-candidate") {
+    gestisciPromessaWebRtc(DamaMedia.candidato(dati.mittenteUid, dati.candidate));
+    return;
+  }
+
   if (dati.tipo === "dama_identita") {
     mioUid = dati.uid || mioUid;
-    if ((dati.colore === "bianco" || dati.colore === "nero") && dati.colore !== mioColore) {
-      mioColore = dati.colore;
-      renderDamiera();
-    }
+    mioColore = dati.colore || mioColore;
     return;
   }
 
   if (dati.tipo === "dama_stato") {
+    const precedenteNumeroMossa = Number(stato.numeroMossa || 0);
+    if (dati.partita) {
+      stato = { ...stato, ...dati.partita };
+      if (Array.isArray(dati.partita.scacchiera)) stato.scacchiera = dati.partita.scacchiera;
+    }
     if (dati.uid) mioUid = dati.uid;
-    if (dati.colore === "bianco" || dati.colore === "nero") mioColore = dati.colore;
-    if (!dati.partita || !scacchieraValida(dati.partita.scacchiera || ultimoStatoRicevuto.scacchiera)) return;
-    const istantanea = attesaSnapshot;
-    attesaSnapshot = false;
-    accodaStatoPartita(dati.partita, istantanea);
+    if (dati.colore) mioColore = dati.colore;
+
+    selezionata = null;
+    mosseLegali = [];
     segnalaStatoInizialeRicevuto();
+    render();
+
+    if (Number(stato.numeroMossa || 0) !== precedenteNumeroMossa) avvisoTempoChiave = "";
+
+    if (stato.presaInCorso && stato.presaInCorso.uid === mioUid) {
+      selezionata = { r: stato.presaInCorso.r, c: stato.presaInCorso.c };
+      renderDamiera();
+      inviaSocket({ tipo: "dama_richiedi_mosse", partitaId: stato.id || partitaId, da: selezionata });
+    }
+
+    if (stato.fase === "in_corso" && giocatoriStato().length >= 2 && !presentazioneSfidaGiaVista()) {
+      setTimeout(mostraPresentazioneSfida, 260);
+    }
+
+    if (stato.fase === "terminata" || stato.vincitoreUid || stato.motivoFine) mostraVittoria(stato);
     return;
   }
 
   if (dati.tipo === "dama_mosse_legali") {
-    const richiesta = richiestaMosse;
-    if (!richiesta || (dati.da && !stessaCasella(dati.da, richiesta))) return;
-    richiestaMosse = null;
-    if (!statiInAttesa && !mossaInAttesa && !attesaSnapshot && richiesta.versione === versioneMosse
-      && stessaCasella(selezionata, richiesta) && stato.turno === mioColore) {
-      mosseLegali = Array.isArray(dati.mosse) ? dati.mosse.filter(mossa => {
-        if (!mossa || typeof mossa !== "object") return false;
-        const origine = mossa.da || mossa.from;
-        return mossa && (!origine || stessaCasella(origine, selezionata)) && coordinateValide(mossa.a || mossa.to);
-      }) : [];
-    }
-    const successiva = richiestaMosseSuccessiva;
-    richiestaMosseSuccessiva = null;
-    if (successiva && stessaCasella(successiva, selezionata) && !statiInAttesa && !mossaInAttesa) richiediMosseCasella(successiva);
+    mosseLegali = Array.isArray(dati.mosse) ? dati.mosse : [];
     renderDamiera();
     return;
   }
@@ -1346,10 +1370,11 @@ function gestisciMessaggioSocket(dati) {
   }
 
   if (dati.tipo === "dama_fine") {
-    const conclusa = { ...(dati.partita || {}), fase: "terminata" };
-    if (Object.prototype.hasOwnProperty.call(dati, "vincitoreUid")) conclusa.vincitoreUid = dati.vincitoreUid;
-    if (dati.motivo) conclusa.motivoFine = dati.motivo;
-    accodaStatoPartita(conclusa);
+    if (dati.partita) stato = { ...stato, ...dati.partita };
+    if (dati.vincitoreUid) stato.vincitoreUid = dati.vincitoreUid;
+    if (dati.motivo) stato.motivoFine = dati.motivo;
+    render();
+    mostraVittoria(dati);
     return;
   }
 
@@ -1359,12 +1384,6 @@ function gestisciMessaggioSocket(dati) {
   }
 
   if (dati.tipo === "dama_errore") {
-    mossaInAttesa = false;
-    clearTimeout(timerMossaInAttesa);
-    richiestaMosse = null;
-    richiestaMosseSuccessiva = null;
-    mosseLegali = [];
-    renderDamiera();
     const errore = dati.errore || "Operazione non consentita.";
     mostraNotificaGioco(errore);
     const minuscolo = errore.toLowerCase();
@@ -1398,7 +1417,6 @@ function connetti() {
   }
 
   socket.onopen = () => {
-    attesaSnapshot = true;
     impostaStatoConnessione(false);
     aggiornaCaricamento("Sincronizzazione partita…", 70);
     inviaSocket({ tipo: "dama_entra", partitaId: partitaId || null, stanza });
@@ -1419,9 +1437,6 @@ function connetti() {
   socket.onclose = () => {
     socket = null;
     if (paginaInChiusura) return;
-    attesaSnapshot = true;
-    annullaTransizioni();
-    renderDamiera();
     impostaStatoConnessione(true);
     const messaggi = document.getElementById("messaggi-gioco");
     if (messaggi) messaggi.textContent = "Connessione persa — riconnessione in corso…";
@@ -1454,20 +1469,11 @@ async function avvia() {
 
   aggiornaCaricamento("Verifica accesso…", 25);
   try {
-    const token = tokenAutenticazione();
-    const opzioni = {
+    const risposta = await fetch(ORIGINE_SERVER + "/api/me-menu", {
       credentials: "include",
-      cache: "no-store",
-      headers: token ? { Authorization: "Bearer " + token } : {}
-    };
-    let risposta = await fetch(ORIGINE_SERVER + "/api/me-menu", opzioni);
-    if (token && (risposta.status === 401 || risposta.status === 403)) {
-      risposta = await fetch(ORIGINE_SERVER + "/api/me-menu", { credentials: "include", cache: "no-store" });
-      if (risposta.ok) {
-        try { if (sessionStorage.getItem(CHIAVE_TOKEN_AUTH) === token) sessionStorage.removeItem(CHIAVE_TOKEN_AUTH); } catch (_) {}
-      }
-    }
-    if (risposta.status === 401 || risposta.status === 403) {
+      cache: "no-store"
+    });
+    if (risposta.status >= 400 && risposta.status < 500 && risposta.status !== 429) {
       paginaInChiusura = true;
       window.location.href = ORIGINE_SERVER + "/login.html?redirect=" + encodeURIComponent(window.location.href);
       return;
@@ -1565,6 +1571,7 @@ document.addEventListener("keydown", evento => {
 });
 
 window.addEventListener("beforeunload", () => {
+  try { DamaMedia.pulisci(true); } catch (_) {}
   paginaInChiusura = true;
   clearTimeout(timerRiconnessione);
   clearTimeout(timerChiusuraPresentazioneSfida);
