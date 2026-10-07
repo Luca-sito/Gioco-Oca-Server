@@ -2,2946 +2,403 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-
-<meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
->
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Community - Giochi Società</title>
-
 <style>
 
 /* =========================================================
-   VARIABILI
+   TOKEN DI DESIGN
+   Palette: nero profondo da piattaforma competitiva + giallo
+   brand esistente usato come accento chirurgico. Il motivo a
+   scacchiera nell'hero è l'unico elemento "audace": richiama
+   la materia (giochi da tavolo) senza essere decorativo a caso.
 ========================================================= */
 
 :root{
-
+    --nero-0:#07070a;
+    --nero-1:#101014;
+    --nero-2:#18181d;
+    --nero-3:#212127;
+    --bordo:rgba(255,255,255,.08);
+    --bordo-2:rgba(255,255,255,.15);
     --giallo:#ffd400;
-    --giallo-hover:#e9c100;
-    --giallo-chiaro:#fff8cf;
-
-    --nero:#0b0b0d;
-    --nero-2:#141416;
-    --nero-3:#1d1d20;
-
-    --bianco:#ffffff;
-
-    --sfondo:#f3f3f5;
-    --bordo:#e4e4e7;
-
-    --testo:#151515;
-    --testo-secondario:#71717a;
-
-    --verde:#22a559;
-    --rosso:#e5484d;
-    --blu:#3478f6;
-
-    --ombra:
-        0 8px 28px
-        rgba(0,0,0,.08);
-
+    --giallo-vivo:#ffe44d;
+    --giallo-velo:rgba(255,212,0,.13);
+    --testo:#f2f2f4;
+    --testo-2:#9c9ca5;
+    --testo-3:#6b6b74;
+    --verde:#30d983;
+    --ambra:#ffab3d;
+    --rosso:#f2555a;
+    --blu:#4d8dff;
+    --serif:Georgia,"Times New Roman",serif;
+    --sans:Arial,Helvetica,sans-serif;
+    --ombra:0 18px 50px rgba(0,0,0,.45);
+    --ombra-soft:0 10px 28px rgba(0,0,0,.3);
 }
 
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;width:100%;min-height:100%}
+body{background:var(--nero-0);color:var(--testo);font-family:var(--sans);line-height:1.5;-webkit-font-smoothing:antialiased}
+button,input,textarea,select{font:inherit}
+button,a{-webkit-tap-highlight-color:transparent}
+button{cursor:pointer}
+a{color:inherit;text-decoration:none}
+img{max-width:100%}
+::selection{background:var(--giallo-velo);color:var(--testo)}
+
+.icona{width:19px;height:19px;display:block;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
 
 /* =========================================================
-   RESET
+   HEADER
 ========================================================= */
 
-*{
-    box-sizing:border-box;
-}
+.community-header{position:sticky;top:0;z-index:500;width:100%;background:rgba(7,7,10,.92);border-bottom:1px solid var(--bordo);backdrop-filter:blur(18px)}
+.community-header-interno{width:min(1460px,calc(100% - 40px));min-height:70px;margin:0 auto;display:flex;align-items:center;gap:18px}
 
-html,
-body{
-    margin:0;
-    padding:0;
-    width:100%;
-    min-height:100%;
-}
+.community-brand{display:flex;align-items:center;gap:11px;flex-shrink:0}
+.community-logo{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:var(--giallo);color:#141400;font-size:16px;font-weight:900;box-shadow:inset 0 -3px 0 rgba(0,0,0,.2)}
+.community-brand-titolo{color:#fff;font-size:14px;font-weight:800;letter-spacing:.02em;line-height:1.1}
+.community-brand-sottotitolo{margin-top:2px;color:var(--testo-3);font-size:10.5px}
 
-body{
-    background:
-        var(--sfondo);
+.ricerca-community{position:relative;width:min(500px,100%);margin-left:auto}
+.ricerca-community .icona{position:absolute;left:14px;top:50%;width:17px;height:17px;transform:translateY(-50%);color:var(--testo-3);pointer-events:none}
+#ricercaCommunity{width:100%;height:42px;padding:0 15px 0 42px;color:var(--testo);background:var(--nero-2);border:1px solid var(--bordo);border-radius:10px;outline:none;transition:.15s}
+#ricercaCommunity::placeholder{color:var(--testo-3)}
+#ricercaCommunity:focus{border-color:var(--giallo);box-shadow:0 0 0 3px var(--giallo-velo)}
 
-    color:
-        var(--testo);
-
-    font-family:
-        Arial,
-        Helvetica,
-        sans-serif;
-
-    line-height:1.45;
-}
-
-button,
-input,
-textarea,
-select{
-    font:inherit;
-}
-
-button,
-a{
-    -webkit-tap-highlight-color:
-        transparent;
-}
-
-button{
-    cursor:pointer;
-}
-
-a{
-    color:inherit;
-    text-decoration:none;
-}
-
-img{
-    max-width:100%;
-}
-
+.btn-crea-post{height:42px;padding:0 17px;display:flex;align-items:center;justify-content:center;gap:8px;flex-shrink:0;border:0;border-radius:10px;background:var(--giallo);color:#141400;font-size:12.5px;font-weight:800;transition:.15s}
+.btn-crea-post:hover{background:var(--giallo-vivo);transform:translateY(-1px)}
+.btn-crea-post:active{transform:translateY(1px)}
 
 /* =========================================================
-   ICONE SVG
-========================================================= */
-
-.icona{
-    width:20px;
-    height:20px;
-
-    display:block;
-
-    fill:none;
-    stroke:currentColor;
-
-    stroke-width:2;
-    stroke-linecap:round;
-    stroke-linejoin:round;
-
-    flex-shrink:0;
-}
-
-
-/* =========================================================
-   BARRA SUPERIORE
-========================================================= */
-
-.community-header{
-
-    position:sticky;
-    top:0;
-
-    z-index:500;
-
-    width:100%;
-
-    background:
-        rgba(11,11,13,.97);
-
-    border-bottom:
-        1px solid
-        rgba(255,255,255,.09);
-
-    box-shadow:
-        0 4px 18px
-        rgba(0,0,0,.18);
-
-    backdrop-filter:
-        blur(16px);
-
-}
-
-
-.community-header-interno{
-
-    width:min(
-        1460px,
-        calc(100% - 40px)
-    );
-
-    min-height:72px;
-
-    margin:0 auto;
-
-    display:flex;
-    align-items:center;
-
-    gap:18px;
-
-}
-
-
-/* =========================================================
-   LOGO COMMUNITY
-========================================================= */
-
-.community-brand{
-
-    display:flex;
-    align-items:center;
-
-    gap:11px;
-
-    flex-shrink:0;
-
-}
-
-
-.community-logo{
-
-    width:42px;
-    height:42px;
-
-    border-radius:11px;
-
-    display:flex;
-    align-items:center;
-    justify-content:center;
-
-    background:
-        var(--giallo);
-
-    color:#111;
-
-    font-size:17px;
-    font-weight:1000;
-
-    box-shadow:
-        inset 0 -3px 0
-        rgba(0,0,0,.16);
-
-}
-
-
-.community-brand-testo{
-    min-width:0;
-}
-
-
-.community-brand-titolo{
-
-    color:#fff;
-
-    font-size:15px;
-    font-weight:900;
-
-    letter-spacing:.08em;
-
-    line-height:1.1;
-
-}
-
-
-.community-brand-sottotitolo{
-
-    margin-top:3px;
-
-    color:#97979f;
-
-    font-size:10px;
-
-    text-transform:uppercase;
-
-    letter-spacing:.08em;
-
-}
-
-
-/* =========================================================
-   RICERCA HEADER
-========================================================= */
-
-.ricerca-community{
-
-    position:relative;
-
-    width:min(
-        520px,
-        100%
-    );
-
-    margin-left:auto;
-
-}
-
-
-.ricerca-community .icona{
-
-    position:absolute;
-
-    left:15px;
-    top:50%;
-
-    width:18px;
-    height:18px;
-
-    transform:
-        translateY(-50%);
-
-    color:#8e8e96;
-
-    pointer-events:none;
-
-}
-
-
-#ricercaCommunity{
-
-    width:100%;
-    height:44px;
-
-    padding:
-        0 16px
-        0 44px;
-
-    color:#fff;
-
-    background:
-        #1d1d20;
-
-    border:
-        1px solid
-        #303035;
-
-    border-radius:
-        12px;
-
-    outline:none;
-
-    transition:
-        .18s ease;
-
-}
-
-
-#ricercaCommunity::placeholder{
-    color:#818188;
-}
-
-
-#ricercaCommunity:focus{
-
-    border-color:
-        var(--giallo);
-
-    box-shadow:
-        0 0 0 3px
-        rgba(255,212,0,.12);
-
-}
-
-
-/* =========================================================
-   BOTTONE CREA
-========================================================= */
-
-.btn-crea-post{
-
-    height:44px;
-
-    padding:
-        0 18px;
-
-    display:flex;
-    align-items:center;
-    justify-content:center;
-
-    gap:8px;
-
-    flex-shrink:0;
-
-    border:0;
-
-    border-radius:11px;
-
-    background:
-        var(--giallo);
-
-    color:#111;
-
-    font-size:13px;
-    font-weight:900;
-
-    box-shadow:
-        inset 0 -3px 0
-        rgba(0,0,0,.14);
-
-    transition:
-        .15s ease;
-
-}
-
-
-.btn-crea-post:hover{
-
-    background:
-        #ffe03b;
-
-    transform:
-        translateY(-1px);
-
-}
-
-
-.btn-crea-post:active{
-
-    transform:
-        translateY(2px);
-
-    box-shadow:none;
-
-}
-
-
-/* =========================================================
-   HERO COMMUNITY
+   HERO — motivo a scacchiera, intestazione in serif
 ========================================================= */
 
 .community-hero{
-
-    background:
-        linear-gradient(
-            135deg,
-            #09090b 0%,
-            #151518 60%,
-            #1a180a 100%
-        );
-
-    border-bottom:
-        1px solid
-        rgba(0,0,0,.12);
-
-}
-
-
-.community-hero-interno{
-
-    width:min(
-        1460px,
-        calc(100% - 40px)
-    );
-
-    margin:0 auto;
-
-    min-height:245px;
-
-    padding:
-        42px 0;
-
-    display:grid;
-
-    grid-template-columns:
-        minmax(0,1.5fr)
-        minmax(300px,.7fr);
-
-    gap:45px;
-
-    align-items:center;
-
-}
-
-
-.hero-eyebrow{
-
-    display:inline-flex;
-
-    align-items:center;
-
-    gap:8px;
-
-    margin-bottom:13px;
-
-    color:
-        var(--giallo);
-
-    font-size:12px;
-    font-weight:900;
-
-    text-transform:uppercase;
-
-    letter-spacing:.13em;
-
-}
-
-
-.pallino-live{
-
-    width:8px;
-    height:8px;
-
-    border-radius:50%;
-
-    background:#3fda77;
-
-    box-shadow:
-        0 0 0 5px
-        rgba(63,218,119,.12);
-
-}
-
-
-.community-hero h1{
-
-    max-width:760px;
-
-    margin:
-        0 0 14px;
-
-    color:#fff;
-
-    font-size:
-        clamp(
-            32px,
-            4vw,
-            52px
-        );
-
-    line-height:1.02;
-
-    letter-spacing:
-        -.035em;
-
-}
-
-
-.community-hero h1 span{
-    color:var(--giallo);
-}
-
-
-.community-hero p{
-
-    max-width:710px;
-
-    margin:0;
-
-    color:#bcbcc3;
-
-    font-size:
-        clamp(
-            14px,
-            1.5vw,
-            17px
-        );
-
-}
-
-
-.hero-statistiche{
-
-    margin-top:25px;
-
-    display:flex;
-    flex-wrap:wrap;
-
-    gap:9px;
-
-}
-
-
-.hero-stat{
-
-    padding:
-        8px 12px;
-
-    border:
-        1px solid
-        rgba(255,255,255,.11);
-
-    border-radius:
-        999px;
-
-    background:
-        rgba(255,255,255,.055);
-
-    color:#d7d7dc;
-
-    font-size:12px;
-
-}
-
-
-.hero-stat strong{
-    color:#fff;
-}
-
-
-/* =========================================================
-   CARD PULSE
-========================================================= */
-
-.community-pulse{
-
-    padding:20px;
-
-    background:
-        rgba(255,255,255,.055);
-
-    border:
-        1px solid
-        rgba(255,255,255,.1);
-
-    border-radius:
-        16px;
-
-    box-shadow:
-        0 18px 50px
-        rgba(0,0,0,.18);
-
-}
-
-
-.pulse-header{
-
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-
-    gap:15px;
-
-    margin-bottom:18px;
-
-}
-
-
-.pulse-header strong{
-    color:#fff;
-}
-
-
-.pulse-live{
-
-    padding:
-        4px 8px;
-
-    border-radius:
-        999px;
-
-    color:#60dc87;
-
-    background:
-        rgba(50,204,103,.11);
-
-    font-size:10px;
-    font-weight:900;
-
-    text-transform:uppercase;
-
-    letter-spacing:.08em;
-
-}
-
-
-.pulse-riga{
-
-    display:flex;
-    align-items:center;
-
-    gap:11px;
-
-    padding:
-        10px 0;
-
-    border-top:
-        1px solid
-        rgba(255,255,255,.07);
-
-}
-
-
-.pulse-riga:first-of-type{
-    border-top:0;
-}
-
-
-.pulse-icona{
-
-    width:34px;
-    height:34px;
-
-    flex-shrink:0;
-
-    border-radius:9px;
-
-    display:flex;
-    align-items:center;
-    justify-content:center;
-
-    background:
-        var(--giallo);
-
-    color:#111;
-
-    font-weight:900;
-
-}
-
-
-.pulse-testo{
-
-    min-width:0;
-
-    flex:1;
-
-}
-
-
-.pulse-testo strong{
-
-    display:block;
-
-    color:#fff;
-
-    font-size:12px;
-
-}
-
-
-.pulse-testo span{
-
-    display:block;
-
-    margin-top:2px;
-
-    color:#888891;
-
-    font-size:10px;
-
-}
-
-
-/* =========================================================
-   LAYOUT PRINCIPALE
-========================================================= */
-
-.community-layout{
-
-    width:min(
-        1460px,
-        calc(100% - 40px)
-    );
-
-    margin:
-        26px auto
-        70px;
-
-    display:grid;
-
-    grid-template-columns:
-        230px
-        minmax(420px,1fr)
-        300px;
-
-    gap:22px;
-
-    align-items:start;
-
-}
-
-
-/* =========================================================
-   CARD GENERICA
-========================================================= */
-
-.card{
-
-    background:#fff;
-
-    border:
-        1px solid
-        var(--bordo);
-
-    border-radius:
-        14px;
-
-    box-shadow:
-        0 2px 10px
-        rgba(0,0,0,.025);
-
-}
-
-
-/* =========================================================
-   SIDEBAR SINISTRA
-========================================================= */
-
-.sidebar{
-
-    position:sticky;
-
-    top:94px;
-
-}
-
-
-.sidebar-titolo{
-
-    padding:
-        18px 17px 10px;
-
-    color:#929298;
-
-    font-size:10px;
-    font-weight:900;
-
-    text-transform:uppercase;
-
-    letter-spacing:.1em;
-
-}
-
-
-.categorie-community{
-
-    padding:
-        0 8px 10px;
-
-}
-
-
-.btn-categoria{
-
-    width:100%;
-
-    min-height:44px;
-
-    padding:
-        8px 10px;
-
-    margin:
-        2px 0;
-
-    display:flex;
-    align-items:center;
-
-    gap:10px;
-
-    border:0;
-
-    border-radius:
-        9px;
-
-    background:
-        transparent;
-
-    color:#44444a;
-
-    text-align:left;
-
-    font-size:12px;
-    font-weight:700;
-
-    transition:.14s;
-
-}
-
-
-.btn-categoria:hover{
-    background:#f5f5f6;
-}
-
-
-.btn-categoria.attiva{
-
-    color:#111;
-
-    background:
-        var(--giallo-chiaro);
-
-}
-
-
-.categoria-icona{
-
-    width:30px;
-    height:30px;
-
-    display:flex;
-    align-items:center;
-    justify-content:center;
-
-    flex-shrink:0;
-
-    border-radius:8px;
-
-    background:#f1f1f2;
-
-    font-size:15px;
-
-}
-
-
-.btn-categoria.attiva
-.categoria-icona{
-
-    background:
-        var(--giallo);
-
-}
-
-
-.categoria-numero{
-
-    margin-left:auto;
-
-    color:#9a9aa0;
-
-    font-size:10px;
-
-}
-
-
-.sidebar-separatore{
-
-    height:1px;
-
-    margin:
-        8px 14px;
-
-    background:
-        #ededee;
-
-}
-
-
-/* =========================================================
-   FEED CENTRALE
-========================================================= */
-
-.feed-community{
-
-    min-width:0;
-
-}
-
-
-/* =========================================================
-   COMPOSER
-========================================================= */
-
-.composer{
-
-    padding:15px;
-
-    margin-bottom:15px;
-
-    display:flex;
-    align-items:center;
-
-    gap:12px;
-
-}
-
-
-.avatar{
-
-    width:42px;
-    height:42px;
-
-    flex-shrink:0;
-
-    display:flex;
-    align-items:center;
-    justify-content:center;
-
-    overflow:hidden;
-
-    border-radius:50%;
-
-    background:
-        #202024;
-
-    color:#fff;
-
-    border:
-        2px solid
-        #eee;
-
-    font-size:15px;
-    font-weight:900;
-
-}
-
-
-.avatar img{
-
-    width:100%;
-    height:100%;
-
-    object-fit:cover;
-
-}
-
-
-.composer-input{
-
-    flex:1;
-
-    height:43px;
-
-    padding:
-        0 15px;
-
-    display:flex;
-    align-items:center;
-
-    border:
-        1px solid
-        #dedee1;
-
-    border-radius:
-        999px;
-
-    background:
-        #f7f7f8;
-
-    color:#808087;
-
-    font-size:12px;
-
-    cursor:pointer;
-
-    transition:.15s;
-
-}
-
-
-.composer-input:hover{
-
-    border-color:#c9c9cc;
-
-    background:#f4f4f5;
-
-}
-
-
-/* =========================================================
-   FILTRI FEED
-========================================================= */
-
-.feed-filtri{
-
-    padding:
-        8px;
-
-    margin-bottom:15px;
-
-    display:flex;
-
-    gap:4px;
-
-}
-
-
-.feed-filtro{
-
-    min-height:36px;
-
-    padding:
-        0 13px;
-
-    border:0;
-
-    border-radius:8px;
-
-    background:transparent;
-
-    color:#77777e;
-
-    font-size:11px;
-    font-weight:800;
-
-}
-
-
-.feed-filtro:hover{
-    background:#f5f5f6;
-}
-
-
-.feed-filtro.attivo{
-
-    color:#111;
-
-    background:
-        var(--giallo);
-
-}
-
-
-/* =========================================================
-   POST
-========================================================= */
-
-.post-community{
-
-    margin-bottom:15px;
-
-    overflow:hidden;
-
-    transition:
-        border-color .15s,
-        box-shadow .15s;
-
-}
-
-
-.post-community:hover{
-
-    border-color:
-        #d3d3d6;
-
-    box-shadow:
-        var(--ombra);
-
-}
-
-
-.post-interno{
-
-    padding:
-        18px;
-
-}
-
-
-.post-header{
-
-    display:flex;
-    align-items:center;
-
-    gap:11px;
-
-}
-
-
-.post-autore-info{
-
-    min-width:0;
-
-    flex:1;
-
-}
-
-
-.post-autore-riga{
-
-    display:flex;
-    align-items:center;
-
-    flex-wrap:wrap;
-
-    gap:6px;
-
-}
-
-
-.post-autore{
-
-    color:#161618;
-
-    font-size:13px;
-    font-weight:900;
-
-}
-
-
-.badge-autore{
-
-    padding:
-        3px 6px;
-
-    border-radius:
-        5px;
-
-    background:
-        #111;
-
-    color:
-        var(--giallo);
-
-    font-size:8px;
-    font-weight:900;
-
-    text-transform:uppercase;
-
-    letter-spacing:.06em;
-
-}
-
-
-.post-meta{
-
-    margin-top:3px;
-
-    color:#8d8d93;
-
-    font-size:10px;
-
-}
-
-
-.post-menu{
-
-    width:34px;
-    height:34px;
-
-    border:0;
-
-    border-radius:8px;
-
-    background:transparent;
-
-    color:#898990;
-
-    font-size:20px;
-
-}
-
-
-.post-menu:hover{
-    background:#f4f4f5;
-}
-
-
-.post-categoria{
-
-    display:inline-flex;
-
-    margin-top:15px;
-
-    padding:
-        4px 8px;
-
-    border-radius:
-        6px;
-
-    background:
-        #fff7c4;
-
-    color:#625200;
-
-    font-size:9px;
-    font-weight:900;
-
-    text-transform:uppercase;
-
-    letter-spacing:.05em;
-
-}
-
-
-.post-titolo{
-
-    margin:
-        9px 0 6px;
-
-    color:#151517;
-
-    font-size:
-        clamp(
-            17px,
-            2vw,
-            20px
-        );
-
-    line-height:1.25;
-
-}
-
-
-.post-testo{
-
-    margin:0;
-
-    color:#55555c;
-
-    font-size:13px;
-
-    line-height:1.6;
-
-}
-
-
-.post-testo + .post-testo{
-    margin-top:8px;
-}
-
-
-/* =========================================================
-   CARD CERCO GIOCATORI
-========================================================= */
-
-.tavolo-community{
-
-    margin-top:15px;
-
-    padding:13px;
-
-    display:flex;
-    align-items:center;
-
-    gap:12px;
-
-    border:
-        1px solid
-        #e2d98e;
-
-    border-radius:
-        10px;
-
-    background:
-        #fffcef;
-
-}
-
-
-.tavolo-community-icona{
-
-    width:42px;
-    height:42px;
-
-    display:flex;
-    align-items:center;
-    justify-content:center;
-
-    flex-shrink:0;
-
-    border-radius:10px;
-
-    background:
-        var(--giallo);
-
-    font-size:20px;
-
-}
-
-
-.tavolo-community-info{
-    flex:1;
-}
-
-
-.tavolo-community-info strong{
-
-    display:block;
-
-    font-size:12px;
-
-}
-
-
-.tavolo-community-info span{
-
-    display:block;
-
-    margin-top:3px;
-
-    color:#747474;
-
-    font-size:10px;
-
-}
-
-
-.btn-unisciti{
-
-    min-height:34px;
-
-    padding:
-        0 11px;
-
-    border:0;
-
-    border-radius:7px;
-
-    background:#111;
-
-    color:#fff;
-
-    font-size:10px;
-    font-weight:900;
-
-}
-
-
-/* =========================================================
-   SONDAGGIO
-========================================================= */
-
-.sondaggio{
-
-    margin-top:15px;
-
-    padding:13px;
-
-    border:
-        1px solid
-        var(--bordo);
-
-    border-radius:
-        10px;
-
-    background:
-        #fafafa;
-
-}
-
-
-.sondaggio-opzione{
-
     position:relative;
-
-    min-height:39px;
-
-    margin-top:8px;
-
     overflow:hidden;
-
-    border:
-        1px solid
-        #e0e0e2;
-
-    border-radius:7px;
-
-    cursor:pointer;
-
-}
-
-
-.sondaggio-riempimento{
-
-    position:absolute;
-
-    top:0;
-    bottom:0;
-    left:0;
-
     background:
-        #fff1a1;
-
+        radial-gradient(ellipse 900px 420px at 18% -10%, rgba(255,212,0,.07), transparent 60%),
+        linear-gradient(135deg,#050507 0%,#0b0b0e 55%,#121008 100%);
+    border-bottom:1px solid var(--bordo);
 }
-
-
-.sondaggio-contenuto{
-
-    position:relative;
-
-    z-index:2;
-
-    min-height:39px;
-
-    padding:
-        0 11px;
-
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-
-    gap:10px;
-
-    font-size:11px;
-    font-weight:700;
-
+.community-hero::before{
+    content:"";
+    position:absolute; inset:0;
+    background-image:repeating-conic-gradient(rgba(255,255,255,.028) 0% 25%, transparent 0% 50%);
+    background-size:46px 46px;
+    opacity:.55;
+    mask-image:linear-gradient(135deg, black, transparent 70%);
+    pointer-events:none;
 }
+.community-hero-interno{position:relative;width:min(1460px,calc(100% - 40px));margin:0 auto;min-height:230px;padding:44px 0;display:grid;grid-template-columns:minmax(0,1.5fr) minmax(300px,.7fr);gap:45px;align-items:center}
 
+.hero-eyebrow{display:inline-flex;align-items:center;gap:8px;margin-bottom:14px;color:var(--testo-2);font-size:12px}
+.pallino-live{width:7px;height:7px;border-radius:50%;background:var(--verde);box-shadow:0 0 0 5px rgba(48,217,131,.14)}
+
+.community-hero h1{max-width:740px;margin:0 0 14px;font-family:var(--serif);color:#fff;font-weight:400;font-size:clamp(30px,3.6vw,47px);line-height:1.08;letter-spacing:-.01em}
+.community-hero h1 em{font-style:italic;color:var(--giallo)}
+.community-hero p{max-width:620px;margin:0;color:var(--testo-2);font-size:clamp(13.5px,1.4vw,15.5px)}
+
+.hero-statistiche{margin-top:24px;display:flex;flex-wrap:wrap;gap:8px}
+.hero-stat{padding:7px 12px;border:1px solid var(--bordo);border-radius:999px;background:rgba(255,255,255,.035);color:var(--testo-2);font-size:11.5px}
+
+.community-pulse{padding:19px;background:rgba(255,255,255,.035);border:1px solid var(--bordo);border-radius:16px;box-shadow:var(--ombra)}
+.pulse-header{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:16px}
+.pulse-header strong{color:#fff;font-size:12.5px}
+.pulse-live{padding:4px 8px;border-radius:999px;color:var(--verde);background:rgba(48,217,131,.12);font-size:9.5px;font-weight:800;letter-spacing:.06em}
+.pulse-riga{display:flex;align-items:center;gap:11px;padding:10px 0;border-top:1px solid var(--bordo)}
+.pulse-riga:first-of-type{border-top:0}
+.pulse-icona{width:33px;height:33px;flex-shrink:0;border-radius:9px;display:flex;align-items:center;justify-content:center;background:var(--giallo-velo);font-size:17px}
+.pulse-testo strong{display:block;color:#fff;font-size:11.5px}
+.pulse-testo span{display:block;margin-top:2px;color:var(--testo-3);font-size:10px}
+
+/* GIOCHI RAPIDI */
+
+.giochi-rapidi{border-top:1px solid var(--bordo)}
+.giochi-rapidi-interno{position:relative;width:min(1460px,calc(100% - 40px));margin:0 auto;padding:14px 0;display:flex;align-items:center;gap:10px;overflow-x:auto;scrollbar-width:none}
+.giochi-rapidi-interno::-webkit-scrollbar{display:none}
+.giochi-rapidi-etichetta{flex-shrink:0;color:var(--testo-3);font-size:11px}
+.gioco-rapido{flex-shrink:0;display:flex;align-items:center;gap:8px;padding:8px 13px;border:1px solid var(--bordo);border-radius:999px;background:rgba(255,255,255,.03);color:var(--testo);font-size:12px;font-weight:700;transition:.15s}
+.gioco-rapido:hover{border-color:var(--giallo);background:var(--giallo-velo);color:#fff}
+.gioco-rapido span.emoji{font-size:14px}
 
 /* =========================================================
-   AZIONI POST
+   LAYOUT
 ========================================================= */
 
-.post-azioni{
+.community-layout{width:min(1460px,calc(100% - 40px));margin:26px auto 70px;display:grid;grid-template-columns:225px minmax(420px,1fr) 300px;gap:20px;align-items:start}
 
-    min-height:49px;
+.card{background:var(--nero-1);border:1px solid var(--bordo);border-radius:14px}
 
-    padding:
-        7px 12px;
+/* SIDEBAR SINISTRA */
 
-    display:flex;
-    align-items:center;
+.sidebar{position:sticky;top:90px}
+.sidebar-titolo{padding:17px 16px 9px;color:var(--testo-3);font-size:10.5px;font-weight:700}
+.categorie-community{padding:0 8px 10px}
+.btn-categoria{width:100%;min-height:42px;padding:8px 10px;margin:2px 0;display:flex;align-items:center;gap:10px;border:0;border-radius:9px;background:transparent;color:var(--testo-2);text-align:left;font-size:12px;font-weight:700;transition:.14s}
+.btn-categoria:hover{background:var(--nero-2);color:var(--testo)}
+.btn-categoria.attiva{color:#fff;background:var(--giallo-velo)}
+.categoria-icona{width:29px;height:29px;display:flex;align-items:center;justify-content:center;flex-shrink:0;border-radius:8px;background:var(--nero-2);font-size:14px}
+.btn-categoria.attiva .categoria-icona{background:var(--giallo);color:#141400}
+.categoria-numero{margin-left:auto;color:var(--testo-3);font-size:10px}
+.sidebar-separatore{height:1px;margin:8px 14px;background:var(--bordo)}
 
-    gap:5px;
+/* FEED CENTRALE */
 
-    border-top:
-        1px solid
-        #ededee;
+.feed-community{min-width:0}
 
-}
+.composer{padding:14px;margin-bottom:14px;display:flex;align-items:center;gap:12px}
+.avatar{width:40px;height:40px;flex-shrink:0;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:50%;background:var(--nero-2);color:#fff;border:2px solid var(--nero-3);font-size:14px;font-weight:800}
+.avatar img{width:100%;height:100%;object-fit:cover}
+.composer-input{flex:1;height:42px;padding:0 15px;display:flex;align-items:center;border:1px solid var(--bordo);border-radius:999px;background:var(--nero-2);color:var(--testo-3);font-size:12px;cursor:pointer;transition:.15s}
+.composer-input:hover{border-color:var(--bordo-2)}
 
+.feed-filtri{padding:7px;margin-bottom:14px;display:flex;gap:4px}
+.feed-filtro{min-height:34px;padding:0 13px;border:0;border-radius:8px;background:transparent;color:var(--testo-2);font-size:11px;font-weight:700}
+.feed-filtro:hover{background:var(--nero-2)}
+.feed-filtro.attivo{color:#141400;background:var(--giallo)}
 
-.post-azione{
+.post-community{margin-bottom:14px;overflow:hidden;transition:border-color .15s,box-shadow .15s}
+.post-community:hover{border-color:var(--bordo-2);box-shadow:var(--ombra-soft)}
+.post-interno{padding:17px}
+.post-header{position:relative;display:flex;align-items:center;gap:11px}
+.post-autore-info{min-width:0;flex:1}
+.post-autore-riga{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
+.post-autore{color:#fff;font-size:13px;font-weight:800}
+.badge-autore{padding:3px 6px;border-radius:5px;background:var(--giallo);color:#141400;font-size:8px;font-weight:900;letter-spacing:.04em}
+.post-meta{margin-top:3px;color:var(--testo-3);font-size:10px}
+.post-menu{width:33px;height:33px;display:flex;align-items:center;justify-content:center;border:0;border-radius:8px;background:transparent;color:var(--testo-2);font-size:19px}
+.post-menu:hover{background:var(--nero-2)}
 
-    min-height:34px;
+.post-categoria{display:inline-flex;margin-top:14px;padding:4px 9px;border-radius:6px;background:var(--giallo-velo);color:var(--giallo);font-size:9px;font-weight:800;letter-spacing:.03em}
+.post-titolo{margin:9px 0 6px;color:#fff;font-size:clamp(16.5px,2vw,19px);line-height:1.3;font-weight:800}
+.post-testo{margin:0;color:var(--testo-2);font-size:13px;line-height:1.65}
+.post-testo + .post-testo{margin-top:8px}
 
-    padding:
-        0 10px;
+.tavolo-community{margin-top:14px;padding:13px;display:flex;align-items:center;gap:12px;border:1px solid var(--bordo-2);border-radius:10px;background:var(--giallo-velo)}
+.tavolo-community-icona{width:40px;height:40px;display:flex;align-items:center;justify-content:center;flex-shrink:0;border-radius:10px;background:var(--giallo);font-size:19px}
+.tavolo-community-info{flex:1}
+.tavolo-community-info strong{display:block;color:#fff;font-size:12px}
+.tavolo-community-info span{display:block;margin-top:3px;color:var(--testo-2);font-size:10px}
+.btn-unisciti{min-height:34px;padding:0 12px;border:0;border-radius:7px;background:var(--giallo);color:#141400;font-size:10px;font-weight:900}
 
-    display:flex;
-    align-items:center;
+.sondaggio{margin-top:14px;padding:13px;border:1px solid var(--bordo);border-radius:10px;background:var(--nero-2)}
+.sondaggio-opzione{position:relative;min-height:38px;margin-top:8px;overflow:hidden;border:1px solid var(--bordo);border-radius:7px;cursor:pointer}
+.sondaggio-riempimento{position:absolute;top:0;bottom:0;left:0;background:var(--giallo-velo)}
+.sondaggio-contenuto{position:relative;z-index:2;min-height:38px;padding:0 11px;display:flex;align-items:center;justify-content:space-between;gap:10px;color:var(--testo);font-size:11px;font-weight:700}
 
-    gap:6px;
+.post-azioni{min-height:48px;padding:7px 11px;display:flex;align-items:center;gap:5px;border-top:1px solid var(--bordo)}
+.post-azione{min-height:33px;padding:0 10px;display:flex;align-items:center;gap:6px;border:0;border-radius:7px;background:transparent;color:var(--testo-2);font-size:10px;font-weight:700}
+.post-azione:hover{background:var(--nero-2)}
+.post-azione.attiva{background:var(--giallo-velo);color:var(--giallo-vivo)}
+.post-azione .icona{width:16px;height:16px}
+.post-azione.caricamento{opacity:.5;pointer-events:none}
+.post-azione.attiva .icona{fill:currentColor}
+.post-azione-salva.attiva{background:#fff;color:#141400}
+.post-azione-condividi.attiva{background:rgba(77,141,255,.14);color:var(--blu)}
 
-    border:0;
+/* BADGE GIOCATORE */
 
-    border-radius:7px;
-
-    background:transparent;
-
-    color:#68686f;
-
-    font-size:10px;
-    font-weight:800;
-
-}
-
-
-.post-azione:hover{
-    background:#f5f5f6;
-}
-
-
-.post-azione.attiva{
-
-    background:
-        var(--giallo-chiaro);
-
-    color:#2c2600;
-
-}
-
-
-.post-azione .icona{
-
-    width:17px;
-    height:17px;
-
-}
-
+.riga-badge{display:inline-flex;align-items:center;gap:3px}
+.badge-chip{width:16px;height:16px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--nero-3);font-size:9px;line-height:1}
 
 /* =========================================================
    SIDEBAR DESTRA
 ========================================================= */
 
-.sidebar-destra{
+.sidebar-destra{position:sticky;top:90px;max-height:calc(100vh - 110px);overflow-y:auto;display:flex;flex-direction:column;gap:14px;scrollbar-width:thin}
 
-    position:sticky;
+.card-titolo{padding:15px 16px 10px;display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid var(--bordo)}
+.card-titolo strong{color:#fff;font-size:12px;font-weight:800}
+.card-titolo span{color:var(--testo-3);font-size:9px}
 
-    top:94px;
+/* AMICI ONLINE */
 
-    display:flex;
-    flex-direction:column;
+#amiciCommunity{padding:6px 13px 12px}
+.amico-riga{display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px solid rgba(255,255,255,.04)}
+.amico-riga:last-child{border-bottom:0}
+.amico-avatar-wrap{position:relative;flex-shrink:0}
+.amico-stato-dot{position:absolute;right:-1px;bottom:-1px;width:9px;height:9px;border-radius:50%;border:2px solid var(--nero-1)}
+.amico-info{min-width:0;flex:1}
+.amico-nome{overflow:hidden;color:var(--testo);font-size:11px;font-weight:700;text-overflow:ellipsis;white-space:nowrap}
+.amico-stato-testo{margin-top:1px;color:var(--testo-3);font-size:9.5px}
+.pannello-quieto{padding:16px 13px;text-align:center;color:var(--testo-3);font-size:10.5px;line-height:1.6}
 
-    gap:15px;
+/* ATTIVITÀ RECENTE */
 
-}
+#attivitaCommunity{padding:13px}
+.attivita-riga{position:relative;display:flex;gap:10px;padding-bottom:14px}
+.attivita-riga:last-child{padding-bottom:0}
+.attivita-riga::before{content:"";position:absolute;left:12px;top:26px;bottom:-2px;width:1px;background:var(--bordo)}
+.attivita-riga:last-child::before{display:none}
+.attivita-icona{position:relative;z-index:1;width:25px;height:25px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--nero-2);border:1px solid var(--bordo);font-size:11px}
+.attivita-testo{min-width:0;flex:1;padding-top:2px}
+.attivita-testo strong{color:var(--testo);font-weight:700}
+.attivita-testo span{display:block;margin-top:2px;color:var(--testo-3);font-size:9.5px}
 
+/* CLASSIFICA */
 
-.card-titolo{
+#classificaCommunity{padding:5px 12px 12px}
+.classifica-riga{width:100%;min-height:54px;padding:5px 6px;display:flex;align-items:center;gap:9px;border-bottom:1px solid rgba(255,255,255,.04);border-radius:8px;color:inherit;cursor:pointer;transition:background .15s,transform .15s}
+.classifica-riga:hover{background:var(--nero-2);transform:translateX(2px)}
+.classifica-riga:focus-visible{outline:2px solid var(--giallo);outline-offset:-2px}
+.classifica-freccia{margin-left:auto;padding-right:3px;color:var(--testo-3);font-size:20px;opacity:0;transform:translateX(-3px);transition:.15s}
+.classifica-riga:hover .classifica-freccia{opacity:1;color:var(--giallo);transform:translateX(0)}
+.classifica-riga:last-child{border-bottom:0}
+.classifica-posizione{width:20px;color:var(--testo-3);font-size:10px;font-weight:800;text-align:center}
+.classifica-posizione.podio{color:var(--giallo)}
+.avatar-piccolo{width:30px;height:30px;display:flex;align-items:center;justify-content:center;flex-shrink:0;border-radius:50%;background:var(--nero-3);color:#fff;font-size:11px;font-weight:800}
+.classifica-info{min-width:0;flex:1}
+.classifica-nome{display:flex;align-items:center;gap:4px;overflow:hidden;color:var(--testo);font-size:10px;font-weight:800;text-overflow:ellipsis;white-space:nowrap}
+.classifica-stat{margin-top:2px;color:var(--testo-3);font-size:8.5px}
 
-    padding:
-        16px 16px 11px;
+/* REGOLE */
 
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-
-    gap:10px;
-
-    border-bottom:
-        1px solid
-        #ededee;
-
-}
-
-
-.card-titolo strong{
-
-    font-size:12px;
-
-}
-
-
-.card-titolo span{
-
-    color:#99999e;
-
-    font-size:9px;
-
-}
-
+.regole-header{padding:16px}
+.regole-header strong{display:block;color:#fff;font-size:12.5px;font-weight:800}
+.regole-header span{display:block;margin-top:4px;color:var(--testo-3);font-size:9.5px}
+.regole-contenuto{padding:4px 14px 14px}
+.regola{display:flex;gap:8px;margin:8px 0;color:var(--testo-2);font-size:10px}
+.regola-numero{width:19px;height:19px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border-radius:6px;background:var(--giallo-velo);color:var(--giallo);font-size:8px;font-weight:900}
+.link-regole{display:block;margin-top:13px;color:var(--giallo);font-size:10px;font-weight:800}
 
 /* =========================================================
-   CLASSIFICA
+   MODALE
 ========================================================= */
 
-#classificaCommunity{
-
-    padding:
-        6px 13px 12px;
-
-}
-
-
-.classifica-riga{
-
-    width:100%;
-    min-height:56px;
-
-    padding:
-        5px 6px;
-
-    display:flex;
-    align-items:center;
-
-    gap:9px;
-
-    border-bottom:
-        1px solid
-        #f0f0f1;
-
-    border-radius:8px;
-
-    color:inherit;
-    text-decoration:none;
-
-    cursor:pointer;
-
-    transition:
-        background .15s ease,
-        transform .15s ease,
-        box-shadow .15s ease;
-}
-
-
-.classifica-riga:hover{
-
-    background:
-        #fff8cf;
-
-    transform:
-        translateX(2px);
-
-}
-
-
-.classifica-riga:active{
-
-    background:
-        #ffed7a;
-
-    transform:
-        translateX(1px)
-        scale(.99);
-
-}
-
-
-.classifica-riga:focus-visible{
-
-    outline:
-        2px solid
-        #ffd400;
-
-    outline-offset:
-        -2px;
-
-}
-
-
-/* Freccia a destra */
-.classifica-freccia{
-
-    margin-left:auto;
-
-    padding-right:3px;
-
-    color:#b0b0b5;
-
-    font-size:22px;
-    font-weight:700;
-
-    line-height:1;
-
-    opacity:0;
-
-    transform:
-        translateX(-3px);
-
-    transition:
-        opacity .15s ease,
-        transform .15s ease,
-        color .15s ease;
-}
-
-
-.classifica-riga:hover
-.classifica-freccia{
-
-    opacity:1;
-
-    color:#111;
-
-    transform:
-        translateX(0);
-
-}
-
-
-/* Anche nickname e avatar fanno capire che sono cliccabili */
-.classifica-riga
-.classifica-nome{
-
-    transition:
-        color .15s ease;
-}
-
-
-.classifica-riga:hover
-.classifica-nome{
-
-    color:#000;
-
-    text-decoration:
-        underline;
-
-    text-decoration-color:
-        #ffd400;
-
-    text-decoration-thickness:
-        2px;
-
-    text-underline-offset:
-        2px;
-
-}
-
-
-.classifica-riga
-.avatar-piccolo{
-
-    transition:
-        transform .15s ease,
-        box-shadow .15s ease;
-}
-
-
-.classifica-riga:hover
-.avatar-piccolo{
-
-    transform:
-        scale(1.08);
-
-    box-shadow:
-        0 0 0 3px
-        rgba(255,212,0,.35);
-
-}
-
-
-.classifica-riga:last-child{
-    border-bottom:0;
-}
-
-
-.classifica-posizione{
-
-    width:22px;
-
-    color:#929298;
-
-    font-size:10px;
-    font-weight:900;
-
-    text-align:center;
-
-}
-
-
-.classifica-posizione.podio{
-    color:#9b8000;
-}
-
-
-.avatar-piccolo{
-
-    width:31px;
-    height:31px;
-
-    display:flex;
-    align-items:center;
-    justify-content:center;
-
-    flex-shrink:0;
-
-    border-radius:50%;
-
-    background:#222;
-
-    color:#fff;
-
-    font-size:11px;
-    font-weight:900;
-
-}
-
-
-.classifica-info{
-
-    min-width:0;
-
-    flex:1;
-
-}
-
-
-.classifica-nome{
-
-    overflow:hidden;
-
-    color:#2b2b2e;
-
-    font-size:10px;
-    font-weight:900;
-
-    text-overflow:ellipsis;
-
-    white-space:nowrap;
-
-}
-
-
-.classifica-stat{
-
-    margin-top:2px;
-
-    color:#929298;
-
-    font-size:8px;
-
-}
-
-
-/* =========================================================
-   REGOLE
-========================================================= */
-
-.regole-card{
-
-    overflow:hidden;
-
-}
-
-
-.regole-header{
-
-    padding:17px;
-
-    background:#111;
-
-    color:#fff;
-
-}
-
-
-.regole-header strong{
-
-    display:block;
-
-    font-size:13px;
-
-}
-
-
-.regole-header span{
-
-    display:block;
-
-    margin-top:4px;
-
-    color:#96969c;
-
-    font-size:9px;
-
-}
-
-
-.regole-contenuto{
-
-    padding:14px;
-
-}
-
-
-.regola{
-
-    display:flex;
-
-    gap:8px;
-
-    margin:
-        8px 0;
-
-    color:#626268;
-
-    font-size:10px;
-
-}
-
-
-.regola-numero{
-
-    width:20px;
-    height:20px;
-
-    flex-shrink:0;
-
-    display:flex;
-    align-items:center;
-    justify-content:center;
-
-    border-radius:6px;
-
-    background:
-        var(--giallo);
-
-    color:#111;
-
-    font-size:8px;
-    font-weight:900;
-
-}
-
-
-/* =========================================================
-   MODALE CREA POST
-========================================================= */
-
-.overlay-modal{
-
-    position:fixed;
-
-    inset:0;
-
-    z-index:10000;
-
-    display:none;
-    align-items:center;
-    justify-content:center;
-
-    padding:20px;
-
-    background:
-        rgba(0,0,0,.68);
-
-    backdrop-filter:
-        blur(5px);
-
-}
-
-
-.overlay-modal.aperto{
-    display:flex;
-}
-
-
-.modal-post{
-
-    width:
-        min(
-            590px,
-            100%
-        );
-
-    max-height:
-        min(
-            760px,
-            calc(100vh - 30px)
-        );
-
-    overflow-y:auto;
-
-    background:#fff;
-
-    border-radius:
-        16px;
-
-    box-shadow:
-        0 30px 90px
-        rgba(0,0,0,.35);
-
-}
-
-
-.modal-header{
-
-    min-height:64px;
-
-    padding:
-        0 18px;
-
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-
-    gap:15px;
-
-    border-bottom:
-        1px solid
-        var(--bordo);
-
-}
-
-
-.modal-header strong{
-    font-size:15px;
-}
-
-
-.modal-chiudi{
-
-    width:35px;
-    height:35px;
-
-    border:0;
-
-    border-radius:8px;
-
-    background:#f2f2f3;
-
-    font-size:18px;
-
-}
-
-
-.modal-body{
-
-    padding:18px;
-
-}
-
-
-.form-label{
-
-    display:block;
-
-    margin:
-        16px 0 6px;
-
-    color:#55555b;
-
-    font-size:10px;
-    font-weight:900;
-
-    text-transform:uppercase;
-
-    letter-spacing:.05em;
-
-}
-
-
-.form-label:first-child{
-    margin-top:0;
-}
-
-
-.campo{
-
-    width:100%;
-
-    border:
-        1px solid
-        #dcdcdf;
-
-    border-radius:
-        9px;
-
-    outline:none;
-
-    background:#fff;
-
-    transition:.15s;
-
-}
-
-
-input.campo,
-select.campo{
-
-    height:43px;
-
-    padding:
-        0 12px;
-
-}
-
-
-textarea.campo{
-
-    min-height:135px;
-
-    resize:vertical;
-
-    padding:12px;
-
-    line-height:1.5;
-
-}
-
-
-.campo:focus{
-
-    border-color:
-        #d6b400;
-
-    box-shadow:
-        0 0 0 3px
-        rgba(255,212,0,.15);
-
-}
-
-
-.modal-footer{
-
-    padding:
-        13px 18px;
-
-    display:flex;
-    justify-content:flex-end;
-
-    gap:8px;
-
-    border-top:
-        1px solid
-        var(--bordo);
-
-}
-
-
-.btn-secondario{
-
-    min-height:40px;
-
-    padding:
-        0 15px;
-
-    border:
-        1px solid
-        #dadadd;
-
-    border-radius:8px;
-
-    background:#fff;
-
-    color:#444;
-
-    font-size:11px;
-    font-weight:800;
-
-}
-
-
-.btn-pubblica{
-
-    min-height:40px;
-
-    padding:
-        0 17px;
-
-    border:0;
-
-    border-radius:8px;
-
-    background:
-        var(--giallo);
-
-    color:#111;
-
-    font-size:11px;
-    font-weight:900;
-
-}
-
+.overlay-modal{position:fixed;inset:0;z-index:10000;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.72);backdrop-filter:blur(5px)}
+.overlay-modal.aperto{display:flex}
+.modal-post{width:min(580px,100%);max-height:min(760px,calc(100vh - 30px));overflow-y:auto;background:var(--nero-1);border:1px solid var(--bordo);border-radius:16px;box-shadow:0 30px 90px rgba(0,0,0,.55)}
+.modal-header{min-height:62px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;gap:15px;border-bottom:1px solid var(--bordo)}
+.modal-header strong{color:#fff;font-size:14px}
+.modal-chiudi{width:34px;height:34px;border:0;border-radius:8px;background:var(--nero-2);color:var(--testo);font-size:17px}
+.modal-body{padding:18px}
+.form-label{display:block;margin:16px 0 6px;color:var(--testo-2);font-size:10px;font-weight:800}
+.form-label:first-child{margin-top:0}
+.campo{width:100%;border:1px solid var(--bordo-2);border-radius:9px;outline:none;background:var(--nero-2);color:var(--testo);transition:.15s}
+input.campo,select.campo{height:42px;padding:0 12px}
+textarea.campo{min-height:130px;resize:vertical;padding:12px;line-height:1.5}
+.campo:focus{border-color:var(--giallo);box-shadow:0 0 0 3px var(--giallo-velo)}
+.modal-footer{padding:13px 18px;display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--bordo)}
+.btn-secondario{min-height:39px;padding:0 15px;border:1px solid var(--bordo-2);border-radius:8px;background:transparent;color:var(--testo);font-size:11px;font-weight:700}
+.btn-pubblica{min-height:39px;padding:0 16px;border:0;border-radius:8px;background:var(--giallo);color:#141400;font-size:11px;font-weight:900}
 
 /* =========================================================
    TOAST
 ========================================================= */
 
-#toastCommunity{
-
-    position:fixed;
-
-    right:18px;
-    bottom:18px;
-
-    z-index:20000;
-
-    max-width:
-        min(
-            340px,
-            calc(100vw - 36px)
-        );
-
-    padding:
-        12px 15px;
-
-    display:none;
-
-    border-radius:
-        10px;
-
-    background:#111;
-
-    color:#fff;
-
-    font-size:11px;
-
-    box-shadow:
-        0 12px 38px
-        rgba(0,0,0,.28);
-
-}
-
-
-#toastCommunity.visibile{
-    display:block;
-}
-
+#toastCommunity{position:fixed;right:18px;bottom:18px;z-index:20000;max-width:min(340px,calc(100vw - 36px));padding:12px 15px;display:none;border-radius:10px;background:var(--nero-3);border:1px solid var(--bordo-2);color:var(--testo);font-size:11px;box-shadow:var(--ombra)}
+#toastCommunity.visibile{display:block}
 
 /* =========================================================
    EMPTY STATE
 ========================================================= */
 
-.feed-vuoto{
-
-    padding:55px 20px;
-
-    display:none;
-
-    text-align:center;
-
-}
-
-
-.feed-vuoto strong{
-
-    display:block;
-
-    font-size:15px;
-
-}
-
-
-.feed-vuoto span{
-
-    display:block;
-
-    margin-top:6px;
-
-    color:#8a8a90;
-
-    font-size:11px;
-
-}
-
-
-/* =========================================================
-   TABLET
-========================================================= */
-
-@media(max-width:1100px){
-
-    .community-layout{
-
-        grid-template-columns:
-            205px
-            minmax(0,1fr);
-
-    }
-
-    .sidebar-destra{
-
-        position:static;
-
-        grid-column:
-            1 / -1;
-
-        display:grid;
-
-        grid-template-columns:
-            1fr 1fr;
-
-    }
-
-}
-
-
-/* =========================================================
-   MOBILE
-========================================================= */
-
-@media(max-width:760px){
-
-    .community-header-interno{
-
-        width:
-            calc(100% - 22px);
-
-        min-height:62px;
-
-        gap:9px;
-
-    }
-
-    .community-logo{
-
-        width:36px;
-        height:36px;
-
-        border-radius:9px;
-
-        font-size:14px;
-
-    }
-
-    .community-brand-titolo{
-
-        font-size:12px;
-
-    }
-
-    .community-brand-sottotitolo{
-        display:none;
-    }
-
-    .ricerca-community{
-
-        margin-left:auto;
-
-    }
-
-    #ricercaCommunity{
-
-        height:39px;
-
-        padding-left:36px;
-
-        font-size:11px;
-
-    }
-
-    .ricerca-community .icona{
-
-        left:11px;
-
-        width:16px;
-        height:16px;
-
-    }
-
-    .btn-crea-post{
-
-        width:39px;
-        height:39px;
-
-        padding:0;
-
-        border-radius:9px;
-
-    }
-
-    .btn-crea-post span{
-        display:none;
-    }
-
-
-    /* HERO */
-
-    .community-hero-interno{
-
-        width:
-            calc(100% - 26px);
-
-        min-height:auto;
-
-        padding:
-            29px 0;
-
-        grid-template-columns:
-            1fr;
-
-        gap:20px;
-
-    }
-
-    .community-hero h1{
-
-        font-size:
-            34px;
-
-    }
-
-    .community-hero p{
-
-        font-size:
-            13px;
-
-    }
-
-    .community-pulse{
-        display:none;
-    }
-
-
-    /* LAYOUT */
-
-    .community-layout{
-
-        width:
-            calc(100% - 20px);
-
-        margin-top:13px;
-
-        grid-template-columns:
-            1fr;
-
-        gap:12px;
-
-    }
-
-
-    /* CATEGORIE ORIZZONTALI */
-
-    .sidebar{
-
-        position:static;
-
-        overflow-x:auto;
-
-        border:0;
-
-        background:transparent;
-
-        box-shadow:none;
-
-        scrollbar-width:none;
-
-    }
-
-    .sidebar::-webkit-scrollbar{
-        display:none;
-    }
-
-    .sidebar-titolo,
-    .sidebar-separatore{
-        display:none;
-    }
-
-    .categorie-community{
-
-        display:flex;
-
-        width:max-content;
-
-        padding:0;
-
-        gap:6px;
-
-    }
-
-    .btn-categoria{
-
-        width:auto;
-
-        min-height:38px;
-
-        padding:
-            0 11px;
-
-        margin:0;
-
-        border:
-            1px solid
-            var(--bordo);
-
-        border-radius:
-            999px;
-
-        background:#fff;
-
-        white-space:nowrap;
-
-        font-size:10px;
-
-    }
-
-    .categoria-icona,
-    .categoria-numero{
-        display:none;
-    }
-
-
-    /* COMPOSER */
-
-    .composer{
-
-        padding:11px;
-
-        margin-bottom:10px;
-
-    }
-
-    .avatar{
-
-        width:36px;
-        height:36px;
-
-    }
-
-    .composer-input{
-
-        height:39px;
-
-        font-size:10px;
-
-    }
-
-
-    /* FILTRI */
-
-    .feed-filtri{
-
-        margin-bottom:10px;
-
-    }
-
-
-    /* POST */
-
-    .post-community{
-
-        margin-bottom:10px;
-
-        border-radius:
-            12px;
-
-    }
-
-    .post-interno{
-
-        padding:14px;
-
-    }
-
-    .post-titolo{
-
-        font-size:
-            17px;
-
-    }
-
-    .post-testo{
-
-        font-size:
-            12px;
-
-    }
-
-    .post-azioni{
-
-        overflow-x:auto;
-
-        padding:
-            6px 8px;
-
-    }
-
-    .post-azione{
-
-        flex-shrink:0;
-
-        padding:
-            0 8px;
-
-    }
-
-
-    /* TAVOLO */
-
-    .tavolo-community{
-
-        align-items:flex-start;
-
-    }
-
-    .btn-unisciti{
-
-        align-self:center;
-
-    }
-
-
-    /* SIDEBAR DESTRA */
-
-    .sidebar-destra{
-
-        display:flex;
-
-        flex-direction:column;
-
-    }
-
-
-    /* MODAL */
-
-    .overlay-modal{
-
-        padding:0;
-
-        align-items:flex-end;
-
-    }
-
-    .modal-post{
-
-        width:100%;
-
-        max-height:
-            90dvh;
-
-        border-radius:
-            18px 18px 0 0;
-
-    }
-
-}
-
-
-/* =========================================================
-   TELEFONI PICCOLI
-========================================================= */
-
-@media(max-width:430px){
-
-    .community-brand-testo{
-        display:none;
-    }
-
-    .hero-statistiche{
-
-        gap:6px;
-
-    }
-
-    .hero-stat{
-
-        padding:
-            6px 9px;
-
-        font-size:10px;
-
-    }
-
-    .post-azione{
-
-        font-size:9px;
-
-    }
-
-}
-
-
-/* =========================================================
-   COMMUNITY REALE - STATO FEED
-========================================================= */
-
-#listaPostCommunity{
-    min-width:0;
-}
-
-.community-caricamento{
-    padding:42px 20px;
-    margin-bottom:15px;
-    text-align:center;
-    color:#8a8a90;
-    font-size:11px;
-}
-
-.community-caricamento-spinner{
-    width:28px;
-    height:28px;
-    margin:0 auto 12px;
-    border:3px solid #ececef;
-    border-top-color:var(--giallo);
-    border-radius:50%;
-    animation:community-spin .75s linear infinite;
-}
-
-@keyframes community-spin{
-    to{ transform:rotate(360deg); }
-}
-
+.feed-vuoto{padding:50px 20px;display:none;text-align:center}
+.feed-vuoto strong{display:block;color:#fff;font-size:14px}
+.feed-vuoto span{display:block;margin-top:6px;color:var(--testo-3);font-size:11px}
+
+.community-caricamento{padding:40px 20px;margin-bottom:14px;text-align:center;color:var(--testo-3);font-size:11px}
+.community-caricamento-spinner{width:26px;height:26px;margin:0 auto 12px;border:3px solid var(--nero-3);border-top-color:var(--giallo);border-radius:50%;animation:community-spin .75s linear infinite}
+@keyframes community-spin{to{transform:rotate(360deg)}}
 
 /* =========================================================
    COMMENTI
 ========================================================= */
 
-.sezione-commenti{
-    display:none;
-    border-top:1px solid #ededee;
-    background:#fafafa;
-}
-
-.sezione-commenti.aperta{
-    display:block;
-}
-
-.commenti-interno{
-    padding:14px 16px 16px;
-}
-
-.commenti-caricamento,
-.commenti-vuoti{
-    padding:18px 10px;
-    color:#96969c;
-    font-size:10px;
-    text-align:center;
-}
-
-.commento-riga{
-    display:flex;
-    align-items:flex-start;
-    gap:9px;
-    padding:10px 0;
-    border-bottom:1px solid #ececee;
-}
-
-.commento-riga:last-child{
-    border-bottom:0;
-}
-
-.commento-avatar{
-    width:30px;
-    height:30px;
-    flex:0 0 30px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    overflow:hidden;
-    border-radius:50%;
-    background:#222;
-    color:#fff;
-    font-size:10px;
-    font-weight:900;
-}
-
-.commento-avatar img{
-    width:100%;
-    height:100%;
-    object-fit:cover;
-}
-
-.commento-corpo{
-    min-width:0;
-    flex:1;
-}
-
-.commento-testata{
-    display:flex;
-    align-items:center;
-    gap:7px;
-    min-width:0;
-}
-
-.commento-autore{
-    min-width:0;
-    overflow:hidden;
-    color:#202024;
-    font-size:10px;
-    font-weight:900;
-    text-overflow:ellipsis;
-    white-space:nowrap;
-}
-
-.commento-data{
-    flex-shrink:0;
-    color:#9b9ba1;
-    font-size:8px;
-}
-
-.commento-testo{
-    margin-top:4px;
-    color:#55555c;
-    font-size:11px;
-    line-height:1.5;
-    overflow-wrap:anywhere;
-    white-space:pre-wrap;
-}
-
-.btn-elimina-commento{
-    margin-left:auto;
-    flex-shrink:0;
-    border:0;
-    background:transparent;
-    color:#b34a4a;
-    font-size:9px;
-    font-weight:800;
-}
-
-.btn-elimina-commento:hover{
-    text-decoration:underline;
-}
-
-.scrivi-commento{
-    display:flex;
-    align-items:flex-end;
-    gap:8px;
-    margin-top:12px;
-    padding-top:12px;
-    border-top:1px solid #e5e5e7;
-}
-
-.scrivi-commento .commento-avatar{
-    margin-bottom:3px;
-}
-
-.commento-input{
-    min-height:38px;
-    max-height:110px;
-    flex:1;
-    resize:none;
-    padding:10px 12px;
-    border:1px solid #dcdcdf;
-    border-radius:10px;
-    outline:none;
-    background:#fff;
-    color:#222;
-    font-size:11px;
-    line-height:1.4;
-}
-
-.commento-input:focus{
-    border-color:#d5b200;
-    box-shadow:0 0 0 3px rgba(255,212,0,.12);
-}
-
-.commento-input:disabled{
-    background:#f2f2f3;
-    color:#929298;
-    cursor:not-allowed;
-}
-
-.btn-invia-commento{
-    min-width:72px;
-    min-height:38px;
-    padding:0 12px;
-    border:0;
-    border-radius:9px;
-    background:var(--giallo);
-    color:#111;
-    font-size:10px;
-    font-weight:900;
-}
-
-.btn-invia-commento:disabled{
-    opacity:.55;
-    cursor:not-allowed;
-}
-
+.sezione-commenti{display:none;border-top:1px solid var(--bordo);background:rgba(0,0,0,.18)}
+.sezione-commenti.aperta{display:block}
+.commenti-interno{padding:14px 16px 16px}
+.commenti-caricamento,.commenti-vuoti{padding:16px 10px;color:var(--testo-3);font-size:10px;text-align:center}
+.commento-riga{display:flex;align-items:flex-start;gap:9px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.commento-riga:last-child{border-bottom:0}
+.commento-avatar{width:29px;height:29px;flex:0 0 29px;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:50%;background:var(--nero-3);color:#fff;font-size:10px;font-weight:800}
+.commento-avatar img{width:100%;height:100%;object-fit:cover}
+.commento-corpo{min-width:0;flex:1}
+.commento-testata{display:flex;align-items:center;gap:7px;min-width:0}
+.commento-autore{display:flex;align-items:center;gap:4px;min-width:0;overflow:hidden;color:var(--testo);font-size:10px;font-weight:800;text-overflow:ellipsis;white-space:nowrap}
+.commento-data{flex-shrink:0;color:var(--testo-3);font-size:8px}
+.commento-testo{margin-top:4px;color:var(--testo-2);font-size:11px;line-height:1.55;overflow-wrap:anywhere;white-space:pre-wrap}
+.btn-elimina-commento{margin-left:auto;flex-shrink:0;border:0;background:transparent;color:var(--rosso);font-size:9px;font-weight:700}
+.btn-elimina-commento:hover{text-decoration:underline}
+.scrivi-commento{display:flex;align-items:flex-end;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--bordo)}
+.commento-input{min-height:37px;max-height:110px;flex:1;resize:none;padding:10px 12px;border:1px solid var(--bordo-2);border-radius:10px;outline:none;background:var(--nero-2);color:var(--testo);font-size:11px;line-height:1.4}
+.commento-input:focus{border-color:var(--giallo);box-shadow:0 0 0 3px var(--giallo-velo)}
+.commento-input:disabled{background:var(--nero-1);color:var(--testo-3);cursor:not-allowed}
+.btn-invia-commento{min-width:70px;min-height:37px;padding:0 12px;border:0;border-radius:9px;background:var(--giallo);color:#141400;font-size:10px;font-weight:900}
+.btn-invia-commento:disabled{opacity:.5;cursor:not-allowed}
+.commenti-login{padding:11px 12px;margin-top:10px;border:1px solid var(--bordo-2);border-radius:9px;background:var(--giallo-velo);color:var(--giallo-vivo);font-size:10px;text-align:center}
 
 /* =========================================================
-   POST MENU / STATO
+   RESPONSIVE
 ========================================================= */
 
-.post-header{
-    position:relative;
+@media(max-width:1100px){
+    .community-layout{grid-template-columns:200px minmax(0,1fr)}
+    .sidebar-destra{position:static;max-height:none;overflow:visible;grid-column:1 / -1;display:grid;grid-template-columns:1fr 1fr;gap:14px}
 }
-
-.post-menu{
-    display:flex;
-    align-items:center;
-    justify-content:center;
-}
-
-.post-stato-azione{
-    display:inline-flex;
-    align-items:center;
-    gap:5px;
-    margin-left:4px;
-    color:#8f8f95;
-    font-size:9px;
-}
-
-.post-azione.caricamento{
-    opacity:.55;
-    pointer-events:none;
-}
-
-.post-azione.attiva .icona{
-    fill:currentColor;
-}
-
-.post-azione-salva.attiva{
-    background:#111;
-    color:var(--giallo);
-}
-
-.post-azione-condividi.attiva{
-    background:#eef5ff;
-    color:#245ca8;
-}
-
-
-/* =========================================================
-   AVVISO LOGIN COMMENTI
-========================================================= */
-
-.commenti-login{
-    padding:11px 12px;
-    margin-top:10px;
-    border:1px solid #eadb80;
-    border-radius:9px;
-    background:#fffcef;
-    color:#665600;
-    font-size:10px;
-    text-align:center;
-}
-
-
-/* =========================================================
-   MOBILE COMMENTI
-========================================================= */
 
 @media(max-width:760px){
+    .community-header-interno{width:calc(100% - 22px);min-height:60px;gap:9px}
+    .community-logo{width:35px;height:35px;font-size:13px}
+    .community-brand-titolo{font-size:12px}
+    .community-brand-sottotitolo{display:none}
+    .ricerca-community{margin-left:auto}
+    #ricercaCommunity{height:38px;padding-left:36px;font-size:11px}
+    .ricerca-community .icona{left:11px;width:16px;height:16px}
+    .btn-crea-post{width:38px;height:38px;padding:0;border-radius:9px}
+    .btn-crea-post span{display:none}
 
-    .commenti-interno{
-        padding:12px;
-    }
+    .community-hero-interno{width:calc(100% - 26px);min-height:auto;padding:28px 0;grid-template-columns:1fr;gap:18px}
+    .community-hero h1{font-size:30px}
+    .community-pulse{display:none}
+    .giochi-rapidi-interno{width:calc(100% - 26px)}
 
-    .commento-riga{
-        gap:8px;
-    }
+    .community-layout{width:calc(100% - 20px);margin-top:13px;grid-template-columns:1fr;gap:12px}
 
-    .commento-avatar{
-        width:28px;
-        height:28px;
-        flex-basis:28px;
-    }
+    .sidebar{position:static;overflow-x:auto;border:0;background:transparent;scrollbar-width:none}
+    .sidebar::-webkit-scrollbar{display:none}
+    .sidebar-titolo,.sidebar-separatore{display:none}
+    .categorie-community{display:flex;width:max-content;padding:0;gap:6px}
+    .btn-categoria{width:auto;min-height:36px;padding:0 11px;margin:0;border:1px solid var(--bordo);border-radius:999px;background:var(--nero-1);white-space:nowrap;font-size:10px}
+    .categoria-icona,.categoria-numero{display:none}
 
-    .scrivi-commento{
-        gap:6px;
-    }
+    .composer{padding:11px;margin-bottom:10px}
+    .avatar{width:35px;height:35px}
+    .composer-input{height:38px;font-size:10px}
 
-    .btn-invia-commento{
-        min-width:62px;
-        padding:0 9px;
-    }
+    .feed-filtri{margin-bottom:10px}
 
-    .commento-input{
-        font-size:16px;
-    }
+    .post-community{margin-bottom:10px;border-radius:12px}
+    .post-interno{padding:14px}
+    .post-titolo{font-size:16.5px}
+    .post-testo{font-size:12px}
+    .post-azioni{overflow-x:auto;padding:6px 8px}
+    .post-azione{flex-shrink:0;padding:0 8px}
 
+    .tavolo-community{align-items:flex-start}
+    .btn-unisciti{align-self:center}
+
+    .sidebar-destra{display:flex;flex-direction:column}
+
+    .overlay-modal{padding:0;align-items:flex-end}
+    .modal-post{width:100%;max-height:90dvh;border-radius:18px 18px 0 0}
+
+    .commenti-interno{padding:12px}
+    .commento-riga{gap:8px}
+    .commento-avatar{width:27px;height:27px;flex-basis:27px}
+    .scrivi-commento{gap:6px}
+    .btn-invia-commento{min-width:60px;padding:0 9px}
+    .commento-input{font-size:16px}
+}
+
+@media(max-width:430px){
+    .community-brand-testo{display:none}
+    .hero-statistiche{gap:6px}
+    .hero-stat{padding:6px 9px;font-size:10px}
+    .post-azione{font-size:9px}
 }
 
 </style>
@@ -2949,3738 +406,1031 @@ textarea.campo{
 
 <body>
 
-
-<!-- ======================================================
-     SPRITE SVG
-====================================================== -->
-
-<svg
-    width="0"
-    height="0"
-    style="position:absolute"
-    aria-hidden="true"
->
-
-    <symbol
-        id="i-search"
-        viewBox="0 0 24 24"
-    >
-        <circle
-            cx="11"
-            cy="11"
-            r="7"
-        ></circle>
-
-        <path
-            d="m20 20-3.5-3.5"
-        ></path>
-    </symbol>
-
-
-    <symbol
-        id="i-plus"
-        viewBox="0 0 24 24"
-    >
-        <path d="M12 5v14"></path>
-        <path d="M5 12h14"></path>
-    </symbol>
-
-
-    <symbol
-        id="i-heart"
-        viewBox="0 0 24 24"
-    >
-        <path
-            d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"
-        ></path>
-    </symbol>
-
-
-    <symbol
-        id="i-comment"
-        viewBox="0 0 24 24"
-    >
-        <path
-            d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"
-        ></path>
-    </symbol>
-
-
-    <symbol
-        id="i-share"
-        viewBox="0 0 24 24"
-    >
-        <circle cx="18" cy="5" r="3"></circle>
-        <circle cx="6" cy="12" r="3"></circle>
-        <circle cx="18" cy="19" r="3"></circle>
-
-        <path d="m8.6 10.5 6.8-4"></path>
-        <path d="m8.6 13.5 6.8 4"></path>
-    </symbol>
-
-
-    <symbol
-        id="i-bookmark"
-        viewBox="0 0 24 24"
-    >
-        <path
-            d="M6 3h12v18l-6-4-6 4z"
-        ></path>
-    </symbol>
-
+<!-- SPRITE SVG -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14"></path><path d="M5 12h14"></path></symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"></path></symbol>
+    <symbol id="i-comment" viewBox="0 0 24 24"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"></path></symbol>
+    <symbol id="i-share" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><path d="m8.6 10.5 6.8-4"></path><path d="m8.6 13.5 6.8 4"></path></symbol>
+    <symbol id="i-bookmark" viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"></path></symbol>
 </svg>
 
-
-<!-- ======================================================
-     HEADER
-====================================================== -->
-
+<!-- HEADER -->
 <header class="community-header">
-
     <div class="community-header-interno">
-
         <div class="community-brand">
-
-            <div class="community-logo">
-                GS
-            </div>
-
+            <div class="community-logo">GS</div>
             <div class="community-brand-testo">
-
-                <div class="community-brand-titolo">
-                    COMMUNITY
-                </div>
-
-                <div class="community-brand-sottotitolo">
-                    Giochi Società
-                </div>
-
+                <div class="community-brand-titolo">COMMUNITY</div>
+                <div class="community-brand-sottotitolo">Giochi Società</div>
             </div>
-
         </div>
-
-
         <div class="ricerca-community">
-
-            <svg class="icona">
-                <use href="#i-search"></use>
-            </svg>
-
-            <input
-                id="ricercaCommunity"
-                type="search"
-                placeholder="Cerca discussioni, giocatori, argomenti..."
-                autocomplete="off"
-            >
-
+            <svg class="icona"><use href="#i-search"></use></svg>
+            <input id="ricercaCommunity" type="search" placeholder="Cerca discussioni, giocatori, argomenti..." autocomplete="off">
         </div>
-
-
-        <button
-            class="btn-crea-post"
-            onclick="apriModalPost()"
-        >
-
-            <svg class="icona">
-                <use href="#i-plus"></use>
-            </svg>
-
-            <span>
-                Crea post
-            </span>
-
+        <button class="btn-crea-post" onclick="apriModalPost()">
+            <svg class="icona"><use href="#i-plus"></use></svg>
+            <span>Crea post</span>
         </button>
-
     </div>
-
 </header>
 
-
-<!-- ======================================================
-     HERO
-====================================================== -->
-
+<!-- HERO -->
 <section class="community-hero">
-
     <div class="community-hero-interno">
-
         <div>
-
-            <div class="hero-eyebrow">
-
-                <span class="pallino-live"></span>
-
-                LA COMMUNITY DI GIOCHI SOCIETÀ
-
-            </div>
-
-
-            <h1>
-
-                Gioca.
-                Condividi.
-                <span>Conosci giocatori.</span>
-
-            </h1>
-
-
-            <p>
-
-                Il punto d'incontro per chi gioca davvero e con passione.
-                Trova persone con cui entrare al tavolo,
-                parla di strategie, condividi le tue partite
-                e resta aggiornato su tutto ciò che succede
-                nella community.
-
-            </p>
-
-
+            <div class="hero-eyebrow"><span class="pallino-live"></span> La community di Giochi Società</div>
+            <h1>Gioca sul serio. <em>Conosci chi gioca come te.</em></h1>
+            <p>Trova avversari all'altezza, segui chi è online in questo momento, discuti di strategie e tieni traccia di dove sei in classifica.</p>
             <div class="hero-statistiche">
-
-                <div class="hero-stat">
-                    🎲 Partite e strategie
-                </div>
-
-                <div class="hero-stat">
-                    👥 Giocatori reali
-                </div>
-
-                <div class="hero-stat">
-                    💬 Discussioni
-                </div>
-
-                <div class="hero-stat">
-                    🏆 Competizione
-                </div>
-
+                <div class="hero-stat">🎲 Partite e strategie</div>
+                <div class="hero-stat">👥 Giocatori reali</div>
+                <div class="hero-stat">💬 Discussioni</div>
+                <div class="hero-stat">🏆 Competizione</div>
             </div>
-
         </div>
-
-
         <div class="community-pulse">
-
-            <div class="pulse-header">
-
-                <strong>
-                    Community Pulse
-                </strong>
-
-                <span class="pulse-live">
-                    ● LIVE
-                </span>
-
-            </div>
-
-
-            <div class="pulse-riga">
-
-                <div class="pulse-icona">
-                    🎲
-                </div>
-
-                <div class="pulse-testo">
-
-                    <strong>
-                        Tavoli attivi
-                    </strong>
-
-                    <span>
-                        Trova una partita e unisciti
-                    </span>
-
-                </div>
-
-            </div>
-
-
-            <div class="pulse-riga">
-
-                <div class="pulse-icona">
-                    💬
-                </div>
-
-                <div class="pulse-testo">
-
-                    <strong>
-                        Discussioni recenti
-                    </strong>
-
-                    <span>
-                        Strategie, partite e community
-                    </span>
-
-                </div>
-
-            </div>
-
-
-            <div class="pulse-riga">
-
-                <div class="pulse-icona">
-                    🏆
-                </div>
-
-                <div class="pulse-testo">
-
-                    <strong>
-                        Classifica giocatori
-                    </strong>
-
-                    <span>
-                        Guarda chi domina i tavoli
-                    </span>
-
-                </div>
-
-            </div>
-
+            <div class="pulse-header"><strong>Community Pulse</strong><span class="pulse-live">● LIVE</span></div>
+            <div class="pulse-riga"><div class="pulse-icona">🎲</div><div class="pulse-testo"><strong>Tavoli attivi</strong><span>Trova una partita e unisciti</span></div></div>
+            <div class="pulse-riga"><div class="pulse-icona">💬</div><div class="pulse-testo"><strong>Discussioni recenti</strong><span>Strategie, partite e community</span></div></div>
+            <div class="pulse-riga"><div class="pulse-icona">🏆</div><div class="pulse-testo"><strong>Classifica giocatori</strong><span>Guarda chi domina i tavoli</span></div></div>
         </div>
-
     </div>
-
 </section>
 
+<!-- GIOCHI RAPIDI -->
+<div class="giochi-rapidi">
+    <div class="giochi-rapidi-interno">
+        <span class="giochi-rapidi-etichetta">I tuoi giochi</span>
+        <a class="gioco-rapido" href="https://api.giochisocieta.com/stanze.html?gioco=dama" target="_top"><span class="emoji">⚫</span> Dama</a>
+        <a class="gioco-rapido" href="https://api.giochisocieta.com/stanze.html?gioco=othello" target="_top"><span class="emoji">⚪</span> Othello</a>
+        <a class="gioco-rapido" href="https://api.giochisocieta.com/stanze.html?gioco=oca" target="_top"><span class="emoji">🎲</span> Gioco dell'Oca</a>
+        <a class="gioco-rapido" href="https://api.giochisocieta.com/stanze.html" target="_top" style="color:var(--giallo)">Tutti i tavoli →</a>
+    </div>
+</div>
 
-<!-- ======================================================
-     LAYOUT
-====================================================== -->
-
+<!-- LAYOUT -->
 <main class="community-layout">
 
-
-    <!-- ==================================================
-         SIDEBAR CATEGORIE
-    =================================================== -->
-
+    <!-- SIDEBAR SINISTRA -->
     <aside class="sidebar card">
-
-        <div class="sidebar-titolo">
-            Esplora
-        </div>
-
-
+        <div class="sidebar-titolo">Esplora</div>
         <div class="categorie-community">
-
-            <button
-                class="btn-categoria attiva"
-                data-categoria="tutto"
-                onclick="selezionaCategoria(this)"
-            >
-
-                <span class="categoria-icona">
-                    ◼
-                </span>
-
-                Per te
-
-                <span class="categoria-numero">
-                    24
-                </span>
-
-            </button>
-
-
-            <button
-                class="btn-categoria"
-                data-categoria="discussioni"
-                onclick="selezionaCategoria(this)"
-            >
-
-                <span class="categoria-icona">
-                    💬
-                </span>
-
-                Discussioni
-
-                <span class="categoria-numero">
-                    12
-                </span>
-
-            </button>
-
-
-            <button
-                class="btn-categoria"
-                data-categoria="giocatori"
-                onclick="selezionaCategoria(this)"
-            >
-
-                <span class="categoria-icona">
-                    👥
-                </span>
-
-                Cerco giocatori
-
-                <span class="categoria-numero">
-                    8
-                </span>
-
-            </button>
-
-
-            <button
-                class="btn-categoria"
-                data-categoria="strategie"
-                onclick="selezionaCategoria(this)"
-            >
-
-                <span class="categoria-icona">
-                    ♟
-                </span>
-
-                Strategie
-
-                <span class="categoria-numero">
-                    18
-                </span>
-
-            </button>
-
-
-            <button
-                class="btn-categoria"
-                data-categoria="eventi"
-                onclick="selezionaCategoria(this)"
-            >
-
-                <span class="categoria-icona">
-                    🏆
-                </span>
-
-                Eventi
-
-                <span class="categoria-numero">
-                    5
-                </span>
-
-            </button>
-
-
-            <button
-                class="btn-categoria"
-                data-categoria="supporto"
-                onclick="selezionaCategoria(this)"
-            >
-
-                <span class="categoria-icona">
-                    ⚙
-                </span>
-
-                Supporto
-
-                <span class="categoria-numero">
-                    4
-                </span>
-
-            </button>
-
+            <button class="btn-categoria attiva" data-categoria="tutto" onclick="selezionaCategoria(this)"><span class="categoria-icona">◼</span> Per te <span class="categoria-numero">24</span></button>
+            <button class="btn-categoria" data-categoria="discussioni" onclick="selezionaCategoria(this)"><span class="categoria-icona">💬</span> Discussioni <span class="categoria-numero">12</span></button>
+            <button class="btn-categoria" data-categoria="giocatori" onclick="selezionaCategoria(this)"><span class="categoria-icona">👥</span> Cerco giocatori <span class="categoria-numero">8</span></button>
+            <button class="btn-categoria" data-categoria="strategie" onclick="selezionaCategoria(this)"><span class="categoria-icona">♟</span> Strategie <span class="categoria-numero">18</span></button>
+            <button class="btn-categoria" data-categoria="eventi" onclick="selezionaCategoria(this)"><span class="categoria-icona">🏆</span> Eventi <span class="categoria-numero">5</span></button>
+            <button class="btn-categoria" data-categoria="supporto" onclick="selezionaCategoria(this)"><span class="categoria-icona">⚙</span> Supporto <span class="categoria-numero">4</span></button>
         </div>
-
-
         <div class="sidebar-separatore"></div>
-
-
-        <div class="sidebar-titolo">
-            Il tuo account
-        </div>
-
-
+        <div class="sidebar-titolo">Il tuo account</div>
         <div class="categorie-community">
-
-            <a
-                class="btn-categoria"
-                href="https://api.giochisocieta.com/profilo.html"
-                target="_top"
-            >
-
-                <span class="categoria-icona">
-                    👤
-                </span>
-
-                Profilo
-
-            </a>
-
-
-            <a
-                class="btn-categoria"
-                href="https://api.giochisocieta.com/messaggi-privati.html"
-                target="_top"
-            >
-
-                <span class="categoria-icona">
-                    ✉
-                </span>
-
-                Messaggi
-
-            </a>
-
+            <a class="btn-categoria" href="https://api.giochisocieta.com/profilo.html" target="_top"><span class="categoria-icona">👤</span> Profilo</a>
+            <a class="btn-categoria" href="https://api.giochisocieta.com/messaggi-privati.html" target="_top"><span class="categoria-icona">✉</span> Messaggi</a>
         </div>
-
     </aside>
 
-
-    <!-- ==================================================
-         FEED
-    =================================================== -->
-
+    <!-- FEED -->
     <section class="feed-community">
-
-
-        <!-- COMPOSER -->
-
         <div class="composer card">
-
-            <div
-                id="avatarComposer"
-                class="avatar"
-            >
-                ?
-            </div>
-
-
-            <div
-                class="composer-input"
-                onclick="apriModalPost()"
-            >
-
-                Condividi qualcosa con la community...
-
-            </div>
-
+            <div id="avatarComposer" class="avatar">?</div>
+            <div class="composer-input" onclick="apriModalPost()">Condividi qualcosa con la community...</div>
         </div>
-
-
-        <!-- FILTRI -->
-
         <div class="feed-filtri card">
-
-            <button
-                class="feed-filtro attivo"
-                onclick="selezionaFiltroFeed(this)"
-            >
-                Più rilevanti
-            </button>
-
-            <button
-                class="feed-filtro"
-                onclick="selezionaFiltroFeed(this)"
-            >
-                Recenti
-            </button>
-
-            <button
-                class="feed-filtro"
-                onclick="selezionaFiltroFeed(this)"
-            >
-                Più discussi
-            </button>
-
+            <button class="feed-filtro attivo" onclick="selezionaFiltroFeed(this)">Più rilevanti</button>
+            <button class="feed-filtro" onclick="selezionaFiltroFeed(this)">Recenti</button>
+            <button class="feed-filtro" onclick="selezionaFiltroFeed(this)">Più discussi</button>
         </div>
-
-
-        <!-- ==================================================
-             FEED REALE CARICATO DAL SERVER
-        =================================================== -->
-
         <div id="listaPostCommunity">
-
-            <div class="community-caricamento card">
-                <div class="community-caricamento-spinner"></div>
-                Caricamento discussioni...
-            </div>
-
+            <div class="community-caricamento card"><div class="community-caricamento-spinner"></div>Caricamento discussioni...</div>
         </div>
-
-
-        <div
-            id="feedVuoto"
-            class="feed-vuoto card"
-        >
-
-            <strong>
-                Nessun risultato trovato
-            </strong>
-
-            <span>
-                Prova a cercare un altro giocatore
-                o un altro argomento.
-            </span>
-
+        <div id="feedVuoto" class="feed-vuoto card">
+            <strong>Nessun risultato trovato</strong>
+            <span>Prova a cercare un altro giocatore o un altro argomento.</span>
         </div>
-
     </section>
 
-
-    <!-- ==================================================
-         DESTRA
-    =================================================== -->
-
+    <!-- SIDEBAR DESTRA -->
     <aside class="sidebar-destra">
 
-
-        <!-- CLASSIFICA -->
-
         <div class="card">
-
-            <div class="card-titolo">
-
-                <strong>
-                    🏆 Top giocatori
-                </strong>
-
-                <span>
-                    CLASSIFICA
-                </span>
-
+            <div class="card-titolo"><strong>👥 Amici online</strong><span id="amiciContatore"></span></div>
+            <div id="amiciCommunity">
+                <div class="pannello-quieto">Caricamento...</div>
             </div>
-
-
-            <div id="classificaCommunity">
-
-                <div
-                    style="
-                        padding:18px;
-                        text-align:center;
-                        color:#999;
-                        font-size:10px;
-                    "
-                >
-                    Caricamento...
-                </div>
-
-            </div>
-
         </div>
 
+        <div class="card">
+            <div class="card-titolo"><strong>⚡ Attività recente</strong><span>LIVE</span></div>
+            <div id="attivitaCommunity">
+                <div class="pannello-quieto">Caricamento...</div>
+            </div>
+        </div>
 
-        <!-- REGOLE -->
+        <div class="card">
+            <div class="card-titolo"><strong>🏆 Top giocatori</strong><span>CLASSIFICA</span></div>
+            <div id="classificaCommunity">
+                <div class="pannello-quieto">Caricamento...</div>
+            </div>
+        </div>
 
         <div class="regole-card card">
-
             <div class="regole-header">
-
-                <strong>
-                    Community sana, partite migliori.
-                </strong>
-
-                <span>
-                    Poche regole, molto rispetto.
-                </span>
-
+                <strong>Community sana, partite migliori.</strong>
+                <span>Poche regole, molto rispetto.</span>
             </div>
-
-
             <div class="regole-contenuto">
-
-                <div class="regola">
-
-                    <span class="regola-numero">
-                        1
-                    </span>
-
-                    Rispetta gli altri giocatori.
-
-                </div>
-
-
-                <div class="regola">
-
-                    <span class="regola-numero">
-                        2
-                    </span>
-
-                    Niente spam o contenuti offensivi.
-
-                </div>
-
-
-                <div class="regola">
-
-                    <span class="regola-numero">
-                        3
-                    </span>
-
-                    Mantieni le discussioni utili e pertinenti.
-
-                </div>
-
-
-                <a
-                    href="https://api.giochisocieta.com/regole-community.html"
-                    target="_top"
-                    style="
-                        display:block;
-                        margin-top:14px;
-                        color:#8d7600;
-                        font-size:10px;
-                        font-weight:900;
-                    "
-                >
-                    Leggi le regole Community →
-                </a>
-
+                <div class="regola"><span class="regola-numero">1</span>Rispetta gli altri giocatori.</div>
+                <div class="regola"><span class="regola-numero">2</span>Niente spam o contenuti offensivi.</div>
+                <div class="regola"><span class="regola-numero">3</span>Mantieni le discussioni utili e pertinenti.</div>
+                <a class="link-regole" href="https://api.giochisocieta.com/regole-community.html" target="_top">Leggi le regole Community →</a>
             </div>
-
         </div>
 
     </aside>
 
 </main>
 
-
-<!-- ======================================================
-     MODAL NUOVO POST
-====================================================== -->
-
-<div
-    id="overlayNuovoPost"
-    class="overlay-modal"
-    onclick="chiudiModalDaOverlay(event)"
->
-
+<!-- MODAL NUOVO POST -->
+<div id="overlayNuovoPost" class="overlay-modal" onclick="chiudiModalDaOverlay(event)">
     <div class="modal-post">
-
         <div class="modal-header">
-
-            <strong>
-                Crea un nuovo post
-            </strong>
-
-            <button
-                class="modal-chiudi"
-                onclick="chiudiModalPost()"
-            >
-                ×
-            </button>
-
+            <strong>Crea un nuovo post</strong>
+            <button class="modal-chiudi" onclick="chiudiModalPost()">×</button>
         </div>
-
-
         <div class="modal-body">
-
-            <label class="form-label">
-                Categoria
-            </label>
-
-            <select
-                id="nuovoPostCategoria"
-                class="campo"
-            >
-
-                <option value="discussioni">
-                    Discussione
-                </option>
-
-                <option value="giocatori">
-                    Cerco giocatori
-                </option>
-
-                <option value="strategie">
-                    Strategie
-                </option>
-
-                <option value="eventi">
-                    Eventi
-                </option>
-
-                <option value="supporto">
-                    Supporto
-                </option>
-
+            <label class="form-label">Categoria</label>
+            <select id="nuovoPostCategoria" class="campo">
+                <option value="discussioni">Discussione</option>
+                <option value="giocatori">Cerco giocatori</option>
+                <option value="strategie">Strategie</option>
+                <option value="eventi">Eventi</option>
+                <option value="supporto">Supporto</option>
             </select>
-
-
-            <label class="form-label">
-                Titolo
-            </label>
-
-            <input
-                id="nuovoPostTitolo"
-                class="campo"
-                maxlength="100"
-                placeholder="Di cosa vuoi parlare?"
-            >
-
-
-            <label class="form-label">
-                Messaggio
-            </label>
-
-            <textarea
-                id="nuovoPostTesto"
-                class="campo"
-                maxlength="1200"
-                placeholder="Scrivi qualcosa alla community..."
-            ></textarea>
-
+            <label class="form-label">Titolo</label>
+            <input id="nuovoPostTitolo" class="campo" maxlength="100" placeholder="Di cosa vuoi parlare?">
+            <label class="form-label">Messaggio</label>
+            <textarea id="nuovoPostTesto" class="campo" maxlength="1200" placeholder="Scrivi qualcosa alla community..."></textarea>
         </div>
-
-
         <div class="modal-footer">
-
-            <button
-                class="btn-secondario"
-                onclick="chiudiModalPost()"
-            >
-                Annulla
-            </button>
-
-
-            <button
-                class="btn-pubblica"
-                onclick="pubblicaPost()"
-            >
-                Pubblica
-            </button>
-
+            <button class="btn-secondario" onclick="chiudiModalPost()">Annulla</button>
+            <button class="btn-pubblica" onclick="pubblicaPost()">Pubblica</button>
         </div>
-
     </div>
-
 </div>
 
-
-<!-- ======================================================
-     TOAST
-====================================================== -->
-
 <div id="toastCommunity"></div>
-
-
 
 <script>
 
 /* =========================================================
-   CONFIGURAZIONE COMMUNITY REALE
+   CONFIGURAZIONE
 ========================================================= */
 
-const SERVER =
-    "https://api.giochisocieta.com";
+const SERVER = "https://api.giochisocieta.com";
+const COMMUNITY_URL = "https://solfriniluca1.wixstudio.com/giochisocieta";
+const INTERVALLO_AGGIORNAMENTO = 8000;
 
-const COMMUNITY_URL =
-    "https://solfriniluca1.wixstudio.com/giochisocieta";
-
-const INTERVALLO_AGGIORNAMENTO_POST =
-    8000;
-
-let utenteCorrente =
-    null;
-
-let categoriaCorrente =
-    "tutto";
-
-let ordinamentoCorrente =
-    "rilevanti";
-
-let postCommunity =
-    [];
-
-let postCommentiAperti =
-    new Set();
-
-let caricamentoPostInCorso =
-    false;
-
-let timerToast =
-    null;
-
+let utenteCorrente = null;
+let categoriaCorrente = "tutto";
+let ordinamentoCorrente = "rilevanti";
+let postCommunity = [];
+let postCommentiAperti = new Set();
+let caricamentoPostInCorso = false;
+let timerToast = null;
 
 /* =========================================================
    UTILITY
 ========================================================= */
 
-function iniziale(nome){
-
-    return String(
-        nome || "?"
-    )
-    .trim()
-    .charAt(0)
-    .toUpperCase();
-
-}
-
+function iniziale(nome){ return String(nome || "?").trim().charAt(0).toUpperCase(); }
 
 function escapeHtml(testo){
-
-    return String(
-        testo ?? ""
-    ).replace(
-        /[&<>"']/g,
-        carattere => ({
-
-            "&":"&amp;",
-            "<":"&lt;",
-            ">":"&gt;",
-            '"':"&quot;",
-            "'":"&#39;"
-
-        })[carattere]
-    );
-
+    return String(testo ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]);
 }
-
-
-function escapeAttr(testo){
-
-    return escapeHtml(
-        testo
-    );
-
-}
-
+function escapeAttr(testo){ return escapeHtml(testo); }
 
 function avatarSicuro(url){
-
-    const valore =
-        String(
-            url || ""
-        ).trim();
-
-    if(
-        valore.startsWith("https://") ||
-        valore.startsWith("data:image/")
-    ){
-        return valore;
-    }
-
+    const v = String(url || "").trim();
+    if(v.startsWith("https://") || v.startsWith("data:image/")) return v;
     return "";
-
 }
-
 
 function coloreDaNome(nome){
-
-    const colori = [
-        "#6a2c70",
-        "#1e40af",
-        "#43a047",
-        "#f57c00",
-        "#c0ca33",
-        "#e53935",
-        "#00838f",
-        "#8d6e63"
-    ];
-
-    let somma =
-        0;
-
-    const testo =
-        String(
-            nome || ""
-        );
-
-    for(
-        let i = 0;
-        i < testo.length;
-        i++
-    ){
-        somma +=
-            testo.charCodeAt(i);
-    }
-
-    return colori[
-        somma %
-        colori.length
-    ];
-
+    const colori = ["#6a2c70","#1e40af","#1f8a4c","#b35c00","#7a8a1f","#c23b3b","#00707f","#6d5848"];
+    let somma = 0;
+    const testo = String(nome || "");
+    for(let i=0;i<testo.length;i++) somma += testo.charCodeAt(i);
+    return colori[somma % colori.length];
 }
 
-
-function renderAvatar(
-    nickname,
-    avatar,
-    classe = "avatar"
-){
-
-    const avatarPulito =
-        avatarSicuro(
-            avatar
-        );
-
-    if(
-        avatarPulito
-    ){
-
-        return `
-            <div class="${classe}">
-                <img
-                    src="${escapeAttr(avatarPulito)}"
-                    alt=""
-                >
-            </div>
-        `;
-
+function renderAvatar(nickname, avatar, classe = "avatar"){
+    const pulito = avatarSicuro(avatar);
+    if(pulito){
+        return `<div class="${classe}"><img src="${escapeAttr(pulito)}" alt=""></div>`;
     }
-
-    return `
-        <div
-            class="${classe}"
-            style="background:${coloreDaNome(nickname)}"
-        >
-            ${escapeHtml(iniziale(nickname))}
-        </div>
-    `;
-
+    return `<div class="${classe}" style="background:${coloreDaNome(nickname)}">${escapeHtml(iniziale(nickname))}</div>`;
 }
 
+/* Badge: array opzionale di {icona, nome} restituito dal backend su post / commenti / classifica.
+   Se il campo non è presente, semplicemente non viene mostrato nulla: nessun errore. */
+function renderBadge(badge){
+    if(!Array.isArray(badge) || !badge.length) return "";
+    return `<span class="riga-badge">` + badge.slice(0,4).map(b =>
+        `<span class="badge-chip" title="${escapeAttr(b.nome || "")}">${escapeHtml(b.icona || "★")}</span>`
+    ).join("") + `</span>`;
+}
 
 function tempoRelativo(timestamp){
-
-    const data =
-        Number(
-            timestamp || 0
-        );
-
-    if(
-        !data
-    ){
-        return "";
-    }
-
-    const diff =
-        Math.max(
-            0,
-            Date.now() - data
-        );
-
-    const secondi =
-        Math.floor(
-            diff / 1000
-        );
-
-    if(
-        secondi < 45
-    ){
-        return "Adesso";
-    }
-
-    const minuti =
-        Math.floor(
-            secondi / 60
-        );
-
-    if(
-        minuti < 60
-    ){
-        return `${minuti} min fa`;
-    }
-
-    const ore =
-        Math.floor(
-            minuti / 60
-        );
-
-    if(
-        ore < 24
-    ){
-        return `${ore} h fa`;
-    }
-
-    const giorni =
-        Math.floor(
-            ore / 24
-        );
-
-    if(
-        giorni < 7
-    ){
-        return `${giorni} g fa`;
-    }
-
-    return new Date(
-        data
-    ).toLocaleDateString(
-        "it-IT",
-        {
-            day:"2-digit",
-            month:"2-digit",
-            year:"numeric"
-        }
-    );
-
+    const data = Number(timestamp || 0);
+    if(!data) return "";
+    const diff = Math.max(0, Date.now() - data);
+    const secondi = Math.floor(diff/1000);
+    if(secondi < 45) return "Adesso";
+    const minuti = Math.floor(secondi/60);
+    if(minuti < 60) return `${minuti} min fa`;
+    const ore = Math.floor(minuti/60);
+    if(ore < 24) return `${ore} h fa`;
+    const giorni = Math.floor(ore/24);
+    if(giorni < 7) return `${giorni} g fa`;
+    return new Date(data).toLocaleDateString("it-IT",{day:"2-digit",month:"2-digit",year:"numeric"});
 }
-
 
 function etichettaCategoria(categoria){
-
-    const etichette = {
-        discussioni:"Discussione",
-        giocatori:"Cerco giocatori",
-        strategie:"Strategie",
-        eventi:"Eventi",
-        supporto:"Supporto"
-    };
-
-    return etichette[
-        categoria
-    ] || "Discussione";
-
+    const etichette = {discussioni:"Discussione",giocatori:"Cerco giocatori",strategie:"Strategie",eventi:"Eventi",supporto:"Supporto"};
+    return etichette[categoria] || "Discussione";
 }
-
 
 /* =========================================================
    API
 ========================================================= */
 
-async function apiCommunity(
-    percorso,
-    opzioni = {}
-){
-
-    const configurazione = {
-        credentials:"include",
-        cache:"no-store",
-        ...opzioni
-    };
-
-    if(
-        configurazione.body &&
-        !(configurazione.body instanceof FormData)
-    ){
-
-        configurazione.headers = {
-            "Content-Type":"application/json",
-            ...(configurazione.headers || {})
-        };
-
+async function apiCommunity(percorso, opzioni = {}){
+    const configurazione = {credentials:"include", cache:"no-store", ...opzioni};
+    if(configurazione.body && !(configurazione.body instanceof FormData)){
+        configurazione.headers = {"Content-Type":"application/json", ...(configurazione.headers || {})};
     }
-
-    const risposta =
-        await fetch(
-            SERVER + percorso,
-            configurazione
-        );
-
+    const risposta = await fetch(SERVER + percorso, configurazione);
     let dati = {};
-
-    try{
-
-        dati =
-            await risposta.json();
-
-    }catch(
-        errore
-    ){
-
-        dati = {};
-
-    }
-
-    if(
-        !risposta.ok
-    ){
-
-        const errore =
-            new Error(
-                dati.errore ||
-                `Errore HTTP ${risposta.status}`
-            );
-
-        errore.status =
-            risposta.status;
-
+    try{ dati = await risposta.json(); }catch(e){ dati = {}; }
+    if(!risposta.ok){
+        const errore = new Error(dati.errore || `Errore HTTP ${risposta.status}`);
+        errore.status = risposta.status;
         throw errore;
-
     }
-
     return dati;
-
 }
-
 
 /* =========================================================
    TOAST
 ========================================================= */
 
 function mostraToast(testo){
-
-    const toast =
-        document.getElementById(
-            "toastCommunity"
-        );
-
-    if(
-        !toast
-    ){
-        return;
-    }
-
-    toast.textContent =
-        testo;
-
-    toast.classList.add(
-        "visibile"
-    );
-
-    clearTimeout(
-        timerToast
-    );
-
-    timerToast =
-        setTimeout(
-            () => {
-
-                toast.classList.remove(
-                    "visibile"
-                );
-
-            },
-            3500
-        );
-
+    const toast = document.getElementById("toastCommunity");
+    if(!toast) return;
+    toast.textContent = testo;
+    toast.classList.add("visibile");
+    clearTimeout(timerToast);
+    timerToast = setTimeout(() => toast.classList.remove("visibile"), 3500);
 }
-
 
 /* =========================================================
    UTENTE
 ========================================================= */
 
 async function controllaUtente(){
-
     try{
-
-        utenteCorrente =
-            await apiCommunity(
-                "/api/me"
-            );
-
-        aggiornaUtenteCommunity(
-            utenteCorrente
-        );
-
-    }catch(
-        errore
-    ){
-
-        utenteCorrente =
-            null;
-
-        aggiornaUtenteCommunity(
-            null
-        );
-
+        utenteCorrente = await apiCommunity("/api/me");
+        aggiornaUtenteCommunity(utenteCorrente);
+    }catch(e){
+        utenteCorrente = null;
+        aggiornaUtenteCommunity(null);
     }
-
 }
 
-
-function aggiornaUtenteCommunity(
-    dati
-){
-
-    const avatar =
-        document.getElementById(
-            "avatarComposer"
-        );
-
-    if(
-        !avatar
-    ){
+function aggiornaUtenteCommunity(dati){
+    const avatar = document.getElementById("avatarComposer");
+    if(!avatar) return;
+    if(!dati){
+        avatar.innerHTML = "?";
+        avatar.style.background = "var(--nero-2)";
         return;
     }
-
-    if(
-        !dati
-    ){
-
-        avatar.innerHTML =
-            "?";
-
-        avatar.style.background =
-            "#202024";
-
-        return;
-
-    }
-
-    const avatarPulito =
-        avatarSicuro(
-            dati.avatar
-        );
-
-    if(
-        avatarPulito
-    ){
-
-        avatar.innerHTML = `
-            <img
-                src="${escapeAttr(avatarPulito)}"
-                alt=""
-            >
-        `;
-
+    const pulito = avatarSicuro(dati.avatar);
+    if(pulito){
+        avatar.innerHTML = `<img src="${escapeAttr(pulito)}" alt="">`;
     }else{
-
-        avatar.innerHTML =
-            escapeHtml(
-                iniziale(
-                    dati.nickname
-                )
-            );
-
-        avatar.style.background =
-            coloreDaNome(
-                dati.nickname
-            );
-
+        avatar.innerHTML = escapeHtml(iniziale(dati.nickname));
+        avatar.style.background = coloreDaNome(dati.nickname);
     }
-
 }
-
 
 /* =========================================================
-   CARICAMENTO POST REALI
+   CARICAMENTO POST
 ========================================================= */
 
-async function caricaPost(
-    silenzioso = false
-){
+async function caricaPost(silenzioso = false){
+    if(caricamentoPostInCorso) return;
 
-    if(
-        caricamentoPostInCorso
-    ){
-        return;
-    }
+    const elementoAttivo = document.activeElement;
+    if(silenzioso && elementoAttivo?.classList?.contains("commento-input")) return;
 
-    /*
-     * Se l'utente sta scrivendo un commento,
-     * non ricostruiamo il feed sotto le sue dita.
-     */
-    const elementoAttivo =
-        document.activeElement;
+    const modalAperto = document.getElementById("overlayNuovoPost")?.classList.contains("aperto");
+    if(silenzioso && modalAperto) return;
 
-    if(
-        silenzioso &&
-        elementoAttivo &&
-        elementoAttivo.classList &&
-        elementoAttivo.classList.contains(
-            "commento-input"
-        )
-    ){
-        return;
-    }
+    caricamentoPostInCorso = true;
+    const lista = document.getElementById("listaPostCommunity");
 
-    const modalAperto =
-        document
-        .getElementById(
-            "overlayNuovoPost"
-        )
-        ?.classList
-        .contains(
-            "aperto"
-        );
-
-    if(
-        silenzioso &&
-        modalAperto
-    ){
-        return;
-    }
-
-    caricamentoPostInCorso =
-        true;
-
-    const lista =
-        document.getElementById(
-            "listaPostCommunity"
-        );
-
-    if(
-        !silenzioso &&
-        lista
-    ){
-
-        lista.innerHTML = `
-            <div class="community-caricamento card">
-                <div class="community-caricamento-spinner"></div>
-                Caricamento discussioni...
-            </div>
-        `;
-
+    if(!silenzioso && lista){
+        lista.innerHTML = `<div class="community-caricamento card"><div class="community-caricamento-spinner"></div>Caricamento discussioni...</div>`;
     }
 
     try{
-
-        const dati =
-            await apiCommunity(
-                "/api/community/posts"
-            );
-
-        postCommunity =
-            Array.isArray(
-                dati.posts
-            )
-                ? dati.posts
-                : [];
-
+        const dati = await apiCommunity("/api/community/posts");
+        postCommunity = Array.isArray(dati.posts) ? dati.posts : [];
         renderFeed();
-
         aggiornaConteggiCategorie();
 
-        /*
-         * Riporta aperte le sezioni commenti
-         * che erano aperte prima del refresh.
-         */
-        for(
-            const postId
-            of postCommentiAperti
-        ){
-
-            const sezione =
-                document.getElementById(
-                    `commenti-${postId}`
-                );
-
-            if(
-                sezione
-            ){
-
-                sezione.classList.add(
-                    "aperta"
-                );
-
-                caricaCommenti(
-                    postId,
-                    true
-                );
-
+        for(const postId of postCommentiAperti){
+            const sezione = document.getElementById(`commenti-${postId}`);
+            if(sezione){
+                sezione.classList.add("aperta");
+                caricaCommenti(postId, true);
             }
-
         }
-
-    }catch(
-        errore
-    ){
-
-        if(
-            lista
-        ){
-
-            lista.innerHTML = `
-                <div class="community-caricamento card">
-                    Impossibile caricare la Community.
-                    Riprova tra qualche secondo.
-                </div>
-            `;
-
+    }catch(errore){
+        if(lista){
+            lista.innerHTML = `<div class="community-caricamento card">Impossibile caricare la Community. Riprova tra qualche secondo.</div>`;
         }
-
-        console.error(
-            "Errore caricamento Community:",
-            errore
-        );
-
+        console.error("Errore caricamento Community:", errore);
     }finally{
-
-        caricamentoPostInCorso =
-            false;
-
+        caricamentoPostInCorso = false;
     }
-
 }
 
-
 /* =========================================================
-   ORDINAMENTO E FILTRO
+   ORDINAMENTO / FILTRO
 ========================================================= */
 
 function ottieniPostVisibili(){
+    const ricerca = document.getElementById("ricercaCommunity").value.trim().toLowerCase();
 
-    const ricerca =
-        document
-        .getElementById(
-            "ricercaCommunity"
-        )
-        .value
-        .trim()
-        .toLowerCase();
+    let lista = postCommunity.filter(post => {
+        const categoriaOk = categoriaCorrente === "tutto" || post.categoria === categoriaCorrente;
+        const testoRicerca = [post.titolo, post.testo, post.nicknameAutore, etichettaCategoria(post.categoria)].join(" ").toLowerCase();
+        const ricercaOk = !ricerca || testoRicerca.includes(ricerca);
+        return categoriaOk && ricercaOk;
+    });
 
-    let lista =
-        postCommunity.filter(
-            post => {
+    lista = [...lista];
 
-                const categoriaOk =
-                    categoriaCorrente ===
-                    "tutto"
-                    ||
-                    post.categoria ===
-                    categoriaCorrente;
-
-                const testoRicerca =
-                    [
-                        post.titolo,
-                        post.testo,
-                        post.nicknameAutore,
-                        etichettaCategoria(
-                            post.categoria
-                        )
-                    ]
-                    .join(" ")
-                    .toLowerCase();
-
-                const ricercaOk =
-                    !ricerca
-                    ||
-                    testoRicerca.includes(
-                        ricerca
-                    );
-
-                return (
-                    categoriaOk &&
-                    ricercaOk
-                );
-
-            }
-        );
-
-    lista =
-        [...lista];
-
-    if(
-        ordinamentoCorrente ===
-        "recenti"
-    ){
-
-        lista.sort(
-            (a,b) =>
-                Number(b.creatoIl || 0) -
-                Number(a.creatoIl || 0)
-        );
-
-    }else if(
-        ordinamentoCorrente ===
-        "discussi"
-    ){
-
-        lista.sort(
-            (a,b) =>
-                (
-                    Number(
-                        b.conteggioCommenti || 0
-                    ) -
-                    Number(
-                        a.conteggioCommenti || 0
-                    )
-                )
-                ||
-                (
-                    Number(
-                        b.creatoIl || 0
-                    ) -
-                    Number(
-                        a.creatoIl || 0
-                    )
-                )
-        );
-
+    if(ordinamentoCorrente === "recenti"){
+        lista.sort((a,b) => Number(b.creatoIl||0) - Number(a.creatoIl||0));
+    }else if(ordinamentoCorrente === "discussi"){
+        lista.sort((a,b) => (Number(b.conteggioCommenti||0) - Number(a.conteggioCommenti||0)) || (Number(b.creatoIl||0) - Number(a.creatoIl||0)));
     }else{
-
-        /*
-         * Rilevanza:
-         * commenti e reazioni pesano di più,
-         * ma i post recenti ricevono comunque priorità.
-         */
-        lista.sort(
-            (a,b) => {
-
-                const etaAOre =
-                    Math.max(
-                        0,
-                        (
-                            Date.now() -
-                            Number(
-                                a.creatoIl || 0
-                            )
-                        ) /
-                        3600000
-                    );
-
-                const etaBOre =
-                    Math.max(
-                        0,
-                        (
-                            Date.now() -
-                            Number(
-                                b.creatoIl || 0
-                            )
-                        ) /
-                        3600000
-                    );
-
-                const punteggioA =
-                    Number(
-                        a.conteggioReazioni || 0
-                    ) * 2
-                    +
-                    Number(
-                        a.conteggioCommenti || 0
-                    ) * 3
-                    +
-                    Number(
-                        a.conteggioCondivisioni || 0
-                    )
-                    -
-                    Math.min(
-                        etaAOre / 12,
-                        20
-                    );
-
-                const punteggioB =
-                    Number(
-                        b.conteggioReazioni || 0
-                    ) * 2
-                    +
-                    Number(
-                        b.conteggioCommenti || 0
-                    ) * 3
-                    +
-                    Number(
-                        b.conteggioCondivisioni || 0
-                    )
-                    -
-                    Math.min(
-                        etaBOre / 12,
-                        20
-                    );
-
-                return (
-                    punteggioB -
-                    punteggioA
-                )
-                ||
-                (
-                    Number(
-                        b.creatoIl || 0
-                    ) -
-                    Number(
-                        a.creatoIl || 0
-                    )
-                );
-
-            }
-        );
-
+        lista.sort((a,b) => {
+            const etaAOre = Math.max(0, (Date.now() - Number(a.creatoIl||0)) / 3600000);
+            const etaBOre = Math.max(0, (Date.now() - Number(b.creatoIl||0)) / 3600000);
+            const puntA = Number(a.conteggioReazioni||0)*2 + Number(a.conteggioCommenti||0)*3 + Number(a.conteggioCondivisioni||0) - Math.min(etaAOre/12,20);
+            const puntB = Number(b.conteggioReazioni||0)*2 + Number(b.conteggioCommenti||0)*3 + Number(b.conteggioCondivisioni||0) - Math.min(etaBOre/12,20);
+            return (puntB - puntA) || (Number(b.creatoIl||0) - Number(a.creatoIl||0));
+        });
     }
-
     return lista;
-
 }
-
 
 function renderFeed(){
+    const contenitore = document.getElementById("listaPostCommunity");
+    const vuoto = document.getElementById("feedVuoto");
+    if(!contenitore) return;
 
-    const contenitore =
-        document.getElementById(
-            "listaPostCommunity"
-        );
+    const lista = ottieniPostVisibili();
 
-    const vuoto =
-        document.getElementById(
-            "feedVuoto"
-        );
-
-    if(
-        !contenitore
-    ){
+    if(!lista.length){
+        contenitore.innerHTML = "";
+        if(vuoto) vuoto.style.display = "block";
         return;
     }
+    if(vuoto) vuoto.style.display = "none";
 
-    const lista =
-        ottieniPostVisibili();
-
-    if(
-        !lista.length
-    ){
-
-        contenitore.innerHTML =
-            "";
-
-        if(
-            vuoto
-        ){
-            vuoto.style.display =
-                "block";
-        }
-
-        return;
-
-    }
-
-    if(
-        vuoto
-    ){
-        vuoto.style.display =
-            "none";
-    }
-
-    contenitore.innerHTML =
-        lista
-        .map(
-            creaHtmlPost
-        )
-        .join("");
-
+    contenitore.innerHTML = lista.map(creaHtmlPost).join("");
 }
-
 
 function aggiornaConteggiCategorie(){
-
-    const conteggi = {
-        tutto:
-            postCommunity.length,
-        discussioni:0,
-        giocatori:0,
-        strategie:0,
-        eventi:0,
-        supporto:0
-    };
-
-    postCommunity.forEach(
-        post => {
-
-            if(
-                Object.prototype
-                .hasOwnProperty.call(
-                    conteggi,
-                    post.categoria
-                )
-            ){
-
-                conteggi[
-                    post.categoria
-                ]++;
-
-            }
-
-        }
-    );
-
-    document
-    .querySelectorAll(
-        ".btn-categoria[data-categoria]"
-    )
-    .forEach(
-        bottone => {
-
-            const numero =
-                bottone.querySelector(
-                    ".categoria-numero"
-                );
-
-            if(
-                numero
-            ){
-
-                numero.textContent =
-                    String(
-                        conteggi[
-                            bottone.dataset.categoria
-                        ] || 0
-                    );
-
-            }
-
-        }
-    );
-
+    const conteggi = {tutto:postCommunity.length, discussioni:0, giocatori:0, strategie:0, eventi:0, supporto:0};
+    postCommunity.forEach(post => {
+        if(Object.prototype.hasOwnProperty.call(conteggi, post.categoria)) conteggi[post.categoria]++;
+    });
+    document.querySelectorAll(".btn-categoria[data-categoria]").forEach(bottone => {
+        const numero = bottone.querySelector(".categoria-numero");
+        if(numero) numero.textContent = String(conteggi[bottone.dataset.categoria] || 0);
+    });
 }
-
 
 /* =========================================================
    HTML POST
 ========================================================= */
 
-function creaHtmlPost(
-    post
-){
+function creaHtmlPost(post){
+    const postId = escapeAttr(post.id);
+    const nickname = post.nicknameAutore || "Giocatore";
+    const ruolo = post.ruoloAutore || "utente";
+    const badgeUfficiale = ruolo === "admin" ? `<span class="badge-autore">UFFICIALE</span>` : "";
+    const badgeGiocatore = renderBadge(post.badge);
+    const categoria = etichettaCategoria(post.categoria);
+    const testo = escapeHtml(post.testo).replace(/\n/g,"<br>");
+    const titolo = escapeHtml(post.titolo);
+    const liked = post.mioLike === true;
+    const salvato = post.salvato === true;
+    const puoEliminare = post.puoEliminare === true;
+    const menuTitolo = puoEliminare ? "Elimina post" : "Segnala post";
+    const azioneMenu = puoEliminare ? `eliminaPost('${postId}')` : `segnalaPost('${postId}')`;
 
-    const postId =
-        escapeAttr(
-            post.id
-        );
-
-    const nickname =
-        post.nicknameAutore ||
-        "Giocatore";
-
-    const ruolo =
-        post.ruoloAutore ||
-        "utente";
-
-    const badge =
-        ruolo === "admin"
-            ? `<span class="badge-autore">UFFICIALE</span>`
-            : "";
-
-    const categoria =
-        etichettaCategoria(
-            post.categoria
-        );
-
-    const testo =
-        escapeHtml(
-            post.testo
-        )
-        .replace(
-            /\n/g,
-            "<br>"
-        );
-
-    const titolo =
-        escapeHtml(
-            post.titolo
-        );
-
-    const liked =
-        post.mioLike === true;
-
-    const salvato =
-        post.salvato === true;
-
-    const puoEliminare =
-        post.puoEliminare === true;
-
-    const menuTitolo =
-        puoEliminare
-            ? "Elimina post"
-            : "Segnala post";
-
-    const azioneMenu =
-        puoEliminare
-            ? `eliminaPost('${postId}')`
-            : `segnalaPost('${postId}')`;
-
-    const tavolo =
-        post.categoria === "giocatori"
-            ? `
-                <div class="tavolo-community">
-
-                    <div class="tavolo-community-icona">
-                        🎲
-                    </div>
-
-                    <div class="tavolo-community-info">
-
-                        <strong>
-                            Cerchi qualcuno con cui giocare?
-                        </strong>
-
-                        <span>
-                            Apri le stanze e trova un tavolo disponibile.
-                        </span>
-
-                    </div>
-
-                    <button
-                        class="btn-unisciti"
-                        onclick="vaiAlleStanze()"
-                    >
-                        Vai alle stanze
-                    </button>
-
-                </div>
-            `
-            : "";
+    const tavolo = post.categoria === "giocatori" ? `
+        <div class="tavolo-community">
+            <div class="tavolo-community-icona">🎲</div>
+            <div class="tavolo-community-info">
+                <strong>Cerchi qualcuno con cui giocare?</strong>
+                <span>Apri le stanze e trova un tavolo disponibile.</span>
+            </div>
+            <button class="btn-unisciti" onclick="vaiAlleStanze()">Vai alle stanze</button>
+        </div>` : "";
 
     return `
-
-        <article
-            class="post-community card"
-            data-post-id="${postId}"
-            data-categoria="${escapeAttr(post.categoria)}"
-        >
-
+        <article class="post-community card" data-post-id="${postId}" data-categoria="${escapeAttr(post.categoria)}">
             <div class="post-interno">
-
                 <div class="post-header">
-
-                    ${renderAvatar(
-                        nickname,
-                        post.avatarAutore,
-                        "avatar"
-                    )}
-
+                    ${renderAvatar(nickname, post.avatarAutore, "avatar")}
                     <div class="post-autore-info">
-
                         <div class="post-autore-riga">
-
-                            <span class="post-autore">
-                                ${escapeHtml(nickname)}
-                            </span>
-
-                            ${badge}
-
+                            <span class="post-autore">${escapeHtml(nickname)}</span>
+                            ${badgeGiocatore}
+                            ${badgeUfficiale}
                         </div>
-
-                        <div class="post-meta">
-
-                            ${escapeHtml(
-                                tempoRelativo(
-                                    post.creatoIl
-                                )
-                            )}
-                            · Pubblico
-
-                        </div>
-
+                        <div class="post-meta">${escapeHtml(tempoRelativo(post.creatoIl))} · Pubblico</div>
                     </div>
-
-                    <button
-                        class="post-menu"
-                        title="${menuTitolo}"
-                        aria-label="${menuTitolo}"
-                        onclick="${azioneMenu}"
-                    >
-                        ⋯
-                    </button>
-
+                    <button class="post-menu" title="${menuTitolo}" aria-label="${menuTitolo}" onclick="${azioneMenu}">⋯</button>
                 </div>
 
-                <div class="post-categoria">
-                    ${escapeHtml(categoria)}
-                </div>
-
-                <h2 class="post-titolo">
-                    ${titolo}
-                </h2>
-
-                <p class="post-testo">
-                    ${testo}
-                </p>
-
+                <div class="post-categoria">${escapeHtml(categoria)}</div>
+                <h2 class="post-titolo">${titolo}</h2>
+                <p class="post-testo">${testo}</p>
                 ${tavolo}
-
             </div>
-
 
             <div class="post-azioni">
-
-                <button
-                    class="post-azione ${liked ? "attiva" : ""}"
-                    onclick="toggleReazione('${postId}', this)"
-                    title="Mi piace"
-                >
-
-                    <svg class="icona">
-                        <use href="#i-heart"></use>
-                    </svg>
-
-                    <span
-                        class="numero-reazioni"
-                        data-reazioni-post="${postId}"
-                    >
-                        ${Number(
-                            post.conteggioReazioni || 0
-                        )}
-                    </span>
-
+                <button class="post-azione ${liked?"attiva":""}" onclick="toggleReazione('${postId}', this)" title="Mi piace">
+                    <svg class="icona"><use href="#i-heart"></use></svg>
+                    <span class="numero-reazioni" data-reazioni-post="${postId}">${Number(post.conteggioReazioni||0)}</span>
                 </button>
-
-
-                <button
-                    class="post-azione"
-                    onclick="toggleCommenti('${postId}')"
-                    title="Commenta"
-                >
-
-                    <svg class="icona">
-                        <use href="#i-comment"></use>
-                    </svg>
-
-                    <span
-                        data-commenti-post="${postId}"
-                    >
-                        ${formattaNumeroCommenti(
-                            post.conteggioCommenti || 0
-                        )}
-                    </span>
-
+                <button class="post-azione" onclick="toggleCommenti('${postId}')" title="Commenta">
+                    <svg class="icona"><use href="#i-comment"></use></svg>
+                    <span data-commenti-post="${postId}">${formattaNumeroCommenti(post.conteggioCommenti||0)}</span>
                 </button>
-
-
-                <button
-                    class="post-azione post-azione-condividi"
-                    onclick="condividiPost('${postId}')"
-                    title="Condividi"
-                >
-
-                    <svg class="icona">
-                        <use href="#i-share"></use>
-                    </svg>
-
-                    <span>
-                        Condividi
-                        ${
-                            Number(
-                                post.conteggioCondivisioni || 0
-                            ) > 0
-                                ? `· ${Number(post.conteggioCondivisioni)}`
-                                : ""
-                        }
-                    </span>
-
+                <button class="post-azione post-azione-condividi" onclick="condividiPost('${postId}')" title="Condividi">
+                    <svg class="icona"><use href="#i-share"></use></svg>
+                    <span>Condividi${Number(post.conteggioCondivisioni||0) > 0 ? ` · ${Number(post.conteggioCondivisioni)}` : ""}</span>
                 </button>
-
-
-                <button
-                    class="post-azione post-azione-salva ${salvato ? "attiva" : ""}"
-                    style="margin-left:auto"
-                    onclick="toggleSalvato('${postId}', this)"
-                    title="${salvato ? "Rimuovi dai salvati" : "Salva post"}"
-                >
-
-                    <svg class="icona">
-                        <use href="#i-bookmark"></use>
-                    </svg>
-
+                <button class="post-azione post-azione-salva ${salvato?"attiva":""}" style="margin-left:auto" onclick="toggleSalvato('${postId}', this)" title="${salvato?"Rimuovi dai salvati":"Salva post"}">
+                    <svg class="icona"><use href="#i-bookmark"></use></svg>
                 </button>
-
             </div>
 
-
-            <div
-                id="commenti-${postId}"
-                class="sezione-commenti"
-            >
-
+            <div id="commenti-${postId}" class="sezione-commenti">
                 <div class="commenti-interno">
-
-                    <div class="commenti-caricamento">
-                        Apri i commenti per caricarli.
-                    </div>
-
+                    <div class="commenti-caricamento">Apri i commenti per caricarli.</div>
                 </div>
-
             </div>
-
-        </article>
-
-    `;
-
+        </article>`;
 }
 
-
-function formattaNumeroCommenti(
-    numero
-){
-
-    const valore =
-        Number(
-            numero || 0
-        );
-
-    if(
-        valore === 1
-    ){
-        return "1 commento";
-    }
-
+function formattaNumeroCommenti(numero){
+    const valore = Number(numero||0);
+    if(valore === 1) return "1 commento";
     return `${valore} commenti`;
-
 }
-
 
 /* =========================================================
-   CREA POST REALE
+   CREA POST
 ========================================================= */
 
 function apriModalPost(){
-
-    if(
-        !utenteCorrente
-    ){
-
-        mostraToast(
-            "Accedi al tuo account per pubblicare nella Community."
-        );
-
+    if(!utenteCorrente){
+        mostraToast("Accedi al tuo account per pubblicare nella Community.");
         return;
-
     }
-
-    document
-    .getElementById(
-        "overlayNuovoPost"
-    )
-    .classList
-    .add(
-        "aperto"
-    );
-
-    setTimeout(
-        () => {
-
-            document
-            .getElementById(
-                "nuovoPostTitolo"
-            )
-            ?.focus();
-
-        },
-        50
-    );
-
+    document.getElementById("overlayNuovoPost").classList.add("aperto");
+    setTimeout(() => document.getElementById("nuovoPostTitolo")?.focus(), 50);
 }
-
 
 function chiudiModalPost(){
-
-    document
-    .getElementById(
-        "overlayNuovoPost"
-    )
-    .classList
-    .remove(
-        "aperto"
-    );
-
+    document.getElementById("overlayNuovoPost").classList.remove("aperto");
 }
 
-
-function chiudiModalDaOverlay(
-    evento
-){
-
-    if(
-        evento.target.id ===
-        "overlayNuovoPost"
-    ){
-
-        chiudiModalPost();
-
-    }
-
+function chiudiModalDaOverlay(evento){
+    if(evento.target.id === "overlayNuovoPost") chiudiModalPost();
 }
-
 
 async function pubblicaPost(){
+    if(!utenteCorrente){ mostraToast("Devi effettuare il login."); return; }
 
-    if(
-        !utenteCorrente
-    ){
+    const titolo = document.getElementById("nuovoPostTitolo").value.trim();
+    const testo = document.getElementById("nuovoPostTesto").value.trim();
+    const categoria = document.getElementById("nuovoPostCategoria").value;
 
-        mostraToast(
-            "Devi effettuare il login."
-        );
+    if(titolo.length < 3){ mostraToast("Il titolo deve contenere almeno 3 caratteri."); return; }
+    if(!testo){ mostraToast("Scrivi un messaggio."); return; }
 
-        return;
-
-    }
-
-    const titolo =
-        document
-        .getElementById(
-            "nuovoPostTitolo"
-        )
-        .value
-        .trim();
-
-    const testo =
-        document
-        .getElementById(
-            "nuovoPostTesto"
-        )
-        .value
-        .trim();
-
-    const categoria =
-        document
-        .getElementById(
-            "nuovoPostCategoria"
-        )
-        .value;
-
-    if(
-        titolo.length < 3
-    ){
-
-        mostraToast(
-            "Il titolo deve contenere almeno 3 caratteri."
-        );
-
-        return;
-
-    }
-
-    if(
-        !testo
-    ){
-
-        mostraToast(
-            "Scrivi un messaggio."
-        );
-
-        return;
-
-    }
-
-    const bottone =
-        document.querySelector(
-            ".btn-pubblica"
-        );
-
-    if(
-        bottone
-    ){
-
-        bottone.disabled =
-            true;
-
-        bottone.textContent =
-            "Pubblicazione...";
-
-    }
+    const bottone = document.querySelector(".btn-pubblica");
+    if(bottone){ bottone.disabled = true; bottone.textContent = "Pubblicazione..."; }
 
     try{
+        await apiCommunity("/api/community/posts", {method:"POST", body:JSON.stringify({categoria, titolo, testo})});
 
-        await apiCommunity(
-            "/api/community/posts",
-            {
-                method:"POST",
-                body:JSON.stringify({
-                    categoria,
-                    titolo,
-                    testo
-                })
-            }
-        );
-
-        document
-        .getElementById(
-            "nuovoPostTitolo"
-        )
-        .value = "";
-
-        document
-        .getElementById(
-            "nuovoPostTesto"
-        )
-        .value = "";
-
+        document.getElementById("nuovoPostTitolo").value = "";
+        document.getElementById("nuovoPostTesto").value = "";
         chiudiModalPost();
 
-        categoriaCorrente =
-            "tutto";
-
-        impostaCategoriaAttiva(
-            "tutto"
-        );
-
-        ordinamentoCorrente =
-            "recenti";
-
-        impostaFiltroFeedAttivo(
-            "recenti"
-        );
+        categoriaCorrente = "tutto";
+        impostaCategoriaAttiva("tutto");
+        ordinamentoCorrente = "recenti";
+        impostaFiltroFeedAttivo("recenti");
 
         await caricaPost();
-
-        mostraToast(
-            "Post pubblicato nella Community."
-        );
-
-    }catch(
-        errore
-    ){
-
-        mostraToast(
-            errore.message ||
-            "Impossibile pubblicare il post."
-        );
-
+        mostraToast("Post pubblicato nella Community.");
+    }catch(errore){
+        mostraToast(errore.message || "Impossibile pubblicare il post.");
     }finally{
-
-        if(
-            bottone
-        ){
-
-            bottone.disabled =
-                false;
-
-            bottone.textContent =
-                "Pubblica";
-
-        }
-
+        if(bottone){ bottone.disabled = false; bottone.textContent = "Pubblica"; }
     }
-
 }
-
 
 /* =========================================================
    ELIMINA / SEGNALA POST
 ========================================================= */
 
-async function eliminaPost(
-    postId
-){
-
-    if(
-        !utenteCorrente
-    ){
-
-        mostraToast(
-            "Devi effettuare il login."
-        );
-
-        return;
-
-    }
-
-    const conferma =
-        window.confirm(
-            "Vuoi davvero eliminare questo post? L'operazione non può essere annullata."
-        );
-
-    if(
-        !conferma
-    ){
-        return;
-    }
+async function eliminaPost(postId){
+    if(!utenteCorrente){ mostraToast("Devi effettuare il login."); return; }
+    if(!window.confirm("Vuoi davvero eliminare questo post? L'operazione non può essere annullata.")) return;
 
     try{
-
-        await apiCommunity(
-            `/api/community/posts/${encodeURIComponent(postId)}`,
-            {
-                method:"DELETE"
-            }
-        );
-
-        postCommentiAperti.delete(
-            postId
-        );
-
+        await apiCommunity(`/api/community/posts/${encodeURIComponent(postId)}`, {method:"DELETE"});
+        postCommentiAperti.delete(postId);
         await caricaPost();
-
-        mostraToast(
-            "Post eliminato."
-        );
-
-    }catch(
-        errore
-    ){
-
-        mostraToast(
-            errore.message ||
-            "Impossibile eliminare il post."
-        );
-
+        mostraToast("Post eliminato.");
+    }catch(errore){
+        mostraToast(errore.message || "Impossibile eliminare il post.");
     }
-
 }
 
-
-async function segnalaPost(
-    postId
-){
-
-    if(
-        !utenteCorrente
-    ){
-
-        mostraToast(
-            "Accedi per segnalare un contenuto."
-        );
-
-        return;
-
-    }
-
-    const motivo =
-        window.prompt(
-            "Perché vuoi segnalare questo post?",
-            "Contenuto inappropriato"
-        );
-
-    if(
-        motivo === null
-    ){
-        return;
-    }
-
-    const motivoPulito =
-        motivo.trim();
-
-    if(
-        !motivoPulito
-    ){
-
-        mostraToast(
-            "Inserisci il motivo della segnalazione."
-        );
-
-        return;
-
-    }
+async function segnalaPost(postId){
+    if(!utenteCorrente){ mostraToast("Accedi per segnalare un contenuto."); return; }
+    const motivo = window.prompt("Perché vuoi segnalare questo post?", "Contenuto inappropriato");
+    if(motivo === null) return;
+    const motivoPulito = motivo.trim();
+    if(!motivoPulito){ mostraToast("Inserisci il motivo della segnalazione."); return; }
 
     try{
-
-        await apiCommunity(
-            `/api/community/posts/${encodeURIComponent(postId)}/segnala`,
-            {
-                method:"POST",
-                body:JSON.stringify({
-                    motivo:
-                        motivoPulito
-                })
-            }
-        );
-
-        mostraToast(
-            "Segnalazione inviata. Grazie."
-        );
-
-    }catch(
-        errore
-    ){
-
-        mostraToast(
-            errore.message ||
-            "Impossibile inviare la segnalazione."
-        );
-
+        await apiCommunity(`/api/community/posts/${encodeURIComponent(postId)}/segnala`, {method:"POST", body:JSON.stringify({motivo:motivoPulito})});
+        mostraToast("Segnalazione inviata. Grazie.");
+    }catch(errore){
+        mostraToast(errore.message || "Impossibile inviare la segnalazione.");
     }
-
 }
-
 
 /* =========================================================
-   REAZIONI REALI
+   REAZIONI
 ========================================================= */
 
-async function toggleReazione(
-    postId,
-    bottone
-){
-
-    if(
-        !utenteCorrente
-    ){
-
-        mostraToast(
-            "Accedi per mettere Mi piace."
-        );
-
-        return;
-
-    }
-
-    if(
-        bottone.classList.contains(
-            "caricamento"
-        )
-    ){
-        return;
-    }
-
-    bottone.classList.add(
-        "caricamento"
-    );
+async function toggleReazione(postId, bottone){
+    if(!utenteCorrente){ mostraToast("Accedi per mettere Mi piace."); return; }
+    if(bottone.classList.contains("caricamento")) return;
+    bottone.classList.add("caricamento");
 
     try{
+        const dati = await apiCommunity(`/api/community/posts/${encodeURIComponent(postId)}/reazione`, {method:"POST"});
+        bottone.classList.toggle("attiva", dati.attiva === true);
+        const numero = bottone.querySelector(".numero-reazioni");
+        if(numero) numero.textContent = String(Number(dati.conteggio||0));
 
-        const dati =
-            await apiCommunity(
-                `/api/community/posts/${encodeURIComponent(postId)}/reazione`,
-                {
-                    method:"POST"
-                }
-            );
-
-        bottone.classList.toggle(
-            "attiva",
-            dati.attiva === true
-        );
-
-        const numero =
-            bottone.querySelector(
-                ".numero-reazioni"
-            );
-
-        if(
-            numero
-        ){
-
-            numero.textContent =
-                String(
-                    Number(
-                        dati.conteggio || 0
-                    )
-                );
-
-        }
-
-        const post =
-            postCommunity.find(
-                elemento =>
-                    elemento.id ===
-                    postId
-            );
-
-        if(
-            post
-        ){
-
-            post.mioLike =
-                dati.attiva === true;
-
-            post.conteggioReazioni =
-                Number(
-                    dati.conteggio || 0
-                );
-
-        }
-
-    }catch(
-        errore
-    ){
-
-        mostraToast(
-            errore.message ||
-            "Impossibile aggiornare la reazione."
-        );
-
+        const post = postCommunity.find(p => p.id === postId);
+        if(post){ post.mioLike = dati.attiva === true; post.conteggioReazioni = Number(dati.conteggio||0); }
+    }catch(errore){
+        mostraToast(errore.message || "Impossibile aggiornare la reazione.");
     }finally{
-
-        bottone.classList.remove(
-            "caricamento"
-        );
-
+        bottone.classList.remove("caricamento");
     }
-
 }
 
-
 /* =========================================================
-   SALVATI REALI
+   SALVATI
 ========================================================= */
 
-async function toggleSalvato(
-    postId,
-    bottone
-){
-
-    if(
-        !utenteCorrente
-    ){
-
-        mostraToast(
-            "Accedi per salvare i post."
-        );
-
-        return;
-
-    }
-
-    if(
-        bottone.classList.contains(
-            "caricamento"
-        )
-    ){
-        return;
-    }
-
-    bottone.classList.add(
-        "caricamento"
-    );
+async function toggleSalvato(postId, bottone){
+    if(!utenteCorrente){ mostraToast("Accedi per salvare i post."); return; }
+    if(bottone.classList.contains("caricamento")) return;
+    bottone.classList.add("caricamento");
 
     try{
+        const dati = await apiCommunity(`/api/community/posts/${encodeURIComponent(postId)}/salva`, {method:"POST"});
+        bottone.classList.toggle("attiva", dati.salvato === true);
+        bottone.title = dati.salvato ? "Rimuovi dai salvati" : "Salva post";
 
-        const dati =
-            await apiCommunity(
-                `/api/community/posts/${encodeURIComponent(postId)}/salva`,
-                {
-                    method:"POST"
-                }
-            );
+        const post = postCommunity.find(p => p.id === postId);
+        if(post) post.salvato = dati.salvato === true;
 
-        bottone.classList.toggle(
-            "attiva",
-            dati.salvato === true
-        );
-
-        bottone.title =
-            dati.salvato
-                ? "Rimuovi dai salvati"
-                : "Salva post";
-
-        const post =
-            postCommunity.find(
-                elemento =>
-                    elemento.id ===
-                    postId
-            );
-
-        if(
-            post
-        ){
-
-            post.salvato =
-                dati.salvato === true;
-
-        }
-
-        mostraToast(
-            dati.salvato
-                ? "Post salvato."
-                : "Post rimosso dai salvati."
-        );
-
-    }catch(
-        errore
-    ){
-
-        mostraToast(
-            errore.message ||
-            "Impossibile salvare il post."
-        );
-
+        mostraToast(dati.salvato ? "Post salvato." : "Post rimosso dai salvati.");
+    }catch(errore){
+        mostraToast(errore.message || "Impossibile salvare il post.");
     }finally{
-
-        bottone.classList.remove(
-            "caricamento"
-        );
-
+        bottone.classList.remove("caricamento");
     }
-
 }
 
-
 /* =========================================================
-   COMMENTI REALI
+   COMMENTI
 ========================================================= */
 
-async function toggleCommenti(
-    postId
-){
+async function toggleCommenti(postId){
+    const sezione = document.getElementById(`commenti-${postId}`);
+    if(!sezione) return;
 
-    const sezione =
-        document.getElementById(
-            `commenti-${postId}`
-        );
-
-    if(
-        !sezione
-    ){
-        return;
-    }
-
-    const staAprendo =
-        !sezione.classList.contains(
-            "aperta"
-        );
-
-    if(
-        staAprendo
-    ){
-
-        sezione.classList.add(
-            "aperta"
-        );
-
-        postCommentiAperti.add(
-            postId
-        );
-
-        await caricaCommenti(
-            postId
-        );
-
+    const staAprendo = !sezione.classList.contains("aperta");
+    if(staAprendo){
+        sezione.classList.add("aperta");
+        postCommentiAperti.add(postId);
+        await caricaCommenti(postId);
     }else{
-
-        sezione.classList.remove(
-            "aperta"
-        );
-
-        postCommentiAperti.delete(
-            postId
-        );
-
+        sezione.classList.remove("aperta");
+        postCommentiAperti.delete(postId);
     }
-
 }
 
+async function caricaCommenti(postId, silenzioso = false){
+    const sezione = document.getElementById(`commenti-${postId}`);
+    if(!sezione) return;
+    const contenitore = sezione.querySelector(".commenti-interno");
+    if(!contenitore) return;
 
-async function caricaCommenti(
-    postId,
-    silenzioso = false
-){
-
-    const sezione =
-        document.getElementById(
-            `commenti-${postId}`
-        );
-
-    if(
-        !sezione
-    ){
-        return;
-    }
-
-    const contenitore =
-        sezione.querySelector(
-            ".commenti-interno"
-        );
-
-    if(
-        !contenitore
-    ){
-        return;
-    }
-
-    if(
-        !silenzioso
-    ){
-
-        contenitore.innerHTML = `
-            <div class="commenti-caricamento">
-                Caricamento commenti...
-            </div>
-        `;
-
+    if(!silenzioso){
+        contenitore.innerHTML = `<div class="commenti-caricamento">Caricamento commenti...</div>`;
     }
 
     try{
-
-        const dati =
-            await apiCommunity(
-                `/api/community/posts/${encodeURIComponent(postId)}/commenti`
-            );
-
-        const commenti =
-            Array.isArray(
-                dati.commenti
-            )
-                ? dati.commenti
-                : [];
-
-        renderCommenti(
-            postId,
-            commenti
-        );
-
-    }catch(
-        errore
-    ){
-
-        contenitore.innerHTML = `
-            <div class="commenti-vuoti">
-                Impossibile caricare i commenti.
-            </div>
-        `;
-
+        const dati = await apiCommunity(`/api/community/posts/${encodeURIComponent(postId)}/commenti`);
+        const commenti = Array.isArray(dati.commenti) ? dati.commenti : [];
+        renderCommenti(postId, commenti);
+    }catch(errore){
+        contenitore.innerHTML = `<div class="commenti-vuoti">Impossibile caricare i commenti.</div>`;
     }
-
 }
 
+function renderCommenti(postId, commenti){
+    const sezione = document.getElementById(`commenti-${postId}`);
+    if(!sezione) return;
+    const contenitore = sezione.querySelector(".commenti-interno");
 
-function renderCommenti(
-    postId,
-    commenti
-){
+    const htmlCommenti = commenti.length
+        ? commenti.map(c => creaHtmlCommento(postId, c)).join("")
+        : `<div class="commenti-vuoti">Ancora nessun commento. Sii il primo a rispondere.</div>`;
 
-    const sezione =
-        document.getElementById(
-            `commenti-${postId}`
-        );
+    const areaScrittura = utenteCorrente ? `
+        <div class="scrivi-commento">
+            ${renderAvatar(utenteCorrente.nickname, utenteCorrente.avatar, "commento-avatar")}
+            <textarea id="input-commento-${escapeAttr(postId)}" class="commento-input" maxlength="600" rows="1" placeholder="Scrivi un commento..." onkeydown="gestisciTastoCommento(event, '${escapeAttr(postId)}')"></textarea>
+            <button id="btn-commento-${escapeAttr(postId)}" class="btn-invia-commento" onclick="inviaCommento('${escapeAttr(postId)}')">Invia</button>
+        </div>` : `
+        <div class="commenti-login">Accedi al tuo account per partecipare alla discussione.</div>`;
 
-    if(
-        !sezione
-    ){
-        return;
-    }
-
-    const contenitore =
-        sezione.querySelector(
-            ".commenti-interno"
-        );
-
-    const htmlCommenti =
-        commenti.length
-            ? commenti
-                .map(
-                    commento =>
-                        creaHtmlCommento(
-                            postId,
-                            commento
-                        )
-                )
-                .join("")
-            : `
-                <div class="commenti-vuoti">
-                    Ancora nessun commento. Sii il primo a rispondere.
-                </div>
-            `;
-
-    const areaScrittura =
-        utenteCorrente
-            ? `
-                <div class="scrivi-commento">
-
-                    ${renderAvatar(
-                        utenteCorrente.nickname,
-                        utenteCorrente.avatar,
-                        "commento-avatar"
-                    )}
-
-                    <textarea
-                        id="input-commento-${escapeAttr(postId)}"
-                        class="commento-input"
-                        maxlength="600"
-                        rows="1"
-                        placeholder="Scrivi un commento..."
-                        onkeydown="gestisciTastoCommento(event, '${escapeAttr(postId)}')"
-                    ></textarea>
-
-                    <button
-                        id="btn-commento-${escapeAttr(postId)}"
-                        class="btn-invia-commento"
-                        onclick="inviaCommento('${escapeAttr(postId)}')"
-                    >
-                        Invia
-                    </button>
-
-                </div>
-            `
-            : `
-                <div class="commenti-login">
-                    Accedi al tuo account per partecipare alla discussione.
-                </div>
-            `;
-
-    contenitore.innerHTML =
-        htmlCommenti +
-        areaScrittura;
-
+    contenitore.innerHTML = htmlCommenti + areaScrittura;
 }
 
-
-function creaHtmlCommento(
-    postId,
-    commento
-){
-
-    const nickname =
-        commento.nicknameAutore ||
-        "Giocatore";
-
-    const elimina =
-        commento.puoEliminare
-            ? `
-                <button
-                    class="btn-elimina-commento"
-                    onclick="eliminaCommento(
-                        '${escapeAttr(postId)}',
-                        '${escapeAttr(commento.id)}'
-                    )"
-                >
-                    Elimina
-                </button>
-            `
-            : "";
+function creaHtmlCommento(postId, commento){
+    const nickname = commento.nicknameAutore || "Giocatore";
+    const badgeGiocatore = renderBadge(commento.badge);
+    const elimina = commento.puoEliminare ? `
+        <button class="btn-elimina-commento" onclick="eliminaCommento('${escapeAttr(postId)}', '${escapeAttr(commento.id)}')">Elimina</button>` : "";
 
     return `
-
         <div class="commento-riga">
-
-            ${renderAvatar(
-                nickname,
-                commento.avatarAutore,
-                "commento-avatar"
-            )}
-
+            ${renderAvatar(nickname, commento.avatarAutore, "commento-avatar")}
             <div class="commento-corpo">
-
                 <div class="commento-testata">
-
-                    <span class="commento-autore">
-                        ${escapeHtml(nickname)}
-                    </span>
-
-                    <span class="commento-data">
-                        ${escapeHtml(
-                            tempoRelativo(
-                                commento.creatoIl
-                            )
-                        )}
-                    </span>
-
+                    <span class="commento-autore">${escapeHtml(nickname)} ${badgeGiocatore}</span>
+                    <span class="commento-data">${escapeHtml(tempoRelativo(commento.creatoIl))}</span>
                     ${elimina}
-
                 </div>
-
-                <div class="commento-testo">
-                    ${escapeHtml(
-                        commento.testo
-                    )}
-                </div>
-
+                <div class="commento-testo">${escapeHtml(commento.testo)}</div>
             </div>
-
-        </div>
-
-    `;
-
+        </div>`;
 }
 
-
-function gestisciTastoCommento(
-    evento,
-    postId
-){
-
-    if(
-        evento.key ===
-        "Enter"
-        &&
-        !evento.shiftKey
-    ){
-
+function gestisciTastoCommento(evento, postId){
+    if(evento.key === "Enter" && !evento.shiftKey){
         evento.preventDefault();
-
-        inviaCommento(
-            postId
-        );
-
+        inviaCommento(postId);
     }
-
 }
 
+async function inviaCommento(postId){
+    if(!utenteCorrente){ mostraToast("Accedi per commentare."); return; }
 
-async function inviaCommento(
-    postId
-){
+    const input = document.getElementById(`input-commento-${postId}`);
+    const bottone = document.getElementById(`btn-commento-${postId}`);
+    if(!input) return;
 
-    if(
-        !utenteCorrente
-    ){
+    const testo = input.value.trim();
+    if(!testo) return;
 
-        mostraToast(
-            "Accedi per commentare."
-        );
-
-        return;
-
-    }
-
-    const input =
-        document.getElementById(
-            `input-commento-${postId}`
-        );
-
-    const bottone =
-        document.getElementById(
-            `btn-commento-${postId}`
-        );
-
-    if(
-        !input
-    ){
-        return;
-    }
-
-    const testo =
-        input.value
-        .trim();
-
-    if(
-        !testo
-    ){
-        return;
-    }
-
-    if(
-        bottone
-    ){
-
-        bottone.disabled =
-            true;
-
-        bottone.textContent =
-            "...";
-
-    }
-
-    input.disabled =
-        true;
+    if(bottone){ bottone.disabled = true; bottone.textContent = "..."; }
+    input.disabled = true;
 
     try{
+        const dati = await apiCommunity(`/api/community/posts/${encodeURIComponent(postId)}/commenti`, {method:"POST", body:JSON.stringify({testo})});
 
-        const dati =
-            await apiCommunity(
-                `/api/community/posts/${encodeURIComponent(postId)}/commenti`,
-                {
-                    method:"POST",
-                    body:JSON.stringify({
-                        testo
-                    })
-                }
-            );
+        input.value = "";
+        aggiornaConteggioCommentiDom(postId, dati.conteggio);
 
-        input.value =
-            "";
+        const post = postCommunity.find(p => p.id === postId);
+        if(post) post.conteggioCommenti = Number(dati.conteggio||0);
 
-        aggiornaConteggioCommentiDom(
-            postId,
-            dati.conteggio
-        );
-
-        const post =
-            postCommunity.find(
-                elemento =>
-                    elemento.id ===
-                    postId
-            );
-
-        if(
-            post
-        ){
-
-            post.conteggioCommenti =
-                Number(
-                    dati.conteggio || 0
-                );
-
-        }
-
-        await caricaCommenti(
-            postId
-        );
-
-        const nuovoInput =
-            document.getElementById(
-                `input-commento-${postId}`
-            );
-
-        nuovoInput?.focus();
-
-    }catch(
-        errore
-    ){
-
-        mostraToast(
-            errore.message ||
-            "Impossibile pubblicare il commento."
-        );
-
-        input.disabled =
-            false;
-
+        await caricaCommenti(postId);
+        document.getElementById(`input-commento-${postId}`)?.focus();
+    }catch(errore){
+        mostraToast(errore.message || "Impossibile pubblicare il commento.");
+        input.disabled = false;
     }finally{
-
-        const nuovoBottone =
-            document.getElementById(
-                `btn-commento-${postId}`
-            );
-
-        if(
-            nuovoBottone
-        ){
-
-            nuovoBottone.disabled =
-                false;
-
-            nuovoBottone.textContent =
-                "Invia";
-
-        }
-
-        const nuovoInput =
-            document.getElementById(
-                `input-commento-${postId}`
-            );
-
-        if(
-            nuovoInput
-        ){
-
-            nuovoInput.disabled =
-                false;
-
-        }
-
+        const nuovoBottone = document.getElementById(`btn-commento-${postId}`);
+        if(nuovoBottone){ nuovoBottone.disabled = false; nuovoBottone.textContent = "Invia"; }
+        const nuovoInput = document.getElementById(`input-commento-${postId}`);
+        if(nuovoInput) nuovoInput.disabled = false;
     }
-
 }
 
-
-async function eliminaCommento(
-    postId,
-    commentoId
-){
-
-    const conferma =
-        window.confirm(
-            "Eliminare questo commento?"
-        );
-
-    if(
-        !conferma
-    ){
-        return;
-    }
+async function eliminaCommento(postId, commentoId){
+    if(!window.confirm("Eliminare questo commento?")) return;
 
     try{
+        const dati = await apiCommunity(`/api/community/posts/${encodeURIComponent(postId)}/commenti/${encodeURIComponent(commentoId)}`, {method:"DELETE"});
+        aggiornaConteggioCommentiDom(postId, dati.conteggio);
 
-        const dati =
-            await apiCommunity(
-                `/api/community/posts/${encodeURIComponent(postId)}/commenti/${encodeURIComponent(commentoId)}`,
-                {
-                    method:"DELETE"
-                }
-            );
+        const post = postCommunity.find(p => p.id === postId);
+        if(post) post.conteggioCommenti = Number(dati.conteggio||0);
 
-        aggiornaConteggioCommentiDom(
-            postId,
-            dati.conteggio
-        );
-
-        const post =
-            postCommunity.find(
-                elemento =>
-                    elemento.id ===
-                    postId
-            );
-
-        if(
-            post
-        ){
-
-            post.conteggioCommenti =
-                Number(
-                    dati.conteggio || 0
-                );
-
-        }
-
-        await caricaCommenti(
-            postId
-        );
-
-        mostraToast(
-            "Commento eliminato."
-        );
-
-    }catch(
-        errore
-    ){
-
-        mostraToast(
-            errore.message ||
-            "Impossibile eliminare il commento."
-        );
-
+        await caricaCommenti(postId);
+        mostraToast("Commento eliminato.");
+    }catch(errore){
+        mostraToast(errore.message || "Impossibile eliminare il commento.");
     }
-
 }
 
-
-function aggiornaConteggioCommentiDom(
-    postId,
-    conteggio
-){
-
-    const elemento =
-        document.querySelector(
-            `[data-commenti-post="${CSS.escape(postId)}"]`
-        );
-
-    if(
-        elemento
-    ){
-
-        elemento.textContent =
-            formattaNumeroCommenti(
-                conteggio
-            );
-
-    }
-
+function aggiornaConteggioCommentiDom(postId, conteggio){
+    const elemento = document.querySelector(`[data-commenti-post="${CSS.escape(postId)}"]`);
+    if(elemento) elemento.textContent = formattaNumeroCommenti(conteggio);
 }
-
 
 /* =========================================================
-   CONDIVISIONE REALE
+   CONDIVISIONE
 ========================================================= */
 
-async function condividiPost(
-    postId
-){
+async function condividiPost(postId){
+    const post = postCommunity.find(p => p.id === postId);
+    if(!post) return;
 
-    const post =
-        postCommunity.find(
-            elemento =>
-                elemento.id ===
-                postId
-        );
-
-    if(
-        !post
-    ){
-        return;
-    }
-
-    const url =
-        `${COMMUNITY_URL}?post=${encodeURIComponent(postId)}`;
-
-    const testo =
-        `${post.titolo} — ${post.nicknameAutore || "Giochi Società"}`;
-
-    let condiviso =
-        false;
+    const url = `${COMMUNITY_URL}?post=${encodeURIComponent(postId)}`;
+    const testo = `${post.titolo} — ${post.nicknameAutore || "Giochi Società"}`;
+    let condiviso = false;
 
     try{
-
-        if(
-            navigator.share
-        ){
-
-            await navigator.share({
-                title:
-                    post.titolo,
-                text:
-                    testo,
-                url
-            });
-
-            condiviso =
-                true;
-
+        if(navigator.share){
+            await navigator.share({title:post.titolo, text:testo, url});
+            condiviso = true;
         }else{
-
-            await copiaNegliAppunti(
-                url
-            );
-
-            condiviso =
-                true;
-
-            mostraToast(
-                "Link del post copiato negli appunti."
-            );
-
+            await copiaNegliAppunti(url);
+            condiviso = true;
+            mostraToast("Link del post copiato negli appunti.");
         }
-
-    }catch(
-        errore
-    ){
-
-        if(
-            errore &&
-            errore.name ===
-            "AbortError"
-        ){
-            return;
-        }
-
+    }catch(errore){
+        if(errore && errore.name === "AbortError") return;
         try{
-
-            await copiaNegliAppunti(
-                url
-            );
-
-            condiviso =
-                true;
-
-            mostraToast(
-                "Link del post copiato negli appunti."
-            );
-
-        }catch(
-            erroreCopia
-        ){
-
-            mostraToast(
-                "Impossibile aprire la condivisione."
-            );
-
+            await copiaNegliAppunti(url);
+            condiviso = true;
+            mostraToast("Link del post copiato negli appunti.");
+        }catch(e2){
+            mostraToast("Impossibile aprire la condivisione.");
         }
-
     }
 
-    if(
-        condiviso &&
-        utenteCorrente
-    ){
-
+    if(condiviso && utenteCorrente){
         try{
-
-            const dati =
-                await apiCommunity(
-                    `/api/community/posts/${encodeURIComponent(postId)}/condivisione`,
-                    {
-                        method:"POST"
-                    }
-                );
-
-            const postLocale =
-                postCommunity.find(
-                    elemento =>
-                        elemento.id ===
-                        postId
-                );
-
-            if(
-                postLocale
-            ){
-
-                postLocale.conteggioCondivisioni =
-                    Number(
-                        dati.conteggio || 0
-                    );
-
-            }
-
-        }catch(
-            errore
-        ){
-
-            /*
-             * La condivisione è già avvenuta:
-             * se il contatore non si aggiorna non blocchiamo l'utente.
-             */
-
-        }
-
+            const dati = await apiCommunity(`/api/community/posts/${encodeURIComponent(postId)}/condivisione`, {method:"POST"});
+            const postLocale = postCommunity.find(p => p.id === postId);
+            if(postLocale) postLocale.conteggioCondivisioni = Number(dati.conteggio||0);
+        }catch(errore){ /* contatore non critico */ }
     }
-
 }
 
-
-async function copiaNegliAppunti(
-    testo
-){
-
-    if(
-        navigator.clipboard &&
-        window.isSecureContext
-    ){
-
-        await navigator.clipboard.writeText(
-            testo
-        );
-
+async function copiaNegliAppunti(testo){
+    if(navigator.clipboard && window.isSecureContext){
+        await navigator.clipboard.writeText(testo);
         return;
-
     }
-
-    const textarea =
-        document.createElement(
-            "textarea"
-        );
-
-    textarea.value =
-        testo;
-
-    textarea.setAttribute(
-        "readonly",
-        ""
-    );
-
-    textarea.style.position =
-        "fixed";
-
-    textarea.style.opacity =
-        "0";
-
-    document.body.appendChild(
-        textarea
-    );
-
+    const textarea = document.createElement("textarea");
+    textarea.value = testo;
+    textarea.setAttribute("readonly","");
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
     textarea.select();
-
-    const riuscito =
-        document.execCommand(
-            "copy"
-        );
-
+    const riuscito = document.execCommand("copy");
     textarea.remove();
-
-    if(
-        !riuscito
-    ){
-
-        throw new Error(
-            "Copia non disponibile"
-        );
-
-    }
-
+    if(!riuscito) throw new Error("Copia non disponibile");
 }
-
 
 /* =========================================================
    CATEGORIE E FILTRI
 ========================================================= */
 
-function selezionaCategoria(
-    bottone
-){
-
-    categoriaCorrente =
-        bottone.dataset.categoria ||
-        "tutto";
-
-    impostaCategoriaAttiva(
-        categoriaCorrente
-    );
-
+function selezionaCategoria(bottone){
+    categoriaCorrente = bottone.dataset.categoria || "tutto";
+    impostaCategoriaAttiva(categoriaCorrente);
     renderFeed();
-
 }
 
-
-function impostaCategoriaAttiva(
-    categoria
-){
-
-    document
-    .querySelectorAll(
-        ".btn-categoria[data-categoria]"
-    )
-    .forEach(
-        elemento => {
-
-            elemento.classList.toggle(
-                "attiva",
-                elemento.dataset.categoria ===
-                categoria
-            );
-
-        }
-    );
-
+function impostaCategoriaAttiva(categoria){
+    document.querySelectorAll(".btn-categoria[data-categoria]").forEach(el => {
+        el.classList.toggle("attiva", el.dataset.categoria === categoria);
+    });
 }
 
+function selezionaFiltroFeed(bottone){
+    const testo = bottone.textContent.trim().toLowerCase();
+    if(testo.includes("recent")) ordinamentoCorrente = "recenti";
+    else if(testo.includes("discuss")) ordinamentoCorrente = "discussi";
+    else ordinamentoCorrente = "rilevanti";
 
-function selezionaFiltroFeed(
-    bottone
-){
-
-    const testo =
-        bottone
-        .textContent
-        .trim()
-        .toLowerCase();
-
-    if(
-        testo.includes(
-            "recent"
-        )
-    ){
-
-        ordinamentoCorrente =
-            "recenti";
-
-    }else if(
-        testo.includes(
-            "discuss"
-        )
-    ){
-
-        ordinamentoCorrente =
-            "discussi";
-
-    }else{
-
-        ordinamentoCorrente =
-            "rilevanti";
-
-    }
-
-    impostaFiltroFeedAttivo(
-        ordinamentoCorrente
-    );
-
+    impostaFiltroFeedAttivo(ordinamentoCorrente);
     renderFeed();
-
 }
 
-
-function impostaFiltroFeedAttivo(
-    filtro
-){
-
-    document
-    .querySelectorAll(
-        ".feed-filtro"
-    )
-    .forEach(
-        elemento => {
-
-            const testo =
-                elemento
-                .textContent
-                .trim()
-                .toLowerCase();
-
-            const tipo =
-                testo.includes("recent")
-                    ? "recenti"
-                    : testo.includes("discuss")
-                        ? "discussi"
-                        : "rilevanti";
-
-            elemento.classList.toggle(
-                "attivo",
-                tipo === filtro
-            );
-
-        }
-    );
-
+function impostaFiltroFeedAttivo(filtro){
+    document.querySelectorAll(".feed-filtro").forEach(el => {
+        const testo = el.textContent.trim().toLowerCase();
+        const tipo = testo.includes("recent") ? "recenti" : testo.includes("discuss") ? "discussi" : "rilevanti";
+        el.classList.toggle("attivo", tipo === filtro);
+    });
 }
 
-
-document
-.getElementById(
-    "ricercaCommunity"
-)
-.addEventListener(
-    "input",
-    renderFeed
-);
-
+document.getElementById("ricercaCommunity").addEventListener("input", renderFeed);
 
 /* =========================================================
    VAI ALLE STANZE
 ========================================================= */
 
 function vaiAlleStanze(){
-
-    window.top.location.href =
-        SERVER +
-        "/stanze.html";
-
+    window.top.location.href = SERVER + "/stanze.html";
 }
 
+/* =========================================================
+   AMICI ONLINE (nuovo — richiede GET /api/community/amici)
+   Risposta attesa: { amici: [{ nickname, avatar, stato: "online"|"in_partita"|"offline", gioco }] }
+========================================================= */
+
+async function caricaAmici(){
+    const contenitore = document.getElementById("amiciCommunity");
+    const contatore = document.getElementById("amiciContatore");
+    if(!contenitore) return;
+
+    try{
+        const dati = await apiCommunity("/api/community/amici");
+        const amici = (Array.isArray(dati.amici) ? dati.amici : []).filter(a => a.stato !== "offline");
+
+        if(contatore) contatore.textContent = amici.length ? `${amici.length} ONLINE` : "";
+
+        if(!amici.length){
+            contenitore.innerHTML = `<div class="pannello-quieto">Nessun amico online ora.<br>Invita qualcuno a giocare.</div>`;
+            return;
+        }
+
+        contenitore.innerHTML = amici.map(amico => {
+            const inPartita = amico.stato === "in_partita";
+            const colore = inPartita ? "var(--ambra)" : "var(--verde)";
+            const statoTesto = inPartita ? `In partita${amico.gioco ? `: ${escapeHtml(amico.gioco)}` : ""}` : "Online ora";
+
+            return `
+                <div class="amico-riga">
+                    <div class="amico-avatar-wrap">
+                        ${renderAvatar(amico.nickname, amico.avatar, "avatar-piccolo")}
+                        <span class="amico-stato-dot" style="background:${colore}"></span>
+                    </div>
+                    <div class="amico-info">
+                        <div class="amico-nome">${escapeHtml(amico.nickname || "Giocatore")}</div>
+                        <div class="amico-stato-testo">${statoTesto}</div>
+                    </div>
+                </div>`;
+        }).join("");
+
+    }catch(errore){
+        if(contatore) contatore.textContent = "";
+        contenitore.innerHTML = `<div class="pannello-quieto">Funzionalità in arrivo.</div>`;
+    }
+}
 
 /* =========================================================
-   TOP GIOCATORI REALI
+   ATTIVITÀ RECENTE (nuovo — richiede GET /api/community/attivita)
+   Risposta attesa: { attivita: [{ tipo: "vittoria"|"achievement"|"iscrizione"|"partita_iniziata", nickname, dettaglio, creatoIl }] }
+========================================================= */
+
+const ICONE_ATTIVITA = {
+    vittoria:"🏆",
+    achievement:"🎯",
+    iscrizione:"👋",
+    partita_iniziata:"🎲"
+};
+
+function testoAttivita(voce){
+    const nome = escapeHtml(voce.nickname || "Un giocatore");
+    const dettaglio = voce.dettaglio ? escapeHtml(voce.dettaglio) : "";
+    switch(voce.tipo){
+        case "vittoria": return `<strong>${nome}</strong> ha vinto${dettaglio ? ` ${dettaglio}` : " una partita"}`;
+        case "achievement": return `<strong>${nome}</strong> ha sbloccato${dettaglio ? ` ${dettaglio}` : " un achievement"}`;
+        case "iscrizione": return `<strong>${nome}</strong> si è unito alla community`;
+        case "partita_iniziata": return `<strong>${nome}</strong> ha iniziato${dettaglio ? ` ${dettaglio}` : " una partita"}`;
+        default: return `<strong>${nome}</strong> ${dettaglio}`;
+    }
+}
+
+async function caricaAttivita(){
+    const contenitore = document.getElementById("attivitaCommunity");
+    if(!contenitore) return;
+
+    try{
+        const dati = await apiCommunity("/api/community/attivita");
+        const attivita = Array.isArray(dati.attivita) ? dati.attivita.slice(0,6) : [];
+
+        if(!attivita.length){
+            contenitore.innerHTML = `<div class="pannello-quieto">Ancora nessuna attività da mostrare.</div>`;
+            return;
+        }
+
+        contenitore.innerHTML = attivita.map(voce => `
+            <div class="attivita-riga">
+                <div class="attivita-icona">${ICONE_ATTIVITA[voce.tipo] || "•"}</div>
+                <div class="attivita-testo">
+                    ${testoAttivita(voce)}
+                    <span>${escapeHtml(tempoRelativo(voce.creatoIl))}</span>
+                </div>
+            </div>`).join("");
+
+    }catch(errore){
+        contenitore.innerHTML = `<div class="pannello-quieto">Funzionalità in arrivo.</div>`;
+    }
+}
+
+/* =========================================================
+   TOP GIOCATORI
 ========================================================= */
 
 async function caricaClassifica(){
-
-    const contenitore =
-        document.getElementById(
-            "classificaCommunity"
-        );
-
+    const contenitore = document.getElementById("classificaCommunity");
 
     try{
+        const risposta = await fetch(SERVER + "/api/top-giocatori", {cache:"no-store"});
+        if(!risposta.ok) throw new Error("Classifica non disponibile");
 
-        const risposta =
-            await fetch(
-                SERVER +
-                "/api/top-giocatori",
-                {
-                    cache:
-                        "no-store"
-                }
-            );
+        const dati = await risposta.json();
+        const giocatori = Array.isArray(dati.giocatori) ? dati.giocatori : [];
 
-
-        if(
-            !risposta.ok
-        ){
-
-            throw new Error(
-                "Classifica non disponibile"
-            );
-
-        }
-
-
-        const dati =
-            await risposta.json();
-
-
-        const giocatori =
-            Array.isArray(
-                dati.giocatori
-            )
-                ? dati.giocatori
-                : [];
-
-
-        if(
-            !giocatori.length
-        ){
-
-            contenitore.innerHTML =
-                `
-                <div
-                    style="
-                        padding:18px;
-                        text-align:center;
-                        color:#999;
-                        font-size:10px;
-                    "
-                >
-                    Nessun giocatore disponibile.
-                </div>
-                `;
-
+        if(!giocatori.length){
+            contenitore.innerHTML = `<div class="pannello-quieto">Nessun giocatore disponibile.</div>`;
             return;
-
         }
 
+        contenitore.innerHTML = giocatori.slice(0,7).map((giocatore, indice) => {
+            const nome = giocatore.nickname || "Giocatore";
+            const linkProfilo = SERVER + "/profilo-pubblico.html?nickname=" + encodeURIComponent(nome);
+            const badge = renderBadge(giocatore.badge);
 
-        contenitore.innerHTML =
-            giocatori
-            .slice(
-                0,
-                7
-            )
-            .map(
-                (
-                    giocatore,
-                    indice
-                ) => {
+            return `
+                <a class="classifica-riga" href="${linkProfilo}" target="_top" title="Apri il profilo di ${escapeHtml(nome)}" aria-label="Apri il profilo di ${escapeHtml(nome)}">
+                    <div class="classifica-posizione ${indice < 3 ? "podio" : ""}">${indice + 1}</div>
+                    <div class="avatar-piccolo" style="background:${coloreDaNome(nome)}">${escapeHtml(iniziale(nome))}</div>
+                    <div class="classifica-info">
+                        <div class="classifica-nome">${escapeHtml(nome)} ${badge}</div>
+                        <div class="classifica-stat">${Number(giocatore.vinte||0)} vittorie · ${Number(giocatore.giocate||0)} partite</div>
+                    </div>
+                    <div class="classifica-freccia" aria-hidden="true">›</div>
+                </a>`;
+        }).join("");
 
-                    const nome =
-                        giocatore.nickname ||
-                        "Giocatore";
-
-
-                    const linkProfilo =
-                        SERVER +
-                        "/profilo-pubblico.html?nickname=" +
-                        encodeURIComponent(
-                            nome
-                        );
-
-
-                    return `
-
-                        <a
-                            class="classifica-riga"
-                            href="${linkProfilo}"
-                            target="_top"
-                            title="Apri il profilo di ${escapeHtml(nome)}"
-                            aria-label="Apri il profilo di ${escapeHtml(nome)}"
-                        >
-
-                            <div
-                                class="
-                                    classifica-posizione
-                                    ${
-                                        indice < 3
-                                            ? "podio"
-                                            : ""
-                                    }
-                                "
-                            >
-                                ${
-                                    indice + 1
-                                }
-                            </div>
-
-
-                            <div
-                                class="avatar-piccolo"
-                                style="
-                                    background:
-                                    ${
-                                        coloreDaNome(
-                                            nome
-                                        )
-                                    }
-                                "
-                            >
-                                ${
-                                    escapeHtml(
-                                        iniziale(
-                                            nome
-                                        )
-                                    )
-                                }
-                            </div>
-
-
-                            <div class="classifica-info">
-
-                                <div class="classifica-nome">
-
-                                    ${
-                                        escapeHtml(
-                                            nome
-                                        )
-                                    }
-
-                                </div>
-
-
-                                <div class="classifica-stat">
-
-                                    ${
-                                        Number(
-                                            giocatore.vinte ||
-                                            0
-                                        )
-                                    }
-                                    vittorie ·
-
-                                    ${
-                                        Number(
-                                            giocatore.giocate ||
-                                            0
-                                        )
-                                    }
-                                    partite
-
-                                </div>
-
-                            </div>
-
-
-                            <div
-                                class="classifica-freccia"
-                                aria-hidden="true"
-                            >
-                                ›
-                            </div>
-
-                        </a>
-
-                    `;
-
-                }
-            )
-            .join("");
-
-
-    }catch(
-        errore
-    ){
-
-        console.error(
-            "Errore classifica Community:",
-            errore
-        );
-
-
-        contenitore.innerHTML =
-            `
-            <div
-                style="
-                    padding:18px;
-                    text-align:center;
-                    color:#999;
-                    font-size:10px;
-                "
-            >
-                Classifica temporaneamente non disponibile.
-            </div>
-            `;
-
+    }catch(errore){
+        console.error("Errore classifica Community:", errore);
+        contenitore.innerHTML = `<div class="pannello-quieto">Classifica temporaneamente non disponibile.</div>`;
     }
-
 }
 
 /* =========================================================
@@ -6688,116 +1438,52 @@ async function caricaClassifica(){
 ========================================================= */
 
 function provaApriPostCondiviso(){
+    const params = new URLSearchParams(window.location.search);
+    const postId = params.get("post");
+    if(!postId) return;
 
-    /*
-     * In un HTML Embed il query string della pagina Wix
-     * non sempre viene inoltrato all'iframe.
-     * Se la pagina viene invece servita direttamente,
-     * questo porta al post condiviso.
-     */
-
-    const params =
-        new URLSearchParams(
-            window.location.search
-        );
-
-    const postId =
-        params.get(
-            "post"
-        );
-
-    if(
-        !postId
-    ){
-        return;
+    const elemento = document.querySelector(`[data-post-id="${CSS.escape(postId)}"]`);
+    if(elemento){
+        elemento.scrollIntoView({behavior:"smooth", block:"center"});
+        elemento.style.boxShadow = "0 0 0 3px rgba(255,212,0,.5), 0 8px 28px rgba(0,0,0,.3)";
+        setTimeout(() => { elemento.style.boxShadow = ""; }, 3500);
     }
-
-    const elemento =
-        document.querySelector(
-            `[data-post-id="${CSS.escape(postId)}"]`
-        );
-
-    if(
-        elemento
-    ){
-
-        elemento.scrollIntoView({
-            behavior:"smooth",
-            block:"center"
-        });
-
-        elemento.style.boxShadow =
-            "0 0 0 3px rgba(255,212,0,.65), 0 8px 28px rgba(0,0,0,.12)";
-
-        setTimeout(
-            () => {
-
-                elemento.style.boxShadow =
-                    "";
-
-            },
-            3500
-        );
-
-    }
-
 }
-
 
 /* =========================================================
    ESC CHIUDE MODALE
 ========================================================= */
 
-document.addEventListener(
-    "keydown",
-    evento => {
-
-        if(
-            evento.key ===
-            "Escape"
-        ){
-
-            chiudiModalPost();
-
-        }
-
-    }
-);
-
+document.addEventListener("keydown", evento => {
+    if(evento.key === "Escape") chiudiModalPost();
+});
 
 /* =========================================================
    AVVIO
 ========================================================= */
 
 async function avviaCommunity(){
-
     await controllaUtente();
 
     await Promise.all([
         caricaPost(),
-        caricaClassifica()
+        caricaClassifica(),
+        caricaAmici(),
+        caricaAttivita()
     ]);
 
     provaApriPostCondiviso();
 
-    setInterval(
-        () => {
-
-            caricaPost(
-                true
-            );
-
-        },
-        INTERVALLO_AGGIORNAMENTO_POST
-    );
-
+    setInterval(() => {
+        caricaPost(true);
+        caricaAmici();
+        caricaAttivita();
+    }, INTERVALLO_AGGIORNAMENTO);
 }
-
 
 avviaCommunity();
 
 </script>
-
 
 </body>
 </html>
