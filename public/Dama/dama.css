@@ -2719,3 +2719,22 @@ body:not(.modalita-desktop) #messaggi-gioco {
 @media (prefers-reduced-motion: reduce) {
   .dama-posizione, .dama-pezzo, .dama-faccia { transition: none !important; }
 }
+
+/* =========================================================
+   VIDEOCHIAMATA DESKTOP — SOLO DAMA (2 giocatori)
+   La Dama ha sempre esattamente 2 partecipanti: una sola riga
+   invece delle 4 previste dall'Oca fa sì che ogni riquadro video
+   occupi tutta l'altezza disponibile della sua colonna, invece di
+   restare piccolo in alto con molto spazio vuoto sotto.
+   ========================================================= */
+body.modalita-desktop.media-partita #griglia-video {
+  grid-template-rows: repeat(1, minmax(0, 1fr));
+}
+
+/* La barra microfono/webcam, su Dama, viene sollevata sopra al
+   riquadro "Le tue prese" (che sta appena sotto la damiera),
+   invece di restare incollata al fondo dello schermo dove lo
+   copriva quasi del tutto. */
+body.modalita-desktop.media-partita #controlli-media-locale {
+  bottom: calc(var(--altezza-raccolta, 58px) + 26px + env(safe-area-inset-bottom));
+}
