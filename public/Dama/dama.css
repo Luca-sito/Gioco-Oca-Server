@@ -2722,13 +2722,19 @@ body:not(.modalita-desktop) #messaggi-gioco {
 
 /* =========================================================
    VIDEOCHIAMATA DESKTOP — SOLO DAMA (2 giocatori)
-   La Dama ha sempre esattamente 2 partecipanti: una sola riga
-   invece delle 4 previste dall'Oca fa sì che ogni riquadro video
-   occupi tutta l'altezza disponibile della sua colonna, invece di
-   restare piccolo in alto con molto spazio vuoto sotto.
+   La Dama è sempre 1 contro 1: un riquadro video rettangolare
+   a sinistra della damiera e uno a destra, di dimensioni normali
+   (non stirati su tutta l'altezza dello schermo) e centrati
+   verticalmente nello spazio laterale.
    ========================================================= */
 body.modalita-desktop.media-partita #griglia-video {
-  grid-template-rows: repeat(1, minmax(0, 1fr));
+  grid-template-rows: minmax(0, 1fr);
+  align-items: center;
+}
+
+body.modalita-desktop.media-partita #griglia-video .video-tile {
+  height: auto;
+  aspect-ratio: 3 / 4;
 }
 
 /* La barra microfono/webcam, su Dama, viene sollevata sopra al
@@ -2737,4 +2743,11 @@ body.modalita-desktop.media-partita #griglia-video {
    copriva quasi del tutto. */
 body.modalita-desktop.media-partita #controlli-media-locale {
   bottom: calc(var(--altezza-raccolta, 58px) + 26px + env(safe-area-inset-bottom));
+}
+
+/* Su Dama il pannello giocatori è già visibile per intero in alto
+   a sinistra: il pulsante "persone" (pensato per l'Oca, dove la
+   videochiamata comprime il pannello) non deve comparire qui. */
+body.modalita-desktop.media-partita #giocatori-wrapper {
+  display: none;
 }
