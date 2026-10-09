@@ -2114,12 +2114,11 @@ body.modalita-desktop.media-partita #btn-giocatori {
 }
 
 /* ===== CELLULARE: CHIAMATA SOLO AUDIO ===== */
-/* Nota: #video-tile-locale e #griglia-video NON vengono più nascosti
-   qui (come accadeva prima): il pulsante del microfono ora si trova
-   dentro al riquadro video locale, quindi va tenuto visibile anche
-   in chiamata solo audio. La webcam e il video vengono nascosti più
-   sotto, nella sezione "VIDEOCHIAMATA — banner nascosto + pulsanti
-   dentro al riquadro". */
+body.client-cellulare-audio-only #btn-toggle-webcam-media,
+body.client-cellulare-audio-only #video-tile-locale,
+body.client-cellulare-audio-only #griglia-video {
+  display: none !important;
+}
 
 body.client-cellulare-audio-only #controlli-media-locale {
   grid-template-columns: 1fr;
