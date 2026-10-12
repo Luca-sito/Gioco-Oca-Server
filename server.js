@@ -2343,6 +2343,93 @@ app.get("/api/top-giocatori", async (req, res) => {
 });
 
 // ============================================================
+// ===== CLASSIFICA GENERALE SOCIAL GAMING =====
+// Espone solo nickname e statistiche pubbliche. Nessuna email o UID viene restituito.
+app.get("/api/classifica-generale", async (req, res) => {
+  res.set("Cache-Control", "no-store");
+  try {
+    if (!db) {
+      return res.status(503).json({ errore: "Database non disponibile." });
+    }
+
+    const utenti = (await db.ref("utenti").once("value")).val() || {};
+    const giocatori = [];
+
+    for (const utente of Object.values(utenti)) {
+      if (!utente || typeof utente !== "object" || !utente.nickname) continue;
+      if (utente.stato === "bannato" || utente.stato === "sospeso") continue;
+      if (utente.emailVerificata === false) continue;
+
+      const eloGiochi = [];
+      let giocateTotali = 0;
+      let vinteTotali = 0;
+
+      // Statistiche generali salvate direttamente sul profilo (gioco principale).
+      const giocateBase = Math.max(0, Number(utente.partiteGiocate) || 0);
+      const vinteBase = Math.max(0, Number(utente.partiteVinte) || 0);
+      giocateTotali += giocateBase;
+      vinteTotali += vinteBase;
+
+      if (giocateBase > 0) {
+        const eloBase = utente.elo != null && Number.isFinite(Number(utente.elo))
+          ? Number(utente.elo)
+          : ELO_INIZIALE;
+        eloGiochi.push(eloBase);
+      }
+
+      // Somma anche le statistiche separate dei giochi (ad es. Dama e Othello).
+      const giochiUtente = utente.giochi && typeof utente.giochi === "object"
+        ? Object.values(utente.giochi)
+        : [];
+
+      for (const stats of giochiUtente) {
+        if (!stats || typeof stats !== "object") continue;
+        const giocate = Math.max(0, Number(stats.partiteGiocate) || 0);
+        const vinte = Math.max(0, Number(stats.partiteVinte) || 0);
+        giocateTotali += giocate;
+        vinteTotali += vinte;
+
+        if (giocate > 0) {
+          const eloGioco = stats.elo != null && Number.isFinite(Number(stats.elo))
+            ? Number(stats.elo)
+            : ELO_INIZIALE;
+          eloGiochi.push(eloGioco);
+        }
+      }
+
+      const eloGenerale = eloGiochi.length
+        ? Math.round(eloGiochi.reduce((somma, valore) => somma + valore, 0) / eloGiochi.length)
+        : ELO_INIZIALE;
+
+      giocatori.push({
+        nickname: String(utente.nickname).slice(0, 30),
+        elo: eloGenerale,
+        vinte: vinteTotali,
+        giocate: giocateTotali
+      });
+    }
+
+    giocatori.sort((a, b) =>
+      b.elo - a.elo ||
+      b.vinte - a.vinte ||
+      b.giocate - a.giocate ||
+      a.nickname.localeCompare(b.nickname, "it", { sensitivity: "base" })
+    );
+
+    return res.json({
+      totale: giocatori.length,
+      aggiornataIl: Date.now(),
+      giocatori: giocatori.map((giocatore, indice) => ({
+        posizione: indice + 1,
+        ...giocatore
+      }))
+    });
+  } catch (errore) {
+    console.error("Errore classifica generale:", errore.message);
+    return res.status(500).json({ errore: "Impossibile caricare la classifica generale." });
+  }
+});
+
 // COMMUNITY - API REALI (Firebase Realtime Database)
 // ============================================================
 
