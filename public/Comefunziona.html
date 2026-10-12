@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Scopri come usare Social Gaming: scegliere un gioco, prepararti alla partita, giocare online e consultare i risultati disponibili.">
+<title>Come funziona — Social Gaming</title>
+<style>
+  :root{color-scheme:light;--sg-yellow:#ffd52a;--sg-yellow-2:#f4b900;--sg-ink:#151515;--sg-text:#292929;--sg-muted:#666;--sg-line:#e8e8e8;--sg-soft:#f6f6f4;--sg-white:#fff;--sg-red:#e33a43;--sg-radius:18px}
+  *,*:before,*:after{box-sizing:border-box}
+  html{scroll-behavior:smooth;scroll-padding-top:22px}
+  html,body{margin:0;padding:0;width:100%;min-width:0;background:#fff;color:var(--sg-text);font-family:Inter,Arial,Helvetica,sans-serif;-webkit-font-smoothing:antialiased}
+  body{line-height:1.6}
+  a{color:inherit}
+  button{font:inherit}
+  #sg-how{width:100%;overflow:hidden;background:#fff}
+  #sg-how .sg-wrap{width:min(1120px,calc(100% - 44px));margin:0 auto}
+  #sg-how .sg-hero{position:relative;padding:58px 0 52px;background:radial-gradient(ellipse at 88% 8%,rgba(255,213,42,.19),transparent 35%),linear-gradient(180deg,#fff 0%,#fff 76%,#fafafa 100%);border-bottom:1px solid var(--sg-line)}
+  #sg-how .sg-eyebrow{display:inline-flex;align-items:center;gap:9px;margin:0 0 15px;color:#685300;font-weight:850;font-size:11px;letter-spacing:.16em;text-transform:uppercase}
+  #sg-how .sg-eyebrow:before{content:"";display:block;width:25px;height:3px;background:var(--sg-yellow-2);border-radius:5px}
+  #sg-how h1,#sg-how h2,#sg-how h3,#sg-how p{margin-top:0}
+  #sg-how h1{max-width:800px;margin-bottom:18px;color:var(--sg-ink);font-size:clamp(38px,6.5vw,70px);font-weight:900;line-height:.99;letter-spacing:-.055em}
+  #sg-how h1 em{font-style:normal;position:relative;z-index:0;white-space:nowrap}
+  #sg-how h1 em:after{content:"";position:absolute;z-index:-1;left:-2px;right:-2px;bottom:2px;height:24%;background:var(--sg-yellow);transform:rotate(-1.2deg)}
+  #sg-how .sg-lead{max-width:740px;margin:0;color:#535353;font-size:clamp(16px,2vw,19px);line-height:1.7}
+  #sg-how .sg-hero-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:27px}
+  #sg-how .sg-btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:47px;padding:0 20px;border:1px solid transparent;border-radius:7px;background:var(--sg-yellow);box-shadow:0 4px 0 #b48a00;color:#171717;text-decoration:none;font-size:13px;font-weight:900;letter-spacing:.02em;transition:transform .16s,box-shadow .16s,background .16s;cursor:pointer}
+  #sg-how .sg-btn:hover{transform:translateY(-2px);background:#ffe36a;box-shadow:0 6px 0 #b48a00}
+  #sg-how .sg-btn:active{transform:translateY(3px);box-shadow:0 1px 0 #b48a00}
+  #sg-how .sg-btn-outline{background:#fff;border-color:#d8d8d8;box-shadow:0 3px 0 #ddd;color:#222}
+  #sg-how .sg-btn-outline:hover{background:#f8f8f8;box-shadow:0 5px 0 #ccc}
+  #sg-how .sg-hero-note{display:flex;align-items:flex-start;gap:10px;max-width:760px;margin-top:28px;padding:13px 15px;border-left:3px solid var(--sg-yellow-2);background:rgba(255,213,42,.11);font-size:13px;color:#4c431f}
+  #sg-how .sg-hero-note b{color:#27220e}
+  #sg-how .sg-section{padding:64px 0;border-bottom:1px solid var(--sg-line)}
+  #sg-how .sg-section.sg-soft{background:var(--sg-soft)}
+  #sg-how .sg-section-head{max-width:760px;margin-bottom:30px}
+  #sg-how .sg-index{display:block;margin-bottom:8px;color:#9a7800;font-weight:900;letter-spacing:.16em;font-size:11px}
+  #sg-how h2{margin-bottom:12px;color:var(--sg-ink);font-size:clamp(27px,4vw,42px);line-height:1.08;font-weight:900;letter-spacing:-.035em}
+  #sg-how .sg-section-head>p{margin-bottom:0;color:#626262;font-size:16px;line-height:1.7}
+  #sg-how .sg-steps{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:13px}
+  #sg-how .sg-step{min-width:0;padding:19px 16px 18px;background:#fff;border:1px solid #e8e8e8;border-radius:14px;box-shadow:0 5px 18px rgba(0,0,0,.025)}
+  #sg-how .sg-number{display:grid;place-items:center;width:37px;height:37px;margin-bottom:17px;border-radius:10px;background:var(--sg-yellow);color:#161616;font-weight:950;font-size:14px}
+  #sg-how .sg-step h3{margin-bottom:8px;color:#191919;font-size:16px;line-height:1.25;font-weight:900}
+  #sg-how .sg-step p{margin:0;color:#626262;font-size:13px;line-height:1.65}
+  #sg-how .sg-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+  #sg-how .sg-info-card{display:flex;align-items:flex-start;gap:17px;padding:23px;background:#fff;border:1px solid #e7e7e7;border-radius:var(--sg-radius)}
+  #sg-how .sg-icon{flex:0 0 46px;display:grid;place-items:center;width:46px;height:46px;border-radius:13px;background:#fff2b8;color:#292300}
+  #sg-how .sg-icon svg{width:23px;height:23px;display:block}
+  #sg-how .sg-info-card h3{margin:1px 0 7px;font-size:18px;line-height:1.25;color:#171717;font-weight:900}
+  #sg-how .sg-info-card p{margin:0;color:#606060;font-size:14px;line-height:1.7}
+  #sg-how .sg-callout{margin-top:20px;padding:19px 22px;border:1px solid #eadc9a;border-radius:12px;background:#fffbed;color:#51471e;font-size:14px;line-height:1.7}
+  #sg-how .sg-callout strong{color:#28220d}
+  #sg-how .sg-play-grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:30px;align-items:center}
+  #sg-how .sg-checklist{display:grid;gap:13px;margin:22px 0 0;padding:0;list-style:none}
+  #sg-how .sg-checklist li{display:grid;grid-template-columns:23px 1fr;gap:11px;color:#494949;font-size:14px;line-height:1.65}
+  #sg-how .sg-check{display:grid;place-items:center;width:22px;height:22px;margin-top:1px;background:var(--sg-yellow);border-radius:50%;color:#1b1b1b;font-size:13px;font-weight:900}
+  #sg-how .sg-side-panel{padding:26px;background:#171717;color:#fff;border-radius:20px;box-shadow:0 16px 38px rgba(0,0,0,.12)}
+  #sg-how .sg-side-panel .sg-panel-label{display:inline-block;margin-bottom:13px;color:var(--sg-yellow);font-size:11px;font-weight:900;letter-spacing:.15em;text-transform:uppercase}
+  #sg-how .sg-side-panel h3{margin-bottom:11px;font-size:25px;line-height:1.15;letter-spacing:-.025em;font-weight:900}
+  #sg-how .sg-side-panel p{margin-bottom:13px;color:#d4d4d4;font-size:14px;line-height:1.75}
+  #sg-how .sg-side-panel p:last-child{margin-bottom:0}
+  #sg-how .sg-side-panel strong{color:#fff}
+  #sg-how .sg-rules{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+  #sg-how .sg-rule{padding:21px 20px;background:#fff;border:1px solid #e6e6e6;border-radius:14px}
+  #sg-how .sg-rule .sg-rule-no{margin-bottom:13px;color:#987600;font-size:11px;font-weight:900;letter-spacing:.14em}
+  #sg-how .sg-rule h3{margin-bottom:8px;color:#1a1a1a;font-size:17px;line-height:1.3;font-weight:900}
+  #sg-how .sg-rule p{margin:0;color:#626262;font-size:13px;line-height:1.7}
+  #sg-how .sg-faq{max-width:850px;border-top:1px solid #dedede}
+  #sg-how .sg-faq-item{border-bottom:1px solid #dedede}
+  #sg-how .sg-faq-q{display:flex;align-items:center;justify-content:space-between;gap:18px;width:100%;padding:19px 0;border:0;background:transparent;color:#1b1b1b;text-align:left;font-size:16px;font-weight:850;cursor:pointer}
+  #sg-how .sg-faq-q span:first-child{flex:1}
+  #sg-how .sg-faq-symbol{display:grid;place-items:center;flex:0 0 28px;width:28px;height:28px;border-radius:50%;background:#fff0a6;font-size:20px;line-height:1;transition:transform .2s}
+  #sg-how .sg-faq-q[aria-expanded="true"] .sg-faq-symbol{transform:rotate(45deg)}
+  #sg-how .sg-faq-a{padding:0 42px 20px 0;color:#5d5d5d;font-size:14px;line-height:1.75}
+  #sg-how .sg-faq-a p{margin:0}
+  #sg-how .sg-final{padding:54px 0 61px;background:#171717;color:#fff}
+  #sg-how .sg-final-inner{display:flex;align-items:center;justify-content:space-between;gap:24px}
+  #sg-how .sg-final h2{max-width:660px;margin-bottom:10px;color:#fff;font-size:clamp(27px,4vw,41px)}
+  #sg-how .sg-final p{max-width:650px;margin:0;color:#cecece;font-size:15px;line-height:1.7}
+  #sg-how .sg-final .sg-btn{flex:0 0 auto}
+  #sg-how .sg-micro{margin-top:22px;color:#888;font-size:11px;line-height:1.6}
+  #sg-how a:focus-visible,#sg-how button:focus-visible{outline:3px solid #987600;outline-offset:4px}
+  @media(max-width:900px){#sg-how .sg-steps{grid-template-columns:repeat(3,minmax(0,1fr))}#sg-how .sg-play-grid{grid-template-columns:1fr;gap:22px}#sg-how .sg-side-panel{max-width:none}}
+  @media(max-width:640px){#sg-how .sg-wrap{width:min(100% - 30px,1120px)}#sg-how .sg-hero{padding:43px 0 37px}#sg-how .sg-section{padding:46px 0}#sg-how .sg-steps{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}#sg-how .sg-step{padding:16px 13px}#sg-how .sg-number{margin-bottom:12px}#sg-how .sg-columns,#sg-how .sg-rules{grid-template-columns:1fr}#sg-how .sg-info-card{padding:18px;gap:13px}#sg-how .sg-final-inner{align-items:flex-start;flex-direction:column}#sg-how .sg-final{padding:43px 0}#sg-how .sg-btn{width:100%}#sg-how h1 em{white-space:normal}}
+  @media(max-width:360px){#sg-how .sg-steps{grid-template-columns:1fr}}
+  @media(prefers-reduced-motion:reduce){#sg-how *,#sg-how *:before,#sg-how *:after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<main id="sg-how">
+  <header class="sg-hero">
+    <div class="sg-wrap">
+      <p class="sg-eyebrow">Social Gaming · Guida alla piattaforma</p>
+      <h1>Il gioco è semplice.<br><em>Si comincia così.</em></h1>
+      <p class="sg-lead">Social Gaming è uno spazio online dedicato ai giochi da tavolo e di carte. Qui trovi una guida pratica per orientarti nella piattaforma, scegliere un gioco, capire come prepararti a una partita e usare correttamente le funzioni disponibili.</p>
+      <div class="sg-hero-actions">
+        <a class="sg-btn" href="#sg-passaggi">SCOPRI I PASSAGGI <span aria-hidden="true">↓</span></a>
+        <a class="sg-btn sg-btn-outline" href="#sg-faq">LEGGI LE FAQ <span aria-hidden="true">↗</span></a>
+      </div>
+      <div class="sg-hero-note"><span aria-hidden="true">ⓘ</span><div><b>Una cosa da sapere:</b> le modalità, le regole e le opzioni possono cambiare da un gioco all'altro. Fai sempre riferimento alle istruzioni e ai comandi mostrati nella pagina del gioco che hai scelto.</div></div>
+    </div>
+  </header>
+
+  <section class="sg-section" id="sg-passaggi">
+    <div class="sg-wrap">
+      <div class="sg-section-head"><span class="sg-index">01 / DA DOVE INIZIARE</span><h2>Cinque passaggi per iniziare</h2><p>Non serve imparare tutto in una volta. Segui questi passaggi e prenditi il tempo necessario per conoscere l'interfaccia prima di iniziare una partita.</p></div>
+      <div class="sg-steps">
+        <article class="sg-step"><div class="sg-number">01</div><h3>Entra nella piattaforma</h3><p>Apri Social Gaming dal sito. Se la funzione scelta richiede un account, accedi oppure registrati seguendo le istruzioni visualizzate.</p></article>
+        <article class="sg-step"><div class="sg-number">02</div><h3>Scegli un gioco</h3><p>Esplora i giochi disponibili e apri quello che ti interessa. Prima di partire, controlla le regole e le indicazioni presenti nella sua pagina.</p></article>
+        <article class="sg-step"><div class="sg-number">03</div><h3>Preparati alla partita</h3><p>Leggi i comandi, verifica quanti partecipanti sono richiesti e segui le indicazioni per entrare in una partita o in una stanza, quando previste.</p></article>
+        <article class="sg-step"><div class="sg-number">04</div><h3>Gioca con attenzione</h3><p>Usa i comandi del gioco, rispetta i turni e attendi che l'azione venga registrata prima di cliccare di nuovo o cambiare pagina.</p></article>
+        <article class="sg-step"><div class="sg-number">05</div><h3>Controlla il risultato</h3><p>Al termine, consulta il risultato mostrato dal gioco. Le statistiche o la classifica sono disponibili quando previste e supportate dalla modalità utilizzata.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <section class="sg-section sg-soft" id="sg-account">
+    <div class="sg-wrap">
+      <div class="sg-section-head"><span class="sg-index">02 / IL TUO PROFILO</span><h2>Account e profilo: a cosa servono</h2><p>Le funzionalità legate all'account possono permettere di riconoscerti sulla piattaforma e di conservare le informazioni associate al tuo profilo. Le opzioni effettivamente disponibili sono quelle presenti nella sezione account del sito.</p></div>
+      <div class="sg-columns">
+        <article class="sg-info-card"><div class="sg-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></div><div><h3>Accedi o registrati</h3><p>Segui la procedura mostrata dalla piattaforma e inserisci solo i dati richiesti. Se una funzione è disponibile soltanto agli utenti registrati, il sito dovrebbe indicartelo prima di procedere.</p></div></article>
+        <article class="sg-info-card"><div class="sg-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 14.8 8.7 21 9.6 16.5 14l1.1 6.2L12 17.3 6.4 20.2 7.5 14 3 9.6l6.2-.9L12 3Z"/></svg></div><div><h3>Usa un profilo riconoscibile</h3><p>Se puoi scegliere un nickname o un avatar, usa un nome appropriato e non condividere informazioni private. Non comunicare la password ad altri giocatori.</p></div></article>
+        <article class="sg-info-card"><div class="sg-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/><path d="M8 7h8M8 11h7"/></svg></div><div><h3>Leggi le istruzioni del gioco</h3><p>Ogni gioco può avere comandi, turni, condizioni di vittoria e impostazioni differenti. Le indicazioni della pagina del gioco hanno la precedenza su questa guida generale.</p></div></article>
+        <article class="sg-info-card"><div class="sg-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11Z"/><path d="m9 12 2 2 4-4"/></svg></div><div><h3>Proteggi il tuo account</h3><p>Utilizza una password sicura, esci dall'account sui dispositivi condivisi e contatta il supporto indicato sul sito se noti attività insolite o problemi di accesso.</p></div></article>
+      </div>
+    </div>
+  </section>
+
+  <section class="sg-section" id="sg-partita">
+    <div class="sg-wrap">
+      <div class="sg-play-grid">
+        <div>
+          <span class="sg-index">03 / DURANTE IL GIOCO</span>
+          <h2>La partita, mossa dopo mossa</h2>
+          <p style="color:#606060;font-size:15px;line-height:1.75">Una volta aperto il gioco, osserva con attenzione la schermata: il tabellone o il tavolo, le informazioni sui partecipanti, il giocatore a cui spetta il turno e i comandi disponibili. Non tutti i giochi mostrano gli stessi elementi.</p>
+          <ul class="sg-checklist">
+            <li><span class="sg-check">✓</span><span><strong>Controlla il turno.</strong> Se il gioco è a turni, verifica che sia il tuo momento di giocare prima di eseguire una mossa.</span></li>
+            <li><span class="sg-check">✓</span><span><strong>Conferma le azioni.</strong> Quando compare un comando di conferma, usalo e attendi l'aggiornamento della schermata.</span></li>
+            <li><span class="sg-check">✓</span><span><strong>Non aggiornare senza motivo.</strong> Ricaricare la pagina o chiuderla durante una partita potrebbe interrompere la sessione o farti perdere lo stato corrente.</span></li>
+            <li><span class="sg-check">✓</span><span><strong>In caso di attesa, verifica la connessione.</strong> Se la partita non si aggiorna, attendi qualche istante e controlla se il gioco mostra un messaggio o una richiesta di riconnessione.</span></li>
+          </ul>
+        </div>
+        <aside class="sg-side-panel"><span class="sg-panel-label">Consiglio pratico</span><h3>Prima di fare una mossa, controlla la schermata.</h3><p>Leggi i messaggi mostrati dal gioco: possono indicare che devi attendere un altro partecipante, scegliere un'azione o completare un passaggio.</p><p><strong>Se qualcosa sembra bloccato</strong>, evita di cliccare ripetutamente. Controlla la connessione e segui le istruzioni disponibili nella pagina della partita.</p></aside>
+      </div>
+    </div>
+  </section>
+
+  <section class="sg-section sg-soft" id="sg-fair-play">
+    <div class="sg-wrap">
+      <div class="sg-section-head"><span class="sg-index">04 / GIOCARE BENE INSIEME</span><h2>Regole di fair play</h2><p>Social Gaming nasce per condividere il piacere del gioco. Un comportamento corretto rende le partite migliori per tutti, indipendentemente dal risultato.</p></div>
+      <div class="sg-rules">
+        <article class="sg-rule"><div class="sg-rule-no">REGOLA 01</div><h3>Rispetta gli altri</h3><p>Evita insulti, minacce, molestie e provocazioni. Una partita competitiva non giustifica comportamenti offensivi verso gli altri partecipanti.</p></article>
+        <article class="sg-rule"><div class="sg-rule-no">REGOLA 02</div><h3>Segui le regole</h3><p>Gioca secondo le regole previste e non cercare di sfruttare bug o malfunzionamenti per ottenere un vantaggio ingiusto.</p></article>
+        <article class="sg-rule"><div class="sg-rule-no">REGOLA 03</div><h3>Proteggi i tuoi dati</h3><p>Non pubblicare password, indirizzi, numeri di telefono o altre informazioni private nella chat o nel profilo pubblico.</p></article>
+      </div>
+      <div class="sg-callout"><strong>Un problema durante una partita?</strong> Conserva le informazioni utili, come il nome del gioco e una descrizione di ciò che è successo, e usa i canali di segnalazione o contatto messi a disposizione sul sito, se presenti. Non condividere pubblicamente dati personali per risolvere una controversia.</div>
+    </div>
+  </section>
+
+  <section class="sg-section" id="sg-risultati">
+    <div class="sg-wrap">
+      <div class="sg-section-head"><span class="sg-index">05 / RISULTATI E PROGRESSI</span><h2>Risultati, statistiche e classifica</h2><p>Alcune modalità possono mostrare un esito della partita, statistiche personali o una classifica. Queste informazioni dipendono dalle funzioni effettivamente attive nel gioco e dalla piattaforma.</p></div>
+      <div class="sg-columns">
+        <article class="sg-info-card"><div class="sg-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 14 4-4 3 3 6-7"/></svg></div><div><h3>Esito della partita</h3><p>Controlla il riepilogo o il messaggio finale mostrato dal gioco. Se il risultato sembra errato, annota il contesto e segnala il problema tramite i canali disponibili.</p></div></article>
+        <article class="sg-info-card"><div class="sg-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4H4v3a5 5 0 0 0 5 5M17 4h3v3a5 5 0 0 1-5 5"/><path d="M7 2h10v8a5 5 0 0 1-10 0V2Z"/></svg></div><div><h3>Classifica generale</h3><p>Quando disponibile, la classifica consente di consultare le posizioni visualizzate dalla piattaforma. Criteri, aggiornamenti e dati mostrati dipendono dal sistema di punteggio adottato.</p></div></article>
+      </div>
+      <p class="sg-micro">Nota: questa guida descrive l'uso generale della piattaforma e non garantisce che ogni gioco disponga di tutte le funzionalità menzionate. Fanno fede le opzioni presenti e le istruzioni mostrate nella versione effettivamente disponibile.</p>
+    </div>
+  </section>
+
+  <section class="sg-section sg-soft" id="sg-faq">
+    <div class="sg-wrap">
+      <div class="sg-section-head"><span class="sg-index">06 / DOMANDE FREQUENTI</span><h2>Hai ancora qualche dubbio?</h2><p>Qui trovi le risposte ai problemi e alle domande più comuni per iniziare con maggiore sicurezza.</p></div>
+      <div class="sg-faq">
+        <div class="sg-faq-item"><button class="sg-faq-q" type="button" aria-expanded="false"><span>Devo creare un account per giocare?</span><span class="sg-faq-symbol" aria-hidden="true">+</span></button><div class="sg-faq-a" hidden><p>Dipende dal gioco e dalle funzioni che vuoi utilizzare. Se è richiesto l'accesso, la pagina o il sistema di account ti guiderà nella procedura. Segui sempre le indicazioni che compaiono sul sito.</p></div></div>
+        <div class="sg-faq-item"><button class="sg-faq-q" type="button" aria-expanded="false"><span>Come faccio a trovare una partita con altri giocatori?</span><span class="sg-faq-symbol" aria-hidden="true">+</span></button><div class="sg-faq-a" hidden><p>Apri il gioco che ti interessa e controlla le opzioni disponibili, come entrare in una partita o in una stanza. La disponibilità delle modalità multiplayer può variare in base al gioco e allo stato della piattaforma.</p></div></div>
+        <div class="sg-faq-item"><button class="sg-faq-q" type="button" aria-expanded="false"><span>Il gioco non risponde: cosa posso fare?</span><span class="sg-faq-symbol" aria-hidden="true">+</span></button><div class="sg-faq-a" hidden><p>Attendi qualche istante, controlla la connessione e leggi eventuali messaggi di errore. Evita di ricaricare subito la pagina se sei in partita. Se il problema continua, annota il gioco e ciò che stavi facendo e usa il canale di assistenza disponibile.</p></div></div>
+        <div class="sg-faq-item"><button class="sg-faq-q" type="button" aria-expanded="false"><span>Perché non vedo una statistica o una posizione in classifica?</span><span class="sg-faq-symbol" aria-hidden="true">+</span></button><div class="sg-faq-a" hidden><p>Non tutte le modalità devono necessariamente salvare o mostrare le stesse informazioni. Verifica se la funzione è prevista per quel gioco e se sei entrato con l'account corretto, quando l'accesso è richiesto.</p></div></div>
+        <div class="sg-faq-item"><button class="sg-faq-q" type="button" aria-expanded="false"><span>Posso giocare da smartphone o tablet?</span><span class="sg-faq-symbol" aria-hidden="true">+</span></button><div class="sg-faq-a" hidden><p>Puoi aprire il sito da un browser mobile, ma l'esperienza e i comandi possono variare da un gioco all'altro. Se un gioco presenta problemi, prova un browser aggiornato e verifica che la connessione sia stabile.</p></div></div>
+        <div class="sg-faq-item"><button class="sg-faq-q" type="button" aria-expanded="false"><span>Dove trovo le regole specifiche di un gioco?</span><span class="sg-faq-symbol" aria-hidden="true">+</span></button><div class="sg-faq-a" hidden><p>Consulta le istruzioni presenti nella pagina del gioco. Questa pagina spiega il funzionamento generale di Social Gaming, ma non sostituisce il regolamento specifico di ciascun gioco.</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="sg-final">
+    <div class="sg-wrap">
+      <div class="sg-final-inner"><div><p class="sg-eyebrow">La prossima mossa è tua</p><h2>Scegli un gioco e mettiti alla prova.</h2><p>Esplora Social Gaming, scopri i giochi disponibili e segui le istruzioni presenti in ciascuna pagina per cominciare.</p></div><a class="sg-btn" href="https://solfriniluca1.wixstudio.com/giochisocieta" target="_top" rel="noopener">TORNA ALLA HOME <span aria-hidden="true">↗</span></a></div>
+      <p class="sg-micro">Social Gaming · Guida introduttiva. Le caratteristiche possono cambiare con gli aggiornamenti della piattaforma.</p>
+    </div>
+  </footer>
+</main>
+<script>
+(() => {
+  const root = document.getElementById('sg-how');
+  if (!root) return;
+  const questions = Array.from(root.querySelectorAll('.sg-faq-q'));
+  questions.forEach((button) => {
+    button.addEventListener('click', () => {
+      const answer = button.nextElementSibling;
+      const willOpen = button.getAttribute('aria-expanded') !== 'true';
+      button.setAttribute('aria-expanded', String(willOpen));
+      if (answer) answer.hidden = !willOpen;
+    });
+  });
+})();
+</script>
+</body>
+</html>
