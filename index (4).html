@@ -1,0 +1,602 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Nessun tema scuro forzato: evita sfondi predefiniti del browser -->
+<title>Social Gaming — Banner animato</title>
+<style>
+  :root {
+    color-scheme: light;
+    --sg-yellow: #ffd52a;
+    --sg-yellow-deep: #f4b900;
+    --sg-white: #f8f8f8;
+    --sg-muted: #bcbcbc;
+    --sg-red: #e33a43;
+    --sg-bg: transparent;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  /* Trasparenza reale del documento contenuto nell'iframe Wix */
+  html, body {
+    width: 100%;
+    min-width: 0;
+    min-height: 100%;
+    margin: 0;
+    padding: 0;
+    background: transparent !important;
+    background-color: rgba(0, 0, 0, 0) !important;
+  }
+
+  body {
+    color: var(--sg-white);
+    font-family: Inter, Arial, Helvetica, sans-serif;
+  }
+
+  button { font: inherit; }
+
+  .sg-hero {
+    position: relative;
+    isolation: isolate;
+    width: 100%;
+    min-height: 450px;
+    overflow: hidden;
+    background: transparent !important;
+    background-color: transparent !important;
+  }
+
+  .sg-stage {
+    position: relative;
+    width: min(1180px, 100%);
+    min-height: 450px;
+    margin: 0 auto;
+    padding: 22px 40px 50px;
+    background: transparent !important;
+    background-color: transparent !important;
+  }
+
+  .sg-slide {
+    position: absolute;
+    inset: 10px 40px 48px;
+    display: grid;
+    grid-template-columns: minmax(0, 1.04fr) minmax(0, .96fr);
+    align-items: center;
+    gap: 30px;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateX(24px) scale(.992);
+    transition: opacity .65s ease, transform .75s cubic-bezier(.2,.75,.2,1), visibility .65s;
+  }
+
+  .sg-slide.is-active {
+    z-index: 2;
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateX(0) scale(1);
+  }
+
+  .sg-art {
+    position: relative;
+    display: grid;
+    place-items: center;
+    min-width: 0;
+    min-height: 335px;
+  }
+
+  .sg-art svg {
+    position: relative;
+    width: min(100%, 430px);
+    height: auto;
+    max-height: 350px;
+    overflow: visible;
+    filter: drop-shadow(0 12px 22px rgba(0,0,0,.25));
+  }
+
+  .sg-copy {
+    justify-self: center;
+    max-width: 450px;
+    padding: 4px 0;
+    text-align: center;
+  }
+
+  .sg-kicker {
+    margin: 0 0 12px;
+    color: var(--sg-yellow);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .15em;
+    text-transform: uppercase;
+  }
+
+  .sg-title {
+    margin: 0;
+    font-size: clamp(29px, 2.75vw, 40px);
+    font-weight: 850;
+    line-height: 1.04;
+    letter-spacing: -.035em;
+    text-transform: uppercase;
+  }
+
+  .sg-title .accent { color: var(--sg-yellow); }
+  .sg-title .line { display: block; }
+
+  .sg-description {
+    max-width: 360px;
+    margin: 15px auto 0;
+    color: #e8e8e8;
+    font-size: clamp(14px, 1.2vw, 16px);
+    line-height: 1.45;
+  }
+
+  .sg-description strong { color: #fff; font-weight: 800; }
+
+  .sg-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 20px;
+  }
+
+  .sg-cta {
+    display: inline-flex;
+    min-height: 43px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 20px;
+    border: 0;
+    border-radius: 5px;
+    background: var(--sg-yellow);
+    box-shadow: 0 4px 0 #b48a00, 0 8px 18px rgba(255,213,42,.10);
+    color: #111;
+    font-size: 13px;
+    font-weight: 850;
+    letter-spacing: .015em;
+    text-decoration: none;
+    transition: transform .16s ease, box-shadow .16s ease, background .16s ease;
+  }
+
+  .sg-cta:hover {
+    transform: translateY(-2px);
+    background: #ffe36a;
+    box-shadow: 0 6px 0 #b48a00, 0 11px 22px rgba(255,213,42,.17);
+  }
+
+  .sg-cta:active {
+    transform: translateY(3px);
+    box-shadow: 0 2px 0 #b48a00;
+  }
+
+  .sg-cta:focus-visible,
+  .sg-nav button:focus-visible,
+  .sg-dot:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 4px;
+  }
+
+  .sg-cta-secondary {
+    background: transparent;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.38);
+    color: #fff;
+  }
+
+  .sg-cta-secondary:hover {
+    background: rgba(255,255,255,.09);
+    box-shadow: inset 0 0 0 1px #fff;
+  }
+
+  .sg-cta-secondary:active { box-shadow: inset 0 0 0 1px #fff; }
+
+  .sg-bottomline {
+    position: absolute;
+    z-index: 5;
+    right: 16px;
+    bottom: 10px;
+    left: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+  }
+
+  .sg-nav { display: flex; align-items: center; gap: 8px; }
+
+  .sg-nav button {
+    display: grid;
+    width: 35px;
+    height: 35px;
+    place-items: center;
+    border: 1px solid rgba(255,255,255,.22);
+    border-radius: 50%;
+    background: rgba(255,255,255,.045);
+    color: #fff;
+    cursor: pointer;
+    transition: background .2s, border-color .2s, transform .2s;
+  }
+
+  .sg-nav button:hover {
+    transform: scale(1.06);
+    border-color: var(--sg-yellow);
+    background: rgba(255,213,42,.15);
+  }
+
+  .sg-nav svg { width: 15px; height: 15px; }
+  .sg-dots { display: flex; align-items: center; gap: 8px; }
+
+  .sg-dot {
+    width: 8px;
+    height: 8px;
+    padding: 0;
+    border: 0;
+    border-radius: 50px;
+    background: #656565;
+    cursor: pointer;
+    transition: width .25s, background .25s;
+  }
+
+  .sg-dot.is-active { width: 25px; background: var(--sg-yellow); }
+
+  .sg-counter {
+    min-width: 34px;
+    color: #929292;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .08em;
+  }
+
+  .sg-counter span { color: #fff; }
+
+  .sg-slide-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 17px;
+    color: #ddd;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+  }
+
+  .sg-slide-tag::before {
+    width: 19px;
+    height: 2px;
+    background: var(--sg-yellow);
+    content: "";
+  }
+
+  .sg-floating { animation: sg-float 5s ease-in-out infinite; transform-origin: center; }
+  .sg-floating-slow { animation: sg-float 6s ease-in-out infinite reverse; transform-origin: center; }
+  .sg-check-pop { animation: sg-pop 3.5s ease-in-out infinite; transform-origin: center; }
+
+  @keyframes sg-float {
+    0%, 100% { transform: translateY(0) rotate(0); }
+    50% { transform: translateY(-9px) rotate(1.2deg); }
+  }
+
+  @keyframes sg-pop {
+    0%, 76%, 100% { transform: scale(1); }
+    83% { transform: scale(1.12); }
+    90% { transform: scale(.98); }
+  }
+
+  @media (min-width: 1450px) {
+    .sg-stage, .sg-hero { min-height: 470px; }
+    .sg-slide { top: 12px; }
+    .sg-art { min-height: 350px; }
+  }
+
+  @media (max-width: 760px) {
+    .sg-hero, .sg-stage { min-height: 610px; }
+    .sg-stage { padding: 10px 14px 54px; }
+    .sg-slide {
+      inset: 8px 12px 48px;
+      grid-template-columns: 1fr;
+      grid-template-rows: minmax(225px, auto) auto;
+      align-content: center;
+      gap: 0;
+    }
+    .sg-art { min-height: 235px; max-height: 260px; }
+    .sg-art svg { width: min(100%, 310px); max-height: 250px; }
+    .sg-copy { align-self: start; max-width: 520px; padding-top: 0; }
+    .sg-kicker { margin-bottom: 9px; font-size: 9px; letter-spacing: .12em; }
+    .sg-title { font-size: clamp(25px, 6.8vw, 34px); }
+    .sg-description { max-width: 340px; margin-top: 10px; font-size: 14px; line-height: 1.42; }
+    .sg-actions { margin-top: 14px; }
+    .sg-cta { min-height: 39px; padding: 0 16px; font-size: 12px; }
+    .sg-bottomline { bottom: 9px; }
+  }
+
+  @media (max-width: 380px) {
+    .sg-hero, .sg-stage { min-height: 630px; }
+    .sg-art { min-height: 220px; max-height: 235px; }
+    .sg-art svg { width: min(100%, 285px); max-height: 225px; }
+    .sg-slide { right: 10px; left: 10px; }
+    .sg-title { font-size: 24px; }
+    .sg-description { font-size: 13.5px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: .01ms !important;
+      animation-iteration-count: 1 !important;
+      scroll-behavior: auto !important;
+      transition-duration: .01ms !important;
+    }
+  }
+</style>
+</head>
+<body>
+<section class="sg-hero" aria-label="Scopri Social Gaming">
+  <div class="sg-stage" id="sgStage">
+    <!-- SLIDE 1: carte e dadi -->
+    <article class="sg-slide is-active" aria-hidden="false" data-slide="0" style="opacity:1;visibility:visible;transform:translateX(0) scale(1);transition:none;pointer-events:auto;">
+      <div class="sg-art" aria-hidden="true">
+        <svg viewBox="0 0 520 420" role="img" aria-label="Carte da gioco, dadi e gettoni">
+          <defs>
+            <linearGradient id="cardFace" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#e4e4e4"/></linearGradient>
+            <linearGradient id="goldChip" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe86b"/><stop offset="1" stop-color="#e8a900"/></linearGradient>
+            <linearGradient id="dieFace" x1="0" y1="0" x2=".9" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#d5d5d5"/></linearGradient>
+          </defs>
+          <ellipse cx="260" cy="354" rx="170" ry="22" fill="#000" opacity=".36"/>
+          <g class="sg-floating-slow" transform="translate(96 73) rotate(-17 100 130)">
+            <rect x="20" y="20" width="170" height="238" rx="17" fill="#d9b21e" opacity=".4"/>
+            <rect x="10" y="10" width="170" height="238" rx="17" fill="url(#cardFace)" stroke="#fff" stroke-width="2"/>
+            <text x="30" y="53" font-size="37" font-weight="800" fill="#d52f3a" font-family="Arial">A</text>
+            <text x="30" y="88" font-size="36" fill="#d52f3a" font-family="Arial">♥</text>
+            <text x="95" y="165" text-anchor="middle" font-size="110" fill="#d52f3a" font-family="Arial">♥</text>
+            <text x="158" y="222" text-anchor="end" font-size="34" fill="#d52f3a" font-family="Arial">A</text>
+          </g>
+          <g class="sg-floating" transform="translate(217 46) rotate(9 95 135)">
+            <rect x="0" y="0" width="180" height="255" rx="18" fill="url(#cardFace)" stroke="#f8f8f8" stroke-width="2"/>
+            <text x="19" y="48" font-size="36" font-weight="800" fill="#202020" font-family="Arial">A</text>
+            <text x="20" y="84" font-size="35" fill="#202020" font-family="Arial">♠</text>
+            <text x="90" y="174" text-anchor="middle" font-size="119" fill="#252525" font-family="Arial">♠</text>
+            <text x="158" y="229" text-anchor="end" font-size="34" fill="#202020" font-family="Arial">A</text>
+          </g>
+          <g class="sg-floating-slow" transform="translate(344 172) rotate(-13 40 40)">
+            <rect x="0" y="0" width="83" height="83" rx="15" fill="url(#dieFace)" stroke="#bbb" stroke-width="2"/>
+            <g fill="#242424"><circle cx="19" cy="19" r="6"/><circle cx="64" cy="19" r="6"/><circle cx="19" cy="41" r="6"/><circle cx="64" cy="41" r="6"/><circle cx="19" cy="64" r="6"/><circle cx="64" cy="64" r="6"/></g>
+          </g>
+          <g transform="translate(80 262) rotate(-12 43 43)" class="sg-floating">
+            <circle cx="43" cy="43" r="42" fill="#d8a900"/><circle cx="43" cy="43" r="34" fill="url(#goldChip)" stroke="#fff0a1" stroke-width="3" stroke-dasharray="4 5"/><circle cx="43" cy="43" r="24" fill="none" stroke="#b98500" stroke-width="2"/><text x="43" y="54" text-anchor="middle" font-size="31" font-weight="900" fill="#ad7a00" font-family="Arial">$</text>
+          </g>
+          <g transform="translate(152 300) rotate(13 35 35)">
+            <circle cx="35" cy="35" r="34" fill="#e8e8e8" stroke="#a5a5a5" stroke-width="5"/><circle cx="35" cy="35" r="26" fill="#ccc" stroke="#f7f7f7" stroke-width="2"/><text x="35" y="43" text-anchor="middle" font-size="22" font-weight="900" fill="#888" font-family="Arial">50</text>
+          </g>
+          <g transform="translate(272 305) rotate(-8 34 34)" class="sg-floating-slow">
+            <circle cx="34" cy="34" r="32" fill="#ffcf19"/><circle cx="34" cy="34" r="25" fill="#edb300" stroke="#ffe35e" stroke-width="3" stroke-dasharray="4 5"/><text x="34" y="44" text-anchor="middle" font-size="29" font-weight="900" fill="#b98500" font-family="Arial">$</text>
+          </g>
+          <g class="sg-floating" transform="translate(342 291) rotate(14 35 35)">
+            <rect x="0" y="0" width="68" height="68" rx="13" fill="url(#dieFace)" stroke="#bdbdbd" stroke-width="2"/><g fill="#252525"><circle cx="17" cy="17" r="5.6"/><circle cx="51" cy="17" r="5.6"/><circle cx="17" cy="51" r="5.6"/><circle cx="51" cy="51" r="5.6"/><circle cx="34" cy="34" r="5.6"/></g>
+          </g>
+        </svg>
+      </div>
+      <div class="sg-copy">
+        <p class="sg-kicker">Social Gaming · Il gioco comincia qui</p>
+        <h1 class="sg-title"><span class="line">Entra in gioco.</span><span class="line accent">Scegli il tuo.</span><span class="line">Divertiti online.</span></h1>
+        <p class="sg-description">Carte, strategia e giochi da tavolo: <strong>trova il tuo preferito</strong> e gioca online con altri appassionati.</p>
+        <div class="sg-actions"><a class="sg-cta" href="#giochi" data-link="giochi">SCOPRI I GIOCHI <span aria-hidden="true">&nbsp;↗</span></a><a class="sg-cta sg-cta-secondary" href="#come-funziona" data-link="come-funziona">COME FUNZIONA</a></div>
+        <div class="sg-slide-tag">Il prossimo gioco ti aspetta</div>
+      </div>
+    </article>
+
+    <!-- SLIDE 2: classifica generale -->
+    <article class="sg-slide" aria-hidden="true" data-slide="1">
+      <div class="sg-art" aria-hidden="true">
+        <svg viewBox="0 0 520 420" role="img" aria-label="Podio, medaglie e classifica giocatori">
+          <defs>
+            <linearGradient id="podiumGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe86d"/><stop offset="1" stop-color="#cc8a00"/></linearGradient>
+            <linearGradient id="podiumSilver" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#8f979f"/></linearGradient>
+          </defs>
+          <ellipse cx="259" cy="354" rx="167" ry="23" fill="#000" opacity=".42"/>
+          <g transform="translate(78 83)" class="sg-floating-slow">
+            <path d="M40 0 L70 18 L65 63 L40 47 L15 63 L10 18 Z" fill="#d8343f" stroke="#ff7279" stroke-width="2"/>
+            <circle cx="40" cy="62" r="42" fill="url(#podiumGold)" stroke="#fff0a1" stroke-width="4"/><circle cx="40" cy="62" r="32" fill="none" stroke="#d49a00" stroke-width="3"/><path d="M40 36 L47 52 L64 54 L51 66 L55 83 L40 74 L25 83 L29 66 L16 54 L33 52 Z" fill="#fff2a4"/>
+          </g>
+          <g class="sg-floating" transform="translate(152 128)">
+            <rect x="0" y="144" width="99" height="100" rx="8" fill="#242424" stroke="#696969" stroke-width="2"/><rect x="0" y="144" width="99" height="16" rx="5" fill="#3b3b3b"/><text x="49" y="204" text-anchor="middle" font-size="51" font-weight="900" fill="#dedede" font-family="Arial">2</text>
+          </g>
+          <g class="sg-floating" transform="translate(251 74)">
+            <rect x="0" y="128" width="104" height="142" rx="8" fill="url(#podiumGold)" stroke="#ffec81" stroke-width="2"/><rect x="0" y="128" width="104" height="18" rx="5" fill="#ffea76"/><text x="52" y="207" text-anchor="middle" font-size="67" font-weight="900" fill="#9e6500" font-family="Arial">1</text>
+            <path d="M52 24 L60 43 L81 45 L65 59 L70 80 L52 69 L34 80 L39 59 L23 45 L44 43 Z" fill="#ffe15b" stroke="#fff5b3" stroke-width="3"/>
+          </g>
+          <g transform="translate(354 156)" class="sg-floating-slow">
+            <rect x="0" y="116" width="80" height="82" rx="8" fill="#2a2f37" stroke="#6d7784" stroke-width="2"/><rect x="0" y="116" width="80" height="14" rx="4" fill="#424b56"/><text x="40" y="168" text-anchor="middle" font-size="44" font-weight="900" fill="#d5dbe2" font-family="Arial">3</text>
+          </g>
+          <g transform="translate(349 50)"><circle cx="44" cy="44" r="39" fill="url(#podiumSilver)" stroke="#fff" stroke-width="3"/><circle cx="44" cy="44" r="28" fill="none" stroke="#767d85" stroke-width="2"/><path d="M44 25 L50 38 L64 39 L54 49 L57 63 L44 56 L31 63 L34 49 L24 39 L38 38 Z" fill="#707781"/></g>
+        </svg>
+      </div>
+      <div class="sg-copy">
+        <p class="sg-kicker">Una classifica, tutti i giochi</p>
+        <h2 class="sg-title"><span class="line">Gioca a modo tuo.</span><span class="line accent">Scala la classifica.</span><span class="line">Fatti notare.</span></h2>
+        <p class="sg-description">La <strong>classifica generale di Social Gaming</strong> mette a confronto i giocatori della piattaforma. Controlla la tua posizione e punta a migliorare, partita dopo partita.</p>
+        <div class="sg-actions"><a class="sg-cta" href="#classifiche" data-link="classifiche">SCOPRI LA CLASSIFICA <span aria-hidden="true">&nbsp;↗</span></a></div>
+        <div class="sg-slide-tag">Il tuo posto in classifica</div>
+      </div>
+    </article>
+
+    <!-- SLIDE 3: coppa e risultati -->
+    <article class="sg-slide" aria-hidden="true" data-slide="2">
+      <div class="sg-art" aria-hidden="true">
+        <svg viewBox="0 0 520 420" role="img" aria-label="Coppa dorata con spunta di vittoria">
+          <defs>
+            <linearGradient id="trophyGold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff18a"/><stop offset=".27" stop-color="#ffd52a"/><stop offset=".68" stop-color="#f5ad00"/><stop offset="1" stop-color="#b97500"/></linearGradient>
+            <linearGradient id="trophyShade" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#c58500"/><stop offset=".45" stop-color="#ffe76b"/><stop offset="1" stop-color="#db9700"/></linearGradient>
+          </defs>
+          <ellipse cx="251" cy="361" rx="132" ry="19" fill="#000" opacity=".4"/>
+          <g class="sg-floating" transform="translate(103 53)">
+            <path d="M91 41 H254 V91 C254 153 222 190 172 207 C122 190 91 153 91 91 Z" fill="url(#trophyGold)" stroke="#ffec7b" stroke-width="3"/>
+            <path d="M91 53 H61 C36 53 34 77 43 101 C54 131 78 141 112 145 L121 120 C94 114 75 99 75 80 H91 Z" fill="url(#trophyShade)" stroke="#efb800" stroke-width="3"/>
+            <path d="M254 53 H284 C309 53 311 77 302 101 C291 131 267 141 233 145 L224 120 C251 114 270 99 270 80 H254 Z" fill="url(#trophyShade)" stroke="#efb800" stroke-width="3"/>
+            <path d="M112 56 H232 V95 C232 139 208 166 172 182 C136 166 112 139 112 95 Z" fill="none" stroke="#fff1a2" stroke-width="2" opacity=".65"/>
+            <path d="M150 89 L172 66 L194 89 L186 121 L172 138 L158 121 Z" fill="#fff4b5" opacity=".74"/>
+            <path d="M160 106 L170 116 L190 91" fill="none" stroke="#aa7200" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+            <rect x="156" y="202" width="32" height="41" rx="5" fill="url(#trophyShade)"/>
+            <path d="M132 242 H212 L232 274 H112 Z" fill="url(#trophyGold)" stroke="#ffeb80" stroke-width="2"/>
+            <rect x="111" y="271" width="122" height="22" rx="5" fill="#d99500" stroke="#ffdf48" stroke-width="2"/>
+            <rect x="126" y="293" width="92" height="13" rx="4" fill="#a86c00"/>
+            <path d="M118 65 L138 60" stroke="#fff9ce" stroke-width="5" stroke-linecap="round" opacity=".7"/>
+          </g>
+          <g class="sg-check-pop" transform="translate(315 51)">
+            <circle cx="69" cy="69" r="57" fill="#101b12" stroke="#65db7e" stroke-width="4"/>
+            <circle cx="69" cy="69" r="46" fill="#183a24" stroke="#4eac61" stroke-width="1.5"/>
+            <path d="M42 69 L60 87 L97 48" fill="none" stroke="#8dffa1" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+          </g>
+        </svg>
+      </div>
+      <div class="sg-copy">
+        <p class="sg-kicker">Ogni partita è una nuova occasione</p>
+        <h2 class="sg-title"><span class="line">Metti alla prova</span><span class="line accent">le tue abilità.</span><span class="line">Fai la tua mossa.</span></h2>
+        <p class="sg-description">Concentrati, trova la strategia giusta e gioca con altri appassionati. <strong>Il prossimo risultato</strong> comincia dalla tua prossima partita.</p>
+        <div class="sg-actions"><a class="sg-cta" href="#giochi" data-link="giochi">INIZIA A GIOCARE <span aria-hidden="true">&nbsp;↗</span></a></div>
+        <div class="sg-slide-tag">Il divertimento è tutto da giocare</div>
+      </div>
+    </article>
+  </div>
+
+  <div class="sg-bottomline" aria-label="Controlli carosello">
+    <div class="sg-nav">
+      <button type="button" id="sgPrev" aria-label="Slide precedente"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 5L8 12L15 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <button type="button" id="sgNext" aria-label="Slide successiva"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 5L16 12L9 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+    <div class="sg-dots" role="group" aria-label="Scegli una slide">
+      <button type="button" class="sg-dot is-active" aria-label="Vai alla slide 1" aria-pressed="true"></button>
+      <button type="button" class="sg-dot" aria-label="Vai alla slide 2" aria-pressed="false"></button>
+      <button type="button" class="sg-dot" aria-label="Vai alla slide 3" aria-pressed="false"></button>
+    </div>
+    <div class="sg-counter" aria-live="polite"><span id="sgCurrent">01</span> / 03</div>
+  </div>
+</section>
+
+<script>
+(() => {
+  const root = document.querySelector('.sg-hero');
+  if (!root) return;
+
+  const slides = Array.from(root.querySelectorAll('.sg-slide'));
+  const dots = Array.from(root.querySelectorAll('.sg-dot'));
+  const currentLabel = root.querySelector('#sgCurrent');
+  const prev = root.querySelector('#sgPrev');
+  const next = root.querySelector('#sgNext');
+  let index = 0;
+  let timer = null;
+  const interval = 6200;
+
+  function showSlide(nextIndex) {
+    index = (nextIndex + slides.length) % slides.length;
+    slides.forEach((slide, i) => {
+      const active = i === index;
+      slide.classList.toggle('is-active', active);
+      slide.setAttribute('aria-hidden', String(!active));
+    });
+    dots.forEach((dot, i) => {
+      const active = i === index;
+      dot.classList.toggle('is-active', active);
+      dot.setAttribute('aria-pressed', String(active));
+    });
+    if (currentLabel) currentLabel.textContent = String(index + 1).padStart(2, '0');
+  }
+
+  /* Il carosello continua a scorrere anche dopo un clic manuale. */
+  function startTimer() {
+    if (timer !== null) window.clearInterval(timer);
+    timer = window.setInterval(() => showSlide(index + 1), interval);
+  }
+
+  /* Rimuove subito lo stile inline di fallback sulla prima slide (serviva
+     solo a evitare un frame vuoto prima che questo script partisse): da
+     qui in poi è la classe .is-active, gestita da showSlide(), a
+     decidere quale slide è visibile — niente più doppie regole in
+     conflitto. */
+  slides.forEach(slide => { slide.removeAttribute('style'); });
+
+  /* --- "Preinit": simula automaticamente lo scroll giù+su -------------
+     Il fatto che un vero scroll giù e poi su sblocchi il rendering dice
+     che qualcosa (il motore del browser o il contenitore Wix) aspetta
+     un vero evento di scroll/reflow prima di disegnare correttamente.
+     Invece di aspettare che l'utente lo faccia a mano, lo facciamo noi,
+     appena la pagina è pronta: un micro-scroll giù e subito dopo su,
+     sia nella nostra finestra (self) sia, se accessibile, nella pagina
+     che ci ospita (parent/top — funziona solo se non è bloccato da
+     restrizioni cross-origin, altrimenti viene ignorato senza errori).
+     In più forziamo un reflow "duro" del documento (display none→block,
+     più pesante della semplice lettura di offsetHeight) e ripetiamo il
+     tutto in una breve sequenza per coprire anche i casi in cui il
+     contenuto Wix si inizializzi con un piccolo ritardo. */
+  function hardReflow() {
+    const el = document.documentElement;
+    const prevDisplay = el.style.display;
+    el.style.display = 'none';
+    void el.offsetHeight;
+    el.style.display = prevDisplay || '';
+  }
+
+  function nudgeScroll(win) {
+    if (!win) return;
+    try {
+      const x = win.scrollX || 0;
+      const y = win.scrollY || 0;
+      win.scrollTo(x, y + 2);
+      win.dispatchEvent(new Event('scroll'));
+      requestAnimationFrame(() => {
+        win.scrollTo(x, y);
+        win.dispatchEvent(new Event('scroll'));
+      });
+    } catch (e) { /* cross-origin o non disponibile: ignorato */ }
+  }
+
+  function preInitBurst() {
+    hardReflow();
+    nudgeScroll(window);
+    nudgeScroll(window.parent);
+    nudgeScroll(window.top);
+    window.dispatchEvent(new Event('resize'));
+    try { window.parent.dispatchEvent(new Event('resize')); } catch (e) {}
+  }
+
+  let preInitAttempts = 0;
+  function preInitLoop() {
+    preInitBurst();
+    preInitAttempts += 1;
+    if (preInitAttempts < 8) {
+      setTimeout(preInitLoop, 150);
+    }
+  }
+
+  preInitLoop();
+  document.addEventListener('DOMContentLoaded', preInitLoop);
+  window.addEventListener('load', preInitLoop);
+  window.addEventListener('pageshow', preInitLoop);
+  /* ------------------------------------------------------------------ */
+
+  if (prev) prev.addEventListener('click', () => { showSlide(index - 1); startTimer(); });
+  if (next) next.addEventListener('click', () => { showSlide(index + 1); startTimer(); });
+  dots.forEach((dot, i) => dot.addEventListener('click', () => { showSlide(i); startTimer(); }));
+  root.addEventListener('keydown', event => {
+    if (event.key === 'ArrowRight') { showSlide(index + 1); startTimer(); }
+    if (event.key === 'ArrowLeft') { showSlide(index - 1); startTimer(); }
+  });
+
+  // In Wix HTML Embed, gli anchor interni non possono scorrere la pagina esterna.
+  // Invia quindi un messaggio al codice Velo della pagina.
+  root.querySelectorAll('[data-link]').forEach(link => {
+    link.addEventListener('click', event => {
+      const destinazione = link.getAttribute('data-link');
+      if (destinazione === 'giochi' || destinazione === 'classifiche' || destinazione === 'come-funziona') {
+        event.preventDefault();
+        window.parent.postMessage({ type: 'socialGamingNavigate', target: destinazione }, '*');
+      }
+    });
+  });
+
+  showSlide(0);
+  startTimer();
+})();
+</script>
+</body>
+</html>
