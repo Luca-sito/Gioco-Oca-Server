@@ -1672,7 +1672,14 @@ async function animaVersoTavola(prossimaTavola, istantanea, generazione) {
 
   for (const cella of nuove) {
     const key = chiaveCasella(cella.r, cella.c);
-    if (posizioniDischi.has(key)) continue;
+    if (posizioniDischi.has(key)) {
+      const posizioneEsistente = posizioniDischi.get(key);
+      const discoEsistente = posizioneEsistente.querySelector(".othello-disco");
+      if (discoEsistente && discoEsistente.dataset.colore !== cella.colore) {
+        discoEsistente.dataset.colore = cella.colore;
+      }
+      continue;
+    }
     const posizione = document.createElement("div");
     posizione.className = "othello-posizione appena-giocato";
     posizione.appendChild(creaFacciaDisco(cella.colore));
@@ -1877,6 +1884,26 @@ function aggiornaCountdownTurno() {
 /* =========================================================
    APPLICAZIONE STATO / SOCKET
    ========================================================= */
+
+/* Coda seriale per l'applicazione degli stati ricevuti dal server.
+   Senza questa coda, due messaggi "othello_stato"/"othello_fine"
+   ravvicinati potevano far partire due applicaStatoPartita() in
+   parallelo: entrambi leggevano lo stesso tavolaDisegnata di
+   partenza e, nel calcolo dei dischi "nuovi" (non protetto dal
+   controllo di generazione), un disco poteva restare disegnato
+   con il colore sbagliato rispetto alla tavola reale del server.
+   Questo produceva conteggi di dischi neri/bianchi diversi tra
+   due dispositivi connessi alla stessa partita. Applicando ogni
+   stato in sequenza (il prossimo solo dopo che il precedente ha
+   finito la sua animazione) la tavola mostrata resta sempre
+   fedele a quella autoritativa del server. */
+let codaAggiornamentiStatoOthello = Promise.resolve();
+function accodaAggiornamentoStatoOthello(azione) {
+  codaAggiornamentiStatoOthello = codaAggiornamentiStatoOthello
+    .then(azione)
+    .catch(errore => console.error("Othello: errore nell'applicazione dello stato in coda:", errore));
+  return codaAggiornamentiStatoOthello;
+}
 
 async function applicaStatoPartita(partita, istantanea = false) {
   if (!partita || typeof partita !== "object") return false;
@@ -2214,10 +2241,12 @@ function gestisciMessaggioSocket(dati) {
 
     const istantanea = attesaSnapshot;
     attesaSnapshot = false;
-    applicaStatoPartita(dati.partita, istantanea).then(ok => {
-      if (!ok && istantanea) attesaSnapshot = true;
-      if (ok) segnalaStatoInizialeRicevuto();
-    });
+    accodaAggiornamentoStatoOthello(() =>
+      applicaStatoPartita(dati.partita, istantanea).then(ok => {
+        if (!ok && istantanea) attesaSnapshot = true;
+        if (ok) segnalaStatoInizialeRicevuto();
+      })
+    );
     return;
   }
 
@@ -2230,7 +2259,7 @@ function gestisciMessaggioSocket(dati) {
     const conclusa = { ...(dati.partita || {}), fase: "terminata" };
     if (Object.prototype.hasOwnProperty.call(dati, "vincitoreUid")) conclusa.vincitoreUid = dati.vincitoreUid;
     if (dati.motivo) conclusa.motivoFine = dati.motivo;
-    applicaStatoPartita(conclusa);
+    accodaAggiornamentoStatoOthello(() => applicaStatoPartita(conclusa));
     return;
   }
 
