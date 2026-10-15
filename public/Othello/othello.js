@@ -1775,7 +1775,15 @@ function distanzaScacchi(a, b) {
 }
 
 async function animaVersoTavola(prossimaTavola, istantanea, generazione) {
-  if (istantanea || !tavolaDisegnata || !animazioniDischiAttive) {
+  const movimentoRidotto =
+  window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
+if (
+  istantanea ||
+  !tavolaDisegnata ||
+  !animazioniDischiAttive ||
+  movimentoRidotto
+) {
     sincronizzaDischiIstantaneo(prossimaTavola);
     return;
   }
@@ -1797,12 +1805,19 @@ async function animaVersoTavola(prossimaTavola, istantanea, generazione) {
       continue;
     }
     const posizione = document.createElement("div");
-    posizione.className = "othello-posizione appena-giocato";
-    posizione.appendChild(creaFacciaDisco(cella.colore));
-    strato.appendChild(posizione);
-    impostaPosizioneDisco(posizione, cella.r, cella.c);
-    posizioniDischi.set(key, posizione);
-    if (cella === nuove[0]) suonaPosa();
+posizione.className = "othello-posizione appena-giocato";
+posizione.appendChild(creaFacciaDisco(cella.colore));
+strato.appendChild(posizione);
+impostaPosizioneDisco(posizione, cella.r, cella.c);
+posizioniDischi.set(key, posizione);
+
+// La caduta dura 380 ms.
+// Rimuove la classe per consentire i successivi flip 3D.
+setTimeout(() => {
+  posizione.classList.remove("appena-giocato");
+}, 450);
+
+if (cella === nuove[0]) suonaPosa();
   }
 
   const flipPromesse = girati.map(cella => {
