@@ -1521,6 +1521,71 @@ let animazioniDaAttendere = 0;
 let animazioniDaAttendereGenerazione = 0;
 const TIMEOUT_ANIMAZIONE_MS = 2500;
 const animazioniDischiAttive = true;
+
+/* =========================================================
+   DIAGNOSTICA TEMPORANEA SINCRONIZZAZIONE OTHELLO
+   ========================================================= */
+
+function firmaTavolaSyncOthello(tavola) {
+  if (!Array.isArray(tavola) || tavola.length !== 8) {
+    return "TAVOLA_NON_VALIDA";
+  }
+
+  return tavola.map(riga =>
+    riga.map(cella =>
+      cella === "nero" ? "N" :
+      cella === "bianco" ? "B" : "."
+    ).join("")
+  ).join("/");
+}
+
+function firmaTavolaDomSyncOthello() {
+  const tavolaDom = Array.from(
+    { length: 8 },
+    () => Array(8).fill(null)
+  );
+
+  for (const [chiave, posizione] of posizioniDischi) {
+    const [r, c] = chiave.split(",").map(Number);
+    const disco = posizione?.querySelector(".othello-disco");
+
+    if (tavolaDom[r] && c >= 0 && c < 8 && disco) {
+      tavolaDom[r][c] = disco.dataset.colore || null;
+    }
+  }
+
+  return firmaTavolaSyncOthello(tavolaDom);
+}
+
+function tracciaSyncOthello(evento, partitaRicevuta = null, extra = {}) {
+  console.log("[OTHELLO-SYNC]", {
+    evento,
+    ora: new Date().toISOString(),
+    partitaId: stato?.id || partitaId || null,
+
+    mossaServer: partitaRicevuta?.numeroMossa ?? null,
+    turnoServer: partitaRicevuta?.turno ?? null,
+    faseServer: partitaRicevuta?.fase ?? null,
+    tavolaServer: firmaTavolaSyncOthello(
+      partitaRicevuta?.tavola
+    ),
+
+    mossaLocale: stato?.numeroMossa ?? null,
+    turnoLocale: stato?.turno ?? null,
+    tavolaLocale: firmaTavolaSyncOthello(stato?.tavola),
+    tavolaDisegnata: firmaTavolaSyncOthello(tavolaDisegnata),
+    tavolaDOM: firmaTavolaDomSyncOthello(),
+
+    ultimoNumeroMossaAccettato,
+    attesaSnapshot,
+    mossaInAttesa,
+    animazioniDaAttendere,
+    socket: socket?.readyState ?? null,
+
+    ...extra
+  });
+}
+
 function aggiornaBottoneAnimazioniOthello() {
   const bottone = document.getElementById("btn-animazioni-othello");
   if (!bottone) return;
@@ -1913,6 +1978,10 @@ async function applicaStatoPartita(partita, istantanea = false) {
     return false;
   }
 
+    tracciaSyncOthello("APPLICAZIONE_INIZIATA", partita, {
+    istantanea
+  });
+
   const prossimo = { ...ultimoStatoRicevuto, ...partita };
   prossimo.tavola = copiaTavola(partita.tavola);
 
@@ -1923,7 +1992,7 @@ async function applicaStatoPartita(partita, istantanea = false) {
     ? Number(stato.numeroMossa)
     : 0;
 
-  if (numeroMossaIngresso < Math.max(numeroMossaCorrente, ultimoNumeroMossaAccettato)) {
+  if (!istantanea && numeroMossaIngresso < Math.max(numeroMossaCorrente, ultimoNumeroMossaAccettato)) {
     console.warn("Othello: ignorato stato arretrato", {
       ricevuto: numeroMossaIngresso,
       corrente: numeroMossaCorrente,
@@ -1983,7 +2052,11 @@ async function applicaStatoPartita(partita, istantanea = false) {
     avvisoTempoChiave = "";
   }
 
-  render();
+    render();
+
+  tracciaSyncOthello("APPLICAZIONE_COMPLETATA", stato, {
+    istantanea
+  });
 
   if (
     stato.fase === "in_corso" &&
@@ -2222,29 +2295,12 @@ async function abbandonaPartita() {
 function gestisciMessaggioSocket(dati) {
   if (!dati || typeof dati !== "object") return;
 
-    // Il server comunica separatamente l'avvio della partita.
-  // Il client deve richiedere lo snapshot aggiornato per uscire
-  // dalla fase "attesa_giocatori".
-  if (dati.tipo === "partitaAvviata") {
-    const idRicevuto = String(dati.partitaId || "");
-    const idLocale = String(stato.id || partitaId || "");
-
-    if (idRicevuto && idLocale && idRicevuto !== idLocale) {
-      return;
-    }
-
-    attesaSnapshot = true;
-    mossaInAttesa = false;
-    clearTimeout(timerMossaInAttesa);
-
-    inviaSocket({
-      tipo: "othello_entra",
-      partitaId: stato.id || partitaId,
-      stanza
-    });
-
-    return;
-  }
+  if (dati.tipo === "othello_stato" || dati.tipo === "othello_fine") {
+  tracciaSyncOthello(
+    "MESSAGGIO_RICEVUTO_" + dati.tipo,
+    dati.partita || null
+  );
+}
 
   aggiornaNomiPartecipanti(dati);
   if (typeof dati.mediaAttiva === "boolean") impostaMediaPartitaAttiva(dati.mediaAttiva);
@@ -2267,16 +2323,8 @@ function gestisciMessaggioSocket(dati) {
     attesaSnapshot = false;
     accodaAggiornamentoStatoOthello(() =>
       applicaStatoPartita(dati.partita, istantanea).then(ok => {
-        if (!ok && istantanea) {
-  // Se la partita era già stata sincronizzata, conserva lo stato
-  // locale più recente invece di bloccare nuovamente la scacchiera.
-  attesaSnapshot = !statoInizialeRicevuto;
-  renderTavola();
-}
-
-if (ok) {
-  segnalaStatoInizialeRicevuto();
-}
+        if (!ok && istantanea) attesaSnapshot = true;
+        if (ok) segnalaStatoInizialeRicevuto();
       })
     );
     return;
