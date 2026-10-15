@@ -1127,7 +1127,7 @@ function applicaStatoPartita(partita, istantanea = false) {
 
   const numeroMossaCorrente = numeroMossaNormalizzato(stato);
   const numeroMossaIngresso = prossimo.numeroMossa;
-  if (numeroMossaIngresso < Math.max(numeroMossaCorrente, ultimoNumeroMossaAccettato)) {
+  if (!istantanea && numeroMossaIngresso < Math.max(numeroMossaCorrente, ultimoNumeroMossaAccettato)) {
     console.warn("Othello: ignorato snapshot arretrato", {
       ricevuto: numeroMossaIngresso,
       corrente: numeroMossaCorrente,
@@ -1143,7 +1143,9 @@ function applicaStatoPartita(partita, istantanea = false) {
   const nuovaMossa = numeroMossaIngresso > numeroPrecedente;
   const tavolaPrecedente = tavolaDisegnata;
 
-  ultimoNumeroMossaAccettato = Math.max(ultimoNumeroMossaAccettato, numeroMossaIngresso);
+  ultimoNumeroMossaAccettato = istantanea
+    ? numeroMossaIngresso
+    : Math.max(ultimoNumeroMossaAccettato, numeroMossaIngresso);
   stato = copiaStatoOthello(prossimo);
   ultimoStatoRicevuto = copiaStatoOthello(prossimo);
   sincronizzaIdentitaDaPartita(stato);
@@ -1460,8 +1462,7 @@ function descrittoreMediaPerUid(uid) {
   const salvato = partecipantiMediaInfo.get(uid);
   if (salvato) return salvato;
 
-  const giocatore = (Array.isArray(ultimoStatoGiocatori) ? ultimoStatoGiocatori : [])
-    .find(g => g && g.id === uid);
+  const giocatore = giocatoriStato().find(g => g && String(g.uid) === String(uid));
   const tipoDispositivo = normalizzaTipoDispositivoMedia(giocatore && giocatore.tipoDispositivo);
   return {
     uid,
@@ -2302,17 +2303,51 @@ function gestisciMessaggioSocket(dati) {
   }
 
   if (dati.tipo === "othello_stato") {
-    if (!dati.partita || !tavolaValida(dati.partita.tavola)) return;
+    if (!dati.partita || typeof dati.partita !== "object") return;
+
+    const partitaRicevuta = { ...dati.partita };
+    // Alcune versioni del server inviano tavola null durante l'attesa.
+    // In quel caso mostriamo la tavola iniziale, ma mai in una partita attiva.
+    if (!tavolaValida(partitaRicevuta.tavola)) {
+      if (partitaRicevuta.fase === "attesa_giocatori" || partitaRicevuta.iniziata !== true) {
+        partitaRicevuta.tavola = tavolaValida(stato.tavola)
+          ? copiaTavola(stato.tavola)
+          : tavolaInizialeOthello();
+      } else {
+        console.warn("Othello: snapshot senza tavola valida; richiedo risincronizzazione.");
+        if (!richiestaSnapshotRipetuta) {
+          richiestaSnapshotRipetuta = true;
+          inviaSocket({ tipo: "othello_entra", partitaId: stato.id || partitaId, stanza });
+        }
+        return;
+      }
+    }
 
     const istantanea = attesaSnapshot;
-    const accettato = applicaStatoPartita(dati.partita, istantanea);
+    const accettato = applicaStatoPartita(partitaRicevuta, istantanea);
     if (accettato) segnalaStatoInizialeRicevuto();
     else if (istantanea && !richiestaSnapshotRipetuta) {
-      /* Uno snapshot più vecchio non deve sbloccare input né sovrascrivere la
-         tavola già conosciuta. Eseguiamo una sola richiesta aggiuntiva, evitando
-         un ciclo infinito se il server continua a restituire uno stato vecchio. */
       richiestaSnapshotRipetuta = true;
       inviaSocket({ tipo: "othello_entra", partitaId: stato.id || partitaId, stanza });
+    }
+    return;
+  }
+
+  // The server announces the start separately from the full Othello snapshot.
+  // Request the canonical state so players already on the screen leave waiting mode.
+  if (dati.tipo === "partitaAvviata") {
+    const idRicevuto = dati.partitaId == null ? "" : String(dati.partitaId);
+    const idLocale = String(stato.id || partitaId || "");
+    if (!idRicevuto || !idLocale || idRicevuto === idLocale) {
+      attesaSnapshot = true;
+      mossaInAttesa = false;
+      clearTimeout(timerMossaInAttesa);
+      richiestaSnapshotRipetuta = false;
+      if (!inviaSocket({ tipo: "othello_entra", partitaId: stato.id || partitaId, stanza })) {
+        setTimeout(() => {
+          if (!paginaInChiusura) inviaSocket({ tipo: "othello_entra", partitaId: stato.id || partitaId, stanza });
+        }, 250);
+      }
     }
     return;
   }
