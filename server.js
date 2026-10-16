@@ -425,16 +425,149 @@ function estraiTokenDaCookieHeader(cookieHeaderGrezzo) {
   }
   return null;
 }
+// Verifica l'accesso senza confondere la disattivazione volontaria
+// (accediDiNuovo) con ban e sospensioni amministrative (stato).
+async function verificaStatoAccessoAccount(uid) {
+  if (!db) {
+    return {
+      ok: false,
+      status: 503,
+      codice: "SERVIZIO_NON_DISPONIBILE",
+      errore: "Servizio account non disponibile."
+    };
+  }
+
+  if (typeof uid !== "string" || !uid) {
+    return {
+      ok: false,
+      status: 401,
+      codice: "SESSIONE_NON_VALIDA",
+      errore: "Sessione non valida. Effettua nuovamente il login."
+    };
+  }
+
+  const [emailSnap, accessoSnap, statoSnap, sospesoFinoSnap] = await Promise.all([
+    db.ref("utenti/" + uid + "/email").once("value"),
+    db.ref("utenti/" + uid + "/accediDiNuovo").once("value"),
+    db.ref("utenti/" + uid + "/stato").once("value"),
+    db.ref("utenti/" + uid + "/sospesoFino").once("value")
+  ]);
+
+  if (!emailSnap.exists()) {
+    return {
+      ok: false,
+      status: 401,
+      codice: "ACCOUNT_NON_DISPONIBILE",
+      errore: "Account non disponibile. Effettua nuovamente il login."
+    };
+  }
+
+  if (accessoSnap.val() === false) {
+    return {
+      ok: false,
+      status: 403,
+      codice: "ACCOUNT_DISATTIVATO",
+      errore: "Account disattivato. Contatta l'assistenza per richiedere la riattivazione."
+    };
+  }
+
+  const stato = statoSnap.val();
+
+  if (stato === "bannato") {
+    return {
+      ok: false,
+      status: 403,
+      codice: "ACCOUNT_BANNATO",
+      errore: "Il tuo account è stato bannato."
+    };
+  }
+
+  if (stato === "sospeso" && Number(sospesoFinoSnap.val()) > Date.now()) {
+    return {
+      ok: false,
+      status: 403,
+      codice: "ACCOUNT_SOSPESO",
+      errore: "Il tuo account è sospeso."
+    };
+  }
+
+  return { ok: true };
+}
+
 async function richiediAuth(req, res, next) {
   const dati = verificaToken(estraiTokenHeader(req));
-  if (!dati) return res.status(401).json({ errore: "Devi effettuare il login." });
-  req.utente = dati; next();
+
+  if (!dati) {
+    return res.status(401).json({
+      errore: "Devi effettuare il login."
+    });
+  }
+
+  try {
+    const controllo = await verificaStatoAccessoAccount(dati.uid);
+
+    if (!controllo.ok) {
+      if (controllo.status === 401 || controllo.status === 403) {
+        res.clearCookie("token", OPZIONI_RIMOZIONE_COOKIE);
+      }
+
+      return res.status(controllo.status).json({
+        codice: controllo.codice,
+        errore: controllo.errore
+      });
+    }
+
+    req.utente = dati;
+    return next();
+
+  } catch (errore) {
+    console.error("Errore verifica accesso account:", errore);
+
+    return res.status(503).json({
+      errore: "Impossibile verificare lo stato dell'account."
+    });
+  }
 }
+
 async function richiediAdmin(req, res, next) {
   const dati = verificaToken(estraiTokenHeader(req));
-  if (!dati) return res.status(401).json({ errore: "Devi effettuare il login." });
-  if (dati.ruolo !== "admin") return res.status(403).json({ errore: "Accesso riservato agli amministratori." });
-  req.utenteAdmin = dati; next();
+
+  if (!dati) {
+    return res.status(401).json({
+      errore: "Devi effettuare il login."
+    });
+  }
+
+  if (dati.ruolo !== "admin") {
+    return res.status(403).json({
+      errore: "Accesso riservato agli amministratori."
+    });
+  }
+
+  try {
+    const controllo = await verificaStatoAccessoAccount(dati.uid);
+
+    if (!controllo.ok) {
+      if (controllo.status === 401 || controllo.status === 403) {
+        res.clearCookie("token", OPZIONI_RIMOZIONE_COOKIE);
+      }
+
+      return res.status(controllo.status).json({
+        codice: controllo.codice,
+        errore: controllo.errore
+      });
+    }
+
+    req.utenteAdmin = dati;
+    return next();
+
+  } catch (errore) {
+    console.error("Errore verifica accesso amministratore:", errore);
+
+    return res.status(503).json({
+      errore: "Impossibile verificare lo stato dell'account."
+    });
+  }
 }
 async function trovaUtentePerEmail(emailLower) {
   const snap = await db.ref("utenti").orderByChild("emailLower").equalTo(emailLower).once("value");
@@ -1077,6 +1210,10 @@ if (GOOGLE_OAUTH_CONFIGURATO) {
 
         if (!attuale) return done(new Error("Account non disponibile."));
 
+        if (attuale.accediDiNuovo === false) {
+          return done(new Error("Account disattivato. Contatta l'assistenza per richiedere la riattivazione."));
+        }
+
         if (attuale.stato === "bannato" ||
           (attuale.stato === "sospeso" && Number(attuale.sospesoFino) > Date.now())) {
           return done(new Error("Il tuo account è bannato o sospeso."));
@@ -1095,7 +1232,8 @@ if (GOOGLE_OAUTH_CONFIGURATO) {
           googleId,
           providerGoogle: true,
           elo: ottieniElo(attuale),
-          ultimoAccesso: adesso
+          ultimoAccesso: adesso,
+          accediDiNuovo: true
         };
 
         if (emailAccount === email) {
@@ -1136,6 +1274,7 @@ if (GOOGLE_OAUTH_CONFIGURATO) {
         avatar: foto, avatarPresente: Boolean(foto),
         avatarAggiornatoIl: foto ? Date.now() : 0,
         ruolo: "utente", stato: "attivo", sospesoFino: null,
+        accediDiNuovo: true,
         avvisi: [], creatoIl: Date.now(), ultimoAccesso: Date.now()
       });
       return done(null, { uid, nickname, ruolo: "utente" });
@@ -1221,6 +1360,7 @@ app.post("/api/registrati", limiteLogin, async (req, res) => {
       passwordHash, emailVerificata: false, providerGoogle: false,
       avatar: null, avatarPresente: false, avatarAggiornatoIl: 0,
       ruolo: "utente", stato: "attivo", sospesoFino: null,
+      accediDiNuovo: true,
       avvisi: [], creatoIl: Date.now(), ultimoAccesso: null
     });
 
@@ -1342,6 +1482,12 @@ app.post("/api/login", limiteLogin, async (req, res) => {
     if (!(await bcrypt.compare(password, utente.passwordHash))) {
       return res.status(400).json({ errore: "Email o password errati." });
     }
+    if (utente.accediDiNuovo === false) {
+      return res.status(403).json({
+        codice: "ACCOUNT_DISATTIVATO",
+        errore: "Questo account è disattivato. Contatta l'assistenza per richiedere la riattivazione."
+      });
+    }
     if (utente.stato === "bannato") {
       return res.status(403).json({ errore: "Il tuo account è stato bannato." });
     }
@@ -1357,6 +1503,7 @@ app.post("/api/login", limiteLogin, async (req, res) => {
       });
     }
     await db.ref("utenti/" + utente.uid).update({
+      accediDiNuovo: true,
       ultimoAccesso: Date.now(), elo: ottieniElo(utente),
       ...(utente.stato === "sospeso" ? { stato: "attivo", sospesoFino: null } : {})
     });
@@ -1553,385 +1700,97 @@ app.post("/api/elimina-avatar", richiediAuth, async (req, res) => {
 });
 
 
-app.post("/api/elimina-account", richiediAuth, async (req, res) => {
+// ============================================================
+// DISATTIVAZIONE REVERSIBILE ACCOUNT
+// L'account resta in Firebase per consentire la riattivazione manuale.
+// Il ban e la sospensione rimangono separati nel campo "stato".
+// Sono supportati entrambi gli endpoint per compatibilità col frontend.
+// ============================================================
 
-    res.set("Cache-Control", "no-store");
+async function gestisciDisattivazioneAccount(req, res) {
+  res.set("Cache-Control", "no-store");
 
-    if (!db) {
-        return res.status(503).json({
-            errore: "Servizio account non disponibile."
-        });
+  if (!db) {
+    return res.status(503).json({
+      ok: false,
+      errore: "Servizio account non disponibile."
+    });
+  }
+
+  const uid = String(req.utente?.uid || "").trim();
+
+  if (!uid || uid.length > 128) {
+    return res.status(401).json({
+      ok: false,
+      errore: "Sessione non valida. Effettua nuovamente il login."
+    });
+  }
+
+  try {
+    const riferimentoUtente = db.ref("utenti/" + uid);
+    const emailSnap = await riferimentoUtente.child("email").once("value");
+
+    if (!emailSnap.exists()) {
+      res.clearCookie("token", OPZIONI_RIMOZIONE_COOKIE);
+
+      return res.status(404).json({
+        ok: false,
+        errore: "Account non trovato."
+      });
     }
 
-    const uid = String(req.utente?.uid || "").trim();
+    const accessoSnap = await riferimentoUtente.child("accediDiNuovo").once("value");
 
-    if (!uid || uid.length > 128) {
-        return res.status(401).json({
-            errore: "Sessione non valida. Accedi di nuovo."
-        });
+    if (accessoSnap.val() === false) {
+      res.clearCookie("token", OPZIONI_RIMOZIONE_COOKIE);
+
+      return res.status(200).json({
+        ok: true,
+        giaDisattivato: true,
+        accountDisattivato: true,
+        messaggio: "Account già disattivato."
+      });
     }
 
-    try {
-        const [
-            utentiSnap,
-            blocchiSnap,
-            messaggiSnap,
-            postsSnap,
-            commentiSnap,
-            reazioniSnap,
-            salvatiPostSnap,
-            condivisioniSnap,
-            segnalazioniPostSnap,
-            storicoSnap,
-            storicoDamaSnap,
-            storicoOthelloSnap,
-            segnalazioniUtentiSnap
-        ] = await Promise.all([
-            db.ref("utenti").once("value"),
-            db.ref("blocchi").once("value"),
-            db.ref("messaggiPrivati").once("value"),
-            db.ref("community/posts").once("value"),
-            db.ref("community/commenti").once("value"),
-            db.ref("community/reazioni").once("value"),
-            db.ref("community/salvatiPost").once("value"),
-            db.ref("community/condivisioni").once("value"),
-            db.ref("community/segnalazioni").once("value"),
-            db.ref("storicoPartite").once("value"),
-            db.ref("giochi/dama/storicoPartite").once("value"),
-            db.ref("giochi/othello/storicoPartite").once("value"),
-            db.ref("segnalazioni").once("value")
-        ]);
+    // Non elimina il profilo e non modifica stato, ban o sospensione.
+    await riferimentoUtente.update({
+      accediDiNuovo: false,
+      accountEliminatoIl: Date.now()
+    });
 
-        const utenti = utentiSnap.val() || {};
-
-        if (!utenti[uid]) {
-            res.clearCookie("token", OPZIONI_RIMOZIONE_COOKIE);
-
-            return res.status(404).json({
-                errore: "Account non trovato."
-            });
-        }
-
-        const blocchi = blocchiSnap.val() || {};
-        const conversazioni = messaggiSnap.val() || {};
-        const posts = postsSnap.val() || {};
-        const commenti = commentiSnap.val() || {};
-        const reazioni = reazioniSnap.val() || {};
-        const salvatiPost = salvatiPostSnap.val() || {};
-        const condivisioni = condivisioniSnap.val() || {};
-        const segnalazioniPost = segnalazioniPostSnap.val() || {};
-
-        const aggiornamenti = {
-            [`utenti/${uid}`]: null,
-            [`albumFoto/${uid}`]: null,
-            [`logChat/${uid}`]: null,
-            [`blocchi/${uid}`]: null,
-            [`community/reazioniUtente/${uid}`]: null,
-            [`community/salvati/${uid}`]: null
-        };
-
-        const postEliminati = new Set(
-            Object.entries(posts)
-                .filter(([, post]) => post && post.uidAutore === uid)
-                .map(([postId]) => postId)
-        );
-
-        const decrementaCommenti = {};
-        const decrementaReazioni = {};
-        const decrementaCondivisioni = {};
-
-        // Rimuove le relazioni con l'account eliminato.
-        for (const [altroUid, profilo] of Object.entries(utenti)) {
-            if (!profilo || altroUid === uid) continue;
-
-            for (const campo of [
-                "amici",
-                "richiesteInviate",
-                "richiesteRicevute"
-            ]) {
-                if (
-                    profilo[campo] &&
-                    Object.prototype.hasOwnProperty.call(profilo[campo], uid)
-                ) {
-                    aggiornamenti[
-                        `utenti/${altroUid}/${campo}/${uid}`
-                    ] = null;
-                }
-            }
-
-            for (const [idNotifica, notifica] of Object.entries(
-                profilo.notifiche || {}
-            )) {
-                if (
-                    notifica &&
-                    (
-                        notifica.daUid === uid ||
-                        postEliminati.has(String(notifica.postId || ""))
-                    )
-                ) {
-                    aggiornamenti[
-                        `utenti/${altroUid}/notifiche/${idNotifica}`
-                    ] = null;
-                }
-            }
-        }
-
-        // Rimuove i blocchi ricevuti dagli altri utenti.
-        for (const [altroUid, mappa] of Object.entries(blocchi)) {
-            if (
-                altroUid !== uid &&
-                mappa &&
-                Object.prototype.hasOwnProperty.call(mappa, uid)
-            ) {
-                aggiornamenti[`blocchi/${altroUid}/${uid}`] = null;
-            }
-        }
-
-        // Elimina le conversazioni private che coinvolgono l'account.
-        for (const [idConversazione, messaggi] of Object.entries(conversazioni)) {
-            const coinvolgeAccount = Object.values(messaggi || {}).some(m =>
-                m && (m.daUid === uid || m.aUid === uid)
-            );
-
-            if (coinvolgeAccount) {
-                aggiornamenti[
-                    `messaggiPrivati/${idConversazione}`
-                ] = null;
-            }
-        }
-
-        // Elimina post dell'utente e dati collegati.
-        for (const postId of postEliminati) {
-            aggiornamenti[`community/posts/${postId}`] = null;
-            aggiornamenti[`community/commenti/${postId}`] = null;
-            aggiornamenti[`community/reazioni/${postId}`] = null;
-            aggiornamenti[`community/condivisioni/${postId}`] = null;
-            aggiornamenti[`community/segnalazioni/${postId}`] = null;
-            aggiornamenti[`community/salvatiPost/${postId}`] = null;
-
-            for (const altroUid of Object.keys(reazioni[postId] || {})) {
-                if (altroUid !== uid) {
-                    aggiornamenti[
-                        `community/reazioniUtente/${altroUid}/${postId}`
-                    ] = null;
-                }
-            }
-
-            for (const altroUid of Object.keys(salvatiPost[postId] || {})) {
-                if (altroUid !== uid) {
-                    aggiornamenti[
-                        `community/salvati/${altroUid}/${postId}`
-                    ] = null;
-                }
-            }
-        }
-
-        // Rimuove interazioni dell'utente sui post altrui.
-        for (const [postId, post] of Object.entries(posts)) {
-            if (!post || postEliminati.has(postId)) continue;
-
-            for (const [commentoId, commento] of Object.entries(
-                commenti[postId] || {}
-            )) {
-                if (commento && commento.uidAutore === uid) {
-                    aggiornamenti[
-                        `community/commenti/${postId}/${commentoId}`
-                    ] = null;
-
-                    decrementaCommenti[postId] =
-                        (decrementaCommenti[postId] || 0) + 1;
-                }
-            }
-
-            if (reazioni[postId]?.[uid] === true) {
-                aggiornamenti[`community/reazioni/${postId}/${uid}`] = null;
-
-                decrementaReazioni[postId] =
-                    (decrementaReazioni[postId] || 0) + 1;
-            }
-
-            if (
-                salvatiPost[postId] &&
-                Object.prototype.hasOwnProperty.call(salvatiPost[postId], uid)
-            ) {
-                aggiornamenti[
-                    `community/salvatiPost/${postId}/${uid}`
-                ] = null;
-            }
-
-            if (condivisioni[postId]?.[uid] === true) {
-                aggiornamenti[
-                    `community/condivisioni/${postId}/${uid}`
-                ] = null;
-
-                decrementaCondivisioni[postId] =
-                    (decrementaCondivisioni[postId] || 0) + 1;
-            }
-
-            if (
-                segnalazioniPost[postId] &&
-                Object.prototype.hasOwnProperty.call(segnalazioniPost[postId], uid)
-            ) {
-                aggiornamenti[
-                    `community/segnalazioni/${postId}/${uid}`
-                ] = null;
-            }
-        }
-
-        // Anonimizza gli storici, conservando i risultati degli altri giocatori.
-        function anonimizzaStorico(storico, percorso) {
-            for (const [id, risultato] of Object.entries(storico || {})) {
-                if (!risultato || typeof risultato !== "object") continue;
-
-                let modificato = false;
-                const copia = { ...risultato };
-
-                if (Array.isArray(risultato.partecipanti)) {
-                    copia.partecipanti = risultato.partecipanti.map(p => {
-                        if (p && p.uid === uid) {
-                            modificato = true;
-
-                            return {
-                                ...p,
-                                uid: null,
-                                nome: "Account eliminato"
-                            };
-                        }
-
-                        return p;
-                    });
-                }
-
-                if (risultato.vincitoreUid === uid) {
-                    copia.vincitoreUid = null;
-                    copia.vincitoreNome = "Account eliminato";
-                    modificato = true;
-                }
-
-                if (
-                    risultato.risultatiElo &&
-                    Object.prototype.hasOwnProperty.call(
-                        risultato.risultatiElo,
-                        uid
-                    )
-                ) {
-                    copia.risultatiElo = { ...risultato.risultatiElo };
-                    delete copia.risultatiElo[uid];
-                    modificato = true;
-                }
-
-                if (modificato) {
-                    aggiornamenti[`${percorso}/${id}`] = copia;
-                }
-            }
-        }
-
-        anonimizzaStorico(
-            storicoSnap.val(),
-            "storicoPartite"
-        );
-
-        anonimizzaStorico(
-            storicoDamaSnap.val(),
-            "giochi/dama/storicoPartite"
-        );
-
-        anonimizzaStorico(
-            storicoOthelloSnap.val(),
-            "giochi/othello/storicoPartite"
-        );
-
-        // Rimuove l'identità dalle segnalazioni di moderazione conservate.
-        for (const [id, segnalazione] of Object.entries(
-            segnalazioniUtentiSnap.val() || {}
-        )) {
-            if (!segnalazione) continue;
-
-            let modificata = false;
-            const copia = { ...segnalazione };
-
-            if (copia.uidSegnalante === uid) {
-                copia.uidSegnalante = null;
-                copia.nicknameSegnalante = "Account eliminato";
-                modificata = true;
-            }
-
-            if (copia.uidSegnalato === uid) {
-                copia.uidSegnalato = null;
-                copia.nicknameSegnalato = "Account eliminato";
-                copia.avatarSegnalato = null;
-                modificata = true;
-            }
-
-            if (modificata) {
-                aggiornamenti[`segnalazioni/${id}`] = copia;
-            }
-        }
-
-        // Scrive tutte le cancellazioni e anonimizzazioni insieme.
-        await db.ref().update(aggiornamenti);
-
-        // Aggiorna i contatori dei post rimasti.
-        for (const [postId, quanti] of Object.entries(decrementaCommenti)) {
-            try {
-                await communityAggiornaContatore(
-                    db.ref(`community/posts/${postId}/conteggioCommenti`),
-                    -quanti
-                );
-            } catch (e) {
-                console.error(
-                    "Errore aggiornamento conteggio commenti:",
-                    e.message
-                );
-            }
-        }
-
-        for (const [postId, quanti] of Object.entries(decrementaReazioni)) {
-            try {
-                await communityAggiornaContatore(
-                    db.ref(`community/posts/${postId}/conteggioReazioni`),
-                    -quanti
-                );
-            } catch (e) {
-                console.error(
-                    "Errore aggiornamento conteggio reazioni:",
-                    e.message
-                );
-            }
-        }
-
-        for (const [postId, quanti] of Object.entries(decrementaCondivisioni)) {
-            try {
-                await communityAggiornaContatore(
-                    db.ref(`community/posts/${postId}/conteggioCondivisioni`),
-                    -quanti
-                );
-            } catch (e) {
-                console.error(
-                    "Errore aggiornamento conteggio condivisioni:",
-                    e.message
-                );
-            }
-        }
-
-        res.clearCookie("token", OPZIONI_RIMOZIONE_COOKIE);
-
-        return res.status(200).json({
-            ok: true,
-            messaggio: "Account eliminato definitivamente."
-        });
-
-    } catch (errore) {
-        console.error(
-            "Errore POST /api/elimina-account:",
-            errore
-        );
-
-        return res.status(500).json({
-            errore: "Errore durante l'eliminazione dell'account. Riprova."
-        });
+    // Chiude le connessioni WebSocket che hanno già associato questo UID.
+    for (const socket of Object.values(socketsPerId)) {
+      if (
+        socket &&
+        socket.gsUid === uid &&
+        socket.readyState === WebSocket.OPEN
+      ) {
+        socket.close(1008, "Account disattivato");
+      }
     }
-});
+
+    res.clearCookie("token", OPZIONI_RIMOZIONE_COOKIE);
+
+    console.log("[Account] Disattivazione reversibile completata:", uid);
+
+    return res.status(200).json({
+      ok: true,
+      accountDisattivato: true,
+      messaggio: "Account disattivato. È possibile richiederne la riattivazione."
+    });
+
+  } catch (errore) {
+    console.error("Errore disattivazione account:", errore);
+
+    return res.status(500).json({
+      ok: false,
+      errore: "Errore durante la disattivazione dell'account. Riprova."
+    });
+  }
+}
+
+app.post("/api/elimina-account", richiediAuth, gestisciDisattivazioneAccount);
+app.post("/api/elimina-definitivamente-account", richiediAuth, gestisciDisattivazioneAccount);
 
 // ============================================================
 // ALBUM FOTO PROFILO
@@ -10388,6 +10247,8 @@ wss.on("connection", (socket, request) => {
     : null;
   const datiTokenIniziali = verificaToken(tokenDalCookie || tokenDamaDaQuery);
   let uid = datiTokenIniziali ? datiTokenIniziali.uid : null;
+  socket.gsUid = uid;
+  socket.gsAccessChecked = false;
 
   socket.on("message", async (message) => {
     try {
@@ -10406,6 +10267,28 @@ wss.on("connection", (socket, request) => {
         const datiTokenMessaggio = verificaToken(dati.token);
         if (datiTokenMessaggio && datiTokenMessaggio.uid) {
           uid = datiTokenMessaggio.uid;
+          socket.gsUid = uid;
+        }
+      }
+
+      // Prima di inoltrare messaggi autenticati ai giochi, verifica lo stato
+      // del profilo. La rotta di disattivazione chiude i socket già associati.
+      if (uid && socket.gsAccessChecked !== true) {
+        try {
+          const controlloAccesso = await verificaStatoAccessoAccount(uid);
+
+          if (!controlloAccesso.ok) {
+            socket.close(1008, controlloAccesso.codice || "Accesso non consentito");
+            return;
+          }
+
+          socket.gsAccessChecked = true;
+          socket.gsUid = uid;
+
+        } catch (erroreAccesso) {
+          console.error("Errore verifica account WebSocket:", erroreAccesso);
+          socket.close(1011, "Verifica account non riuscita");
+          return;
         }
       }
 
