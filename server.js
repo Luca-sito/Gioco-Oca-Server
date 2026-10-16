@@ -758,6 +758,12 @@ const PUBLIC_SITE_URL =
     .replace(/\/$/, "");
 const URL_HOME_WIX = PUBLIC_SITE_URL;
 
+function urlHomeConAvvisoAccountDisattivato() {
+  const url = new URL(URL_HOME_WIX);
+  url.searchParams.set("avviso", "account-disattivato");
+  return url.href;
+}
+
 function normalizzaRedirectAutenticazione(valore) {
   if (typeof valore !== "string" || !valore.trim()) return null;
   try {
@@ -1211,7 +1217,7 @@ if (GOOGLE_OAUTH_CONFIGURATO) {
         if (!attuale) return done(new Error("Account non disponibile."));
 
         if (attuale.accediDiNuovo === false) {
-          return done(new Error("Account disattivato. Contatta l'assistenza per richiedere la riattivazione."));
+          return done(null, false, { codice: "ACCOUNT_DISATTIVATO" });
         }
 
         if (attuale.stato === "bannato" ||
@@ -1300,9 +1306,24 @@ app.get("/auth/google", richiediGoogleOAuthConfigurato, (req, res, next) => {
 
 app.get("/auth/google/callback",
   richiediGoogleOAuthConfigurato,
-  passport.authenticate("google", {
-    session: false, failureRedirect: "/login.html?errore=google"
-  }),
+  (req, res, next) => {
+    passport.authenticate("google", { session: false }, (errore, utente, info) => {
+      if (errore) {
+        console.error("Errore callback Google:", errore?.message || errore);
+        return res.redirect("/login.html?errore=google");
+      }
+
+      if (!utente || !utente.uid) {
+        if (info?.codice === "ACCOUNT_DISATTIVATO") {
+          return res.redirect(urlHomeConAvvisoAccountDisattivato());
+        }
+        return res.redirect("/login.html?errore=google");
+      }
+
+      req.user = utente;
+      return next();
+    })(req, res, next);
+  },
   (req, res) => {
     try {
       const utente = req.user;
@@ -1485,7 +1506,8 @@ app.post("/api/login", limiteLogin, async (req, res) => {
     if (utente.accediDiNuovo === false) {
       return res.status(403).json({
         codice: "ACCOUNT_DISATTIVATO",
-        errore: "Questo account è disattivato. Contatta l'assistenza per richiedere la riattivazione."
+        errore: "Questo account è disattivato.",
+        urlHome: urlHomeConAvvisoAccountDisattivato()
       });
     }
     if (utente.stato === "bannato") {
