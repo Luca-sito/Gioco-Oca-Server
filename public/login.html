@@ -521,6 +521,11 @@ async function accedi() {
 
         if (!risposta.ok) {
 
+            if (dati.codice === "ACCOUNT_DISATTIVATO" && dati.urlHome) {
+                window.location.replace(dati.urlHome);
+                return;
+            }
+
             erroreEl.textContent =
                 dati.errore ||
                 "Errore durante il login.";
