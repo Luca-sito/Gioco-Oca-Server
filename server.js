@@ -1552,6 +1552,387 @@ app.post("/api/elimina-avatar", richiediAuth, async (req, res) => {
   }
 });
 
+
+app.post("/api/elimina-account", richiediAuth, async (req, res) => {
+
+    res.set("Cache-Control", "no-store");
+
+    if (!db) {
+        return res.status(503).json({
+            errore: "Servizio account non disponibile."
+        });
+    }
+
+    const uid = String(req.utente?.uid || "").trim();
+
+    if (!uid || uid.length > 128) {
+        return res.status(401).json({
+            errore: "Sessione non valida. Accedi di nuovo."
+        });
+    }
+
+    try {
+        const [
+            utentiSnap,
+            blocchiSnap,
+            messaggiSnap,
+            postsSnap,
+            commentiSnap,
+            reazioniSnap,
+            salvatiPostSnap,
+            condivisioniSnap,
+            segnalazioniPostSnap,
+            storicoSnap,
+            storicoDamaSnap,
+            storicoOthelloSnap,
+            segnalazioniUtentiSnap
+        ] = await Promise.all([
+            db.ref("utenti").once("value"),
+            db.ref("blocchi").once("value"),
+            db.ref("messaggiPrivati").once("value"),
+            db.ref("community/posts").once("value"),
+            db.ref("community/commenti").once("value"),
+            db.ref("community/reazioni").once("value"),
+            db.ref("community/salvatiPost").once("value"),
+            db.ref("community/condivisioni").once("value"),
+            db.ref("community/segnalazioni").once("value"),
+            db.ref("storicoPartite").once("value"),
+            db.ref("giochi/dama/storicoPartite").once("value"),
+            db.ref("giochi/othello/storicoPartite").once("value"),
+            db.ref("segnalazioni").once("value")
+        ]);
+
+        const utenti = utentiSnap.val() || {};
+
+        if (!utenti[uid]) {
+            res.clearCookie("token", OPZIONI_RIMOZIONE_COOKIE);
+
+            return res.status(404).json({
+                errore: "Account non trovato."
+            });
+        }
+
+        const blocchi = blocchiSnap.val() || {};
+        const conversazioni = messaggiSnap.val() || {};
+        const posts = postsSnap.val() || {};
+        const commenti = commentiSnap.val() || {};
+        const reazioni = reazioniSnap.val() || {};
+        const salvatiPost = salvatiPostSnap.val() || {};
+        const condivisioni = condivisioniSnap.val() || {};
+        const segnalazioniPost = segnalazioniPostSnap.val() || {};
+
+        const aggiornamenti = {
+            [`utenti/${uid}`]: null,
+            [`albumFoto/${uid}`]: null,
+            [`logChat/${uid}`]: null,
+            [`blocchi/${uid}`]: null,
+            [`community/reazioniUtente/${uid}`]: null,
+            [`community/salvati/${uid}`]: null
+        };
+
+        const postEliminati = new Set(
+            Object.entries(posts)
+                .filter(([, post]) => post && post.uidAutore === uid)
+                .map(([postId]) => postId)
+        );
+
+        const decrementaCommenti = {};
+        const decrementaReazioni = {};
+        const decrementaCondivisioni = {};
+
+        // Rimuove le relazioni con l'account eliminato.
+        for (const [altroUid, profilo] of Object.entries(utenti)) {
+            if (!profilo || altroUid === uid) continue;
+
+            for (const campo of [
+                "amici",
+                "richiesteInviate",
+                "richiesteRicevute"
+            ]) {
+                if (
+                    profilo[campo] &&
+                    Object.prototype.hasOwnProperty.call(profilo[campo], uid)
+                ) {
+                    aggiornamenti[
+                        `utenti/${altroUid}/${campo}/${uid}`
+                    ] = null;
+                }
+            }
+
+            for (const [idNotifica, notifica] of Object.entries(
+                profilo.notifiche || {}
+            )) {
+                if (
+                    notifica &&
+                    (
+                        notifica.daUid === uid ||
+                        postEliminati.has(String(notifica.postId || ""))
+                    )
+                ) {
+                    aggiornamenti[
+                        `utenti/${altroUid}/notifiche/${idNotifica}`
+                    ] = null;
+                }
+            }
+        }
+
+        // Rimuove i blocchi ricevuti dagli altri utenti.
+        for (const [altroUid, mappa] of Object.entries(blocchi)) {
+            if (
+                altroUid !== uid &&
+                mappa &&
+                Object.prototype.hasOwnProperty.call(mappa, uid)
+            ) {
+                aggiornamenti[`blocchi/${altroUid}/${uid}`] = null;
+            }
+        }
+
+        // Elimina le conversazioni private che coinvolgono l'account.
+        for (const [idConversazione, messaggi] of Object.entries(conversazioni)) {
+            const coinvolgeAccount = Object.values(messaggi || {}).some(m =>
+                m && (m.daUid === uid || m.aUid === uid)
+            );
+
+            if (coinvolgeAccount) {
+                aggiornamenti[
+                    `messaggiPrivati/${idConversazione}`
+                ] = null;
+            }
+        }
+
+        // Elimina post dell'utente e dati collegati.
+        for (const postId of postEliminati) {
+            aggiornamenti[`community/posts/${postId}`] = null;
+            aggiornamenti[`community/commenti/${postId}`] = null;
+            aggiornamenti[`community/reazioni/${postId}`] = null;
+            aggiornamenti[`community/condivisioni/${postId}`] = null;
+            aggiornamenti[`community/segnalazioni/${postId}`] = null;
+            aggiornamenti[`community/salvatiPost/${postId}`] = null;
+
+            for (const altroUid of Object.keys(reazioni[postId] || {})) {
+                if (altroUid !== uid) {
+                    aggiornamenti[
+                        `community/reazioniUtente/${altroUid}/${postId}`
+                    ] = null;
+                }
+            }
+
+            for (const altroUid of Object.keys(salvatiPost[postId] || {})) {
+                if (altroUid !== uid) {
+                    aggiornamenti[
+                        `community/salvati/${altroUid}/${postId}`
+                    ] = null;
+                }
+            }
+        }
+
+        // Rimuove interazioni dell'utente sui post altrui.
+        for (const [postId, post] of Object.entries(posts)) {
+            if (!post || postEliminati.has(postId)) continue;
+
+            for (const [commentoId, commento] of Object.entries(
+                commenti[postId] || {}
+            )) {
+                if (commento && commento.uidAutore === uid) {
+                    aggiornamenti[
+                        `community/commenti/${postId}/${commentoId}`
+                    ] = null;
+
+                    decrementaCommenti[postId] =
+                        (decrementaCommenti[postId] || 0) + 1;
+                }
+            }
+
+            if (reazioni[postId]?.[uid] === true) {
+                aggiornamenti[`community/reazioni/${postId}/${uid}`] = null;
+
+                decrementaReazioni[postId] =
+                    (decrementaReazioni[postId] || 0) + 1;
+            }
+
+            if (
+                salvatiPost[postId] &&
+                Object.prototype.hasOwnProperty.call(salvatiPost[postId], uid)
+            ) {
+                aggiornamenti[
+                    `community/salvatiPost/${postId}/${uid}`
+                ] = null;
+            }
+
+            if (condivisioni[postId]?.[uid] === true) {
+                aggiornamenti[
+                    `community/condivisioni/${postId}/${uid}`
+                ] = null;
+
+                decrementaCondivisioni[postId] =
+                    (decrementaCondivisioni[postId] || 0) + 1;
+            }
+
+            if (
+                segnalazioniPost[postId] &&
+                Object.prototype.hasOwnProperty.call(segnalazioniPost[postId], uid)
+            ) {
+                aggiornamenti[
+                    `community/segnalazioni/${postId}/${uid}`
+                ] = null;
+            }
+        }
+
+        // Anonimizza gli storici, conservando i risultati degli altri giocatori.
+        function anonimizzaStorico(storico, percorso) {
+            for (const [id, risultato] of Object.entries(storico || {})) {
+                if (!risultato || typeof risultato !== "object") continue;
+
+                let modificato = false;
+                const copia = { ...risultato };
+
+                if (Array.isArray(risultato.partecipanti)) {
+                    copia.partecipanti = risultato.partecipanti.map(p => {
+                        if (p && p.uid === uid) {
+                            modificato = true;
+
+                            return {
+                                ...p,
+                                uid: null,
+                                nome: "Account eliminato"
+                            };
+                        }
+
+                        return p;
+                    });
+                }
+
+                if (risultato.vincitoreUid === uid) {
+                    copia.vincitoreUid = null;
+                    copia.vincitoreNome = "Account eliminato";
+                    modificato = true;
+                }
+
+                if (
+                    risultato.risultatiElo &&
+                    Object.prototype.hasOwnProperty.call(
+                        risultato.risultatiElo,
+                        uid
+                    )
+                ) {
+                    copia.risultatiElo = { ...risultato.risultatiElo };
+                    delete copia.risultatiElo[uid];
+                    modificato = true;
+                }
+
+                if (modificato) {
+                    aggiornamenti[`${percorso}/${id}`] = copia;
+                }
+            }
+        }
+
+        anonimizzaStorico(
+            storicoSnap.val(),
+            "storicoPartite"
+        );
+
+        anonimizzaStorico(
+            storicoDamaSnap.val(),
+            "giochi/dama/storicoPartite"
+        );
+
+        anonimizzaStorico(
+            storicoOthelloSnap.val(),
+            "giochi/othello/storicoPartite"
+        );
+
+        // Rimuove l'identità dalle segnalazioni di moderazione conservate.
+        for (const [id, segnalazione] of Object.entries(
+            segnalazioniUtentiSnap.val() || {}
+        )) {
+            if (!segnalazione) continue;
+
+            let modificata = false;
+            const copia = { ...segnalazione };
+
+            if (copia.uidSegnalante === uid) {
+                copia.uidSegnalante = null;
+                copia.nicknameSegnalante = "Account eliminato";
+                modificata = true;
+            }
+
+            if (copia.uidSegnalato === uid) {
+                copia.uidSegnalato = null;
+                copia.nicknameSegnalato = "Account eliminato";
+                copia.avatarSegnalato = null;
+                modificata = true;
+            }
+
+            if (modificata) {
+                aggiornamenti[`segnalazioni/${id}`] = copia;
+            }
+        }
+
+        // Scrive tutte le cancellazioni e anonimizzazioni insieme.
+        await db.ref().update(aggiornamenti);
+
+        // Aggiorna i contatori dei post rimasti.
+        for (const [postId, quanti] of Object.entries(decrementaCommenti)) {
+            try {
+                await communityAggiornaContatore(
+                    db.ref(`community/posts/${postId}/conteggioCommenti`),
+                    -quanti
+                );
+            } catch (e) {
+                console.error(
+                    "Errore aggiornamento conteggio commenti:",
+                    e.message
+                );
+            }
+        }
+
+        for (const [postId, quanti] of Object.entries(decrementaReazioni)) {
+            try {
+                await communityAggiornaContatore(
+                    db.ref(`community/posts/${postId}/conteggioReazioni`),
+                    -quanti
+                );
+            } catch (e) {
+                console.error(
+                    "Errore aggiornamento conteggio reazioni:",
+                    e.message
+                );
+            }
+        }
+
+        for (const [postId, quanti] of Object.entries(decrementaCondivisioni)) {
+            try {
+                await communityAggiornaContatore(
+                    db.ref(`community/posts/${postId}/conteggioCondivisioni`),
+                    -quanti
+                );
+            } catch (e) {
+                console.error(
+                    "Errore aggiornamento conteggio condivisioni:",
+                    e.message
+                );
+            }
+        }
+
+        res.clearCookie("token", OPZIONI_RIMOZIONE_COOKIE);
+
+        return res.status(200).json({
+            ok: true,
+            messaggio: "Account eliminato definitivamente."
+        });
+
+    } catch (errore) {
+        console.error(
+            "Errore POST /api/elimina-account:",
+            errore
+        );
+
+        return res.status(500).json({
+            errore: "Errore durante l'eliminazione dell'account. Riprova."
+        });
+    }
+});
+
 // ============================================================
 // ALBUM FOTO PROFILO
 // Massimo 15 foto pubbliche + 15 foto private per utente.
