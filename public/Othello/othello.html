@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0d1620">
   <title>Othello - Partita</title>
-  <link rel="stylesheet" href="othello.css?v=2">
+  <link rel="stylesheet" href="othello.css?v=musica-video-20261123">
+  <link rel="stylesheet" href="../musica-youtube.css?v=musica-video-20261123">
 </head>
 <body class="caricamento-in-corso">
 
@@ -188,6 +189,24 @@
     </div>
   </div>
 
+  <div id="musica-youtube" hidden>
+    <button type="button" id="btn-musica-youtube" aria-label="Musica YouTube" title="Musica YouTube" aria-controls="pannello-musica-youtube" aria-expanded="false">♫</button>
+    <section id="pannello-musica-youtube" aria-labelledby="titolo-musica-youtube" hidden>
+      <div class="intestazione-musica-youtube">
+        <strong id="titolo-musica-youtube">Musica YouTube</strong>
+        <button type="button" id="chiudi-musica-youtube" aria-label="Chiudi il mini player">×</button>
+      </div>
+      <form id="modulo-musica-youtube">
+        <label for="link-musica-youtube">Link al brano o alla playlist</label>
+        <div class="riga-musica-youtube">
+          <input id="link-musica-youtube" type="text" inputmode="url" autocomplete="off" maxlength="2048" placeholder="https://youtu.be/…" required>
+          <button type="submit">Carica</button>
+        </div>
+      </form>
+      <p id="messaggio-musica-youtube" role="status"></p>
+      <div id="player-musica-youtube"></div>
+    </section>
+  </div>
   <div id="chat-wrapper">
     <button type="button" id="btn-chat" aria-label="Apri chat" aria-controls="pannello-chat" aria-expanded="false"><img class="icona-pulsante-gioco" src="https://api.giochisocieta.com/Immagini/Chatmenugioco.png" alt="" aria-hidden="true"><span id="badge-chat-partita" class="badge-chat-partita" style="display:none;">0</span></button>
     <section id="pannello-chat" class="nascosto" aria-label="Chat della partita">
@@ -201,6 +220,7 @@
   </div>
 </main>
 
-<script src="othello.js?v=1"></script>
+<script src="../musica-youtube.js?v=musica-video-20261123"></script>
+<script src="othello.js?v=musica-video-20261123"></script>
 </body>
 </html>
