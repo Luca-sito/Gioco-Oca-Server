@@ -2351,17 +2351,18 @@ app.post("/api/logout", (req, res) => { res.clearCookie("token", OPZIONI_RIMOZIO
 function preferenzeAudio(utente) {
   return {
     playerYouTube: utente?.playerYouTube !== false,
-    abbassaVociConMusica: utente?.abbassaVociConMusica === true
+    abbassaMusicaConVoci: (utente?.abbassaMusicaConVoci ?? utente?.abbassaVociConMusica) === true
   };
 }
 
 app.post("/api/preferenze-audio", richiediAuth, async (req, res) => {
-  const { playerYouTube, abbassaVociConMusica } = req.body || {};
-  if (typeof playerYouTube !== "boolean" || typeof abbassaVociConMusica !== "boolean") {
+  const { playerYouTube } = req.body || {};
+  const abbassaMusicaConVoci = req.body?.abbassaMusicaConVoci ?? req.body?.abbassaVociConMusica;
+  if (typeof playerYouTube !== "boolean" || typeof abbassaMusicaConVoci !== "boolean") {
     return res.status(400).json({ errore: "Seleziona Sì o No per entrambe le preferenze." });
   }
   try {
-    const preferenze = { playerYouTube, abbassaVociConMusica };
+    const preferenze = { playerYouTube, abbassaMusicaConVoci };
     await db.ref("utenti/" + req.utente.uid + "/preferenze").update(preferenze);
     return res.json({ preferenze });
   } catch {

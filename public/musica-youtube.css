@@ -46,6 +46,13 @@
   gap: 8px;
 }
 
+.comandi-finestra-youtube {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+}
+
 #musica-youtube button {
   border: 1px solid #d4b548;
   border-radius: 8px;
@@ -57,11 +64,31 @@
 #musica-youtube button:hover { background: #393622; }
 #musica-youtube :focus-visible { outline: 2px solid #ffdd65; outline-offset: 2px; }
 
-#riduci-musica-youtube {
-  width: 38px;
-  height: 36px;
+.comandi-finestra-youtube button {
+  width: 32px;
+  height: 32px;
   padding: 0;
-  font-size: 20px;
+  font: 19px/1 system-ui, sans-serif;
+}
+
+#musica-youtube .comandi-finestra-youtube button:disabled {
+  opacity: .45;
+  cursor: default;
+}
+
+#musica-youtube #chiudi-musica-youtube:hover {
+  color: #fff;
+  background: #8f2a37;
+  border-color: #e6818d;
+}
+
+#pannello-musica-youtube[data-vista="compatto"] {
+  width: min(242px, calc(100% - var(--musica-sinistra) - 12px - env(safe-area-inset-right)));
+  padding: 7px;
+}
+
+#pannello-musica-youtube[data-vista="compatto"] #titolo-musica-youtube {
+  font-size: 12px;
 }
 
 #modulo-musica-youtube { margin-top: 8px; }

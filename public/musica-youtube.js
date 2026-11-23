@@ -12,10 +12,14 @@
   blocco.innerHTML = `
     <button type="button" id="btn-musica-youtube" aria-label="Apri il player YouTube"
       aria-controls="pannello-musica-youtube" aria-expanded="false">♫</button>
-    <section id="pannello-musica-youtube" aria-labelledby="titolo-musica-youtube" hidden>
+    <section id="pannello-musica-youtube" aria-labelledby="titolo-musica-youtube" data-vista="elenco" hidden>
       <div class="intestazione-musica-youtube">
         <strong id="titolo-musica-youtube">Musica YouTube</strong>
-        <button type="button" id="riduci-musica-youtube" aria-label="Riduci il player a icona" title="Riduci a icona">−</button>
+        <div class="comandi-finestra-youtube" role="group" aria-label="Comandi del player">
+          <button type="button" id="riduci-musica-youtube" aria-label="Riduci il player" title="Riduci il player">−</button>
+          <button type="button" id="vista-musica-youtube" aria-label="Mostra solo il video" title="Mostra solo il video" disabled>□</button>
+          <button type="button" id="chiudi-musica-youtube" aria-label="Chiudi e interrompi la musica" title="Chiudi e interrompi la musica">×</button>
+        </div>
       </div>
       <form id="modulo-musica-youtube" role="search" aria-label="YouTube">
         <label class="solo-lettori-schermo" for="cerca-musica-youtube">Cerca su YouTube</label>
@@ -35,6 +39,8 @@
   const pulsante = nodo("btn-musica-youtube");
   const pannello = nodo("pannello-musica-youtube");
   const riduci = nodo("riduci-musica-youtube");
+  const vista = nodo("vista-musica-youtube");
+  const chiudi = nodo("chiudi-musica-youtube");
   const modulo = nodo("modulo-musica-youtube");
   const ingresso = nodo("cerca-musica-youtube");
   const messaggio = nodo("messaggio-musica-youtube");
@@ -43,9 +49,16 @@
   const risultati = nodo("risultati-musica-youtube");
   const altri = nodo("altri-risultati-youtube");
   const voci = new Map();
-  let abbassaVoci = false;
+  const sogliaVoce = 0.012;
+  const durataCodaVoce = 600;
+  let abbassaMusica = false;
   let musicaAttiva = false;
   let audioContext = null;
+  let timerVoci = null;
+  let ultimaVoce = -Infinity;
+  let volumePrimaDelleVoci = null;
+  let volumeRidotto = null;
+  let vistaPrimaDiRidurre = "elenco";
   let server = window.location.origin;
   let leggiToken = null;
   let queryAttiva = "";
@@ -54,63 +67,146 @@
   let caricamentoApi = null;
   let player = null;
 
-  function aggiornaVoce(audio, voce, attenua) {
-    if (!attenua) {
-      if (voce.gain) {
-        voce.sorgente.disconnect();
-        voce.gain.disconnect();
-        audio.muted = voce.muted;
-        voce.gain = null;
-        voce.sorgente = null;
+  function disconnettiAnalizzatore(audio) {
+    voci.get(audio)?.sorgente.disconnect();
+    voci.set(audio, null);
+  }
+
+  function livelloVoce(audio, analisi) {
+    const stream = audio.srcObject;
+    if (audio.muted || audio.paused || audio.volume === 0 || !stream?.getAudioTracks().some(traccia => traccia.readyState === "live" && traccia.enabled)) return 0;
+    if (analisi?.stream !== stream) {
+      disconnettiAnalizzatore(audio);
+      try {
+        const sorgente = audioContext.createMediaStreamSource(stream);
+        const analizzatore = audioContext.createAnalyser();
+        analizzatore.fftSize = 2048;
+        sorgente.connect(analizzatore);
+        analisi = { stream, sorgente, analizzatore, campioni: new Float32Array(analizzatore.fftSize) };
+        voci.set(audio, analisi);
+      } catch {
+        return 0;
       }
-      if (voce.volume !== null) audio.volume = voce.volume;
-      voce.volume = null;
+    }
+    analisi.analizzatore.getFloatTimeDomainData(analisi.campioni);
+    let energia = 0;
+    for (const campione of analisi.campioni) energia += campione * campione;
+    return Math.sqrt(energia / analisi.campioni.length);
+  }
+
+  function ripristinaVolumeMusica() {
+    if (volumePrimaDelleVoci === null) return;
+    const attuale = player?.getVolume?.();
+    if (attuale === volumeRidotto || attuale === volumePrimaDelleVoci || !Number.isFinite(attuale)) {
+      player?.setVolume?.(volumePrimaDelleVoci);
+    }
+    volumePrimaDelleVoci = null;
+    volumeRidotto = null;
+  }
+
+  function rilevaVoci() {
+    const adesso = performance.now();
+    for (const [audio, analisi] of voci) {
+      if (livelloVoce(audio, analisi) > sogliaVoce) {
+        ultimaVoce = adesso;
+        break;
+      }
+    }
+    if (adesso - ultimaVoce >= durataCodaVoce) {
+      ripristinaVolumeMusica();
       return;
     }
-    if (voce.volume === null) voce.volume = audio.volume;
-    const volumeRidotto = voce.volume * 0.35;
-    audio.volume = volumeRidotto;
-    if (Math.abs(audio.volume - volumeRidotto) < 0.01 || voce.gain || audioContext?.state !== "running") return;
+    if (volumePrimaDelleVoci !== null || player?.isMuted?.()) return;
+    const attuale = player?.getVolume?.();
+    if (!Number.isFinite(attuale) || attuale <= 0) return;
+    volumePrimaDelleVoci = attuale;
+    volumeRidotto = Math.round(attuale * 0.35);
+    player.setVolume(volumeRidotto);
+  }
 
-    try {
-      // Su alcuni tablet il volume del tag audio dipende dai controlli di sistema.
-      voce.sorgente = audioContext.createMediaStreamSource(audio.srcObject);
-      voce.gain = audioContext.createGain();
-      voce.gain.gain.value = volumeRidotto;
-      voce.sorgente.connect(voce.gain).connect(audioContext.destination);
-      voce.muted = audio.muted;
-      audio.muted = true;
-    } catch {
-      voce.sorgente?.disconnect();
-      voce.gain?.disconnect();
-      voce.gain = null;
-      voce.sorgente = null;
+  function aggiornaRilevamentoVoci() {
+    if (abbassaMusica && musicaAttiva && voci.size && audioContext?.state === "running") {
+      if (timerVoci === null) timerVoci = setInterval(rilevaVoci, 75);
+      return;
     }
+    clearInterval(timerVoci);
+    timerVoci = null;
+    ultimaVoce = -Infinity;
+    for (const audio of voci.keys()) disconnettiAnalizzatore(audio);
+    ripristinaVolumeMusica();
+  }
+
+  function preparaAudio() {
+    const Contesto = window.AudioContext || window.webkitAudioContext;
+    if (!abbassaMusica || !Contesto) return;
+    try {
+      audioContext ||= new Contesto();
+      audioContext.resume().then(aggiornaRilevamentoVoci).catch(() => {});
+    } catch {}
   }
 
   function impostaMusicaAttiva(attiva) {
     musicaAttiva = attiva;
-    for (const [audio, voce] of voci) aggiornaVoce(audio, voce, abbassaVoci && attiva);
+    aggiornaRilevamentoVoci();
   }
 
-  function preparaAudio() {
-    if (!abbassaVoci || (!/iPad/i.test(agente) && !(navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1))) return;
-    const Contesto = window.AudioContext || window.webkitAudioContext;
-    if (!Contesto) return;
-    try {
-      audioContext ||= new Contesto();
-      audioContext.resume().then(() => impostaMusicaAttiva(musicaAttiva)).catch(() => {});
-    } catch {}
+  function cambiaVista(modo) {
+    pannello.dataset.vista = modo;
+    const elenco = modo === "elenco";
+    modulo.hidden = !elenco;
+    risultati.hidden = !elenco;
+    altri.hidden = !elenco || !paginaSuccessiva;
+    vista.disabled = !contenitore.hasChildNodes();
+    const azioneVista = elenco ? "Mostra solo il video" : "Mostra lista e ricerca";
+    vista.setAttribute("aria-label", azioneVista);
+    vista.title = azioneVista;
+    const azioneRiduci = modo === "compatto" ? "Ripristina la dimensione del player" : "Riduci il player";
+    riduci.setAttribute("aria-label", azioneRiduci);
+    riduci.title = azioneRiduci;
+    pannello.scrollTop = 0;
   }
 
-  function nascondiPannello(ripristinaFocus = false) {
-    if (pannello.hidden) return;
-    player?.pauseVideo?.();
+  function nascondiPannello(ripristinaFocus) {
     pannello.hidden = true;
     pulsante.hidden = false;
     pulsante.setAttribute("aria-expanded", "false");
+    if (ripristinaFocus && !blocco.hidden) pulsante.focus();
+  }
+
+  function riduciPlayer(ripristinaFocus = false) {
+    if (!contenitore.hasChildNodes()) {
+      nascondiPannello(ripristinaFocus);
+    } else if (pannello.dataset.vista === "compatto") {
+      cambiaVista(vistaPrimaDiRidurre);
+    } else {
+      vistaPrimaDiRidurre = pannello.dataset.vista;
+      cambiaVista("compatto");
+      if (ripristinaFocus) riduci.focus();
+    }
+  }
+
+  function rimuoviVideo() {
     impostaMusicaAttiva(false);
-    if (ripristinaFocus) pulsante.focus();
+    player?.stopVideo?.();
+    player?.destroy?.();
+    player = null;
+    contenitore.replaceChildren();
+  }
+
+  function chiudiPlayer(ripristinaFocus = false) {
+    chiamata?.abort();
+    chiamata = null;
+    rimuoviVideo();
+    ingresso.value = "";
+    queryAttiva = "";
+    paginaSuccessiva = null;
+    risultati.replaceChildren();
+    messaggio.textContent = "";
+    apriVideo.hidden = true;
+    apriVideo.removeAttribute("href");
+    vistaPrimaDiRidurre = "elenco";
+    cambiaVista("elenco");
+    nascondiPannello(ripristinaFocus);
   }
 
   function caricaApi() {
@@ -147,9 +243,7 @@
 
   async function riproduci(video) {
     preparaAudio();
-    player?.destroy?.();
-    player = null;
-    impostaMusicaAttiva(false);
+    rimuoviVideo();
     messaggio.textContent = "";
     apriVideo.hidden = true;
     apriVideo.href = "https://www.youtube.com/watch?v=" + video.id;
@@ -163,7 +257,7 @@
     iframe.allow = "autoplay; encrypted-media; fullscreen; picture-in-picture";
     iframe.allowFullscreen = true;
     contenitore.replaceChildren(iframe);
-    pannello.scrollTop = 0;
+    cambiaVista("elenco");
 
     const attuale = () => contenitore.contains(iframe);
     const errorePlayer = () => {
@@ -261,7 +355,7 @@
     } catch (errore) {
       if (chiamata === richiesta) messaggio.textContent = errore.message || "Ricerca non disponibile.";
     } finally {
-      if (chiamata === richiesta) altri.hidden = !paginaSuccessiva;
+      if (chiamata === richiesta) altri.hidden = pannello.dataset.vista !== "elenco" || !paginaSuccessiva;
     }
   }
 
@@ -272,16 +366,21 @@
     pulsante.setAttribute("aria-expanded", "true");
     ingresso.focus();
   });
-  riduci.addEventListener("click", () => nascondiPannello(true));
+  riduci.addEventListener("click", () => riduciPlayer(true));
+  vista.addEventListener("click", () => cambiaVista(pannello.dataset.vista === "elenco" ? "video" : "elenco"));
+  chiudi.addEventListener("click", () => chiudiPlayer(true));
   blocco.addEventListener("keydown", evento => {
     if (evento.key !== "Escape" || pannello.hidden) return;
     evento.stopPropagation();
-    nascondiPannello(true);
+    riduciPlayer(true);
   });
   document.addEventListener("visibilitychange", () => {
-    if (document.hidden) nascondiPannello();
+    if (document.hidden) {
+      player?.pauseVideo?.();
+      impostaMusicaAttiva(false);
+    }
   });
-  window.addEventListener("pagehide", () => nascondiPannello());
+  window.addEventListener("pagehide", () => chiudiPlayer());
   modulo.addEventListener("submit", evento => {
     evento.preventDefault();
     const query = ingresso.value.trim();
@@ -295,20 +394,20 @@
     avvia(preferenze, origine, token) {
       server = origine;
       leggiToken = token;
-      abbassaVoci = preferenze?.abbassaVociConMusica === true;
+      abbassaMusica = (preferenze?.abbassaMusicaConVoci ?? preferenze?.abbassaVociConMusica) === true;
       blocco.hidden = preferenze?.playerYouTube === false;
-      if (blocco.hidden) nascondiPannello();
-      impostaMusicaAttiva(musicaAttiva);
+      if (blocco.hidden) chiudiPlayer();
+      aggiornaRilevamentoVoci();
     },
     registraVoce(audio) {
-      if (!voci.has(audio)) voci.set(audio, { volume: null, gain: null });
-      aggiornaVoce(audio, voci.get(audio), abbassaVoci && musicaAttiva);
+      if (!voci.has(audio)) voci.set(audio, null);
+      aggiornaRilevamentoVoci();
     },
     rimuoviVoce(audio) {
-      const voce = voci.get(audio);
-      if (!voce) return;
-      aggiornaVoce(audio, voce, false);
+      if (!voci.has(audio)) return;
+      disconnettiAnalizzatore(audio);
       voci.delete(audio);
+      aggiornaRilevamentoVoci();
     }
   };
 })();

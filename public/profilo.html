@@ -2948,12 +2948,12 @@ body {
                                 <small>Disponibile su computer e tablet.</small>
                             </div>
                             <div class="field">
-                                <label for="preferenzaAbbassaVoci">Abbassa automaticamente le voci quando la musica è attiva</label>
-                                <select id="preferenzaAbbassaVoci" disabled>
+                                <label for="preferenzaAbbassaMusica">Abbassa automaticamente la musica quando qualcuno parla</label>
+                                <select id="preferenzaAbbassaMusica" disabled>
                                     <option value="si">Sì</option>
                                     <option value="no" selected>No</option>
                                 </select>
-                                <small>Riduce il volume della chiamata solo per te, mentre YouTube è in riproduzione.</small>
+                                <small>Abbassa il volume di YouTube quando qualcuno parla in chiamata e lo ripristina durante le pause.</small>
                             </div>
                         </div>
                         <div class="inline-actions">
@@ -3116,7 +3116,7 @@ formPreferenzeAudio.addEventListener("submit", async evento => {
     evento.preventDefault();
     const esito = document.getElementById("esitoPreferenzeAudio");
     const playerYouTube = document.getElementById("preferenzaPlayerYouTube").value === "si";
-    const abbassaVociConMusica = document.getElementById("preferenzaAbbassaVoci").value === "si";
+    const abbassaMusicaConVoci = document.getElementById("preferenzaAbbassaMusica").value === "si";
     for (const controllo of formPreferenzeAudio.elements) controllo.disabled = true;
     esito.className = "avatar-status";
     esito.textContent = "Salvataggio…";
@@ -3125,7 +3125,7 @@ formPreferenzeAudio.addEventListener("submit", async evento => {
             method: "POST",
             credentials: "include",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ playerYouTube, abbassaVociConMusica })
+            body: JSON.stringify({ playerYouTube, abbassaMusicaConVoci })
         });
         const dati = await risposta.json();
         if (!risposta.ok) throw new Error(dati.errore || "Salvataggio non riuscito.");
@@ -3687,7 +3687,7 @@ function aggiornaInterfaccia() {
     document.getElementById("gestioneEmailGoogle").hidden = !datiUtente.accountGoogle;
     document.getElementById("emailSenzaGoogle").hidden = Boolean(datiUtente.accountGoogle);
     document.getElementById("preferenzaPlayerYouTube").value = datiUtente.preferenze?.playerYouTube === false ? "no" : "si";
-    document.getElementById("preferenzaAbbassaVoci").value = datiUtente.preferenze?.abbassaVociConMusica ? "si" : "no";
+    document.getElementById("preferenzaAbbassaMusica").value = datiUtente.preferenze?.abbassaMusicaConVoci ? "si" : "no";
     for (const controllo of document.getElementById("formPreferenzeAudio").elements) controllo.disabled = false;
 
 
