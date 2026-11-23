@@ -2369,6 +2369,7 @@ function gestisciMessaggioSocket(dati) {
 }
 
   aggiornaNomiPartecipanti(dati);
+  if (dati.tipo === "othello_stato" && dati.partita) window.MusicaYouTube?.impostaDisponibilita(dati.partita.musicaYouTube);
   if (typeof dati.mediaAttiva === "boolean") impostaMediaPartitaAttiva(dati.mediaAttiva);
 
   if (dati.tipo === "othello_identita") {
