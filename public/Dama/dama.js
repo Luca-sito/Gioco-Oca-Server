@@ -2170,6 +2170,7 @@ function gestisciMessaggioSocket(dati) {
   if (!dati || typeof dati !== "object") return;
 
   aggiornaNomiPartecipanti(dati);
+  if (dati.tipo === "dama_stato" && dati.partita) window.MusicaYouTube?.impostaDisponibilita(dati.partita.musicaYouTube);
   if (typeof dati.mediaAttiva === "boolean") impostaMediaPartitaAttiva(dati.mediaAttiva);
 
   if (dati.tipo === "dama_identita") {
