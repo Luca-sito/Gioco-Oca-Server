@@ -206,7 +206,6 @@ async function salvaPartita(partita) {
     maxGiocatori: partita.maxGiocatori,
     chatAttiva: partita.chatAttiva !== false,
     mediaAttiva: partita.mediaAttiva === true,
-    musicaYouTube: partita.musicaYouTube === true,
     fase: partita.fase || "in_corso",
     giocatori: preparaGiocatoriPerFirebase(partita.giocatori),
     ordineGiocatori: partita.ordineGiocatori || [],
@@ -777,11 +776,12 @@ function normalizzaRedirectAutenticazione(valore) {
   }
 }
 
-function creaStatoOAuth(redirectRichiesto) {
+function creaStatoOAuth(redirectRichiesto, sincronizzaUid = null) {
   return jwt.sign(
     {
       tipo: "oauth_redirect",
-      redirect: normalizzaRedirectAutenticazione(redirectRichiesto)
+      redirect: normalizzaRedirectAutenticazione(redirectRichiesto),
+      sincronizzaUid
     },
     JWT_SECRET,
     { expiresIn: "10m" }
@@ -793,7 +793,7 @@ function leggiStatoOAuth(state) {
   try {
     const dati = jwt.verify(state, JWT_SECRET);
     if (!dati || dati.tipo !== "oauth_redirect") return null;
-    return normalizzaRedirectAutenticazione(dati.redirect);
+    return dati;
   } catch (e) {
     return null;
   }
@@ -1173,6 +1173,24 @@ const gsLimiteConferma = rateLimit({
 });
 
 // ===== LOGIN CON GOOGLE =====
+const operazioniEmail = new Map();
+
+async function conEmailRiservata(email, azione) {
+  let attesa = operazioniEmail.get(email);
+  while (attesa) {
+    await attesa;
+    attesa = operazioniEmail.get(email);
+  }
+  let libera;
+  operazioniEmail.set(email, new Promise(resolve => { libera = resolve; }));
+  try {
+    return await azione();
+  } finally {
+    operazioniEmail.delete(email);
+    libera();
+  }
+}
+
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const GOOGLE_CALLBACK_URL = process.env.GOOGLE_CALLBACK_URL;
@@ -1184,10 +1202,13 @@ if (GOOGLE_OAUTH_CONFIGURATO) {
   passport.use(new GoogleStrategy({
     clientID: GOOGLE_CLIENT_ID,
     clientSecret: GOOGLE_CLIENT_SECRET,
-    callbackURL: GOOGLE_CALLBACK_URL
-  }, async (accessToken, refreshToken, profile, done) => {
+    callbackURL: GOOGLE_CALLBACK_URL,
+    passReqToCallback: true
+  }, async (req, accessToken, refreshToken, profile, done) => {
     try {
       if (!db) return done(new Error("Database non disponibile."));
+      const statoOAuth = leggiStatoOAuth(req.query.state);
+      if (!statoOAuth) return done(new Error("Richiesta Google scaduta."));
       const googleId = typeof profile.id === "string" ? profile.id : "";
       const email = gsEmail(profile.emails?.[0]?.value);
       const json = profile._json || {};
@@ -1201,90 +1222,108 @@ if (GOOGLE_OAUTH_CONFIGURATO) {
       const autorevole = dominio === "gmail.com" || dominio === "googlemail.com" ||
         (typeof json.hd === "string" && json.hd.length > 0);
 
-      let utente = await trovaUtentePerGoogleId(googleId);
-      if (!utente) {
-        utente = await trovaUtentePerEmail(email);
-        if (utente && (!autorevole ||
-          (utente.googleId && utente.googleId !== googleId))) {
-          return done(new Error("Accedi con il metodo già associato al tuo account."));
+      return await conEmailRiservata(email, async () => {
+        let utente = await trovaUtentePerGoogleId(googleId);
+        if (statoOAuth.sincronizzaUid && utente?.uid !== statoOAuth.sincronizzaUid) {
+          return done(null, false, { codice: "account-diverso" });
         }
-      }
-
-      if (utente) {
-        const ref = db.ref("utenti/" + utente.uid);
-        const snap = await ref.once("value");
-        const attuale = snap.val();
-
-        if (!attuale) return done(new Error("Account non disponibile."));
-
-        if (attuale.accediDiNuovo === false) {
-          return done(null, false, { codice: "ACCOUNT_DISATTIVATO" });
-        }
-
-        if (attuale.stato === "bannato" ||
-          (attuale.stato === "sospeso" && Number(attuale.sospesoFino) > Date.now())) {
-          return done(new Error("Il tuo account è bannato o sospeso."));
-        }
-
-        const emailAccount = gsEmail(attuale.emailLower || attuale.email);
-        if (attuale.googleId && attuale.googleId !== googleId) {
-          return done(new Error("Accedi con il metodo già associato al tuo account."));
-        }
-        if (!attuale.googleId && (!autorevole || emailAccount !== email)) {
-          return done(new Error("Accedi con il metodo già associato al tuo account."));
-        }
-
-        const adesso = Date.now();
-        const aggiornamenti = {
-          googleId,
-          providerGoogle: true,
-          elo: ottieniElo(attuale),
-          ultimoAccesso: adesso,
-          accediDiNuovo: true
-        };
-
-        if (emailAccount === email) {
-          aggiornamenti.emailVerificata = true;
-          aggiornamenti.emailVerificataIl = attuale.emailVerificataIl || adesso;
-          aggiornamenti.emailVerificataCon = "google";
-        }
-
-        if (attuale.emailVerificata === false) {
-          if (emailAccount !== email) {
+        if (!utente) {
+          utente = await trovaUtentePerEmail(email);
+          if (utente && (!autorevole ||
+            (utente.googleId && utente.googleId !== googleId))) {
             return done(new Error("Accedi con il metodo già associato al tuo account."));
           }
-          aggiornamenti.passwordHash = null;
-          aggiornamenti.verificaEmail = null;
         }
 
-        await ref.update(aggiornamenti);
+        if (utente) {
+          const ref = db.ref("utenti/" + utente.uid);
+          const snap = await ref.once("value");
+          const attuale = snap.val();
 
-        return done(null, {
-          uid: utente.uid,
-          nickname: attuale.nickname,
-          ruolo: attuale.ruolo || "utente"
+          if (!attuale) return done(new Error("Account non disponibile."));
+
+          if (attuale.accediDiNuovo === false) {
+            return done(null, false, { codice: "ACCOUNT_DISATTIVATO" });
+          }
+
+          if (attuale.stato === "bannato" ||
+            (attuale.stato === "sospeso" && Number(attuale.sospesoFino) > Date.now())) {
+            return done(new Error("Il tuo account è bannato o sospeso."));
+          }
+
+          const emailAccount = gsEmail(attuale.emailLower || attuale.email);
+          if (attuale.googleId && attuale.googleId !== googleId) {
+            return done(new Error("Accedi con il metodo già associato al tuo account."));
+          }
+          if (!attuale.googleId && (!autorevole || emailAccount !== email)) {
+            return done(new Error("Accedi con il metodo già associato al tuo account."));
+          }
+
+          const adesso = Date.now();
+          const aggiornamenti = {
+            googleId,
+            providerGoogle: true,
+            elo: ottieniElo(attuale),
+            ultimoAccesso: adesso,
+            accediDiNuovo: true
+          };
+
+          if (emailAccount !== email && attuale.googleId === googleId && autorevole) {
+            const occupante = await trovaUtentePerEmail(email);
+            if (!occupante || occupante.uid === utente.uid) {
+              aggiornamenti.email = email;
+              aggiornamenti.emailLower = email;
+              aggiornamenti.verificaEmail = null;
+            } else if (statoOAuth.sincronizzaUid) {
+              return done(null, false, { codice: "indirizzo-occupato" });
+            }
+          } else if (emailAccount !== email && statoOAuth.sincronizzaUid) {
+            return done(null, false, { codice: "indirizzo-non-verificabile" });
+          }
+
+          if (emailAccount === email || aggiornamenti.email) {
+            aggiornamenti.emailVerificata = true;
+            aggiornamenti.emailVerificataIl = aggiornamenti.email ? adesso : attuale.emailVerificataIl || adesso;
+            aggiornamenti.emailVerificataCon = "google";
+          }
+
+          if (attuale.emailVerificata === false) {
+            if (emailAccount !== email && !aggiornamenti.email) {
+              return done(new Error("Accedi con il metodo già associato al tuo account."));
+            }
+            aggiornamenti.passwordHash = null;
+            aggiornamenti.verificaEmail = null;
+          }
+
+          await ref.update(aggiornamenti);
+
+          return done(null, {
+            uid: utente.uid,
+            nickname: attuale.nickname,
+            ruolo: attuale.ruolo || "utente"
+          });
+        }
+
+        const nickname = await generaNicknameGoogleUnico(profile.displayName, email);
+        const ref = db.ref("utenti").push();
+        const uid = ref.key;
+        const foto = profile.photos?.[0]?.value || null;
+        await ref.set({
+          partiteVinte: 0, partiteGiocate: 0, puntiTotali: 0, elo: ELO_INIZIALE,
+          streakVittorieAttuale: 0, streakVittorieMassima: 0,
+          vittoriaPiuVeloceSecondi: null,
+          email, emailLower: email, nickname, nicknameLower: nickname.toLowerCase(),
+          passwordHash: null, googleId, providerGoogle: true,
+          emailVerificata: true, emailVerificataIl: Date.now(),
+          emailVerificataCon: "google",
+          avatar: foto, avatarPresente: Boolean(foto),
+          avatarAggiornatoIl: foto ? Date.now() : 0,
+          ruolo: "utente", stato: "attivo", sospesoFino: null,
+          accediDiNuovo: true,
+          avvisi: [], creatoIl: Date.now(), ultimoAccesso: Date.now()
         });
-      }
-
-      const nickname = await generaNicknameGoogleUnico(profile.displayName, email);
-      const ref = db.ref("utenti").push();
-      const uid = ref.key;
-      const foto = profile.photos?.[0]?.value || null;
-      await ref.set({
-        partiteVinte: 0, partiteGiocate: 0, puntiTotali: 0, elo: ELO_INIZIALE,
-        streakVittorieAttuale: 0, streakVittorieMassima: 0,
-        vittoriaPiuVeloceSecondi: null,
-        email, emailLower: email, nickname, nicknameLower: nickname.toLowerCase(),
-        passwordHash: null, googleId, providerGoogle: true,
-        emailVerificata: true, emailVerificataIl: Date.now(),
-        emailVerificataCon: "google",
-        avatar: foto, avatarPresente: Boolean(foto),
-        avatarAggiornatoIl: foto ? Date.now() : 0,
-        ruolo: "utente", stato: "attivo", sospesoFino: null,
-        accediDiNuovo: true,
-        avvisi: [], creatoIl: Date.now(), ultimoAccesso: Date.now()
+        return done(null, { uid, nickname, ruolo: "utente" });
       });
-      return done(null, { uid, nickname, ruolo: "utente" });
     } catch (_) {
       return done(new Error("Impossibile completare l'accesso con Google."));
     }
@@ -1305,10 +1344,27 @@ app.get("/auth/google", richiediGoogleOAuthConfigurato, (req, res, next) => {
   })(req, res, next);
 });
 
+app.get("/auth/google/aggiorna-email", richiediGoogleOAuthConfigurato, richiediAuth, (req, res, next) => {
+  passport.authenticate("google", {
+    scope: ["profile", "email"],
+    prompt: "select_account",
+    state: creaStatoOAuth(null, req.utente.uid)
+  })(req, res, next);
+});
+
 app.get("/auth/google/callback",
   richiediGoogleOAuthConfigurato,
   (req, res, next) => {
+    const statoOAuth = leggiStatoOAuth(req.query.state);
+    if (!statoOAuth) return res.redirect("/login.html?errore=google");
     passport.authenticate("google", { session: false }, (errore, utente, info) => {
+      if (statoOAuth.sincronizzaUid) {
+        const esito = utente?.uid === statoOAuth.sincronizzaUid
+          ? "aggiornata"
+          : ["account-diverso", "indirizzo-occupato", "indirizzo-non-verificabile"].includes(info?.codice)
+            ? info.codice : "errore";
+        return res.redirect("/profilo.html?email-google=" + esito + "#email");
+      }
       if (errore) {
         console.error("Errore callback Google:", errore?.message || errore);
         return res.redirect("/login.html?errore=google");
@@ -1331,7 +1387,7 @@ app.get("/auth/google/callback",
       if (!utente || !utente.uid) return res.redirect("/login.html?errore=google");
       const token = creaToken(utente.uid, utente.nickname, utente.ruolo || "utente");
       res.cookie("token", token, OPZIONI_COOKIE);
-      const redirect = leggiStatoOAuth(req.query.state);
+      const redirect = normalizzaRedirectAutenticazione(leggiStatoOAuth(req.query.state)?.redirect);
       return res.redirect(redirect
         ? aggiungiTokenAlFrammento(redirect, token) : URL_HOME_WIX);
     } catch (_) {
@@ -1361,30 +1417,38 @@ app.post("/api/registrati", limiteLogin, async (req, res) => {
       });
     }
 
-    const esistente = await trovaUtentePerEmail(email);
-    if (esistente) return res.status(409).json({
-      errore: esistente.emailVerificata === false
-        ? "Questa email è in attesa di verifica. Richiedi un nuovo link."
-        : "Questa email è già registrata.",
-      codice: esistente.emailVerificata === false ? "EMAIL_DA_VERIFICARE" : "EMAIL_ESISTENTE"
+    const ref = await conEmailRiservata(email, async () => {
+      const esistente = await trovaUtentePerEmail(email);
+      if (esistente) {
+        res.status(409).json({
+          errore: esistente.emailVerificata === false
+            ? "Questa email è in attesa di verifica. Richiedi un nuovo link."
+            : "Questa email è già registrata.",
+          codice: esistente.emailVerificata === false ? "EMAIL_DA_VERIFICARE" : "EMAIL_ESISTENTE"
+        });
+        return null;
+      }
+      if (await trovaUtentePerNickname(nickname.toLowerCase())) {
+        res.status(409).json({ errore: "Questo nickname è già in uso." });
+        return null;
+      }
+      gsConfigurazioneEmail();
+      const passwordHash = await bcrypt.hash(password, 10);
+      const ref = db.ref("utenti").push();
+      await ref.set({
+        partiteVinte: 0, partiteGiocate: 0, puntiTotali: 0, elo: ELO_INIZIALE,
+        streakVittorieAttuale: 0, streakVittorieMassima: 0,
+        vittoriaPiuVeloceSecondi: null,
+        email, emailLower: email, nickname, nicknameLower: nickname.toLowerCase(),
+        passwordHash, emailVerificata: false, providerGoogle: false,
+        avatar: null, avatarPresente: false, avatarAggiornatoIl: 0,
+        ruolo: "utente", stato: "attivo", sospesoFino: null,
+        accediDiNuovo: true,
+        avvisi: [], creatoIl: Date.now(), ultimoAccesso: null
+      });
+      return ref;
     });
-    if (await trovaUtentePerNickname(nickname.toLowerCase())) {
-      return res.status(409).json({ errore: "Questo nickname è già in uso." });
-    }
-    gsConfigurazioneEmail();
-    const passwordHash = await bcrypt.hash(password, 10);
-    const ref = db.ref("utenti").push();
-    await ref.set({
-      partiteVinte: 0, partiteGiocate: 0, puntiTotali: 0, elo: ELO_INIZIALE,
-      streakVittorieAttuale: 0, streakVittorieMassima: 0,
-      vittoriaPiuVeloceSecondi: null,
-      email, emailLower: email, nickname, nicknameLower: nickname.toLowerCase(),
-      passwordHash, emailVerificata: false, providerGoogle: false,
-      avatar: null, avatarPresente: false, avatarAggiornatoIl: 0,
-      ruolo: "utente", stato: "attivo", sospesoFino: null,
-      accediDiNuovo: true,
-      avvisi: [], creatoIl: Date.now(), ultimoAccesso: null
-    });
+    if (!ref) return;
 
     let emailInviata = false;
     let messaggio = "Account creato. Controlla la posta per confermare la tua email.";
@@ -2284,6 +2348,29 @@ app.get(
 
 app.post("/api/logout", (req, res) => { res.clearCookie("token", OPZIONI_RIMOZIONE_COOKIE); res.json({ ok: true }); });
 
+function preferenzeAudio(utente) {
+  return {
+    playerYouTube: utente?.playerYouTube !== false,
+    abbassaVociConMusica: utente?.abbassaVociConMusica === true
+  };
+}
+
+app.post("/api/preferenze-audio", richiediAuth, async (req, res) => {
+  const { playerYouTube, abbassaVociConMusica } = req.body || {};
+  if (typeof playerYouTube !== "boolean" || typeof abbassaVociConMusica !== "boolean") {
+    return res.status(400).json({ errore: "Seleziona Sì o No per entrambe le preferenze." });
+  }
+  try {
+    const preferenze = { playerYouTube, abbassaVociConMusica };
+    await db.ref("utenti/" + req.utente.uid + "/preferenze").update(preferenze);
+    return res.json({ preferenze });
+  } catch {
+    return res.status(503).json({ errore: "Impossibile salvare le preferenze. Riprova." });
+  }
+});
+
+require("./ricerca-youtube")(app, richiediAuth);
+
 app.get("/api/me", richiediAuth, async (req, res) => {
   if (!db) {
     return res.status(500).json({
@@ -2319,6 +2406,8 @@ app.get("/api/me", richiediAuth, async (req, res) => {
 
       nickname: utente.nickname,
       email: utente.email,
+      accountGoogle: Boolean(utente.googleId),
+      preferenze: preferenzeAudio(utente.preferenze),
       avatar: utente.avatar || null,
 
       // =========================================
@@ -2512,10 +2601,11 @@ app.get("/api/me-menu", richiediAuth, async (req, res) => {
   try {
     const refUtente = db.ref("utenti/" + req.utente.uid);
 
-    const [snapNickname, snapAvatarPresente, snapAvatarAggiornatoIl] = await Promise.all([
+    const [snapNickname, snapAvatarPresente, snapAvatarAggiornatoIl, snapPreferenze] = await Promise.all([
       refUtente.child("nickname").once("value"),
       refUtente.child("avatarPresente").once("value"),
-      refUtente.child("avatarAggiornatoIl").once("value")
+      refUtente.child("avatarAggiornatoIl").once("value"),
+      refUtente.child("preferenze").once("value")
     ]);
 
     const nickname = snapNickname.val() || req.utente.nickname || "Utente";
@@ -2541,7 +2631,8 @@ app.get("/api/me-menu", richiediAuth, async (req, res) => {
       uid: req.utente.uid,
       nickname,
       avatarPresente,
-      avatarVersione: avatarAggiornatoIl || 1
+      avatarVersione: avatarAggiornatoIl || 1,
+      preferenze: preferenzeAudio(snapPreferenze.val())
     });
   } catch (err) {
     console.error("Errore /api/me-menu:", err);
@@ -6127,7 +6218,6 @@ async function ripristinaPartiteDaFirebase() {
       maxGiocatori: p.maxGiocatori || (Object.keys(p.giocatori || {}).length || 2),
       chatAttiva: p.chatAttiva !== false,
       mediaAttiva: p.mediaAttiva === true,
-      musicaYouTube: p.musicaYouTube === true,
       giocatori: p.giocatori || {},
       ordineGiocatori: p.ordineGiocatori || [],
       turnoAttuale: p.turnoAttuale || 0,
@@ -6559,7 +6649,6 @@ function inviaListaPartite(nomeStanza) {
     id: p.id, creatore: p.creatore, creatoDa: p.creatoDa, tempo: p.tempo, modalita: p.modalita, classificata: p.classificata !== false,
     maxGiocatori: p.maxGiocatori, numGiocatoriAttuali: Object.keys(p.giocatori).length, chatAttiva: p.chatAttiva !== false,
     mediaAttiva: p.mediaAttiva === true,
-    musicaYouTube: p.musicaYouTube === true,
     iniziata: p.iniziata !== false,
     giocatori: Object.entries(p.giocatori).map(([uid, g]) => ({ uid, nome: g.nome, avatar: g.avatar || null }))
   }));
@@ -7598,7 +7687,6 @@ function damaSerializzaPartitaClient(partita) {
     durataTurnoMs: damaDurataTurnoMs(partita),
     classificata: partita.classificata !== false,
     mediaAttiva: partita.mediaAttiva === true,
-    musicaYouTube: partita.musicaYouTube === true,
     vincitoreUid: partita.vincitoreUid || null,
     motivoFine: partita.motivoFine || null
   };
@@ -7628,7 +7716,6 @@ function damaPreparaPartitaFirebase(partita) {
     maxGiocatori: 2,
     chatAttiva: partita.chatAttiva !== false,
     mediaAttiva: partita.mediaAttiva === true,
-    musicaYouTube: partita.musicaYouTube === true,
     fase: partita.fase,
     iniziata: partita.iniziata === true,
     iniziataIl: partita.iniziataIl || null,
@@ -7749,7 +7836,6 @@ function damaListaPartite(stanza) {
     numGiocatoriAttuali: Object.keys(p.giocatori || {}).length,
     chatAttiva: p.chatAttiva !== false,
     mediaAttiva: p.mediaAttiva === true,
-    musicaYouTube: p.musicaYouTube === true,
     iniziata: p.iniziata === true,
     giocatori: Object.entries(p.giocatori || {}).map(([uid, g]) => ({
       uid,
@@ -8174,7 +8260,6 @@ async function damaRipristinaPartiteDaFirebase() {
       gioco: DAMA_ID_GIOCO,
       maxGiocatori: 2,
       mediaAttiva: dati.mediaAttiva === true,
-      musicaYouTube: dati.musicaYouTube === true,
       giocatori,
       coppieAudioApprovate: new Set(),
       partecipantiMediaPronti: new Set(),
@@ -8368,7 +8453,6 @@ async function damaGestisciMessaggioSocket({
       maxGiocatori: 2,
       chatAttiva: dati.chatAttiva !== false,
       mediaAttiva,
-      musicaYouTube: dati.musicaYouTube === true,
       coppieAudioApprovate: new Set(),
       partecipantiMediaPronti: new Set(),
       partecipantiMediaInfo: new Map(),
@@ -8487,8 +8571,7 @@ async function damaGestisciMessaggioSocket({
       stanza,
       daUid: uid,
       daNome: contesto.nickname || partita.creatore,
-      mediaAttiva: partita.mediaAttiva === true,
-      musicaYouTube: partita.musicaYouTube === true
+      mediaAttiva: partita.mediaAttiva === true
     });
     damaInviaSocket(socket, {
       tipo: "invitoInviato",
@@ -9157,7 +9240,6 @@ const creaModuloOthello = function creaModuloOthello(deps) {
       scadenzaTurno: partita.scadenzaTurno || null,
       durataTurnoMs: durataTurnoMs(partita),
       classificata: partita.classificata !== false,
-      musicaYouTube: partita.musicaYouTube === true,
       vincitoreUid: partita.vincitoreUid || null,
       motivoFine: partita.motivoFine || null
     };
@@ -9185,7 +9267,6 @@ const creaModuloOthello = function creaModuloOthello(deps) {
       maxGiocatori: 2,
       chatAttiva: partita.chatAttiva !== false,
       mediaAttiva: partita.mediaAttiva === true,
-      musicaYouTube: partita.musicaYouTube === true,
       fase: partita.fase,
       iniziata: partita.iniziata === true,
       iniziataIl: partita.iniziataIl || null,
@@ -9294,7 +9375,6 @@ const creaModuloOthello = function creaModuloOthello(deps) {
       numGiocatoriAttuali: Object.keys(p.giocatori || {}).length,
       chatAttiva: p.chatAttiva !== false,
       mediaAttiva: p.mediaAttiva === true,
-      musicaYouTube: p.musicaYouTube === true,
       iniziata: p.iniziata === true,
       giocatori: Object.entries(p.giocatori || {}).map(([uid, g]) => ({
         uid,
@@ -9530,7 +9610,7 @@ const creaModuloOthello = function creaModuloOthello(deps) {
     catch (errore) { console.error("Othello: errore salvataggio avvio partita:", errore.message); }
 
     for (const g of Object.values(partita.giocatori)) {
-      inviaSocket(g.socket, { tipo: "partitaAvviata", partitaId: partita.id, mediaAttiva: partita.mediaAttiva === true, musicaYouTube: partita.musicaYouTube === true });
+      inviaSocket(g.socket, { tipo: "partitaAvviata", partitaId: partita.id, mediaAttiva: partita.mediaAttiva === true });
     }
     inviaListaPartite(partita.stanza);
     inviaConteggioStanze();
@@ -9590,7 +9670,6 @@ const creaModuloOthello = function creaModuloOthello(deps) {
         gioco: OTHELLO_ID_GIOCO,
         maxGiocatori: 2,
         mediaAttiva: dati.mediaAttiva === true,
-        musicaYouTube: dati.musicaYouTube === true,
         giocatori,
         ordineGiocatori: Array.isArray(dati.ordineGiocatori) ? dati.ordineGiocatori : Object.keys(giocatori),
         tavola: Array.isArray(dati.tavola) ? dati.tavola : null,
@@ -9768,7 +9847,6 @@ const creaModuloOthello = function creaModuloOthello(deps) {
         maxGiocatori: 2,
         chatAttiva: dati.chatAttiva !== false,
         mediaAttiva: dati.mediaAttiva === true,
-        musicaYouTube: dati.musicaYouTube === true,
         fase: "attesa_giocatori",
         iniziata: false,
         iniziataIl: null,
@@ -9878,8 +9956,7 @@ const creaModuloOthello = function creaModuloOthello(deps) {
         stanza,
         daUid: uid,
         daNome: c.nickname || partita.creatore,
-        mediaAttiva: partita.mediaAttiva === true,
-        musicaYouTube: partita.musicaYouTube === true
+        mediaAttiva: partita.mediaAttiva === true
       });
       inviaSocket(socket, {
         tipo: "invitoInviato",
@@ -10616,7 +10693,6 @@ inviaAllaStanza(stanzaAttuale, {
         inviaConteggioStanze();
 
         if (partita.mediaAttiva === true) socket.send(JSON.stringify({ tipo: "configMedia", configurazioneIce: configurazioneIcePerClient() }));
-        socket.send(JSON.stringify({ tipo: "configMusica", musicaYouTube: partita.musicaYouTube === true }));
 
         if (partita.fase === "determinazione_ordine") {
           socket.send(JSON.stringify({
@@ -10664,7 +10740,6 @@ inviaAllaStanza(stanzaAttuale, {
           maxGiocatori: (!max || max < 2 || max > 8 ? 2 : max),
           chatAttiva: dati.chatAttiva !== false,
           mediaAttiva,
-          musicaYouTube: dati.musicaYouTube === true,
           fase: "attesa_giocatori",
           giocatori: { [uid]: { nome: nickname, avatar: mioAvatar, posizione: 0, socket, tipoDispositivo, turniSaltati: 0, tentativiAutomaticiConsecutivi: 0, tiriRealiEffettuati: 0 } },
           ordineGiocatori: [uid], turnoAttuale: 0, iniziata: false, elaborandoTiro: false, animazioneTiroInCorso: false,
@@ -10770,7 +10845,7 @@ inviaAllaStanza(stanzaAttuale, {
         partita.invitati[destinatarioUid] = true;
         const socketDestinatario = socketsPerId[socketIdDestinatario];
         const nomeDestinatario = stanzaOggetto.giocatoriOnline[socketIdDestinatario].nickname;
-        if (socketDestinatario && socketDestinatario.readyState === WebSocket.OPEN) socketDestinatario.send(JSON.stringify({ tipo: "invitoRicevuto", partitaId: partita.id, stanza: nomeStanza, daUid: uid, daNome: nickname, mediaAttiva: partita.mediaAttiva === true, musicaYouTube: partita.musicaYouTube === true }));
+        if (socketDestinatario && socketDestinatario.readyState === WebSocket.OPEN) socketDestinatario.send(JSON.stringify({ tipo: "invitoRicevuto", partitaId: partita.id, stanza: nomeStanza, daUid: uid, daNome: nickname, mediaAttiva: partita.mediaAttiva === true }));
         if (db) db.ref("utenti/" + destinatarioUid + "/notifiche").push({ tipo: "invitoPartita", testo: `${nickname} ti ha invitato a giocare nella stanza ${nomeStanza}`, data: Date.now(), letta: false, daUid: uid, daNome: nickname, stanza: nomeStanza, partitaId: partita.id }).catch(() => {});
         socket.send(JSON.stringify({ tipo: "invitoInviato", destinatarioUid, destinatarioNome: nomeDestinatario }));
         return;

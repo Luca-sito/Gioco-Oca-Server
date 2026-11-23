@@ -1770,6 +1770,7 @@ function creaConnessionePeer(altroUid) {
         elementi.streamAudioRemoto.addTrack(evento.track);
       }
       elementi.audio.srcObject = elementi.streamAudioRemoto;
+      window.MusicaYouTube?.registraVoce(elementi.audio);
       evento.track.onended = () => {
         try { elementi.streamAudioRemoto.removeTrack(evento.track); } catch (e) {}
       };
@@ -1896,6 +1897,7 @@ function chiudiConnessioneMedia(altroUid) {
   const elementi = elementiVideoRemoti[altroUid];
   if (elementi) {
     if (elementi.video) elementi.video.srcObject = null;
+    window.MusicaYouTube?.rimuoviVoce(elementi.audio);
     if (elementi.audio) elementi.audio.srcObject = null;
     try {
       elementi.streamAudioRemoto.getTracks().forEach(t => elementi.streamAudioRemoto.removeTrack(t));
@@ -2618,6 +2620,7 @@ async function avvia() {
     if (!profiloRapido || !profiloRapido.uid) throw new Error("Profilo non valido");
 
     mioUid = profiloRapido.uid;
+    window.MusicaYouTube?.avvia(profiloRapido.preferenze, ORIGINE_SERVER);
 
     if (timerRiprovaAvvio) {
       clearTimeout(timerRiprovaAvvio);
@@ -2715,7 +2718,6 @@ function connetti() {
     }
     if (!dati || typeof dati.tipo !== "string") return;
     aggiornaNomiPartecipanti(dati);
-    if (dati.tipo === "configMusica") { window.MusicaYouTube?.impostaDisponibilita(dati.musicaYouTube); return; }
     if (typeof dati.mediaAttiva === "boolean") impostaMediaPartitaAttiva(dati.mediaAttiva);
 
     if (dati.tipo === "sessioneScaduta") {

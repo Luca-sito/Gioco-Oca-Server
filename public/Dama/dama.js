@@ -964,6 +964,7 @@ function creaConnessionePeer(altroUid) {
         elementi.streamAudioRemoto.addTrack(evento.track);
       }
       elementi.audio.srcObject = elementi.streamAudioRemoto;
+      window.MusicaYouTube?.registraVoce(elementi.audio);
       evento.track.onended = () => {
         try { elementi.streamAudioRemoto.removeTrack(evento.track); } catch (e) {}
       };
@@ -1088,6 +1089,7 @@ function chiudiConnessioneMedia(altroUid) {
   const elementi = elementiVideoRemoti[altroUid];
   if (elementi) {
     if (elementi.video) elementi.video.srcObject = null;
+    window.MusicaYouTube?.rimuoviVoce(elementi.audio);
     if (elementi.audio) elementi.audio.srcObject = null;
     try {
       elementi.streamAudioRemoto.getTracks().forEach(t => elementi.streamAudioRemoto.removeTrack(t));
@@ -2170,7 +2172,6 @@ function gestisciMessaggioSocket(dati) {
   if (!dati || typeof dati !== "object") return;
 
   aggiornaNomiPartecipanti(dati);
-  if (dati.tipo === "dama_stato" && dati.partita) window.MusicaYouTube?.impostaDisponibilita(dati.partita.musicaYouTube);
   if (typeof dati.mediaAttiva === "boolean") impostaMediaPartitaAttiva(dati.mediaAttiva);
 
   if (dati.tipo === "dama_identita") {
@@ -2357,6 +2358,7 @@ async function avvia() {
     if (risposta.ok) {
       const profilo = await risposta.json();
       if (profilo && profilo.uid) mioUid = profilo.uid;
+      if (profilo?.uid) window.MusicaYouTube?.avvia(profilo.preferenze, ORIGINE_SERVER, tokenAutenticazione);
     }
   } catch (errore) {
     console.warn("Verifica HTTP non disponibile, provo il WebSocket:", errore);

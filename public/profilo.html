@@ -2660,11 +2660,20 @@ body {
 
                     </div>
 
-                    <div class="warning" style="margin-top:16px;">
-                        La modifica dell'e-mail richiede un'apposita procedura
-                        di verifica. Nel server attuale questa funzione non è
-                        ancora esposta tramite API.
+                    <div id="gestioneEmailGoogle" hidden>
+                        <p class="card-subtitle">
+                            Dopo aver cambiato l’indirizzo nelle impostazioni Google,
+                            seleziona lo stesso account per aggiornare l’e-mail su Giochi Società.
+                        </p>
+                        <div class="inline-actions">
+                            <a class="btn btn-secondary" href="https://myaccount.google.com/google-account-email" target="_blank" rel="noopener">Modifica e-mail su Google ↗</a>
+                            <a class="btn btn-primary" href="/auth/google/aggiorna-email">Sincronizza da Google</a>
+                        </div>
+                        <p class="avatar-status" id="esitoEmailGoogle" role="status"></p>
                     </div>
+                    <p class="card-subtitle" id="emailSenzaGoogle" hidden>
+                        Per aggiornare questo indirizzo, contatta l’assistenza di Giochi Società.
+                    </p>
 
                 </div>
 
@@ -2928,10 +2937,30 @@ body {
                         Impostazioni personali dell'esperienza sulla piattaforma.
                     </p>
 
-                    <div class="empty-state">
-                        La sezione è predisposta per le future preferenze
-                        dell'account.
-                    </div>
+                    <form id="formPreferenzeAudio" aria-label="Preferenze audio dei giochi">
+                        <div class="form-grid">
+                            <div class="field">
+                                <label for="preferenzaPlayerYouTube">Player YouTube in tutti i giochi</label>
+                                <select id="preferenzaPlayerYouTube" disabled>
+                                    <option value="si">Sì</option>
+                                    <option value="no">No</option>
+                                </select>
+                                <small>Disponibile su computer e tablet.</small>
+                            </div>
+                            <div class="field">
+                                <label for="preferenzaAbbassaVoci">Abbassa automaticamente le voci quando la musica è attiva</label>
+                                <select id="preferenzaAbbassaVoci" disabled>
+                                    <option value="si">Sì</option>
+                                    <option value="no" selected>No</option>
+                                </select>
+                                <small>Riduce il volume della chiamata solo per te, mentre YouTube è in riproduzione.</small>
+                            </div>
+                        </div>
+                        <div class="inline-actions">
+                            <button class="btn btn-primary" type="submit" disabled>Salva preferenze</button>
+                        </div>
+                        <p class="avatar-status" id="esitoPreferenzeAudio" role="status"></p>
+                    </form>
 
                 </div>
 
@@ -3081,6 +3110,48 @@ const PALETTE = [
 
 
 let datiUtente = null;
+
+const formPreferenzeAudio = document.getElementById("formPreferenzeAudio");
+formPreferenzeAudio.addEventListener("submit", async evento => {
+    evento.preventDefault();
+    const esito = document.getElementById("esitoPreferenzeAudio");
+    const playerYouTube = document.getElementById("preferenzaPlayerYouTube").value === "si";
+    const abbassaVociConMusica = document.getElementById("preferenzaAbbassaVoci").value === "si";
+    for (const controllo of formPreferenzeAudio.elements) controllo.disabled = true;
+    esito.className = "avatar-status";
+    esito.textContent = "Salvataggio…";
+    try {
+        const risposta = await fetch(SERVER + "/api/preferenze-audio", {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ playerYouTube, abbassaVociConMusica })
+        });
+        const dati = await risposta.json();
+        if (!risposta.ok) throw new Error(dati.errore || "Salvataggio non riuscito.");
+        datiUtente.preferenze = dati.preferenze;
+        esito.textContent = "Preferenze salvate.";
+        esito.classList.add("success");
+    } catch (errore) {
+        esito.textContent = errore.message || "Salvataggio non riuscito.";
+        esito.classList.add("error");
+    } finally {
+        for (const controllo of formPreferenzeAudio.elements) controllo.disabled = false;
+    }
+});
+
+const statoEmailGoogle = new URLSearchParams(location.search).get("email-google");
+if (statoEmailGoogle) {
+    const esiti = {
+        aggiornata: "E-mail verificata e sincronizzata con Google.",
+        "account-diverso": "Scegli lo stesso account Google collegato a questo profilo.",
+        "indirizzo-occupato": "Il nuovo indirizzo è già associato a un altro profilo Giochi Società.",
+        "indirizzo-non-verificabile": "Per confermare questo indirizzo, contatta l’assistenza."
+    };
+    const esito = document.getElementById("esitoEmailGoogle");
+    esito.textContent = esiti[statoEmailGoogle] || "Sincronizzazione non riuscita. Riprova.";
+    esito.classList.add(statoEmailGoogle === "aggiornata" ? "success" : "error");
+}
 let avatarFileSelezionato = null;
 let albumFoto = [];
 let albumVisibilitaDaCaricare = null;
@@ -3612,6 +3683,12 @@ function aggiornaInterfaccia() {
         "currentEmail"
     ).textContent =
         email || "Non disponibile";
+
+    document.getElementById("gestioneEmailGoogle").hidden = !datiUtente.accountGoogle;
+    document.getElementById("emailSenzaGoogle").hidden = Boolean(datiUtente.accountGoogle);
+    document.getElementById("preferenzaPlayerYouTube").value = datiUtente.preferenze?.playerYouTube === false ? "no" : "si";
+    document.getElementById("preferenzaAbbassaVoci").value = datiUtente.preferenze?.abbassaVociConMusica ? "si" : "no";
+    for (const controllo of document.getElementById("formPreferenzeAudio").elements) controllo.disabled = false;
 
 
     /* DATI PERSONALI */

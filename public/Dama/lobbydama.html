@@ -1910,11 +1910,6 @@ body.tema-scuro .giocatore-online{
         <option value="on">🎥 Attiva</option>
       </select>
       <p style="font-size:12px;line-height:1.35;color:#777;margin-top:8px;">Su computer usa webcam e microfono; su cellulare usa soltanto il microfono.</p>
-      <p><label for="musicaYouTube">Musica YouTube</label></p>
-      <select id="musicaYouTube">
-        <option value="off">No</option>
-        <option value="on">Sì</option>
-      </select>
       <button class="crea" onclick="creaPartita()">Crea partita</button>
     </div>
   </div>
@@ -2646,11 +2641,6 @@ CREA TAVOLO
 <option value="on">🎙️ Attiva (su cellulare solo audio)</option>
 </select>
 <p style="font-size:12px;line-height:1.35;color:#777;">Su cellulare viene usato solo il microfono: niente webcam e niente video degli altri giocatori.</p>
-<p><label for="musicaYouTubeMobile">Musica YouTube</label></p>
-<select id="musicaYouTubeMobile">
-  <option value="off">No</option>
-  <option value="on">Sì</option>
-</select>
 <button onclick="creaPartitaMobile()" 
 style="
 margin-top:20px;
@@ -2671,7 +2661,6 @@ function leggiTempoPartita(idElemento) {
 async function creaPartitaMobile() {
   const tipo = document.getElementById("tipoPartitaMobile").value;
   const mediaAttiva = document.getElementById("mediaPartitaMobile").value === "on";
-  const musicaYouTube = document.getElementById("musicaYouTubeMobile").value === "on";
   if (!(await richiediConsensoMediaSeNecessario(mediaAttiva))) return;
   const inviato = inviaMessaggioSocket({
     tipo: "creaPartita",
@@ -2680,8 +2669,7 @@ async function creaPartitaMobile() {
     modalita: tipo,
     maxGiocatori: "2",
     mediaAttiva,
-    mediaConsenso: mediaAttiva,
-    musicaYouTube
+    mediaConsenso: mediaAttiva
   });
   if (!inviato) return;
   if (tipo === "privata") aspettaPropriaPartitaPrivata = true;
@@ -3037,7 +3025,6 @@ window.addEventListener("pageshow", () => {
 async function creaPartita() {
   const tipo = document.getElementById("tipoPartita").value;
   const mediaAttiva = document.getElementById("mediaPartita").value === "on";
-  const musicaYouTube = document.getElementById("musicaYouTube").value === "on";
   if (!(await richiediConsensoMediaSeNecessario(mediaAttiva))) return;
   const inviato = inviaMessaggioSocket({
     tipo: "creaPartita",
@@ -3046,8 +3033,7 @@ async function creaPartita() {
     modalita: tipo,
     maxGiocatori: "2",
     mediaAttiva,
-    mediaConsenso: mediaAttiva,
-    musicaYouTube
+    mediaConsenso: mediaAttiva
   });
   if (!inviato) return;
   if (tipo === "privata") aspettaPropriaPartitaPrivata = true;
@@ -3123,7 +3109,6 @@ function mostraPartite(lista) {
               ? "🎙️ Chiamata attiva · solo audio su cellulare"
               : "🎥 Webcam e microfono attivi")
           : "🔇 Chiamata disattiva"}<br>
-        Musica YouTube · ${partita.musicaYouTube === true ? "Sì" : "No"}<br>
         ${testoModalitaSfida}<br>
         ⏱ ${tempoPulito} secondi
         <div style="margin-top:8px;">👥 ${partita.numGiocatoriAttuali} su ${partita.maxGiocatori}</div>
@@ -3959,8 +3944,7 @@ function mostraInvitoRicevuto(dati) {
     : "🔇 Webcam e microfono sono disattivi.";
 
   document.getElementById("testoInvitoRicevuto").textContent =
-    "🎲 " + dati.daNome + " ti ha invitato a giocare! " + testoMediaInvito +
-    (dati.musicaYouTube === true ? " Musica YouTube disponibile." : "");
+    "🎲 " + dati.daNome + " ti ha invitato a giocare! " + testoMediaInvito;
   document.getElementById("cardInvitoRicevuto").classList.remove("nascosto");
 }
 async function rispondiInvito(accettato) {

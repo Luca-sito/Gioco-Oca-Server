@@ -25,7 +25,23 @@ jobs:
           chmod 600 ~/.ssh/known_hosts
 
       - name: Deploy su Oracle
+        env:
+          YOUTUBE_DATA_API_KEY: ${{ secrets.YOUTUBE_DATA_API_KEY }}
         run: |
+          if [ -n "$YOUTUBE_DATA_API_KEY" ]; then
+            printf '%s\n' "$YOUTUBE_DATA_API_KEY" | ssh \
+              -i ~/.ssh/id_ed25519 \
+              -o IdentitiesOnly=yes \
+              ${{ secrets.OCI_USER }}@${{ secrets.OCI_HOST }} \
+              'set -e; umask 077
+               directory="$HOME/.config/giochi-societa"
+               mkdir -p "$directory"
+               temporaneo=$(mktemp "$directory/youtube.key.XXXXXX")
+               trap '"'"'rm -f -- "$temporaneo"'"'"' EXIT
+               cat > "$temporaneo"
+               mv -f -- "$temporaneo" "$directory/youtube.key"'
+          fi
+
           ssh \
             -i ~/.ssh/id_ed25519 \
             -o IdentitiesOnly=yes \
