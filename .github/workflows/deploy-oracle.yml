@@ -39,7 +39,18 @@ jobs:
                temporaneo=$(mktemp "$directory/youtube.key.XXXXXX")
                trap '"'"'rm -f -- "$temporaneo"'"'"' EXIT
                cat > "$temporaneo"
-               mv -f -- "$temporaneo" "$directory/youtube.key"'
+               if [ -f "$directory/youtube.verificata" ] && cmp -s "$temporaneo" "$directory/youtube.key"; then
+                 exit 0
+               fi
+               read -r chiave < "$temporaneo"
+               printf "header = \"x-goog-api-key: %s\"\n" "$chiave" |
+                 curl --config - --fail --silent --show-error --max-time 15 --output /dev/null \
+                   --get --data-urlencode "part=snippet" --data-urlencode "type=video" \
+                   --data-urlencode "videoEmbeddable=true" --data-urlencode "maxResults=1" \
+                   --data-urlencode "q=musica jazz" "https://www.googleapis.com/youtube/v3/search"
+               mv -f -- "$temporaneo" "$directory/youtube.key"
+               touch "$directory/youtube.verificata"
+               echo "Ricerca YouTube verificata da Oracle"'
           fi
 
           ssh \
