@@ -1,0 +1,130 @@
+#musica-youtube {
+  --musica-margine: 14px;
+  --musica-destra: calc(var(--musica-margine) + env(safe-area-inset-right));
+  --musica-basso: calc(var(--musica-margine) + env(safe-area-inset-bottom));
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 79;
+}
+
+#musica-youtube [hidden],
+#musica-youtube[hidden] {
+  display: none;
+}
+
+#btn-musica-youtube,
+#pannello-musica-youtube {
+  position: absolute;
+  pointer-events: auto;
+}
+
+#btn-musica-youtube {
+  right: calc(var(--musica-destra) + 66px);
+  bottom: var(--musica-basso);
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  font-size: 25px;
+}
+
+#pannello-musica-youtube {
+  right: var(--musica-destra);
+  bottom: calc(var(--musica-basso) + 62px);
+  box-sizing: border-box;
+  width: min(390px, calc(100% - var(--musica-destra) - var(--musica-margine) - env(safe-area-inset-left)));
+  max-height: calc(var(--altezza-reale, 100vh) - var(--musica-basso) - 70px - env(safe-area-inset-top));
+  overflow: auto;
+  padding: 12px;
+  color: #fff;
+  background: var(--pannello, #121c26);
+  border: 1px solid rgba(255, 215, 0, .42);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .55);
+  font: 14px/1.4 system-ui, sans-serif;
+}
+
+.intestazione-musica-youtube,
+.riga-musica-youtube {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+#musica-youtube button {
+  border: 1px solid #d4b548;
+  border-radius: 9px;
+  color: #fff4ba;
+  background: #202b36;
+  cursor: pointer;
+}
+
+#musica-youtube button:hover,
+#musica-youtube button[aria-expanded="true"] {
+  background: #393622;
+}
+
+#musica-youtube button:focus-visible,
+#musica-youtube input:focus-visible {
+  outline: 2px solid #ffdd65;
+  outline-offset: 2px;
+}
+
+#chiudi-musica-youtube {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  font-size: 19px;
+}
+
+#modulo-musica-youtube {
+  margin-top: 8px;
+}
+
+.riga-musica-youtube {
+  margin-top: 4px;
+  align-items: stretch;
+}
+
+#link-musica-youtube {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 8px;
+  font: inherit;
+  font-size: 16px;
+  color: #fff;
+  background: #0d1620;
+  border: 1px solid #7e8790;
+  border-radius: 7px;
+}
+
+.riga-musica-youtube button {
+  padding: 6px 9px;
+  font: inherit;
+}
+
+#messaggio-musica-youtube {
+  margin: 7px 0 0;
+  color: #ffe29a;
+}
+
+#messaggio-musica-youtube:empty {
+  margin: 0;
+}
+
+#player-musica-youtube iframe {
+  display: block;
+  width: 100%;
+  min-width: 200px;
+  min-height: 200px;
+  aspect-ratio: 16 / 9;
+  margin-top: 10px;
+  border: 0;
+}
+
+@media (max-width: 640px), (max-height: 480px) {
+  #musica-youtube {
+    --musica-margine: 10px;
+  }
+}
