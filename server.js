@@ -206,6 +206,7 @@ async function salvaPartita(partita) {
     maxGiocatori: partita.maxGiocatori,
     chatAttiva: partita.chatAttiva !== false,
     mediaAttiva: partita.mediaAttiva === true,
+    musicaYouTube: partita.musicaYouTube === true,
     fase: partita.fase || "in_corso",
     giocatori: preparaGiocatoriPerFirebase(partita.giocatori),
     ordineGiocatori: partita.ordineGiocatori || [],
@@ -6126,6 +6127,7 @@ async function ripristinaPartiteDaFirebase() {
       maxGiocatori: p.maxGiocatori || (Object.keys(p.giocatori || {}).length || 2),
       chatAttiva: p.chatAttiva !== false,
       mediaAttiva: p.mediaAttiva === true,
+      musicaYouTube: p.musicaYouTube === true,
       giocatori: p.giocatori || {},
       ordineGiocatori: p.ordineGiocatori || [],
       turnoAttuale: p.turnoAttuale || 0,
@@ -6557,6 +6559,7 @@ function inviaListaPartite(nomeStanza) {
     id: p.id, creatore: p.creatore, creatoDa: p.creatoDa, tempo: p.tempo, modalita: p.modalita, classificata: p.classificata !== false,
     maxGiocatori: p.maxGiocatori, numGiocatoriAttuali: Object.keys(p.giocatori).length, chatAttiva: p.chatAttiva !== false,
     mediaAttiva: p.mediaAttiva === true,
+    musicaYouTube: p.musicaYouTube === true,
     iniziata: p.iniziata !== false,
     giocatori: Object.entries(p.giocatori).map(([uid, g]) => ({ uid, nome: g.nome, avatar: g.avatar || null }))
   }));
@@ -7595,6 +7598,7 @@ function damaSerializzaPartitaClient(partita) {
     durataTurnoMs: damaDurataTurnoMs(partita),
     classificata: partita.classificata !== false,
     mediaAttiva: partita.mediaAttiva === true,
+    musicaYouTube: partita.musicaYouTube === true,
     vincitoreUid: partita.vincitoreUid || null,
     motivoFine: partita.motivoFine || null
   };
@@ -7624,6 +7628,7 @@ function damaPreparaPartitaFirebase(partita) {
     maxGiocatori: 2,
     chatAttiva: partita.chatAttiva !== false,
     mediaAttiva: partita.mediaAttiva === true,
+    musicaYouTube: partita.musicaYouTube === true,
     fase: partita.fase,
     iniziata: partita.iniziata === true,
     iniziataIl: partita.iniziataIl || null,
@@ -7744,6 +7749,7 @@ function damaListaPartite(stanza) {
     numGiocatoriAttuali: Object.keys(p.giocatori || {}).length,
     chatAttiva: p.chatAttiva !== false,
     mediaAttiva: p.mediaAttiva === true,
+    musicaYouTube: p.musicaYouTube === true,
     iniziata: p.iniziata === true,
     giocatori: Object.entries(p.giocatori || {}).map(([uid, g]) => ({
       uid,
@@ -7911,6 +7917,7 @@ async function damaConcludiPartita(partita, vincitoreUid, motivo, pareggio = fal
   for (const giocatore of Object.values(partita.giocatori || {})) {
     damaInviaSocket(giocatore.socket, {
       tipo: "dama_fine",
+      mediaAttiva: false,
       partita: stato,
       vincitoreUid: pareggio ? null : vincitoreUid,
       motivo: motivo || null,
@@ -8167,6 +8174,7 @@ async function damaRipristinaPartiteDaFirebase() {
       gioco: DAMA_ID_GIOCO,
       maxGiocatori: 2,
       mediaAttiva: dati.mediaAttiva === true,
+      musicaYouTube: dati.musicaYouTube === true,
       giocatori,
       coppieAudioApprovate: new Set(),
       partecipantiMediaPronti: new Set(),
@@ -8360,6 +8368,7 @@ async function damaGestisciMessaggioSocket({
       maxGiocatori: 2,
       chatAttiva: dati.chatAttiva !== false,
       mediaAttiva,
+      musicaYouTube: dati.musicaYouTube === true,
       coppieAudioApprovate: new Set(),
       partecipantiMediaPronti: new Set(),
       partecipantiMediaInfo: new Map(),
@@ -8478,7 +8487,8 @@ async function damaGestisciMessaggioSocket({
       stanza,
       daUid: uid,
       daNome: contesto.nickname || partita.creatore,
-      mediaAttiva: partita.mediaAttiva === true
+      mediaAttiva: partita.mediaAttiva === true,
+      musicaYouTube: partita.musicaYouTube === true
     });
     damaInviaSocket(socket, {
       tipo: "invitoInviato",
@@ -8984,6 +8994,7 @@ const creaModuloOthello = function creaModuloOthello(deps) {
     OTHELLO_NOMI_STANZE.map(nome => [nome, { giocatoriOnline: {}, partite: {} }])
   );
   const othelloContestiSocket = new Map();
+  const mediaTavolo = require("./media-tavolo")(inviaSocket, configurazioneIcePerClient);
 
   /* =======================================================================
      UTILITÀ SOCKET / CONTESTO
@@ -9146,6 +9157,7 @@ const creaModuloOthello = function creaModuloOthello(deps) {
       scadenzaTurno: partita.scadenzaTurno || null,
       durataTurnoMs: durataTurnoMs(partita),
       classificata: partita.classificata !== false,
+      musicaYouTube: partita.musicaYouTube === true,
       vincitoreUid: partita.vincitoreUid || null,
       motivoFine: partita.motivoFine || null
     };
@@ -9172,7 +9184,8 @@ const creaModuloOthello = function creaModuloOthello(deps) {
       classificata: partita.classificata !== false,
       maxGiocatori: 2,
       chatAttiva: partita.chatAttiva !== false,
-      mediaAttiva: false,
+      mediaAttiva: partita.mediaAttiva === true,
+      musicaYouTube: partita.musicaYouTube === true,
       fase: partita.fase,
       iniziata: partita.iniziata === true,
       iniziataIl: partita.iniziataIl || null,
@@ -9280,7 +9293,8 @@ const creaModuloOthello = function creaModuloOthello(deps) {
       maxGiocatori: 2,
       numGiocatoriAttuali: Object.keys(p.giocatori || {}).length,
       chatAttiva: p.chatAttiva !== false,
-      mediaAttiva: false,
+      mediaAttiva: p.mediaAttiva === true,
+      musicaYouTube: p.musicaYouTube === true,
       iniziata: p.iniziata === true,
       giocatori: Object.entries(p.giocatori || {}).map(([uid, g]) => ({
         uid,
@@ -9387,6 +9401,7 @@ const creaModuloOthello = function creaModuloOthello(deps) {
     fermaTimer(partita);
 
     partita.fase = "terminata";
+    mediaTavolo.chiudi(partita);
     partita.vincitoreUid = pareggio ? null : vincitoreUid;
     partita.motivoFine = motivo || null;
     partita.scadenzaTurno = null;
@@ -9515,7 +9530,7 @@ const creaModuloOthello = function creaModuloOthello(deps) {
     catch (errore) { console.error("Othello: errore salvataggio avvio partita:", errore.message); }
 
     for (const g of Object.values(partita.giocatori)) {
-      inviaSocket(g.socket, { tipo: "partitaAvviata", partitaId: partita.id, mediaAttiva: false });
+      inviaSocket(g.socket, { tipo: "partitaAvviata", partitaId: partita.id, mediaAttiva: partita.mediaAttiva === true, musicaYouTube: partita.musicaYouTube === true });
     }
     inviaListaPartite(partita.stanza);
     inviaConteggioStanze();
@@ -9574,7 +9589,8 @@ const creaModuloOthello = function creaModuloOthello(deps) {
         id,
         gioco: OTHELLO_ID_GIOCO,
         maxGiocatori: 2,
-        mediaAttiva: false,
+        mediaAttiva: dati.mediaAttiva === true,
+        musicaYouTube: dati.musicaYouTube === true,
         giocatori,
         ordineGiocatori: Array.isArray(dati.ordineGiocatori) ? dati.ordineGiocatori : Object.keys(giocatori),
         tavola: Array.isArray(dati.tavola) ? dati.tavola : null,
@@ -9712,6 +9728,13 @@ const creaModuloOthello = function creaModuloOthello(deps) {
       return true;
     }
 
+    if (mediaTavolo.accetta(tipo)) {
+      if (c.schermataPartita && c.partitaId === dati.partitaId) {
+        mediaTavolo.gestisci(trovaPartita(dati.partitaId)?.partita, uid, socket, dati);
+      }
+      return true;
+    }
+
     if (tipo === "creaPartita") {
       const stanza = c.stanza;
       if (!stanza || !othelloStanze[stanza]) return true;
@@ -9728,6 +9751,11 @@ const creaModuloOthello = function creaModuloOthello(deps) {
       const id = "othello_" + Date.now() + "_" + Math.floor(Math.random() * 100000);
       const stats = await leggiStatisticheUtente(uid);
 
+      if (dati.mediaAttiva === true && dati.mediaConsenso !== true) {
+        inviaSocket(socket, { tipo: "errore", messaggio: "Autorizza i dispositivi richiesti per creare il tavolo." });
+        return true;
+      }
+
       const partita = {
         id,
         gioco: OTHELLO_ID_GIOCO,
@@ -9739,7 +9767,8 @@ const creaModuloOthello = function creaModuloOthello(deps) {
         classificata: dati.classificata !== false,
         maxGiocatori: 2,
         chatAttiva: dati.chatAttiva !== false,
-        mediaAttiva: false,
+        mediaAttiva: dati.mediaAttiva === true,
+        musicaYouTube: dati.musicaYouTube === true,
         fase: "attesa_giocatori",
         iniziata: false,
         iniziataIl: null,
@@ -9782,6 +9811,10 @@ const creaModuloOthello = function creaModuloOthello(deps) {
       const stanza = c.stanza;
       const partita = stanza ? othelloStanze[stanza]?.partite?.[dati.id] : null;
       if (!partita) return true;
+      if (partita.mediaAttiva === true && dati.mediaConsenso !== true) {
+        inviaSocket(socket, { tipo: "errore", messaggio: "Autorizza i dispositivi richiesti per entrare nel tavolo." });
+        return true;
+      }
       if (partita.fase !== "attesa_giocatori" || partita.iniziata === true) {
         inviaSocket(socket, { tipo: "errore", messaggio: "Questa partita è già iniziata." });
         return true;
@@ -9845,7 +9878,8 @@ const creaModuloOthello = function creaModuloOthello(deps) {
         stanza,
         daUid: uid,
         daNome: c.nickname || partita.creatore,
-        mediaAttiva: false
+        mediaAttiva: partita.mediaAttiva === true,
+        musicaYouTube: partita.musicaYouTube === true
       });
       inviaSocket(socket, {
         tipo: "invitoInviato",
@@ -9867,6 +9901,11 @@ const creaModuloOthello = function creaModuloOthello(deps) {
           tipo: "invitoRifiutato",
           destinatarioNome: c.nickname || "Il giocatore"
         });
+        return true;
+      }
+
+      if (partita.mediaAttiva === true && dati.mediaConsenso !== true) {
+        inviaSocket(socket, { tipo: "errore", messaggio: "Autorizza i dispositivi richiesti per entrare nel tavolo." });
         return true;
       }
 
@@ -10012,6 +10051,7 @@ const creaModuloOthello = function creaModuloOthello(deps) {
         colore: giocatore.colore,
         partita: serializzaPartitaClient(partita)
       });
+      mediaTavolo.collega(partita, uid, socket, tipoDispositivo);
       inviaConteggioStanze();
       return true;
     }
@@ -10111,6 +10151,7 @@ const creaModuloOthello = function creaModuloOthello(deps) {
           await rimuoviDaPartitaInAttesa(partita, stanza, c.uid);
         } else {
           giocatore.socket = null;
+          mediaTavolo.scollega(partita, c.uid, socket);
         }
       }
       inviaListaPartite(stanza);
@@ -10264,7 +10305,7 @@ wss.on("connection", (socket, request) => {
 
   let stanzaAttuale = null, nickname = null, mioAvatar = null;
   const tokenDalCookie = estraiTokenDaCookieHeader(request.headers.cookie);
-  const tokenDamaDaQuery = giocoRichiestoSocket === DAMA_ID_GIOCO
+  const tokenDamaDaQuery = (giocoRichiestoSocket === DAMA_ID_GIOCO || giocoRichiestoSocket === "othello")
     ? damaTokenDaRequest(request)
     : null;
   const datiTokenIniziali = verificaToken(tokenDalCookie || tokenDamaDaQuery);
@@ -10575,6 +10616,7 @@ inviaAllaStanza(stanzaAttuale, {
         inviaConteggioStanze();
 
         if (partita.mediaAttiva === true) socket.send(JSON.stringify({ tipo: "configMedia", configurazioneIce: configurazioneIcePerClient() }));
+        socket.send(JSON.stringify({ tipo: "configMusica", musicaYouTube: partita.musicaYouTube === true }));
 
         if (partita.fase === "determinazione_ordine") {
           socket.send(JSON.stringify({
@@ -10622,6 +10664,7 @@ inviaAllaStanza(stanzaAttuale, {
           maxGiocatori: (!max || max < 2 || max > 8 ? 2 : max),
           chatAttiva: dati.chatAttiva !== false,
           mediaAttiva,
+          musicaYouTube: dati.musicaYouTube === true,
           fase: "attesa_giocatori",
           giocatori: { [uid]: { nome: nickname, avatar: mioAvatar, posizione: 0, socket, tipoDispositivo, turniSaltati: 0, tentativiAutomaticiConsecutivi: 0, tiriRealiEffettuati: 0 } },
           ordineGiocatori: [uid], turnoAttuale: 0, iniziata: false, elaborandoTiro: false, animazioneTiroInCorso: false,
@@ -10727,7 +10770,7 @@ inviaAllaStanza(stanzaAttuale, {
         partita.invitati[destinatarioUid] = true;
         const socketDestinatario = socketsPerId[socketIdDestinatario];
         const nomeDestinatario = stanzaOggetto.giocatoriOnline[socketIdDestinatario].nickname;
-        if (socketDestinatario && socketDestinatario.readyState === WebSocket.OPEN) socketDestinatario.send(JSON.stringify({ tipo: "invitoRicevuto", partitaId: partita.id, stanza: nomeStanza, daUid: uid, daNome: nickname, mediaAttiva: partita.mediaAttiva === true }));
+        if (socketDestinatario && socketDestinatario.readyState === WebSocket.OPEN) socketDestinatario.send(JSON.stringify({ tipo: "invitoRicevuto", partitaId: partita.id, stanza: nomeStanza, daUid: uid, daNome: nickname, mediaAttiva: partita.mediaAttiva === true, musicaYouTube: partita.musicaYouTube === true }));
         if (db) db.ref("utenti/" + destinatarioUid + "/notifiche").push({ tipo: "invitoPartita", testo: `${nickname} ti ha invitato a giocare nella stanza ${nomeStanza}`, data: Date.now(), letta: false, daUid: uid, daNome: nickname, stanza: nomeStanza, partitaId: partita.id }).catch(() => {});
         socket.send(JSON.stringify({ tipo: "invitoInviato", destinatarioUid, destinatarioNome: nomeDestinatario }));
         return;

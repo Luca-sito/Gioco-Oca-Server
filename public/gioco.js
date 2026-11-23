@@ -2715,6 +2715,7 @@ function connetti() {
     }
     if (!dati || typeof dati.tipo !== "string") return;
     aggiornaNomiPartecipanti(dati);
+    if (dati.tipo === "configMusica") { window.MusicaYouTube?.impostaDisponibilita(dati.musicaYouTube); return; }
     if (typeof dati.mediaAttiva === "boolean") impostaMediaPartitaAttiva(dati.mediaAttiva);
 
     if (dati.tipo === "sessioneScaduta") {
