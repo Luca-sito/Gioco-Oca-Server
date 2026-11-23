@@ -34,6 +34,7 @@ const ORIGINE_SERVER = (origineConfigurata || ((hostLocale || paginaSulServerUff
 const URL_WEBSOCKET = ORIGINE_SERVER.replace(/^http:/, "ws:").replace(/^https:/, "wss:");
 
 const params = new URLSearchParams(window.location.search);
+const spettatore = window.SpettatoreGioco;
 const partitaId = params.get("partita");
 const stanza = params.get("stanza");
 let mioUid = null;
@@ -104,6 +105,7 @@ function impostaStatoConnessione(disconnesso) {
 }
 
 function inviaSocket(dati) {
+  if (spettatore && dati.tipo !== "spettatore_entra") return false;
   if (!socket || socket.readyState !== WebSocket.OPEN) return false;
   try {
     socket.send(JSON.stringify(dati));
@@ -891,7 +893,7 @@ function chiudiPresentazioneSfida(automatica = false) {
 document.getElementById("btn-entra-partita")?.addEventListener("click", () => chiudiPresentazioneSfida(false));
 
 function gestisciStatoDeterminazione(dati) {
-  if (deveMostrarePresentazioneSfida(dati)) {
+  if (!spettatore && deveMostrarePresentazioneSfida(dati)) {
     presentazioneSfidaInAttesa = dati;
     segnalaStatoInizialeRicevuto();
     mostraPresentazioneSfida(dati.giocatori, dati).catch(errore => {
@@ -2620,7 +2622,7 @@ async function avvia() {
     if (!profiloRapido || !profiloRapido.uid) throw new Error("Profilo non valido");
 
     mioUid = profiloRapido.uid;
-    window.MusicaYouTube?.avvia(profiloRapido.preferenze, ORIGINE_SERVER);
+    if (!spettatore) window.MusicaYouTube?.avvia(profiloRapido.preferenze, ORIGINE_SERVER);
 
     if (timerRiprovaAvvio) {
       clearTimeout(timerRiprovaAvvio);
@@ -2672,7 +2674,7 @@ function connetti() {
 
   let socketCorrente;
   try {
-    socketCorrente = new WebSocket(URL_WEBSOCKET);
+    socketCorrente = new WebSocket(spettatore ? URL_WEBSOCKET + "/?gioco=oca&spettatore=1" : URL_WEBSOCKET);
   } catch (errore) {
     console.error("Apertura WebSocket non riuscita:", errore);
     impostaStatoConnessione(true);
@@ -2686,7 +2688,7 @@ function connetti() {
     impostaStatoConnessione(false);
     aggiornaCaricamento("Recupero stato partita…", 75);
     if (timerRiconnessione) { clearTimeout(timerRiconnessione); timerRiconnessione = null; }
-    if (!inviaSocket({ tipo: "riprendiPartita", partitaId })) socketCorrente.close();
+    if (!inviaSocket({ tipo: spettatore ? "spettatore_entra" : "riprendiPartita", partitaId })) socketCorrente.close();
   };
 
   socketCorrente.onclose = () => {
@@ -2717,6 +2719,10 @@ function connetti() {
       return;
     }
     if (!dati || typeof dati.tipo !== "string") return;
+    if (spettatore?.gestisci(dati)) {
+      paginaInChiusura = true;
+      return;
+    }
     aggiornaNomiPartecipanti(dati);
     if (typeof dati.mediaAttiva === "boolean") impostaMediaPartitaAttiva(dati.mediaAttiva);
 
@@ -2785,7 +2791,9 @@ function aggiornaTurno(turnoDiId) {
   turnoAttualeId = turnoDiId;
   mioTurno = (turnoDiId === mioUid);
   if (mioTurno && !eraIlMioTurno) suonaTuoTurno();
-  document.getElementById("riga-turno").textContent = mioTurno ? "🎲 È il tuo turno!" : "⏳ In attesa…";
+  const giocatoreDiTurno = spettatore && ultimoStatoGiocatori.find(g => g.id === turnoDiId);
+  document.getElementById("riga-turno").textContent = giocatoreDiTurno ? "Turno di " + giocatoreDiTurno.nome
+    : mioTurno ? "🎲 È il tuo turno!" : "⏳ In attesa…";
   impostaDadiAbilitati(mioTurno);
 }
 
@@ -2863,6 +2871,7 @@ function mostraVittoria(nomeVincitore) {
   fermaCountdown(false);
   impostaDadiAbilitati(false);
   impostaMediaPartitaAttiva(false);
+  if (spettatore) { spettatore.esito(nomeVincitore); return; }
   suonaVittoria();
   document.getElementById("testo-vincitore").textContent = "🎉 Ha vinto " + nomeVincitore + "!";
   const overlay = document.getElementById("overlay-vittoria");

@@ -1,0 +1,52 @@
+.barra-spettatore {
+  position: fixed;
+  z-index: 100010;
+  top: calc(12px + env(safe-area-inset-top));
+  left: calc(12px + env(safe-area-inset-left));
+  max-width: min(460px, calc(100% - 24px - env(safe-area-inset-left) - env(safe-area-inset-right)));
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px 10px;
+  color: #fff;
+  font: 13px/1.35 system-ui, sans-serif;
+  pointer-events: none;
+}
+
+.barra-spettatore button,
+.barra-spettatore p {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 7px;
+}
+
+.barra-spettatore button {
+  min-height: 40px;
+  border: 1px solid #ffc66e;
+  background: #e57619;
+  color: #191007;
+  font: inherit;
+  font-weight: 750;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.barra-spettatore button:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
+.barra-spettatore p { background: #121c26; }
+
+.vista-spettatore #menu-wrapper,
+.vista-spettatore #chat-wrapper,
+.vista-spettatore #btn-giocatori,
+.vista-spettatore #videochiamata,
+.vista-spettatore #musica-youtube,
+.vista-spettatore #overlay-presentazione-sfida,
+.vista-spettatore.spettatore-non-disponibile #overlay-caricamento,
+.vista-spettatore.spettatore-non-disponibile #scena {
+  display: none;
+}
+
+.vista-spettatore #area-tabellone { pointer-events: none; }

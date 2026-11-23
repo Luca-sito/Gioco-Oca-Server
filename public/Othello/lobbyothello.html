@@ -1708,6 +1708,8 @@ body.tema-scuro .giocatore-online{
 .segnalazione-invia:disabled{background:#cfd4d9 !important;border-color:#cfd4d9 !important;color:#fff !important;}
 
 </style>
+<link rel="stylesheet" href="../schede-partita.css?v=spettatori-20261123">
+<script src="../schede-partita.js?v=spettatori-20261123"></script>
 </head>
 <body>
 <div id="contenitoreNotifiche" aria-live="polite"></div>
@@ -2923,13 +2925,14 @@ function mostraPartite(lista) {
     const testoModalitaSfida = partita.classificata === false
       ? "🎲 Divertimento · ELO invariato"
       : "🏆 Classifica · ELO attivo";
+    const azioneSpettatore = SchedePartita.azioneSpettatore(partita, cePartecipo, "othello.html", stanza);
     let azioniHtml;
 
-    if (partita.iniziata) {
+    if (partita.iniziata || partita.spettatoriDisponibili === true) {
       if (cePartecipo) {
         azioniHtml = `<button class="btn-riprendi-scheda" onclick="riprendiPartita('${partita.id}', ${partita.mediaAttiva === true})">Riprendi</button>`;
       } else {
-        azioniHtml = `<button disabled>🎲 In corso</button>`;
+        azioniHtml = azioneSpettatore || `<button disabled>🎲 In corso</button>`;
       }
     } else if (eMia) {
       let invito = "";
@@ -2947,23 +2950,19 @@ function mostraPartite(lista) {
       azioniHtml = `<button onclick="entraPartita('${partita.id}', ${partita.mediaAttiva === true})" ${piena ? 'disabled' : ''}>${piena ? 'Piena' : 'Entra'}</button>`;
     }
 
-    html += `
-      <div class="scheda-partita">
-      <div class="info-partita">
-        🎲 ${creatorePulito}<br>
-        ${partita.modalita === "privata" ? "🔒 Privata" : "🔓 Pubblica"}<br>
-        ${partita.mediaAttiva === true
-          ? (rilevaTipoDispositivoClient() === "cellulare"
-              ? "🎙️ Chiamata attiva · solo audio su cellulare"
-              : "🎥 Webcam e microfono attivi")
-          : "🔇 Chiamata disattiva"}<br>
-        ${testoModalitaSfida}<br>
-        ⏱ ${tempoPulito} secondi
-        <div style="margin-top:8px;">👥 ${partita.numGiocatoriAttuali} su ${partita.maxGiocatori}</div>
-      </div>
-      <div class="giocatori-mini">${creaGiocatoriPartita(partita)}</div>
-      <div class="azioni-scheda">${azioniHtml}</div>
-    </div>`;
+    const chiamata = partita.mediaAttiva === true
+      ? (rilevaTipoDispositivoClient() === "cellulare" ? "🎙️ Chiamata attiva · solo audio" : "🎥 Webcam e microfono attivi")
+      : "🔇 Chiamata disattiva";
+    const dettagli = [
+      "🎲 " + creatorePulito,
+      partita.modalita === "privata" ? "🔒 Privata" : "🔓 Pubblica",
+      chiamata,
+      testoModalitaSfida,
+      "⏱ " + tempoPulito + " secondi",
+      "👥 " + Number(partita.numGiocatoriAttuali) + " su " + Number(partita.maxGiocatori)
+    ];
+    if (partita.spettatoriDisponibili) dettagli.push("👁 " + Number(partita.numSpettatori) + " su " + Number(partita.maxSpettatori) + " spettatori");
+    html += SchedePartita.disegna({ dettagli, giocatori: creaGiocatoriPartita(partita), azioni: azioniHtml });
   });
   document.getElementById("partite").innerHTML = html;
   if (aspettaPropriaPartitaPrivata) {

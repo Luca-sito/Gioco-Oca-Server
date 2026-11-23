@@ -17,6 +17,7 @@ const ORIGINE_SERVER = (origineConfigurata || ((hostLocale || paginaSulServerUff
 const URL_WEBSOCKET = ORIGINE_SERVER.replace(/^http:/, "ws:").replace(/^https:/, "wss:");
 
 const params = new URLSearchParams(window.location.search);
+const spettatore = window.SpettatoreGioco;
 const partitaId = params.get("partita") || params.get("id") || "";
 const stanza = params.get("stanza") || "othello";
 const CHIAVE_TOKEN_AUTH = "giochiSocietaAuthToken";
@@ -187,6 +188,7 @@ function tokenAutenticazione() {
 }
 
 function inviaSocket(dati) {
+  if (spettatore && dati.tipo !== "spettatore_entra") return false;
   if (!socket || socket.readyState !== WebSocket.OPEN) return false;
   try {
     const token = tokenAutenticazione();
@@ -1466,7 +1468,7 @@ function disegnaPresentazioneSfida() {
 }
 
 function mostraPresentazioneSfida() {
-  if (presentazioneSfidaAperta || presentazioneSfidaGiaVista() || giocatoriStato().length < 2) return;
+  if (spettatore || presentazioneSfidaAperta || presentazioneSfidaGiaVista() || giocatoriStato().length < 2) return;
   const overlay = document.getElementById("overlay-presentazione-sfida");
   if (!overlay) return;
 
@@ -1970,7 +1972,10 @@ function aggiornaInterfacciaPartita() {
   if (rigaTurno) {
     if (stato.fase === "attesa_giocatori") rigaTurno.textContent = "⏳ In attesa dell'avversario…";
     else if (stato.fase === "terminata") rigaTurno.textContent = "Partita terminata";
-    else rigaTurno.textContent = mioTurno ? "● È il tuo turno!" : "⏳ In attesa…";
+    else if (spettatore && inCorso) {
+      const attivo = giocatoriStato().find(g => g.colore === stato.turno);
+      rigaTurno.textContent = attivo ? "Turno di " + attivo.nome : "Partita in corso";
+    } else rigaTurno.textContent = mioTurno ? "● È il tuo turno!" : "⏳ In attesa…";
   }
 
   if (messaggi) {
@@ -2191,9 +2196,10 @@ function mostraVittoria(dati = {}) {
   vittoriaMostrata = true;
   chiudiPresentazioneSfida();
   impostaMediaPartitaAttiva(false);
-  suonaVittoria();
   const vincitoreUid = dati.vincitoreUid || stato.vincitoreUid || null;
   const vincitore = vincitoreUid ? (stato.giocatori?.[vincitoreUid] || null) : null;
+  if (spettatore) { spettatore.esito(vincitore?.nome || vincitore?.nickname); return; }
+  suonaVittoria();
   const conteggio = contaDischi(stato.tavola);
   const testo = document.getElementById("testo-vincitore");
   if (testo) {
@@ -2370,6 +2376,10 @@ function gestisciMessaggioSocket(dati) {
   );
 }
 
+  if (spettatore?.gestisci(dati)) {
+    paginaInChiusura = true;
+    return;
+  }
   aggiornaNomiPartecipanti(dati);
   if (typeof dati.mediaAttiva === "boolean") impostaMediaPartitaAttiva(dati.mediaAttiva);
 
@@ -2449,6 +2459,7 @@ function connetti() {
   if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) return;
 
   const q = new URLSearchParams({ gioco: "othello", stanza });
+  if (spettatore) q.set("spettatore", "1");
   const token = tokenAutenticazione();
   if (token) q.set("token", token);
   if (partitaId) q.set("partita", partitaId);
@@ -2472,7 +2483,7 @@ function connetti() {
     aggiornaCaricamento("Sincronizzazione partita…", 70);
 
     if (socket === ws) {
-      inviaSocket({ tipo: "othello_entra", partitaId: partitaId || null, stanza });
+      inviaSocket({ tipo: spettatore ? "spettatore_entra" : "othello_entra", partitaId: partitaId || null, stanza });
     }
   };
 
@@ -2555,7 +2566,7 @@ async function avvia() {
     if (risposta.ok) {
       const profilo = await risposta.json();
       if (profilo && profilo.uid) mioUid = profilo.uid;
-      if (profilo?.uid) window.MusicaYouTube?.avvia(profilo.preferenze, ORIGINE_SERVER, tokenAutenticazione);
+      if (profilo?.uid && !spettatore) window.MusicaYouTube?.avvia(profilo.preferenze, ORIGINE_SERVER, tokenAutenticazione);
     }
   } catch (errore) {
     console.warn("Verifica HTTP non disponibile, provo il WebSocket:", errore);
