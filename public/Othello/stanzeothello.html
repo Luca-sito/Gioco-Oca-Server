@@ -762,6 +762,7 @@ body {
 
 </style>
 
+<script src="../rientro-lobby.js?v=2"></script>
 </head>
 
 <body>
@@ -983,17 +984,7 @@ function collegaWebSocket() {
             );
 
 
-            socket.send(
-                JSON.stringify({
-
-                    tipo:
-                        "richiediConteggio",
-
-                    gioco:
-                        "othello"
-
-                })
-            );
+            window.PresenzaLobby.richiediConteggio(socket, "/Othello/lobbyothello.html");
 
         };
 
@@ -1095,6 +1086,15 @@ function collegaWebSocket() {
 
 
 collegaWebSocket();
+
+window.addEventListener("pageshow", evento => {
+    if (!evento.persisted) return;
+    if (socket?.readyState === WebSocket.OPEN) {
+        window.PresenzaLobby.richiediConteggio(socket, "/Othello/lobbyothello.html");
+    } else if (socket?.readyState !== WebSocket.CONNECTING) {
+        collegaWebSocket();
+    }
+});
 
 
 document.addEventListener(

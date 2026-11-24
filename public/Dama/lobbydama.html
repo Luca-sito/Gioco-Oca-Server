@@ -1830,6 +1830,7 @@ body.tema-scuro .giocatore-online{
 </style>
 <link rel="stylesheet" href="../schede-partita.css?v=layout-privacy-20261123">
 <script src="../schede-partita.js?v=spettatori-20261123"></script>
+<script src="../rientro-lobby.js?v=2"></script>
 </head>
 <body>
 <div id="contenitoreNotifiche" aria-live="polite"></div>
@@ -1996,7 +1997,6 @@ body.tema-scuro .giocatore-online{
 <script>
 let socket = null;
 let timerRiconnessione = null;
-let sessioneVerificata = false;
 let paginaInUscita = false;
 const URL_SERVER_WS = "wss://api.giochisocieta.com/?gioco=dama";
 const CHIAVE_TOKEN_AUTH = "giochiSocietaAuthToken";
@@ -2876,30 +2876,8 @@ const popup = document.getElementById("popupMobile");
 popup.classList.remove("aperto", "crea-schermo-intero");
 document.getElementById("contenutoMobile").dataset.vista = "";
 }
-async function verificaSessione() {
-  try {
-    const risposta = await fetchAutenticato(
-      "https://api.giochisocieta.com/api/me"
-    );
-
-    if (!risposta.ok) {
-      if (risposta.status === 401) cancellaTokenAutenticazione();
-      window.location.href =
-        "/login.html?redirect=" + encodeURIComponent(window.location.href);
-      return;
-    }
-
-    const dati = await risposta.json();
-    mioUid = dati.uid;
-    sessioneVerificata = true;
-    connetti();
-    caricaAmici();
-    caricaBlocchiLobby();
-  } catch (e) {
-    sessioneVerificata = false;
-    window.location.href =
-      "/login.html?redirect=" + encodeURIComponent(window.location.href);
-  }
+function vaiAlLoginLobby() {
+  window.location.href = "/login.html?redirect=" + encodeURIComponent(window.location.href);
 }
 function vaiAccount() { window.location.href = "/account.html"; }
 async function esci() {
@@ -2915,7 +2893,7 @@ async function esci() {
   window.location.href = "/login.html";
 }
 function connetti() {
-  if (!sessioneVerificata || paginaInUscita) return;
+  if (paginaInUscita) return;
   if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) return;
 
   const connessione = new WebSocket(URL_SERVER_WS);
@@ -2934,9 +2912,13 @@ function connetti() {
     }));
   };
 
-  connessione.onclose = () => {
-    if (socket === connessione) socket = null;
-    if (paginaInUscita || !sessioneVerificata) return;
+  connessione.onclose = evento => {
+    if (socket !== connessione || paginaInUscita) return;
+    socket = null;
+    if (evento.code === 1008 && /^(ACCOUNT_|SESSIONE_)/.test(evento.reason)) {
+      vaiAlLoginLobby();
+      return;
+    }
     clearTimeout(timerRiconnessione);
     timerRiconnessione = setTimeout(connetti, 3000);
   };
@@ -2953,8 +2935,18 @@ function connetti() {
 
     if (dati.tipo === "sessioneScaduta") {
       cancellaTokenAutenticazione();
-      window.location.href =
-        "/login.html?redirect=" + encodeURIComponent(window.location.href);
+      vaiAlLoginLobby();
+      return;
+    }
+
+    if (dati.tipo === "lobbyEntrata") {
+      const primaEntrata = mioUid === null;
+      mioUid = dati.uid;
+      window.PresenzaLobby.completa(window.location.pathname);
+      if (primaEntrata) {
+        caricaAmici();
+        caricaBlocchiLobby();
+      }
       return;
     }
 
@@ -3012,7 +3004,9 @@ window.addEventListener("pagehide", () => {
   try {
     if (connessione && connessione.readyState === WebSocket.OPEN) {
       connessione.send(JSON.stringify({
-        tipo: "lasciaLobby"
+        tipo: "lasciaLobby",
+        rientro: window.PresenzaLobby.rientro(window.location.pathname),
+        token: ottieniTokenAutenticazione() || undefined
       }));
     }
     if (connessione && connessione.readyState < WebSocket.CLOSING) connessione.close();
@@ -3021,7 +3015,7 @@ window.addEventListener("pagehide", () => {
 
 window.addEventListener("pageshow", () => {
   paginaInUscita = false;
-  if (sessioneVerificata) connetti();
+  connetti();
 });
 // ===== CREAZIONE / LISTA PARTITE =====
 async function creaPartita() {
@@ -3959,7 +3953,7 @@ if(temaSalvato==="scuro"){
 document.body.classList.add("tema-scuro");
 }
 caricaTopGiocatori();
-verificaSessione();
+connetti();
 
 
 // ===== SEGNALAZIONI GIOCATORI =====

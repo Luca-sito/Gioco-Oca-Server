@@ -6542,7 +6542,7 @@ function trovaPartitaAttivaPerUid(uid) {
 const rientriLobby = new WeakMap();
 const TEMPO_RIENTRO_LOBBY_MS = 12000;
 
-function preparaRientroLobby(stanza, socketId, aggiornaConteggio) {
+function preparaRientroLobby(stanza, socketId, idRientro, aggiornaConteggio) {
   const presenza = stanza?.giocatoriOnline[socketId];
   if (!presenza?.schermataPartita) return;
 
@@ -6558,7 +6558,7 @@ function preparaRientroLobby(stanza, socketId, aggiornaConteggio) {
     rientri.delete(presenza.uid);
     aggiornaConteggio();
   }, TEMPO_RIENTRO_LOBBY_MS).unref();
-  rientri.set(presenza.uid, { presenza: { ...presenza }, timer });
+  rientri.set(presenza.uid, { presenza: { ...presenza }, timer, id: idRientro });
   aggiornaConteggio();
 }
 
@@ -6568,6 +6568,19 @@ function completaRientroLobby(stanza, uid) {
   if (!rientro) return;
   clearTimeout(rientro.timer);
   rientri.delete(uid);
+}
+
+function annullaRientroLobby(stanzeDelGioco, uid, rientro) {
+  if (!uid || typeof rientro?.stanza !== "string" || typeof rientro.id !== "string" ||
+    !Object.hasOwn(stanzeDelGioco, rientro.stanza)) return false;
+  const stanza = stanzeDelGioco[rientro.stanza];
+  if (rientriLobby.get(stanza)?.get(uid)?.id !== rientro.id) return false;
+  completaRientroLobby(stanza, uid);
+  return true;
+}
+
+function ingressoLobbyValido(socket, ingressoLobby) {
+  return socket.readyState === WebSocket.OPEN && socket.gsIngressoLobby === ingressoLobby;
 }
 
 function presenzeUnicheStanza(stanza) {
@@ -8267,9 +8280,10 @@ async function damaRimuoviDaPartitaInAttesa(partita, stanza, uid) {
 }
 
 async function damaCaricaUtentePerGioco(uid, nicknameFallback) {
-  const base = await caricaUtenteRealtimeLeggero(uid, nicknameFallback);
+  const [base, stats] = await Promise.all([
+    caricaUtenteRealtimeLeggero(uid, nicknameFallback), damaLeggiStatisticheUtente(uid)
+  ]);
   if (!base) return null;
-  const stats = await damaLeggiStatisticheUtente(uid);
   return { ...base, eloDama: stats.elo };
 }
 
@@ -8322,7 +8336,7 @@ async function damaRipristinaPartiteDaFirebase() {
   console.log("Partite Dama ripristinate da Firebase:", ripristinate);
 }
 
-async function damaConnettiLobby({ socket, socketId, tipoDispositivo, uid, datiTokenIniziali, stanza }) {
+async function damaConnettiLobby({ socket, socketId, tipoDispositivo, uid, datiTokenIniziali, stanza, ingressoLobby }) {
   if (!db) {
     damaInviaSocket(socket, { tipo: "errore", messaggio: "Servizio account non disponibile." });
     return;
@@ -8340,6 +8354,7 @@ async function damaConnettiLobby({ socket, socketId, tipoDispositivo, uid, datiT
     uid,
     datiTokenIniziali?.nickname || "Utente"
   );
+  if (!ingressoLobbyValido(socket, ingressoLobby)) return;
   if (!utente) {
     damaInviaSocket(socket, { tipo: "sessioneScaduta" });
     return;
@@ -8387,6 +8402,7 @@ async function damaConnettiLobby({ socket, socketId, tipoDispositivo, uid, datiT
     }
   }
 
+  damaInviaSocket(socket, { tipo: "lobbyEntrata", uid });
   damaInviaConteggioStanze();
   damaInviaListaPartite(stanza);
   damaInviaSocket(socket, {
@@ -8407,6 +8423,7 @@ async function damaGestisciMessaggioSocket({
   uid,
   datiTokenIniziali,
   giocoRichiestoSocket,
+  ingressoLobby,
   dati
 }) {
   if (!damaMessaggioAppartieneAlGioco(giocoRichiestoSocket, dati)) return false;
@@ -8416,6 +8433,7 @@ async function damaGestisciMessaggioSocket({
   const tipo = typeof dati.tipo === "string" ? dati.tipo : "";
 
   if (tipo === "richiediConteggio") {
+    annullaRientroLobby(damaStanze, uid, dati.rientro);
     damaInviaConteggioStanze();
     return true;
   }
@@ -8427,15 +8445,19 @@ async function damaGestisciMessaggioSocket({
       tipoDispositivo,
       uid,
       datiTokenIniziali,
+      ingressoLobby,
       stanza: dati.stanza
     });
     return true;
   }
 
   if (tipo === "lasciaLobby") {
+    const annullato = annullaRientroLobby(damaStanze, uid, dati.rientro);
     if (contesto.stanza && damaStanze[contesto.stanza]) {
       const stanza = contesto.stanza;
+      contesto.stanza = null;
       delete damaStanze[stanza].giocatoriOnline[socketId];
+      damaInviaConteggioStanze();
 
       for (const partita of Object.values(damaStanze[stanza].partite || {})) {
         if (
@@ -8447,9 +8469,9 @@ async function damaGestisciMessaggioSocket({
         }
       }
 
-      contesto.stanza = null;
-      damaInviaConteggioStanze();
       damaInviaListaPartite(stanza);
+    } else if (annullato) {
+      damaInviaConteggioStanze();
     }
     return true;
   }
@@ -8460,7 +8482,7 @@ async function damaGestisciMessaggioSocket({
   }
 
   if (tipo === "rientroLobby") {
-    preparaRientroLobby(damaStanze[contesto.stanza], socketId, damaInviaConteggioStanze);
+    preparaRientroLobby(damaStanze[contesto.stanza], socketId, dati.idRientro, damaInviaConteggioStanze);
     damaInviaSocket(socket, { tipo: "rientroLobbyPronto" });
     return true;
   }
@@ -8962,6 +8984,7 @@ async function damaChiudiSocket(socketId, socket) {
   const stanza = contesto.stanza;
   if (stanza && damaStanze[stanza]) {
     delete damaStanze[stanza].giocatoriOnline[socketId];
+    damaInviaConteggioStanze();
 
     for (const partita of Object.values(damaStanze[stanza].partite || {})) {
       const giocatore = partita.giocatori?.[contesto.uid];
@@ -8976,7 +8999,6 @@ async function damaChiudiSocket(socketId, socket) {
     }
 
     damaInviaListaPartite(stanza);
-    damaInviaConteggioStanze();
   }
   return true;
 }
@@ -9673,9 +9695,10 @@ const creaModuloOthello = function creaModuloOthello(deps) {
   }
 
   async function caricaUtentePerGioco(uid, nicknameFallback) {
-    const base = await caricaUtenteRealtimeLeggero(uid, nicknameFallback);
+    const [base, stats] = await Promise.all([
+      caricaUtenteRealtimeLeggero(uid, nicknameFallback), leggiStatisticheUtente(uid)
+    ]);
     if (!base) return null;
-    const stats = await leggiStatisticheUtente(uid);
     return { ...base, eloOthello: stats.elo };
   }
 
@@ -9727,7 +9750,7 @@ const creaModuloOthello = function creaModuloOthello(deps) {
      LOBBY WEBSOCKET
      ======================================================================= */
 
-  async function connettiLobby({ socket, socketId, tipoDispositivo, uid, datiTokenIniziali, stanza }) {
+  async function connettiLobby({ socket, socketId, tipoDispositivo, uid, datiTokenIniziali, stanza, ingressoLobby }) {
     const db = getDb();
     if (!db) {
       inviaSocket(socket, { tipo: "errore", messaggio: "Servizio account non disponibile." });
@@ -9743,6 +9766,7 @@ const creaModuloOthello = function creaModuloOthello(deps) {
     }
 
     const utente = await caricaUtentePerGioco(uid, datiTokenIniziali?.nickname || "Utente");
+    if (!ingressoLobbyValido(socket, ingressoLobby)) return;
     if (!utente) {
       inviaSocket(socket, { tipo: "sessioneScaduta" });
       return;
@@ -9789,6 +9813,7 @@ const creaModuloOthello = function creaModuloOthello(deps) {
       }
     }
 
+    inviaSocket(socket, { tipo: "lobbyEntrata", uid });
     inviaConteggioStanze();
     inviaListaPartite(stanza);
     inviaSocket(socket, {
@@ -9800,7 +9825,7 @@ const creaModuloOthello = function creaModuloOthello(deps) {
 
   // Ritorna true se il messaggio è stato gestito (sempre, se appartiene a Othello).
   async function gestisciMessaggioSocket({
-    socket, socketId, tipoDispositivo, uid, datiTokenIniziali, giocoRichiestoSocket, dati
+    socket, socketId, tipoDispositivo, uid, datiTokenIniziali, giocoRichiestoSocket, ingressoLobby, dati
   }) {
     if (!messaggioAppartieneAlGioco(giocoRichiestoSocket, dati)) return false;
 
@@ -9809,19 +9834,23 @@ const creaModuloOthello = function creaModuloOthello(deps) {
     const tipo = typeof dati.tipo === "string" ? dati.tipo : "";
 
     if (tipo === "richiediConteggio") {
+      annullaRientroLobby(othelloStanze, uid, dati.rientro);
       inviaConteggioStanze();
       return true;
     }
 
     if (tipo === "entraLobby") {
-      await connettiLobby({ socket, socketId, tipoDispositivo, uid, datiTokenIniziali, stanza: dati.stanza });
+      await connettiLobby({ socket, socketId, tipoDispositivo, uid, datiTokenIniziali, ingressoLobby, stanza: dati.stanza });
       return true;
     }
 
     if (tipo === "lasciaLobby") {
+      const annullato = annullaRientroLobby(othelloStanze, uid, dati.rientro);
       if (c.stanza && othelloStanze[c.stanza]) {
         const stanza = c.stanza;
+        c.stanza = null;
         delete othelloStanze[stanza].giocatoriOnline[socketId];
+        inviaConteggioStanze();
 
         for (const partita of Object.values(othelloStanze[stanza].partite || {})) {
           if (
@@ -9832,9 +9861,9 @@ const creaModuloOthello = function creaModuloOthello(deps) {
             await rimuoviDaPartitaInAttesa(partita, stanza, c.uid);
           }
         }
-        c.stanza = null;
-        inviaConteggioStanze();
         inviaListaPartite(stanza);
+      } else if (annullato) {
+        inviaConteggioStanze();
       }
       return true;
     }
@@ -9845,7 +9874,7 @@ const creaModuloOthello = function creaModuloOthello(deps) {
     }
 
     if (tipo === "rientroLobby") {
-      preparaRientroLobby(othelloStanze[c.stanza], socketId, inviaConteggioStanze);
+      preparaRientroLobby(othelloStanze[c.stanza], socketId, dati.idRientro, inviaConteggioStanze);
       inviaSocket(socket, { tipo: "rientroLobbyPronto" });
       return true;
     }
@@ -10263,6 +10292,7 @@ const creaModuloOthello = function creaModuloOthello(deps) {
     const stanza = c.stanza;
     if (stanza && othelloStanze[stanza]) {
       delete othelloStanze[stanza].giocatoriOnline[socketId];
+      inviaConteggioStanze();
 
       for (const partita of Object.values(othelloStanze[stanza].partite || {})) {
         const giocatore = partita.giocatori?.[c.uid];
@@ -10276,7 +10306,6 @@ const creaModuloOthello = function creaModuloOthello(deps) {
         }
       }
       inviaListaPartite(stanza);
-      inviaConteggioStanze();
     }
     return true;
   }
@@ -10472,6 +10501,11 @@ wss.on("connection", (socket, request) => {
     try {
       let dati;
       try { dati = JSON.parse(message); } catch (e) { return; }
+      if (!dati || typeof dati !== "object") return;
+
+      let ingressoLobby;
+      if (dati.tipo === "entraLobby") socket.gsIngressoLobby = ingressoLobby = Symbol();
+      if (dati.tipo === "lasciaLobby") socket.gsIngressoLobby = null;
 
       // Fallback per browser/iframe che bloccano il cookie di terze parti.
       // Il cookie HTTP-only resta il metodo principale; il token nel messaggio
@@ -10491,7 +10525,7 @@ wss.on("connection", (socket, request) => {
 
       // Prima di inoltrare messaggi autenticati ai giochi, verifica lo stato
       // del profilo. La rotta di disattivazione chiude i socket già associati.
-      if (uid && socket.gsAccessChecked !== true) {
+      if (uid && socket.gsAccessChecked !== true && dati.tipo !== "richiediConteggio" && dati.tipo !== "lasciaLobby") {
         try {
           const controlloAccesso = await verificaStatoAccessoAccount(uid);
 
@@ -10509,6 +10543,7 @@ wss.on("connection", (socket, request) => {
           return;
         }
       }
+      if (ingressoLobby && !ingressoLobbyValido(socket, ingressoLobby)) return;
 
       // Il canale degli spettatori accetta soltanto sottoscrizioni di sola lettura.
       if (socketSpettatore) {
@@ -10532,6 +10567,7 @@ wss.on("connection", (socket, request) => {
           uid,
           datiTokenIniziali,
           giocoRichiestoSocket,
+          ingressoLobby,
           dati
         });
         if (gestitoOthello) return;
@@ -10546,12 +10582,17 @@ wss.on("connection", (socket, request) => {
           uid,
           datiTokenIniziali,
           giocoRichiestoSocket,
+          ingressoLobby,
           dati
         });
         if (gestitoDama) return;
       }
 
-      if (dati.tipo === "richiediConteggio") { inviaConteggioStanze(); return; }
+      if (dati.tipo === "richiediConteggio") {
+        annullaRientroLobby(stanze, uid, dati.rientro);
+        inviaConteggioStanze();
+        return;
+      }
 
       if (dati.tipo === "mediaPronto") {
         if (!uid) return;
@@ -10628,13 +10669,17 @@ wss.on("connection", (socket, request) => {
       }
 
       if (dati.tipo === "rientroLobby" && uid) {
-        preparaRientroLobby(stanze[stanzaAttuale], socketId, inviaConteggioStanze);
+        preparaRientroLobby(stanze[stanzaAttuale], socketId, dati.idRientro, inviaConteggioStanze);
         socket.send(JSON.stringify({ tipo: "rientroLobbyPronto" }));
         return;
       }
 
       if (dati.tipo === "lasciaLobby") {
-  if (!uid || !stanzaAttuale || !stanze[stanzaAttuale]) return;
+  const annullato = annullaRientroLobby(stanze, uid, dati.rientro);
+  if (!uid || !stanzaAttuale || !stanze[stanzaAttuale]) {
+    if (annullato) inviaConteggioStanze();
+    return;
+  }
 
   const nomeStanzaDaLasciare = stanzaAttuale;
 
@@ -10696,6 +10741,7 @@ wss.on("connection", (socket, request) => {
             ? datiTokenIniziali.nickname
             : "Utente"
         );
+        if (!ingressoLobbyValido(socket, ingressoLobby)) return;
 
         if (!utenteDb) {
           socket.send(JSON.stringify({ tipo: "sessioneScaduta" }));
@@ -10734,6 +10780,7 @@ wss.on("connection", (socket, request) => {
   schermataPartita: false,
   partitaIdAttiva: null
 };
+        socket.send(JSON.stringify({ tipo: "lobbyEntrata", uid }));
         inviaConteggioStanze();
         const numeroOnlineUnici = presenzeUnicheStanza(stanze[stanzaAttuale]).length;
 

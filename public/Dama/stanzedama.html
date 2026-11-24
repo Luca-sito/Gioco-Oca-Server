@@ -859,6 +859,7 @@ body {
 
 </style>
 
+<script src="../rientro-lobby.js?v=2"></script>
 </head>
 
 <body>
@@ -1136,17 +1137,7 @@ function collegaWebSocket() {
             );
 
 
-            socket.send(
-                JSON.stringify({
-
-                    tipo:
-                        "richiediConteggio",
-
-                    gioco:
-                        "dama"
-
-                })
-            );
+            window.PresenzaLobby.richiediConteggio(socket, "/Dama/lobbydama.html");
 
         };
 
@@ -1264,6 +1255,15 @@ function collegaWebSocket() {
    ========================================================= */
 
 collegaWebSocket();
+
+window.addEventListener("pageshow", evento => {
+    if (!evento.persisted) return;
+    if (socket?.readyState === WebSocket.OPEN) {
+        window.PresenzaLobby.richiediConteggio(socket, "/Dama/lobbydama.html");
+    } else if (socket?.readyState !== WebSocket.CONNECTING) {
+        collegaWebSocket();
+    }
+});
 
 
 /* =========================================================
