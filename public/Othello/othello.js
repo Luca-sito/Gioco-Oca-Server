@@ -2133,15 +2133,6 @@ function chiudiChat() {
   }
 }
 
-function apriProfilo() {
-  chiudiMenu();
-  window.location.href = ORIGINE_SERVER + "/profilo.html";
-}
-function apriImpostazioni() {
-  chiudiMenu();
-  window.location.href = ORIGINE_SERVER + "/account.html";
-}
-
 function urlLobby() {
   return stanza ? "lobbyothello.html?stanza=" + encodeURIComponent(stanza) : "lobbyothello.html";
 }

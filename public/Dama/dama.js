@@ -2079,15 +2079,6 @@ function chiudiChat() {
   }
 }
 
-function apriProfilo() {
-  chiudiMenu();
-  window.location.href = ORIGINE_SERVER + "/profilo.html";
-}
-function apriImpostazioni() {
-  chiudiMenu();
-  window.location.href = ORIGINE_SERVER + "/account.html";
-}
-
 function urlLobby() {
   return stanza ? "lobbydama.html?stanza=" + encodeURIComponent(stanza) : "lobbydama.html";
 }

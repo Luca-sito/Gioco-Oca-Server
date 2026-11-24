@@ -2936,8 +2936,6 @@ async function abbandonaPartita() {
   paginaInChiusura = true;
   setTimeout(tornaAllaLobby, 120);
 }
-function apriProfilo() { chiudiMenu(); window.location.href = "profilo.html"; }
-function apriImpostazioni() { chiudiMenu(); window.location.href = "account.html"; }
 const chiudiMenu = window.MenuPartita.chiudi;
 function chiudiPannelloGiocatori() {
   document.getElementById("pannello-giocatori").classList.remove("aperto");
