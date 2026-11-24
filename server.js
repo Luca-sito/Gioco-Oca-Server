@@ -6539,27 +6539,53 @@ function trovaPartitaAttivaPerUid(uid) {
   return null;
 }
 
-function calcolaUidInPartita(nomeStanza) {
-  const uidInPartita = new Set();
-  if (!stanze[nomeStanza]) return uidInPartita;
+const rientriLobby = new WeakMap();
+const TEMPO_RIENTRO_LOBBY_MS = 12000;
 
-  // Partite ancora presenti sul server.
-  Object.values(stanze[nomeStanza].partite || {}).forEach(partita => {
-    if (!partita || partita.iniziata !== true) return;
-    Object.keys(partita.giocatori || {}).forEach(uid => uidInPartita.add(uid));
-  });
+function preparaRientroLobby(stanza, socketId, aggiornaConteggio) {
+  const presenza = stanza?.giocatoriOnline[socketId];
+  if (!presenza?.schermataPartita) return;
 
-  // Se la partita è appena terminata, il tavolo può essere già stato rimosso.
-  // Finché però il WebSocket della pagina gioco è ancora aperto, l'utente deve
-  // continuare a risultare "In partita". Passerà a "In Lobby" solo quando
-  // lascia davvero gioco.html (ad esempio premendo "Torna alla Lobby").
-  Object.values(stanze[nomeStanza].giocatoriOnline || {}).forEach(presenza => {
-    if (presenza && presenza.uid && presenza.schermataPartita === true) {
-      uidInPartita.add(presenza.uid);
+  let rientri = rientriLobby.get(stanza);
+  if (!rientri) {
+    rientri = new Map();
+    rientriLobby.set(stanza, rientri);
+  }
+  completaRientroLobby(stanza, presenza.uid);
+  presenza.schermataPartita = false;
+  presenza.partitaIdAttiva = null;
+  const timer = setTimeout(() => {
+    rientri.delete(presenza.uid);
+    aggiornaConteggio();
+  }, TEMPO_RIENTRO_LOBBY_MS).unref();
+  rientri.set(presenza.uid, { presenza: { ...presenza }, timer });
+  aggiornaConteggio();
+}
+
+function completaRientroLobby(stanza, uid) {
+  const rientri = rientriLobby.get(stanza);
+  const rientro = rientri?.get(uid);
+  if (!rientro) return;
+  clearTimeout(rientro.timer);
+  rientri.delete(uid);
+}
+
+function presenzeUnicheStanza(stanza) {
+  const unici = new Map();
+  for (const [uid, { presenza }] of rientriLobby.get(stanza) || []) unici.set(uid, presenza);
+  for (const presenza of Object.values(stanza.giocatoriOnline)) {
+    if (!presenza?.uid) continue;
+    if (presenza.schermataPartita || !unici.get(presenza.uid)?.schermataPartita) {
+      unici.set(presenza.uid, presenza);
     }
-  });
-
-  return uidInPartita;
+  }
+  return Array.from(unici.values(), p => ({
+    uid: p.uid,
+    nickname: p.nickname,
+    avatar: p.avatar || null,
+    tipoDispositivo: p.tipoDispositivo || "computer",
+    stato: p.schermataPartita ? "partita" : "lobby"
+  }));
 }
 
 function costruisciStatoGiocatori(partita) {
@@ -6713,31 +6739,8 @@ function inviaConteggioStanze() {
   const giocatoriPerStanza = {};
 
   for (const nome in stanze) {
-    const valori = Object.values(stanze[nome].giocatoriOnline || {});
-    const uidInPartita = calcolaUidInPartita(nome);
-
-    // Ogni UID può comparire una sola volta.
-    const vistiUid = new Map();
-
-    for (const g of valori) {
-      if (!g || !g.uid) continue;
-
-      // Se esistono più connessioni dello stesso utente,
-      // manteniamo una sola presenza.
-      vistiUid.set(g.uid, g);
-    }
-
-    const valoriUnici = Array.from(vistiUid.values());
-
-    conteggi[nome] = valoriUnici.length;
-
-    giocatoriPerStanza[nome] = valoriUnici.map(g => ({
-      uid: g.uid,
-      nickname: g.nickname,
-      avatar: g.avatar || null,
-      tipoDispositivo: g.tipoDispositivo || "computer",
-      stato: uidInPartita.has(g.uid) ? "partita" : "lobby"
-    }));
+    giocatoriPerStanza[nome] = presenzeUnicheStanza(stanze[nome]);
+    conteggi[nome] = giocatoriPerStanza[nome].length;
   }
 
   const messaggio = JSON.stringify({
@@ -7851,22 +7854,8 @@ function damaInviaConteggioStanze() {
   const giocatori = {};
 
   for (const nome of DAMA_NOMI_STANZE) {
-    const presenze = Object.values(damaStanze[nome].giocatoriOnline || {});
-    const unici = new Map();
-    for (const presenza of presenze) {
-      if (!presenza?.uid) continue;
-      unici.set(presenza.uid, presenza);
-    }
-
-    const valori = Array.from(unici.values());
-    conteggi[nome] = valori.length;
-    giocatori[nome] = valori.map(p => ({
-      uid: p.uid,
-      nickname: p.nickname,
-      avatar: p.avatar || null,
-      tipoDispositivo: p.tipoDispositivo || "computer",
-      stato: p.schermataPartita ? "partita" : "lobby"
-    }));
+    giocatori[nome] = presenzeUnicheStanza(damaStanze[nome]);
+    conteggi[nome] = giocatori[nome].length;
   }
 
   for (const contesto of damaContestiSocket.values()) {
@@ -8379,6 +8368,7 @@ async function damaConnettiLobby({ socket, socketId, tipoDispositivo, uid, datiT
   contesto.schermataPartita = false;
   contesto.partitaId = null;
 
+  completaRientroLobby(damaStanze[stanza], uid);
   damaStanze[stanza].giocatoriOnline[socketId] = {
     uid,
     nickname: contesto.nickname,
@@ -8401,7 +8391,7 @@ async function damaConnettiLobby({ socket, socketId, tipoDispositivo, uid, datiT
   damaInviaListaPartite(stanza);
   damaInviaSocket(socket, {
     tipo: "online",
-    numero: new Set(Object.values(damaStanze[stanza].giocatoriOnline).map(g => g.uid).filter(Boolean)).size
+    numero: presenzeUnicheStanza(damaStanze[stanza]).length
   });
   damaInviaSocket(socket, {
     tipo: "statoPartitaPersonale",
@@ -8466,6 +8456,12 @@ async function damaGestisciMessaggioSocket({
 
   if (!uid) {
     damaInviaSocket(socket, { tipo: "sessioneScaduta" });
+    return true;
+  }
+
+  if (tipo === "rientroLobby") {
+    preparaRientroLobby(damaStanze[contesto.stanza], socketId, damaInviaConteggioStanze);
+    damaInviaSocket(socket, { tipo: "rientroLobbyPronto" });
     return true;
   }
 
@@ -8779,6 +8775,7 @@ async function damaGestisciMessaggioSocket({
     contesto.partitaId = partita.id;
     contesto.schermataPartita = true;
 
+    completaRientroLobby(damaStanze[stanza], uid);
     damaStanze[stanza].giocatoriOnline[socketId] = {
       uid,
       nickname: giocatore.nome,
@@ -9393,20 +9390,8 @@ const creaModuloOthello = function creaModuloOthello(deps) {
     const giocatori = {};
 
     for (const nome of OTHELLO_NOMI_STANZE) {
-      const presenze = Object.values(othelloStanze[nome].giocatoriOnline || {});
-      const unici = new Map();
-      for (const p of presenze) {
-        if (p?.uid) unici.set(p.uid, p);
-      }
-      const valori = Array.from(unici.values());
-      conteggi[nome] = valori.length;
-      giocatori[nome] = valori.map(p => ({
-        uid: p.uid,
-        nickname: p.nickname,
-        avatar: p.avatar || null,
-        tipoDispositivo: p.tipoDispositivo || "computer",
-        stato: p.schermataPartita ? "partita" : "lobby"
-      }));
+      giocatori[nome] = presenzeUnicheStanza(othelloStanze[nome]);
+      conteggi[nome] = giocatori[nome].length;
     }
 
     for (const c of othelloContestiSocket.values()) {
@@ -9786,6 +9771,7 @@ const creaModuloOthello = function creaModuloOthello(deps) {
     c.schermataPartita = false;
     c.partitaId = null;
 
+    completaRientroLobby(othelloStanze[stanza], uid);
     othelloStanze[stanza].giocatoriOnline[socketId] = {
       uid,
       nickname: c.nickname,
@@ -9807,7 +9793,7 @@ const creaModuloOthello = function creaModuloOthello(deps) {
     inviaListaPartite(stanza);
     inviaSocket(socket, {
       tipo: "online",
-      numero: new Set(Object.values(othelloStanze[stanza].giocatoriOnline).map(g => g.uid).filter(Boolean)).size
+      numero: presenzeUnicheStanza(othelloStanze[stanza]).length
     });
     inviaSocket(socket, { tipo: "statoPartitaPersonale", partitaAttiva: trovaPartitaPerUid(uid) });
   }
@@ -9855,6 +9841,12 @@ const creaModuloOthello = function creaModuloOthello(deps) {
 
     if (!uid) {
       inviaSocket(socket, { tipo: "sessioneScaduta" });
+      return true;
+    }
+
+    if (tipo === "rientroLobby") {
+      preparaRientroLobby(othelloStanze[c.stanza], socketId, inviaConteggioStanze);
+      inviaSocket(socket, { tipo: "rientroLobbyPronto" });
       return true;
     }
 
@@ -10163,6 +10155,7 @@ const creaModuloOthello = function creaModuloOthello(deps) {
       c.partitaId = partita.id;
       c.schermataPartita = true;
 
+      completaRientroLobby(othelloStanze[stanza], uid);
       othelloStanze[stanza].giocatoriOnline[socketId] = {
         uid,
         nickname: giocatore.nome,
@@ -10634,6 +10627,12 @@ wss.on("connection", (socket, request) => {
         return;
       }
 
+      if (dati.tipo === "rientroLobby" && uid) {
+        preparaRientroLobby(stanze[stanzaAttuale], socketId, inviaConteggioStanze);
+        socket.send(JSON.stringify({ tipo: "rientroLobbyPronto" }));
+        return;
+      }
+
       if (dati.tipo === "lasciaLobby") {
   if (!uid || !stanzaAttuale || !stanze[stanzaAttuale]) return;
 
@@ -10726,6 +10725,7 @@ wss.on("connection", (socket, request) => {
         nickname = utenteDb.nickname;
         mioAvatar = utenteDb.avatar || null;
         if (!stanze[stanzaAttuale]) stanze[stanzaAttuale] = { giocatoriOnline: {}, partite: {} };
+        completaRientroLobby(stanze[stanzaAttuale], uid);
         stanze[stanzaAttuale].giocatoriOnline[socketId] = {
   uid,
   nickname,
@@ -10735,11 +10735,7 @@ wss.on("connection", (socket, request) => {
   partitaIdAttiva: null
 };
         inviaConteggioStanze();
-        const numeroOnlineUnici = new Set(
-  Object.values(stanze[stanzaAttuale].giocatoriOnline)
-    .filter(g => g && g.uid)
-    .map(g => g.uid)
-).size;
+        const numeroOnlineUnici = presenzeUnicheStanza(stanze[stanzaAttuale]).length;
 
 inviaAllaStanza(stanzaAttuale, {
   tipo: "online",
@@ -10777,6 +10773,7 @@ inviaAllaStanza(stanzaAttuale, {
         nickname = mioGiocatore.nome; mioAvatar = mioGiocatore.avatar || null;
 
         if (!stanze[stanzaAttuale]) stanze[stanzaAttuale] = { giocatoriOnline: {}, partite: {} };
+        completaRientroLobby(stanze[stanzaAttuale], uid);
         stanze[stanzaAttuale].giocatoriOnline[socketId] = {
   uid,
   nickname,

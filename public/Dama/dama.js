@@ -2117,9 +2117,12 @@ function apriImpostazioni() {
 function urlLobby() {
   return stanza ? "lobbydama.html?stanza=" + encodeURIComponent(stanza) : "lobbydama.html";
 }
+let rientroLobbyInCorso = false;
 function tornaAllaLobby() {
+  if (rientroLobbyInCorso) return;
+  rientroLobbyInCorso = true;
   paginaInChiusura = true;
-  window.location.replace(urlLobby());
+  window.rientraInLobby(urlLobby(), spettatore ? null : socket, inviaSocket);
 }
 
 let risolviConfermaGioco = null;

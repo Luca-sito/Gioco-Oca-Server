@@ -2883,11 +2883,14 @@ function urlLobby() {
   return stanza ? "lobby.html?stanza=" + encodeURIComponent(stanza) : "lobby.html";
 }
 
+let rientroLobbyInCorso = false;
 function tornaAllaLobby() {
+  if (rientroLobbyInCorso) return;
+  rientroLobbyInCorso = true;
   paginaInChiusura = true;
   // Anche il ritorno sostituisce la voce corrente: il browser conserva
   // Stanze -> Lobby, ma non mantiene mai la Partita nella cronologia.
-  window.location.replace(urlLobby());
+  window.rientraInLobby(urlLobby(), spettatore ? null : socket, inviaSocket);
 }
 
 let risolviConfermaGioco = null;

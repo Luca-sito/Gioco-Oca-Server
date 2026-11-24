@@ -43,7 +43,6 @@
       <a id="apri-video-youtube" target="_blank" rel="noopener" hidden>Apri il video su YouTube ↗</a>
       <ul id="risultati-musica-youtube" aria-label="Risultati di ricerca"></ul>
       <button type="button" id="altri-risultati-youtube" hidden>Altri risultati</button>
-      <button type="button" id="preferenze-cookie-youtube" hidden>Preferenze cookie</button>
     </section>`;
 
   const nodo = id => document.getElementById(id);
@@ -62,7 +61,6 @@
   const bannerCookie = nodo("banner-cookie-youtube");
   const accettaCookie = nodo("accetta-cookie-youtube");
   const rifiutaCookie = nodo("rifiuta-cookie-youtube");
-  const preferenzeCookie = nodo("preferenze-cookie-youtube");
   const voci = new Map();
   const sogliaVoce = 0.012;
   const durataCodaVoce = 600;
@@ -172,7 +170,6 @@
     modulo.hidden = !ricercaVisibile;
     risultati.hidden = !ricercaVisibile;
     altri.hidden = !ricercaVisibile || !paginaSuccessiva;
-    preferenzeCookie.hidden = !ricercaVisibile;
     vista.disabled = !bannerCookie.hidden || !contenitore.hasChildNodes();
     const azioneVista = elenco ? "Mostra solo il video" : "Mostra lista e ricerca";
     vista.setAttribute("aria-label", azioneVista);
@@ -391,11 +388,6 @@
     } else {
       rifiutaCookie.focus();
     }
-  });
-  preferenzeCookie.addEventListener("click", () => {
-    bannerCookie.hidden = false;
-    cambiaVista("elenco");
-    rifiutaCookie.focus();
   });
   rifiutaCookie.addEventListener("click", () => cookieYouTube?.salva(false));
   accettaCookie.addEventListener("click", () => cookieYouTube?.salva(true));
