@@ -2,11 +2,13 @@
 
 const MAX_SPETTATORI = 10;
 
-module.exports = function creaSpettatori({ WebSocket, partitaContieneUtenteBloccato }) {
+module.exports = function creaSpettatori({ WebSocket, partitaContieneUtenteBloccato, leggiPreferenza }) {
   const giochi = new Map();
   const gruppi = new WeakMap();
   const connessioni = new WeakMap();
   const ingressiInCorso = new WeakSet();
+  const preferenzePartita = new WeakMap();
+  const schedeInAttesa = new WeakSet();
 
   function visibile(partita) {
     return partita?.modalita === "pubblica" &&
@@ -26,12 +28,74 @@ module.exports = function creaSpettatori({ WebSocket, partitaContieneUtenteBlocc
     manda(socket, JSON.stringify({ tipo: "spettatore_errore", messaggio }));
   }
 
-  function scheda(partita) {
+  function regoleDellaPartita(partita) {
+    if (!preferenzePartita.has(partita)) {
+      preferenzePartita.set(partita, { regole: new Map(), inLettura: new Map() });
+    }
+    return preferenzePartita.get(partita);
+  }
+
+  function caricaPreferenze(partita) {
+    const { regole, inLettura } = regoleDellaPartita(partita);
+    const richieste = [];
+    for (const uid of Object.keys(partita.giocatori)) {
+      if (regole.has(uid)) continue;
+      if (!inLettura.has(uid)) {
+        const richiesta = leggiPreferenza(uid).then(preferenza => {
+          if (inLettura.get(uid) === richiesta) regole.set(uid, preferenza);
+        }).finally(() => {
+          if (inLettura.get(uid) === richiesta) inLettura.delete(uid);
+        });
+        inLettura.set(uid, richiesta);
+      }
+      richieste.push(inLettura.get(uid));
+    }
+    return richieste.length ? Promise.all(richieste) : null;
+  }
+
+  function puoGuardare(partita, uid) {
+    if (!uid || !visibile(partita) || partita.giocatori?.[uid]) return false;
+    const regole = preferenzePartita.get(partita)?.regole;
+    return Object.keys(partita.giocatori).every(giocatore => {
+      const preferenza = regole?.get(giocatore);
+      return preferenza?.modalita === "si" ||
+        (preferenza?.modalita === "eccetto" && preferenza.eccezioni.has(uid));
+    });
+  }
+
+  function scheda(partita, uid) {
     return {
-      spettatoriDisponibili: visibile(partita),
+      spettatoriDisponibili: puoGuardare(partita, uid),
       numSpettatori: gruppi.get(partita)?.size || 0,
       maxSpettatori: MAX_SPETTATORI
     };
+  }
+
+  function inviaLista(partite, presenze, serializza, invia, aggiornaLobby) {
+    const destinatari = Object.entries(presenze || {});
+    if (!destinatari.length) return;
+    const schede = partite.map(partita => {
+      if (visibile(partita) && !schedeInAttesa.has(partita)) {
+        const lettura = caricaPreferenze(partita);
+        if (lettura) {
+          schedeInAttesa.add(partita);
+          lettura.then(() => {
+            schedeInAttesa.delete(partita);
+            if (visibile(partita)) aggiornaLobby();
+          }).catch(e => {
+            schedeInAttesa.delete(partita);
+            console.error("Preferenze spettatori non disponibili:", e.message);
+          });
+        }
+      }
+      return serializza(partita);
+    });
+    for (const [socketId, presenza] of destinatari) {
+      invia(socketId, {
+        tipo: "listaPartite",
+        partite: schede.map((dati, indice) => ({ ...dati, ...scheda(partite[indice], presenza.uid) }))
+      });
+    }
   }
 
   async function entra(gioco, socket, uid, partitaId) {
@@ -55,7 +119,8 @@ module.exports = function creaSpettatori({ WebSocket, partitaContieneUtenteBlocc
 
     ingressiInCorso.add(socket);
     try {
-      if (await partitaContieneUtenteBloccato(partita, uid)) {
+      const [bloccato] = await Promise.all([partitaContieneUtenteBloccato(partita, uid), caricaPreferenze(partita)]);
+      if (bloccato) {
         errore(socket, "Non puoi guardare questa partita.");
         return;
       }
@@ -64,8 +129,8 @@ module.exports = function creaSpettatori({ WebSocket, partitaContieneUtenteBlocc
         errore(socket, "La partita è terminata.");
         return;
       }
-      if (partita.giocatori?.[uid]) {
-        errore(socket, "Fai già parte di questa partita. Usa Riprendi dalla lobby.");
+      if (!puoGuardare(partita, uid)) {
+        errore(socket, "Questa partita non è disponibile per gli spettatori.");
         return;
       }
       const gruppo = gruppi.get(partita) || new Map();
@@ -94,7 +159,7 @@ module.exports = function creaSpettatori({ WebSocket, partitaContieneUtenteBlocc
     }
   }
 
-  function esci(socket) {
+  function esci(socket, notificaLobby = true) {
     const iscrizione = connessioni.get(socket);
     if (!iscrizione) return;
     connessioni.delete(socket);
@@ -103,7 +168,26 @@ module.exports = function creaSpettatori({ WebSocket, partitaContieneUtenteBlocc
     if (gruppo?.get(uid) !== iscrizione) return;
     gruppo.delete(uid);
     if (!gruppo.size) gruppi.delete(partita);
-    adattatore.aggiornaLobby(stanza);
+    if (notificaLobby) adattatore.aggiornaLobby(stanza);
+  }
+
+  function aggiornaPreferenza(uid, preferenza) {
+    for (const adattatore of giochi.values()) {
+      const stanze = new Set();
+      for (const { partita, stanza } of adattatore.partiteDelGiocatore(uid)) {
+        if (!visibile(partita)) continue;
+        const { regole, inLettura } = regoleDellaPartita(partita);
+        regole.set(uid, preferenza);
+        inLettura.delete(uid);
+        for (const iscrizione of gruppi.get(partita)?.values() || []) {
+          if (puoGuardare(partita, iscrizione.uid)) continue;
+          esci(iscrizione.socket, false);
+          errore(iscrizione.socket, "Le preferenze dei giocatori non ti consentono più di guardare questa partita.");
+        }
+        stanze.add(stanza);
+      }
+      for (const stanza of stanze) adattatore.aggiornaLobby(stanza);
+    }
   }
 
   function pubblica(partita, evento) {
@@ -120,6 +204,5 @@ module.exports = function creaSpettatori({ WebSocket, partitaContieneUtenteBlocc
     gruppi.delete(partita);
   }
 
-  // Ogni gioco espone solo lo stato pubblico della partita e il callback della lobby.
-  return { registra: (gioco, adattatore) => giochi.set(gioco, adattatore), scheda, entra, esci, pubblica, termina };
+  return { registra: (gioco, adattatore) => giochi.set(gioco, adattatore), inviaLista, aggiornaPreferenza, entra, esci, pubblica, termina };
 };

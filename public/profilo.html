@@ -707,6 +707,98 @@ body {
     box-shadow: 0 0 0 3px rgba(255, 215, 0, .15);
 }
 
+#apriEccezioniSpettatori {
+    margin-top: 9px;
+}
+
+.eccezioni-spettatori {
+    width: min(460px, calc(100% - 28px));
+    max-height: min(640px, calc(100% - 28px));
+    padding: 22px;
+    border: 1px solid #dfe4e8;
+    border-radius: 16px;
+    background: #fff;
+    color: #1b2530;
+    box-shadow: 0 18px 60px rgba(18, 28, 38, .24);
+}
+
+.eccezioni-spettatori::backdrop {
+    background: rgba(18, 28, 38, .48);
+}
+
+.eccezioni-spettatori header,
+.ricerca-spettatori,
+.scelta-spettatore {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.eccezioni-spettatori h2 {
+    margin: 0;
+    font-size: 20px;
+}
+
+.eccezioni-spettatori p {
+    margin: 12px 0;
+    font-size: 14px;
+    line-height: 1.45;
+}
+
+.ricerca-spettatori input {
+    flex: 1;
+    min-width: 0;
+}
+
+#chiudiEccezioniSpettatori {
+    flex: 0 0 36px;
+    min-height: 36px;
+    padding: 0;
+    font-size: 24px;
+    line-height: 1;
+}
+
+#listaEccezioniSpettatori {
+    margin: 12px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+#listaEccezioniSpettatori li + li {
+    margin-top: 6px;
+}
+
+.scelta-spettatore {
+    min-height: 42px;
+    padding: 8px 12px;
+    border: 1px solid #dfe4e8;
+    border-radius: 10px;
+    cursor: pointer;
+    overflow-wrap: anywhere;
+}
+
+.scelta-spettatore input {
+    appearance: none;
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    border: 2px solid #78838c;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.scelta-spettatore input:checked {
+    border-color: #182c41;
+    background: radial-gradient(circle, #182c41 48%, transparent 52%);
+}
+
+.scelta-spettatore input:focus-visible {
+    outline: 2px solid #2265a7;
+    outline-offset: 3px;
+}
+
 /* =========================================================
    AVATAR UPLOAD
    ========================================================= */
@@ -2937,7 +3029,7 @@ body {
                         Impostazioni personali dell'esperienza sulla piattaforma.
                     </p>
 
-                    <form id="formPreferenzeAudio" aria-label="Preferenze audio dei giochi">
+                    <form id="formPreferenzeAudio" aria-label="Preferenze dei giochi">
                         <div class="form-grid">
                             <div class="field">
                                 <label for="preferenzaPlayerYouTube">Player YouTube in tutti i giochi</label>
@@ -2954,6 +3046,18 @@ body {
                                     <option value="no" selected>No</option>
                                 </select>
                                 <small>Abbassa il volume di YouTube quando qualcuno parla in chiamata e lo ripristina durante le pause.</small>
+                            </div>
+                            <div class="field full">
+                                <label for="preferenzaAccettaSpettatori">Accetta spettatori</label>
+                                <select id="preferenzaAccettaSpettatori" aria-describedby="descrizioneAccettaSpettatori" disabled>
+                                    <option value="si">Sì</option>
+                                    <option value="no">No</option>
+                                    <option value="eccetto">No, eccetto</option>
+                                </select>
+                                <small id="descrizioneAccettaSpettatori">Decidi chi può guardare le tue partite pubbliche. Con «No, eccetto» puoi scegliere i giocatori da ammettere.</small>
+                                <div>
+                                    <button class="btn btn-secondary" id="apriEccezioniSpettatori" aria-haspopup="dialog" type="button" hidden>Gestisci eccezioni</button>
+                                </div>
                             </div>
                         </div>
                         <div class="inline-actions">
@@ -3067,6 +3171,25 @@ body {
     </div>
 </div>
 
+<dialog class="eccezioni-spettatori" id="dialogEccezioniSpettatori" aria-labelledby="titoloEccezioniSpettatori">
+    <header>
+        <h2 id="titoloEccezioniSpettatori">Eccezioni per gli spettatori</h2>
+        <button class="btn btn-secondary" id="chiudiEccezioniSpettatori" type="button" aria-label="Chiudi">×</button>
+    </header>
+    <p>Seleziona i giocatori a cui vuoi permettere di guardare. Applica la scelta con «Salva preferenze».</p>
+    <form id="formCercaSpettatore" role="search" aria-label="Cerca giocatori">
+        <div class="field">
+            <label for="nicknameSpettatore">Nickname</label>
+            <div class="ricerca-spettatori">
+                <input id="nicknameSpettatore" type="search" maxlength="20" autocomplete="off" autofocus required>
+                <button class="btn btn-primary" type="submit">Cerca</button>
+            </div>
+        </div>
+    </form>
+    <p id="esitoCercaSpettatore" role="status"></p>
+    <ul id="listaEccezioniSpettatori" aria-label="Giocatori da ammettere" hidden></ul>
+</dialog>
+
 
 <script>
 /* =========================================================
@@ -3112,11 +3235,125 @@ const PALETTE = [
 let datiUtente = null;
 
 const formPreferenzeAudio = document.getElementById("formPreferenzeAudio");
+const preferenzaAccettaSpettatori = document.getElementById("preferenzaAccettaSpettatori");
+const apriEccezioniSpettatori = document.getElementById("apriEccezioniSpettatori");
+const dialogEccezioniSpettatori = document.getElementById("dialogEccezioniSpettatori");
+const nicknameSpettatore = document.getElementById("nicknameSpettatore");
+const esitoCercaSpettatore = document.getElementById("esitoCercaSpettatore");
+const listaEccezioniSpettatori = document.getElementById("listaEccezioniSpettatori");
+const eccezioniSpettatori = new Map();
+let timerCercaSpettatore;
+let richiestaCercaSpettatore;
+
+function aggiornaPulsanteEccezioniSpettatori() {
+    apriEccezioniSpettatori.hidden = preferenzaAccettaSpettatori.value !== "eccetto";
+    apriEccezioniSpettatori.textContent = eccezioniSpettatori.size
+        ? `Gestisci eccezioni (${eccezioniSpettatori.size})`
+        : "Gestisci eccezioni";
+}
+
+function mostraEccezioniSpettatori(risultato) {
+    const giocatori = Array.from(eccezioniSpettatori.values());
+    if (risultato) {
+        const indice = giocatori.findIndex(giocatore => giocatore.uid === risultato.uid);
+        if (indice >= 0) giocatori.splice(indice, 1);
+        giocatori.unshift(risultato);
+    }
+
+    listaEccezioniSpettatori.replaceChildren(...giocatori.map(giocatore => {
+        const voce = document.createElement("li");
+        const scelta = document.createElement("label");
+        scelta.className = "scelta-spettatore";
+        const nome = document.createElement("span");
+        nome.textContent = giocatore.nickname;
+        const pallino = document.createElement("input");
+        pallino.type = "checkbox";
+        pallino.checked = eccezioniSpettatori.has(giocatore.uid);
+        pallino.addEventListener("change", () => {
+            if (pallino.checked) eccezioniSpettatori.set(giocatore.uid, giocatore);
+            else eccezioniSpettatori.delete(giocatore.uid);
+            aggiornaPulsanteEccezioniSpettatori();
+        });
+        scelta.append(nome, pallino);
+        voce.append(scelta);
+        return voce;
+    }));
+    listaEccezioniSpettatori.hidden = giocatori.length === 0;
+}
+
+function caricaPreferenzeSpettatori(preferenze) {
+    preferenzaAccettaSpettatori.value = preferenze?.accettaSpettatori || "si";
+    eccezioniSpettatori.clear();
+    for (const giocatore of preferenze?.eccezioniSpettatori || []) {
+        eccezioniSpettatori.set(giocatore.uid, giocatore);
+    }
+    aggiornaPulsanteEccezioniSpettatori();
+}
+
+function interrompiRicercaSpettatore() {
+    clearTimeout(timerCercaSpettatore);
+    richiestaCercaSpettatore?.abort();
+    richiestaCercaSpettatore = null;
+}
+
+async function cercaSpettatore() {
+    interrompiRicercaSpettatore();
+    const nickname = nicknameSpettatore.value.trim();
+    if (!nickname) return;
+    const richiesta = new AbortController();
+    richiestaCercaSpettatore = richiesta;
+    esitoCercaSpettatore.textContent = "Ricerca in corso…";
+    try {
+        const url = SERVER + "/api/profilo-pubblico/" + encodeURIComponent(nickname);
+        const risposta = await fetch(url, { credentials: "include", signal: richiesta.signal });
+        if (!risposta.ok && risposta.status !== 404) throw new Error("Ricerca non riuscita.");
+        const giocatore = risposta.ok ? await risposta.json() : null;
+        if (richiestaCercaSpettatore !== richiesta) return;
+        const valido = giocatore?.uid && giocatore.uid !== datiUtente?.uid && giocatore.statoBlocco === "nessuno";
+        esitoCercaSpettatore.textContent = valido ? "" : "Nessun giocatore con questo Nickname";
+        mostraEccezioniSpettatori(valido ? giocatore : null);
+    } catch (errore) {
+        if (richiestaCercaSpettatore === richiesta) esitoCercaSpettatore.textContent = errore.message || "Ricerca non riuscita.";
+    }
+}
+
+function apriDialogEccezioniSpettatori() {
+    nicknameSpettatore.value = "";
+    esitoCercaSpettatore.textContent = "";
+    mostraEccezioniSpettatori();
+    dialogEccezioniSpettatori.showModal();
+}
+
+preferenzaAccettaSpettatori.addEventListener("change", () => {
+    aggiornaPulsanteEccezioniSpettatori();
+    if (preferenzaAccettaSpettatori.value === "eccetto") apriDialogEccezioniSpettatori();
+});
+apriEccezioniSpettatori.addEventListener("click", apriDialogEccezioniSpettatori);
+document.getElementById("chiudiEccezioniSpettatori").addEventListener("click", () => dialogEccezioniSpettatori.close());
+dialogEccezioniSpettatori.addEventListener("close", interrompiRicercaSpettatore);
+dialogEccezioniSpettatori.addEventListener("keydown", evento => {
+    if (evento.key === "Escape") {
+        evento.preventDefault();
+        dialogEccezioniSpettatori.close();
+    }
+});
+document.getElementById("formCercaSpettatore").addEventListener("submit", evento => {
+    evento.preventDefault();
+    cercaSpettatore();
+});
+nicknameSpettatore.addEventListener("input", () => {
+    interrompiRicercaSpettatore();
+    esitoCercaSpettatore.textContent = "";
+    mostraEccezioniSpettatori();
+    if (nicknameSpettatore.value.trim()) timerCercaSpettatore = setTimeout(cercaSpettatore, 350);
+});
+
 formPreferenzeAudio.addEventListener("submit", async evento => {
     evento.preventDefault();
     const esito = document.getElementById("esitoPreferenzeAudio");
     const playerYouTube = document.getElementById("preferenzaPlayerYouTube").value === "si";
     const abbassaMusicaConVoci = document.getElementById("preferenzaAbbassaMusica").value === "si";
+    const accettaSpettatori = preferenzaAccettaSpettatori.value;
     for (const controllo of formPreferenzeAudio.elements) controllo.disabled = true;
     esito.className = "avatar-status";
     esito.textContent = "Salvataggio…";
@@ -3125,11 +3362,12 @@ formPreferenzeAudio.addEventListener("submit", async evento => {
             method: "POST",
             credentials: "include",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ playerYouTube, abbassaMusicaConVoci })
+            body: JSON.stringify({ playerYouTube, abbassaMusicaConVoci, accettaSpettatori, eccezioniSpettatori: Array.from(eccezioniSpettatori.keys()) })
         });
         const dati = await risposta.json();
         if (!risposta.ok) throw new Error(dati.errore || "Salvataggio non riuscito.");
         datiUtente.preferenze = dati.preferenze;
+        caricaPreferenzeSpettatori(dati.preferenze);
         esito.textContent = "Preferenze salvate.";
         esito.classList.add("success");
     } catch (errore) {
@@ -3688,6 +3926,7 @@ function aggiornaInterfaccia() {
     document.getElementById("emailSenzaGoogle").hidden = Boolean(datiUtente.accountGoogle);
     document.getElementById("preferenzaPlayerYouTube").value = datiUtente.preferenze?.playerYouTube === false ? "no" : "si";
     document.getElementById("preferenzaAbbassaMusica").value = datiUtente.preferenze?.abbassaMusicaConVoci ? "si" : "no";
+    caricaPreferenzeSpettatori(datiUtente.preferenze);
     for (const controllo of document.getElementById("formPreferenzeAudio").elements) controllo.disabled = false;
 
 

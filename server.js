@@ -50,7 +50,11 @@ app.use(passport.initialize());
 
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server, maxPayload: 256 * 1024 });
-const spettatori = require("./spettatori")({ WebSocket, partitaContieneUtenteBloccato });
+const spettatori = require("./spettatori")({
+  WebSocket,
+  partitaContieneUtenteBloccato,
+  leggiPreferenza: leggiPreferenzaSpettatori
+});
 const PORT = process.env.PORT || 3000;
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -2357,16 +2361,59 @@ function preferenzeAudio(utente) {
   };
 }
 
+const MODALITA_SPETTATORI = new Set(["si", "no", "eccetto"]);
+const UID_SPETTATORE_VALIDO = /^[A-Za-z0-9_-]{1,128}$/;
+const LIMITE_ECCEZIONI_SPETTATORI = 50;
+
+function preferenzeConSpettatori(preferenze) {
+  const modalita = preferenze?.accettaSpettatori;
+  return {
+    ...preferenzeAudio(preferenze),
+    accettaSpettatori: MODALITA_SPETTATORI.has(modalita) ? modalita : "si",
+    eccezioniSpettatori: Object.entries(preferenze?.eccezioniSpettatori || {})
+      .filter(([uid, nickname]) => UID_SPETTATORE_VALIDO.test(uid) && typeof nickname === "string" && nickname.length > 0)
+      .map(([uid, nickname]) => ({ uid, nickname }))
+  };
+}
+
+function regolaSpettatori(preferenze) {
+  const dati = preferenzeConSpettatori(preferenze);
+  return {
+    modalita: dati.accettaSpettatori,
+    eccezioni: new Set(dati.eccezioniSpettatori.map(({ uid }) => uid))
+  };
+}
+
+async function leggiPreferenzaSpettatori(uid) {
+  const snap = await db.ref(`utenti/${uid}/preferenze`).once("value");
+  return regolaSpettatori(snap.val());
+}
+
 app.post("/api/preferenze-audio", richiediAuth, async (req, res) => {
-  const { playerYouTube } = req.body || {};
+  const { playerYouTube, accettaSpettatori, eccezioniSpettatori } = req.body || {};
   const abbassaMusicaConVoci = req.body?.abbassaMusicaConVoci ?? req.body?.abbassaVociConMusica;
   if (typeof playerYouTube !== "boolean" || typeof abbassaMusicaConVoci !== "boolean") {
     return res.status(400).json({ errore: "Seleziona Sì o No per entrambe le preferenze." });
   }
+  const aggiornaSpettatori = accettaSpettatori !== undefined || eccezioniSpettatori !== undefined;
+  if (aggiornaSpettatori && (!MODALITA_SPETTATORI.has(accettaSpettatori) || !Array.isArray(eccezioniSpettatori) ||
+    eccezioniSpettatori.length > LIMITE_ECCEZIONI_SPETTATORI ||
+    eccezioniSpettatori.some(uid => typeof uid !== "string" || !UID_SPETTATORE_VALIDO.test(uid) || uid === req.utente.uid))) {
+    return res.status(400).json({ errore: `Controlla la scelta sugli spettatori e seleziona fino a ${LIMITE_ECCEZIONI_SPETTATORI} account.` });
+  }
   try {
     const preferenze = { playerYouTube, abbassaMusicaConVoci };
+    if (aggiornaSpettatori) {
+      const eccezioni = await Promise.all([...new Set(eccezioniSpettatori)].map(async uid => {
+        const snap = await db.ref(`utenti/${uid}/nickname`).once("value");
+        return [uid, snap.val()];
+      }));
+      preferenze.accettaSpettatori = accettaSpettatori;
+      preferenze.eccezioniSpettatori = Object.fromEntries(eccezioni.filter(([, nickname]) => typeof nickname === "string" && nickname));
+    }
     await db.ref("utenti/" + req.utente.uid + "/preferenze").update(preferenze);
-    return res.json({ preferenze });
+    if (aggiornaSpettatori) spettatori.aggiornaPreferenza(req.utente.uid, regolaSpettatori(preferenze));
+    return res.json({ preferenze: aggiornaSpettatori ? preferenzeConSpettatori(preferenze) : preferenze });
   } catch {
     return res.status(503).json({ errore: "Impossibile salvare le preferenze. Riprova." });
   }
@@ -2410,7 +2457,7 @@ app.get("/api/me", richiediAuth, async (req, res) => {
       nickname: utente.nickname,
       email: utente.email,
       accountGoogle: Boolean(utente.googleId),
-      preferenze: preferenzeAudio(utente.preferenze),
+      preferenze: preferenzeConSpettatori(utente.preferenze),
       avatar: utente.avatar || null,
 
       // =========================================
@@ -6647,16 +6694,18 @@ async function inviaChatPartitaFiltrata(partita, mittenteUid, messaggio) {
 }
 
 function inviaListaPartite(nomeStanza) {
-  if (!stanze[nomeStanza]) return;
-  const lista = Object.values(stanze[nomeStanza].partite).map(p => ({
+  const stanza = stanze[nomeStanza];
+  if (!stanza) return;
+  spettatori.inviaLista(Object.values(stanza.partite), stanza.giocatoriOnline, p => ({
     id: p.id, creatore: p.creatore, creatoDa: p.creatoDa, tempo: p.tempo, modalita: p.modalita, classificata: p.classificata !== false,
     maxGiocatori: p.maxGiocatori, numGiocatoriAttuali: Object.keys(p.giocatori).length, chatAttiva: p.chatAttiva !== false,
     mediaAttiva: p.mediaAttiva === true,
-    iniziata: p.iniziata !== false,
-    ...spettatori.scheda(p),
+    iniziata: p.iniziata !== false || p.fase === "determinazione_ordine",
     giocatori: Object.entries(p.giocatori).map(([uid, g]) => ({ uid, nome: g.nome, avatar: g.avatar || null }))
-  }));
-  inviaAllaStanza(nomeStanza, { tipo: "listaPartite", partite: lista });
+  }), (socketId, dati) => {
+    const socket = socketsPerId[socketId];
+    if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(dati));
+  }, () => inviaListaPartite(nomeStanza));
 }
 
 function inviaConteggioStanze() {
@@ -7829,9 +7878,10 @@ function damaInviaConteggioStanze() {
   }
 }
 
-function damaListaPartite(stanza) {
-  if (!damaStanze[stanza]) return [];
-  return Object.values(damaStanze[stanza].partite || {}).map(p => ({
+function damaInviaListaPartite(stanza) {
+  const stanzaDama = damaStanze[stanza];
+  if (!stanzaDama) return;
+  spettatori.inviaLista(Object.values(stanzaDama.partite), stanzaDama.giocatoriOnline, p => ({
     id: p.id,
     creatore: p.creatore,
     creatoDa: p.creatoDa,
@@ -7843,20 +7893,12 @@ function damaListaPartite(stanza) {
     chatAttiva: p.chatAttiva !== false,
     mediaAttiva: p.mediaAttiva === true,
     iniziata: p.iniziata === true,
-    ...spettatori.scheda(p),
     giocatori: Object.entries(p.giocatori || {}).map(([uid, g]) => ({
       uid,
       nome: g.nome,
       avatar: g.avatar || null
     }))
-  }));
-}
-
-function damaInviaListaPartite(stanza) {
-  damaInviaAllaStanza(stanza, {
-    tipo: "listaPartite",
-    partite: damaListaPartite(stanza)
-  });
+  }), (socketId, dati) => damaInviaSocket(socketsPerId[socketId], dati), () => damaInviaListaPartite(stanza));
 }
 
 async function damaLeggiStatisticheUtente(uid) {
@@ -9372,9 +9414,10 @@ const creaModuloOthello = function creaModuloOthello(deps) {
     }
   }
 
-  function listaPartite(stanza) {
-    if (!othelloStanze[stanza]) return [];
-    return Object.values(othelloStanze[stanza].partite || {}).map(p => ({
+  function inviaListaPartite(stanza) {
+    const stanzaOthello = othelloStanze[stanza];
+    if (!stanzaOthello) return;
+    spettatori.inviaLista(Object.values(stanzaOthello.partite), stanzaOthello.giocatoriOnline, p => ({
       id: p.id,
       creatore: p.creatore,
       creatoDa: p.creatoDa,
@@ -9386,17 +9429,12 @@ const creaModuloOthello = function creaModuloOthello(deps) {
       chatAttiva: p.chatAttiva !== false,
       mediaAttiva: p.mediaAttiva === true,
       iniziata: p.iniziata === true,
-      ...spettatori.scheda(p),
       giocatori: Object.entries(p.giocatori || {}).map(([uid, g]) => ({
         uid,
         nome: g.nome,
         avatar: g.avatar || null
       }))
-    }));
-  }
-
-  function inviaListaPartite(stanza) {
-    inviaAllaStanza(stanza, { tipo: "listaPartite", partite: listaPartite(stanza) });
+    }), (socketId, dati) => inviaSocket(socketsPerId[socketId], dati), () => inviaListaPartite(stanza));
   }
 
   /* =======================================================================
@@ -10349,6 +10387,7 @@ const creaModuloOthello = function creaModuloOthello(deps) {
 
   spettatori.registra(OTHELLO_ID_GIOCO, {
     trova: trovaPartita,
+    partiteDelGiocatore: uid => partiteDelGiocatore(othelloStanze, uid),
     stato: partita => ({ tipo: "othello_stato", partita: serializzaPartitaClient(partita) }),
     aggiornaLobby: inviaListaPartite
   });
@@ -10379,16 +10418,28 @@ const othello = creaModuloOthello({
   getDb: () => db
 });
 
+function partiteDelGiocatore(stanzeDelGioco, uid) {
+  const partite = [];
+  for (const [stanza, dati] of Object.entries(stanzeDelGioco)) {
+    for (const partita of Object.values(dati.partite)) {
+      if (partita.giocatori?.[uid]) partite.push({ partita, stanza });
+    }
+  }
+  return partite;
+}
+
 spettatori.registra("oca", {
   trova(id) {
     const trovato = trovaPartita(id);
     return trovato && { partita: trovato.partita, stanza: trovato.nomeStanza };
   },
+  partiteDelGiocatore: uid => partiteDelGiocatore(stanze, uid),
   stato: statoOcaPerSpettatore,
   aggiornaLobby: inviaListaPartite
 });
 spettatori.registra(DAMA_ID_GIOCO, {
   trova: damaTrovaPartita,
+  partiteDelGiocatore: uid => partiteDelGiocatore(damaStanze, uid),
   stato: partita => ({ tipo: "dama_stato", partita: damaSerializzaPartitaClient(partita) }),
   aggiornaLobby: damaInviaListaPartite
 });
