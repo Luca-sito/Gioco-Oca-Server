@@ -853,42 +853,6 @@ body.modalita-desktop #btn-chat {
   z-index: 80;
 }
 
-#pannello-menu {
-  position: absolute;
-  top: 58px;
-  right: 0;
-  width: min(215px, calc(100vw - 28px));
-  max-height: calc(var(--altezza-reale, 100vh) - 86px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
-  overflow-y: auto;
-  background: var(--pannello);
-  border: 1px solid rgba(255, 215, 0, 0.25);
-  border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-}
-
-#pannello-menu.nascosto { display: none; }
-
-#pannello-menu button {
-  display: block;
-  width: 100%;
-  min-height: 44px;
-  padding: 11px 16px;
-  color: #eee;
-  background: none;
-  border: 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  text-align: left;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-#pannello-menu button:last-child { border-bottom: 0; }
-#pannello-menu button:hover { background: rgba(255, 255, 255, 0.06); }
-#pannello-menu .voce-pericolo { color: #ff7b7b; }
-#pannello-menu #btn-stato-media:disabled { color: #aaa; cursor: default; opacity: 1; }
-#pannello-menu #btn-stato-media.media-attiva:disabled { color: #72d979; }
-body:not(.modalita-desktop) #btn-toggle-fullscreen { display: none; }
-
 #messaggi-gioco {
   position: absolute;
   top: calc(14px + env(safe-area-inset-top));
@@ -1305,14 +1269,9 @@ body:not(.modalita-desktop) .videochiamata-intestazione { justify-content: cente
   #btn-giocatori,
   #btn-chat { width: 50px; height: 50px; }
 
-  #pannello-menu { top: 56px; }
   #pannello-chat { bottom: 58px; }
   #messaggi-gioco { font-size: 12px; }
   #flash-messaggio-gioco { padding: 22px; }
-}
-
-@media (max-width: 360px) {
-  #pannello-menu { width: min(190px, calc(100vw - 20px)); }
 }
 
 @media (orientation: landscape) and (max-height: 600px) {

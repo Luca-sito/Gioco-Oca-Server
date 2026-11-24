@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0d1620">
   <title>Othello - Partita</title>
-  <link rel="stylesheet" href="othello.css?v=layout-privacy-20261123">
+  <link rel="stylesheet" href="othello.css?v=menu-partita-1">
+  <link rel="stylesheet" href="../menu-partita.css?v=menu-partita-1">
   <link rel="stylesheet" href="../videochiamata-due.css?v=layout-privacy-20261123">
   <link rel="stylesheet" href="../musica-youtube.css?v=rientro-lobby-1">
   <link rel="stylesheet" href="../spettatore.css?v=spettatori-20261123">
@@ -162,15 +163,46 @@
 
   <div id="menu-wrapper">
     <button type="button" id="btn-menu" aria-label="Apri menu" aria-controls="pannello-menu" aria-expanded="false"><img class="icona-pulsante-gioco" src="https://api.giochisocieta.com/Immagini/Hamburgerbuttonmenugioco.png" alt="" aria-hidden="true"></button>
-    <div id="pannello-menu" class="nascosto">
-      <button type="button" onclick="apriProfilo()">👤 Profilo</button>
-      <button type="button" onclick="apriImpostazioni()">⚙️ Impostazioni</button>
-      <button type="button" id="btn-toggle-suoni" onclick="toggleSuoni()">🔊 Suoni: On</button>
-      <button type="button" id="btn-animazioni-othello" onclick="toggleAnimazioniOthello()" aria-pressed="true">Animazioni dischi: attive</button>
-      <button type="button" id="btn-toggle-fullscreen" onclick="toggleFullscreen()">⛶ Tutto schermo</button>
-      <button type="button" id="btn-stato-media" disabled>🔇 Videochiamata: non attiva</button>
-      <button type="button" class="voce-pericolo" onclick="abbandonaPartita()">🚪 Abbandona partita</button>
-    </div>
+    <aside id="pannello-menu" class="nascosto" aria-labelledby="titolo-menu-partita">
+      <header class="menu-partita-testata">
+        <h2 id="titolo-menu-partita">Menu partita</h2>
+        <button type="button" id="btn-chiudi-menu" class="menu-partita-chiudi" aria-label="Chiudi menu">×</button>
+      </header>
+      <section class="menu-partita-gruppo" aria-labelledby="titolo-menu-visualizzazione">
+        <h3 id="titolo-menu-visualizzazione">Visualizzazione</h3>
+        <button type="button" id="btn-toggle-fullscreen" class="menu-partita-voce menu-partita-evidenza" onclick="toggleFullscreen()">
+          <span class="menu-partita-simbolo" aria-hidden="true">⛶</span><span id="testo-menu-schermo">Attiva tutto schermo</span><span class="menu-partita-freccia" id="freccia-menu-schermo" aria-hidden="true">↗</span>
+        </button>
+        <button type="button" id="btn-animazioni-othello" class="menu-partita-voce" onclick="toggleAnimazioniOthello()" role="switch" aria-checked="true" aria-labelledby="btn-animazioni-othello-titolo">
+          <span class="menu-partita-simbolo" aria-hidden="true">◈</span><span id="btn-animazioni-othello-titolo">Animazioni dischi</span>
+          <span class="menu-partita-controllo" aria-hidden="true"><span data-stato-interruttore>On</span><span class="menu-partita-interruttore"></span></span>
+        </button>
+      </section>
+      <section class="menu-partita-gruppo" aria-labelledby="titolo-menu-audio">
+        <h3 id="titolo-menu-audio">Audio e video</h3>
+        <button type="button" id="btn-toggle-suoni" class="menu-partita-voce" onclick="toggleSuoni()" role="switch" aria-checked="true" aria-labelledby="btn-toggle-suoni-titolo">
+          <span class="menu-partita-simbolo" aria-hidden="true">♪</span><span id="btn-toggle-suoni-titolo">Suoni di gioco</span>
+          <span class="menu-partita-controllo" aria-hidden="true"><span data-stato-interruttore>On</span><span class="menu-partita-interruttore"></span></span>
+        </button>
+        <div id="btn-stato-media" class="menu-partita-voce" role="status">
+          <span class="menu-partita-simbolo" aria-hidden="true">▣</span><span id="titolo-menu-video">Videochiamata</span><span id="stato-menu-video">Non attiva</span>
+        </div>
+      </section>
+      <section class="menu-partita-gruppo" aria-labelledby="titolo-menu-account">
+        <h3 id="titolo-menu-account">Account</h3>
+        <button type="button" class="menu-partita-voce" onclick="apriProfilo()">
+          <span class="menu-partita-simbolo" aria-hidden="true">◉</span><span>Profilo</span><span class="menu-partita-freccia" aria-hidden="true">›</span>
+        </button>
+        <button type="button" class="menu-partita-voce" onclick="apriImpostazioni()">
+          <span class="menu-partita-simbolo" aria-hidden="true">⚙︎</span><span>Impostazioni</span><span class="menu-partita-freccia" aria-hidden="true">›</span>
+        </button>
+      </section>
+      <div class="menu-partita-gruppo">
+        <button type="button" class="menu-partita-voce voce-pericolo" onclick="abbandonaPartita()">
+          <span class="menu-partita-simbolo" aria-hidden="true">⇥</span><span>Abbandona partita</span><span class="menu-partita-freccia" aria-hidden="true">›</span>
+        </button>
+      </div>
+    </aside>
   </div>
 
   <div id="messaggi-gioco" role="status" aria-live="polite"></div>
@@ -212,6 +244,7 @@
 <script src="../musica-youtube.js?v=rientro-lobby-1"></script>
 <script src="../videochiamata-due.js?v=layout-privacy-20261123"></script>
 <script src="../rientro-lobby.js?v=2"></script>
-<script src="othello.js?v=rientro-lobby-1"></script>
+<script src="../menu-partita.js?v=menu-partita-1"></script>
+<script src="othello.js?v=menu-partita-1"></script>
 </body>
 </html>

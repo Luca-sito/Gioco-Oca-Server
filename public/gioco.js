@@ -259,7 +259,9 @@ function impostaSuoni(attivi) {
   if (attivi && interazioneUtenteRegistrata) ottieniContestoAudio();
   aggiornaTestoBottoneSuoni();
 }
-function aggiornaTestoBottoneSuoni() { const b = document.getElementById("btn-toggle-suoni"); if (b) b.textContent = suoniAttivi ? "🔊 Suoni: On" : "🔇 Suoni: Off"; }
+function aggiornaTestoBottoneSuoni() {
+  window.MenuPartita.impostaInterruttore("btn-toggle-suoni", suoniAttivi);
+}
 
 // ===== TUTTO SCHERMO (solo Computer) =====
 function toggleFullscreen() {
@@ -280,11 +282,7 @@ function toggleFullscreen() {
     mostraNotificaGioco("Errore durante l'attivazione dello schermo intero" + (err && err.message ? (": " + err.message) : "."));
   }
 }
-function aggiornaTestoBottoneFullscreen() {
-  const b = document.getElementById("btn-toggle-fullscreen");
-  if (!b) return;
-  b.textContent = (document.fullscreenElement || document.webkitFullscreenElement) ? "🡼 Esci da tutto schermo" : "⛶ Tutto schermo";
-}
+const aggiornaTestoBottoneFullscreen = window.MenuPartita.aggiornaSchermoIntero;
 document.addEventListener("fullscreenchange", aggiornaTestoBottoneFullscreen);
 document.addEventListener("webkitfullscreenchange", aggiornaTestoBottoneFullscreen);
 
@@ -1339,22 +1337,12 @@ function aggiornaInterfacciaMedia(testo, errore) {
 
   const pannello = document.getElementById("videochiamata");
   const stato = document.getElementById("stato-media-connessione");
-  const voceMenu = document.getElementById("btn-stato-media");
   if (pannello) pannello.classList.toggle("nascosto", !mediaPartitaAttiva);
   if (stato) {
     stato.textContent = testo || (mediaPartitaAttiva ? "Collegamento…" : "Non attiva");
     stato.style.color = errore ? "#ff8a80" : "";
   }
-  if (voceMenu) {
-    if (!mediaPartitaAttiva) {
-      voceMenu.textContent = "🔇 Videochiamata: non attiva";
-    } else if (clientCellulareAudioOnly) {
-      voceMenu.textContent = errore ? "⚠️ Microfono: verifica necessaria" : "🎙️ Chiamata audio attiva";
-    } else {
-      voceMenu.textContent = errore ? "⚠️ Webcam/microfono: verifica necessaria" : "🎥 Webcam e microfono attivi";
-    }
-    voceMenu.classList.toggle("media-attiva", mediaPartitaAttiva && !errore);
-  }
+  window.MenuPartita.impostaVideochiamata(mediaPartitaAttiva, clientCellulareAudioOnly, errore);
   aggiornaControlliMediaLocale();
 }
 
@@ -2950,12 +2938,7 @@ async function abbandonaPartita() {
 }
 function apriProfilo() { chiudiMenu(); window.location.href = "profilo.html"; }
 function apriImpostazioni() { chiudiMenu(); window.location.href = "account.html"; }
-function chiudiMenu() {
-  document.getElementById("pannello-menu").classList.add("nascosto");
-  const bottone = document.getElementById("btn-menu");
-  bottone.setAttribute("aria-expanded", "false");
-  bottone.setAttribute("aria-label", "Apri menu");
-}
+const chiudiMenu = window.MenuPartita.chiudi;
 function chiudiPannelloGiocatori() {
   document.getElementById("pannello-giocatori").classList.remove("aperto");
   document.getElementById("backdrop-giocatori").classList.remove("aperto");
@@ -2973,20 +2956,10 @@ function chiudiChat() {
   }
 }
 
-document.getElementById("btn-menu").onclick = (e) => {
-  e.stopPropagation();
-  const pannello = document.getElementById("pannello-menu");
-  const staPerAprirsi = pannello.classList.contains("nascosto");
-  if (staPerAprirsi) {
-    chiudiChat();
-    chiudiPannelloGiocatori();
-  }
-  const aperto = pannello.classList.toggle("nascosto") === false;
-  const bottone = document.getElementById("btn-menu");
-  bottone.setAttribute("aria-expanded", aperto ? "true" : "false");
-  bottone.setAttribute("aria-label", aperto ? "Chiudi menu" : "Apri menu");
-};
-document.addEventListener("click", chiudiMenu);
+window.MenuPartita.inizializza(() => {
+  chiudiChat();
+  chiudiPannelloGiocatori();
+});
 
 document.getElementById("btn-giocatori").onclick = (e) => {
   e.stopPropagation();
@@ -3083,7 +3056,7 @@ document.getElementById("area-dadi").addEventListener("keydown", (e) => {
 
 document.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
-  chiudiMenu();
+  chiudiMenu(true);
   chiudiChat();
   chiudiPannelloGiocatori();
 });

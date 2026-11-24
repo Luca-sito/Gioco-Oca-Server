@@ -362,8 +362,7 @@ function impostaSuoni(attivi) {
   aggiornaTestoBottoneSuoni();
 }
 function aggiornaTestoBottoneSuoni() {
-  const b = document.getElementById("btn-toggle-suoni");
-  if (b) b.textContent = suoniAttivi ? "🔊 Suoni: On" : "🔇 Suoni: Off";
+  window.MenuPartita.impostaInterruttore("btn-toggle-suoni", suoniAttivi);
 }
 
 /* =========================================================
@@ -390,11 +389,7 @@ function toggleFullscreen() {
   }
 }
 
-function aggiornaTestoBottoneFullscreen() {
-  const b = document.getElementById("btn-toggle-fullscreen");
-  if (!b) return;
-  b.textContent = (document.fullscreenElement || document.webkitFullscreenElement) ? "🡼 Esci da tutto schermo" : "⛶ Tutto schermo";
-}
+const aggiornaTestoBottoneFullscreen = window.MenuPartita.aggiornaSchermoIntero;
 
 document.addEventListener("fullscreenchange", () => {
   aggiornaTestoBottoneFullscreen();
@@ -631,22 +626,12 @@ function aggiornaInterfacciaMedia(testo, errore) {
 
   const pannello = document.getElementById("videochiamata");
   const statoTesto = document.getElementById("stato-media-connessione");
-  const voceMenu = document.getElementById("btn-stato-media");
   if (pannello) pannello.classList.toggle("nascosto", !mediaPartitaAttiva);
   if (statoTesto) {
     statoTesto.textContent = testo || (mediaPartitaAttiva ? "Collegamento…" : "Non attiva");
     statoTesto.style.color = errore ? "#ff8a80" : "";
   }
-  if (voceMenu) {
-    if (!mediaPartitaAttiva) {
-      voceMenu.textContent = "🔇 Videochiamata: non attiva";
-    } else if (clientCellulareAudioOnly) {
-      voceMenu.textContent = errore ? "⚠️ Microfono: verifica necessaria" : "🎙️ Chiamata audio attiva";
-    } else {
-      voceMenu.textContent = errore ? "⚠️ Webcam/microfono: verifica necessaria" : "🎥 Webcam e microfono attivi";
-    }
-    voceMenu.classList.toggle("media-attiva", mediaPartitaAttiva && !errore);
-  }
+  window.MenuPartita.impostaVideochiamata(mediaPartitaAttiva, clientCellulareAudioOnly, errore);
   aggiornaControlliMediaLocale();
 }
 
@@ -1513,15 +1498,15 @@ let tavolaDisegnata = null;
 let animazioniDaAttendere = 0;
 let animazioniDaAttendereGenerazione = 0;
 const TIMEOUT_ANIMAZIONE_MS = 2500;
-const animazioniDischiAttive = true;
+let animazioniDischiAttive = true;
+try { animazioniDischiAttive = localStorage.getItem("othello:animazioni") !== "off"; } catch (_) { /* Storage non disponibile. */ }
 
 function aggiornaBottoneAnimazioniOthello() {
-  const bottone = document.getElementById("btn-animazioni-othello");
-  if (!bottone) return;
-  bottone.textContent = "Animazioni dischi: attive";
-  bottone.setAttribute("aria-pressed", "true");
+  window.MenuPartita.impostaInterruttore("btn-animazioni-othello", animazioniDischiAttive);
 }
 function toggleAnimazioniOthello() {
+  animazioniDischiAttive = !animazioniDischiAttive;
+  try { localStorage.setItem("othello:animazioni", animazioniDischiAttive ? "on" : "off"); } catch (_) { /* Preferenza valida per questa pagina. */ }
   aggiornaBottoneAnimazioniOthello();
 }
 aggiornaBottoneAnimazioniOthello();
@@ -1653,20 +1638,19 @@ function distanzaScacchi(a, b) {
 }
 
 async function animaVersoTavola(prossimaTavola, istantanea, generazione) {
-  const movimentoRidotto =
-  window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-
-if (
-  istantanea ||
-  !tavolaDisegnata ||
-  !animazioniDischiAttive ||
-  movimentoRidotto
-) {
+  const movimentoRidotto = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  if (istantanea || !tavolaDisegnata || movimentoRidotto) {
     sincronizzaDischiIstantaneo(prossimaTavola);
     return;
   }
 
   const { nuove, girati } = estraiDifferenzeTavola(tavolaDisegnata, prossimaTavola);
+  if (!animazioniDischiAttive) {
+    sincronizzaDischiIstantaneo(prossimaTavola);
+    if (nuove.length) suonaPosa();
+    if (girati.length) suonaFlip(0);
+    return;
+  }
   const strato = document.getElementById("othello-strato-dischi");
   if (!strato) { sincronizzaDischiIstantaneo(prossimaTavola); return; }
 
@@ -2128,15 +2112,7 @@ function inviaChatPartita() {
    MENU / PANNELLI
    ========================================================= */
 
-function chiudiMenu() {
-  const pannello = document.getElementById("pannello-menu");
-  const bottone = document.getElementById("btn-menu");
-  if (pannello) pannello.classList.add("nascosto");
-  if (bottone) {
-    bottone.setAttribute("aria-expanded", "false");
-    bottone.setAttribute("aria-label", "Apri menu");
-  }
-}
+const chiudiMenu = window.MenuPartita.chiudi;
 
 function chiudiPannelloGiocatori() {
   document.getElementById("pannello-giocatori")?.classList.remove("aperto");
@@ -2442,24 +2418,10 @@ async function avvia() {
    EVENTI UI
    ========================================================= */
 
-const btnMenu = document.getElementById("btn-menu");
-if (btnMenu) {
-  btnMenu.onclick = evento => {
-    evento.stopPropagation();
-    const pannello = document.getElementById("pannello-menu");
-    if (!pannello) return;
-    const staPerAprirsi = pannello.classList.contains("nascosto");
-    if (staPerAprirsi) {
-      chiudiChat();
-      chiudiPannelloGiocatori();
-    }
-    const aperto = pannello.classList.toggle("nascosto") === false;
-    btnMenu.setAttribute("aria-expanded", aperto ? "true" : "false");
-    btnMenu.setAttribute("aria-label", aperto ? "Chiudi menu" : "Apri menu");
-  };
-}
-
-document.addEventListener("click", chiudiMenu);
+window.MenuPartita.inizializza(() => {
+  chiudiChat();
+  chiudiPannelloGiocatori();
+});
 
 const btnGiocatori = document.getElementById("btn-giocatori");
 if (btnGiocatori) {
@@ -2512,7 +2474,7 @@ document.getElementById("chat-input")?.addEventListener("keydown", evento => {
 
 document.addEventListener("keydown", evento => {
   if (evento.key !== "Escape") return;
-  chiudiMenu();
+  chiudiMenu(true);
   chiudiChat();
   chiudiPannelloGiocatori();
   if (risolviConfermaGioco) chiudiConfermaGioco(false);

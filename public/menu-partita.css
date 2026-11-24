@@ -1,0 +1,113 @@
+#pannello-menu {
+  --spazio-menu-partita: 86px;
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  width: min(321px, calc(100vw - 28px - env(safe-area-inset-left) - env(safe-area-inset-right)));
+  max-height: calc(var(--altezza-reale, 100vh) - var(--spazio-menu-partita) - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scroll-padding-top: 62px;
+  border: 1px solid #466073;
+  border-radius: 15px;
+  background: #152638;
+  color: #f1f6f8;
+  box-shadow: 0 14px 38px #030b13a8;
+  font: 14px/1.35 system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: dark;
+}
+
+body.disconnesso #pannello-menu { --spazio-menu-partita: 130px; }
+#pannello-menu.nascosto { display: none; }
+#pannello-menu :focus-visible { outline: 2px solid #f7d574; outline-offset: 2px; }
+
+.menu-partita-testata {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 11px;
+  min-height: 55px;
+  padding: 7px 9px 7px 15px;
+  border-bottom: 1px solid #35495b;
+  background: #152638;
+}
+
+.menu-partita-testata h2 { margin: 0; color: inherit; font-size: 17px; letter-spacing: -.01em; }
+
+.menu-partita-chiudi {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #c3d3de;
+  font: 24px/1 system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.menu-partita-chiudi:hover { background: #253b4e; }
+.menu-partita-gruppo { display: grid; gap: 3px; padding: 8px 9px; }
+.menu-partita-gruppo + .menu-partita-gruppo { border-top: 1px solid #35495b; }
+.menu-partita-gruppo h3 { margin: 0 6px 4px; color: #afc2d1; font-size: 12px; font-weight: 750; }
+
+.menu-partita-voce {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 4px 8px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: #f1f6f8;
+  font: inherit;
+  font-weight: 670;
+  text-align: start;
+}
+
+button.menu-partita-voce { cursor: pointer; }
+button.menu-partita-voce:hover { background: #263d50; }
+
+.menu-partita-simbolo {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: #284055;
+  color: #d8e7ef;
+  font: 17px/1 system-ui, sans-serif;
+}
+
+.menu-partita-freccia { color: #9db6ca; font-size: 18px; }
+.menu-partita-voce.menu-partita-evidenza { border-color: #f7d574; background: #f7d574; color: #252013; font-weight: 780; }
+button.menu-partita-evidenza:hover { background: #ffe598; }
+.menu-partita-evidenza .menu-partita-simbolo { background: #31261320; color: inherit; font-size: 19px; }
+.menu-partita-evidenza .menu-partita-freccia { color: #594212; }
+.menu-partita-controllo { display: flex; align-items: center; gap: 7px; color: #c7d6e0; font-size: 12px; white-space: nowrap; }
+.menu-partita-interruttore { position: relative; flex: 0 0 32px; height: 18px; border: 1px solid #7c96a8; border-radius: 99px; background: #344b5e; }
+.menu-partita-interruttore::after { position: absolute; inset: 2px auto auto 2px; width: 12px; height: 12px; border-radius: 50%; background: #fff; content: ""; }
+[aria-checked="true"] .menu-partita-interruttore { border-color: #bcdfc9; background: #75c997; }
+[aria-checked="true"] .menu-partita-interruttore::after { inset-inline-start: auto; inset-inline-end: 2px; background: #142f25; }
+
+#btn-stato-media { grid-template-columns: 28px minmax(0, 1fr) minmax(0, auto); color: #c5d4df; }
+#stato-menu-video { max-width: 110px; color: #adc7db; font-size: 12px; text-align: end; overflow-wrap: anywhere; }
+#btn-stato-media.media-attiva #stato-menu-video { color: #94d9ae; }
+#btn-stato-media.media-errore #stato-menu-video { color: #ffd28c; }
+.menu-partita-voce.voce-pericolo { color: #ffb2b0; }
+.voce-pericolo .menu-partita-simbolo { background: #52313d; color: #ffb2b0; }
+button.menu-partita-voce.voce-pericolo:hover { background: #4a2836; }
+
+#btn-toggle-fullscreen, .menu-partita-solo-schermo { display: none; }
+@media (min-width: 1000px) and (pointer: fine) {
+  #btn-toggle-fullscreen, .menu-partita-solo-schermo { display: grid; }
+}
