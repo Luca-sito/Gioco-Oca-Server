@@ -1625,114 +1625,6 @@ body:not(.modalita-desktop) .videochiamata-intestazione { justify-content: cente
 
 #btn-sblocca-media.nascosto { display: none; }
 
-/* Desktop: fino a quattro video grandi per lato, senza coprire il tabellone. */
-body.modalita-desktop.media-partita #videochiamata {
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  width: auto;
-  max-height: none;
-  padding: 0;
-  overflow: visible;
-  background: transparent;
-  border: 0;
-  border-radius: 0;
-  box-shadow: none;
-  backdrop-filter: none;
-  pointer-events: none;
-}
-
-body.modalita-desktop.media-partita #griglia-video {
-  position: absolute;
-  /*
-   * ↕️ SU / GIÙ (posizione verticale dei riquadri video):
-   *   - "top": distanza dal bordo SUPERIORE dello schermo.
-   *     Aumentala per spingere i riquadri più in BASSO,
-   *     diminuiscila per farli salire più in ALTO.
-   *   - "bottom": distanza dal bordo INFERIORE dello schermo.
-   *     Aumentala per alzare la base dei riquadri,
-   *     diminuiscila per farla scendere.
-   *   (i riquadri si centrano da soli nello spazio tra top e
-   *   bottom grazie ad "align-items: center" più sotto)
-   */
-  top: calc(88px + env(safe-area-inset-top));
-  bottom: calc(18px + env(safe-area-inset-bottom));
-  /*
-   * ↔️ SINISTRA / DESTRA (quanto sono vicini ai bordi laterali):
-   *   aumenta questi valori per allontanare i riquadri dai
-   *   bordi dello schermo, diminuiscili per avvicinarli.
-   */
-  right: calc(14px + env(safe-area-inset-right));
-  left: calc(14px + env(safe-area-inset-left));
-  display: grid;
-  /*
-   * ↔️ LARGHEZZA del riquadro: cambia il valore "260px" qui sotto
-   *   (è il valore di riserva della variabile --larghezza-colonna-video).
-   *   Più alto = riquadri più larghi, più basso = più stretti.
-   *   L'altezza si adatta da sola in base alla "forma" impostata
-   *   più in basso con "aspect-ratio".
-   */
-  grid-template-columns: repeat(2, minmax(0, var(--larghezza-colonna-video, 525px)));
-  grid-template-rows: repeat(4, minmax(0, 1fr));
-  grid-auto-flow: row;
-  justify-content: space-between;
-  align-content: stretch;
-  row-gap: 14px;
-  column-gap: 0;
-  overflow: visible;
-  scroll-snap-type: none;
-  pointer-events: none;
-}
-
-body.modalita-desktop.media-partita #griglia-video .video-tile {
-  width: 100%;
-  height: 100%;
-  min-width: 0;
-  min-height: 0;
-  aspect-ratio: auto;
-  border: 2px solid rgba(255, 255, 255, 0.26);
-  border-radius: 14px;
-  box-shadow: 0 7px 24px rgba(0, 0, 0, 0.48);
-}
-
-body.modalita-desktop.media-partita #griglia-video .video-locale {
-  border-color: rgba(255, 215, 0, 0.78);
-}
-
-body.modalita-desktop.media-partita .video-tile figcaption {
-  padding: 16px 10px 7px;
-  font-size: 13px;
-}
-
-body.modalita-desktop.media-partita .videochiamata-intestazione {
-  position: absolute;
-  bottom: calc(10px + env(safe-area-inset-bottom));
-  left: 50%;
-  z-index: 2;
-  max-width: min(440px, 42vw);
-  padding: 6px 11px;
-  transform: translateX(-50%);
-  background: rgba(10, 16, 22, 0.9);
-  border: 1px solid rgba(255, 215, 0, 0.3);
-  border-radius: 999px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.32);
-}
-
-body.modalita-desktop.media-partita #btn-sblocca-media {
-  position: absolute;
-  bottom: calc(52px + env(safe-area-inset-bottom));
-  left: 50%;
-  z-index: 3;
-  width: auto;
-  min-width: 190px;
-  max-width: min(360px, 46vw);
-  margin: 0;
-  padding: 9px 15px;
-  transform: translateX(-50%);
-  pointer-events: auto;
-}
-
 /* Con la doppia colonna video il riepilogo giocatori resta compatto;
    il pulsante accanto lo espande solo quando serve. */
 body.modalita-desktop.media-partita #pannello-giocatori {
@@ -1760,19 +1652,6 @@ body.modalita-desktop.media-partita #btn-giocatori {
   width: 44px;
   height: 44px;
   font-size: 17px;
-}
-
-@media (max-height: 700px) {
-  body.modalita-desktop.media-partita #griglia-video {
-    top: calc(72px + env(safe-area-inset-top));
-    bottom: calc(12px + env(safe-area-inset-bottom));
-    row-gap: 9px;
-  }
-
-  body.modalita-desktop.media-partita .videochiamata-intestazione {
-    padding: 4px 9px;
-    font-size: 10px;
-  }
 }
 
 /* ===== CHAT ===== */
@@ -2114,16 +1993,6 @@ body.modalita-desktop.media-partita #btn-giocatori {
 }
 
 /* ===== CELLULARE: CHIAMATA SOLO AUDIO ===== */
-body.client-cellulare-audio-only #btn-toggle-webcam-media,
-body.client-cellulare-audio-only #video-tile-locale,
-body.client-cellulare-audio-only #griglia-video {
-  display: none !important;
-}
-
-body.client-cellulare-audio-only #controlli-media-locale {
-  grid-template-columns: 1fr;
-}
-
 body.client-cellulare-audio-only:not(.modalita-desktop) #videochiamata {
   top: calc(72px + env(safe-area-inset-top));
   left: calc(8px + env(safe-area-inset-left));
@@ -2743,153 +2612,9 @@ body:not(.modalita-desktop) #messaggi-gioco {
   .dama-posizione, .dama-pezzo, .dama-faccia { transition: none !important; }
 }
 
-/* =========================================================
-   VIDEOCHIAMATA DESKTOP — SOLO DAMA (2 giocatori)
-   La Dama è sempre 1 contro 1: un riquadro video rettangolare
-   a sinistra della damiera e uno a destra, di dimensioni normali
-   (non stirati su tutta l'altezza dello schermo) e centrati
-   verticalmente nello spazio laterale.
-   ========================================================= */
-body.modalita-desktop.media-partita #griglia-video {
-  grid-template-rows: minmax(0, 1fr);
-  align-items: center;
-}
-
-body.modalita-desktop.media-partita #griglia-video .video-tile {
-  height: auto;
-  /*
-   * 📐 FORMA del riquadro (valore = larghezza / altezza):
-   *   4 / 3  = rettangolare ORIZZONTALE (più largo che alto) ← attuale
-   *   16 / 9 = ancora più panoramico
-   *   1 / 1  = quadrato perfetto
-   *   3 / 4  = rettangolare VERTICALE (il vecchio valore, "stretto")
-   * La posizione (sopra, in #griglia-video) resta invariata:
-   * i riquadri restano centrati verticalmente rispetto alla
-   * damiera, cambia solo la loro forma.
-   */
-  aspect-ratio: 4 / 3;
-}
-
-/* La barra microfono/webcam, su Dama, viene sollevata sopra al
-   riquadro "Le tue prese" (che sta appena sotto la damiera),
-   invece di restare incollata al fondo dello schermo dove lo
-   copriva quasi del tutto. */
-body.modalita-desktop.media-partita #controlli-media-locale {
-  bottom: calc(var(--altezza-raccolta, 58px) + 26px + env(safe-area-inset-bottom));
-}
-
 /* Su Dama il pannello giocatori è già visibile per intero in alto
    a sinistra: il pulsante "persone" (pensato per l'Oca, dove la
    videochiamata comprime il pannello) non deve comparire qui. */
 body.modalita-desktop.media-partita #giocatori-wrapper {
   display: none;
-}
-
-/* =========================================================
-   VIDEOCHIAMATA — banner nascosto + pulsanti dentro al riquadro
-   ========================================================= */
-
-/* Nasconde il banner "🎥 Videochiamata / N partecipanti collegati":
-   resta nel markup (dama.js aggiorna il testo al suo interno) ma
-   non viene più mostrato a schermo. */
-.videochiamata-intestazione {
-  display: none !important;
-}
-
-/* La vecchia barra centrale in basso non serve più: i pulsanti
-   mic/webcam ora vivono dentro al riquadro video (vedi sotto). */
-#controlli-media-locale {
-  display: none !important;
-}
-
-/* Contenitore dei pulsanti mic/webcam, in basso a destra DENTRO
-   al riquadro video (figure.video-tile ha già position: relative,
-   quindi questo si posiziona rispetto al riquadro stesso: se il
-   riquadro si sposta o cambia forma, i pulsanti lo seguono). */
-.video-tile-controlli {
-  position: absolute;
-  right: 8px;
-  bottom: 8px;
-  z-index: 3;
-  display: flex;
-  gap: 6px;
-  pointer-events: auto;
-}
-
-.video-tile-controlli .controllo-media-tondo {
-  flex: 0 0 auto;
-  width: 34px;
-  height: 34px;
-  min-width: 34px;
-  min-height: 34px;
-  padding: 0;
-  display: grid;
-  place-items: center;
-  color: #ffffff;
-  background: rgba(10, 16, 22, 0.78);
-  border: 1px solid rgba(255, 215, 0, 0.42);
-  border-radius: 50%;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
-  font-size: 15px;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.video-tile-controlli .controllo-media-tondo:hover {
-  background: rgba(30, 38, 46, 0.92);
-}
-
-.video-tile-controlli .controllo-media-tondo.media-spento {
-  background: rgba(105, 24, 24, 0.9);
-  border-color: rgba(255, 110, 110, 0.55);
-}
-
-.video-tile-controlli .controllo-media-tondo:disabled {
-  opacity: .48;
-  cursor: default;
-}
-
-/* Su mobile i pulsanti restano nello stesso angolo ma più piccoli,
-   per non coprire troppo il riquadro video ridotto. */
-body:not(.modalita-desktop) .video-tile-controlli {
-  right: 5px;
-  bottom: 5px;
-  gap: 4px;
-}
-
-body:not(.modalita-desktop) .video-tile-controlli .controllo-media-tondo {
-  width: 26px;
-  height: 26px;
-  min-width: 26px;
-  min-height: 26px;
-  font-size: 12px;
-}
-
-/* Riquadri di eventuali ALTRI giocatori che in futuro si aggiungono
-   al riquadro video: se dama.js genera nuovi .video-tile e aggiunge
-   al loro interno un .video-tile-controlli (anche solo con un'icona
-   di stato, non interattiva), si posizionerà da solo nello stesso
-   angolo in basso a destra grazie a questa stessa classe — non
-   serve altro CSS per riquadri aggiuntivi. */
-
-/* Chiamata solo audio (telefono): il microfono deve restare
-   utilizzabile anche quando non c'è alcun video da mostrare.
-   Invece di nascondere l'intero riquadro #video-tile-locale (che
-   ora contiene anche il pulsante del microfono), nascondiamo solo
-   il video e la webcam: il riquadro resta visibile come semplice
-   "cornice" col solo pulsante microfono dentro. */
-body.client-cellulare-audio-only #video-locale,
-body.client-cellulare-audio-only #btn-toggle-webcam-media {
-  display: none !important;
-}
-
-/* Stesso sfondo "placeholder" già usato per un partecipante remoto
-   in sola audio (.video-tile-mobile-audio), applicato qui al
-   riquadro locale quando sei TU ad essere in chiamata solo audio:
-   niente più scatola nera vuota, resta solo il pulsante microfono. */
-body.client-cellulare-audio-only #video-tile-locale {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(145deg, #101820, #070b0f);
 }

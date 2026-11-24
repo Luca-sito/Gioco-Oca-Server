@@ -5,8 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0d1620">
   <title>Othello - Partita</title>
-  <link rel="stylesheet" href="othello.css?v=musica-video-20261123">
-  <link rel="stylesheet" href="../musica-youtube.css?v=youtube-controlli-20261123">
+  <link rel="stylesheet" href="othello.css?v=layout-privacy-20261123">
+  <link rel="stylesheet" href="../videochiamata-due.css?v=layout-privacy-20261123">
+  <link rel="stylesheet" href="../musica-youtube.css?v=layout-privacy-20261123">
   <link rel="stylesheet" href="../spettatore.css?v=spettatori-20261123">
 </head>
 <body class="caricamento-in-corso">
@@ -130,17 +131,19 @@
 
   <section id="videochiamata" class="nascosto" aria-label="Videochiamata della partita">
     <div id="controlli-media-locale" aria-label="Controlli della chiamata">
-      <button type="button" id="btn-toggle-microfono-media" class="controllo-media-tondo" onclick="toggleMicrofonoMedia()" aria-pressed="false" aria-label="Disattiva microfono" title="Disattiva microfono"><svg class="icona-media-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14.5a3.5 3.5 0 0 0 3.5-3.5V5a3.5 3.5 0 0 0-7 0v6a3.5 3.5 0 0 0 3.5 3.5Z"/><path d="M5.75 10.75a6.25 6.25 0 0 0 12.5 0M12 17v4M9 21h6"/></svg></button>
       <div class="videochiamata-intestazione">
         <strong>🎥 Videochiamata</strong>
         <span id="stato-media-connessione" role="status" aria-live="polite">Avvio…</span>
       </div>
-      <button type="button" id="btn-toggle-webcam-media" class="controllo-media-tondo" onclick="toggleWebcamMedia()" aria-pressed="false" aria-label="Disattiva webcam" title="Disattiva webcam"><svg class="icona-media-svg" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="6.5" width="11.5" height="11" rx="2"/><path d="m15 10 5-3v10l-5-3Z"/></svg></button>
     </div>
     <div id="griglia-video">
       <figure id="video-tile-locale" class="video-tile video-locale">
         <video id="video-locale" autoplay playsinline muted></video>
         <figcaption>Tu</figcaption>
+        <div class="video-tile-controlli">
+          <button type="button" id="btn-toggle-microfono-media" class="controllo-media-tondo" onclick="toggleMicrofonoMedia()" aria-pressed="false" aria-label="Disattiva microfono" title="Disattiva microfono"><svg class="icona-media-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14.5a3.5 3.5 0 0 0 3.5-3.5V5a3.5 3.5 0 0 0-7 0v6a3.5 3.5 0 0 0 3.5 3.5Z"/><path d="M5.75 10.75a6.25 6.25 0 0 0 12.5 0M12 17v4M9 21h6"/></svg></button>
+          <button type="button" id="btn-toggle-webcam-media" class="controllo-media-tondo" onclick="toggleWebcamMedia()" aria-pressed="false" aria-label="Disattiva webcam" title="Disattiva webcam"><svg class="icona-media-svg" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="6.5" width="11.5" height="11" rx="2"/><path d="m15 10 5-3v10l-5-3Z"/></svg></button>
+        </div>
       </figure>
     </div>
     <button type="button" id="btn-sblocca-media" class="nascosto" onclick="sbloccaRiproduzioneMedia()">🔊 Attiva l'audio / riprova</button>
@@ -205,7 +208,9 @@
 </main>
 
 <script src="../spettatore.js?v=spettatori-20261123"></script>
-<script src="../musica-youtube.js?v=youtube-controlli-20261123"></script>
-<script src="othello.js?v=spettatori-20261123"></script>
+<script src="../cookie-youtube.js?v=layout-privacy-20261123"></script>
+<script src="../musica-youtube.js?v=layout-privacy-20261123"></script>
+<script src="../videochiamata-due.js?v=layout-privacy-20261123"></script>
+<script src="othello.js?v=layout-privacy-20261123"></script>
 </body>
 </html>

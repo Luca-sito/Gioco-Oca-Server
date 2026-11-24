@@ -396,8 +396,14 @@ function aggiornaTestoBottoneFullscreen() {
   b.textContent = (document.fullscreenElement || document.webkitFullscreenElement) ? "🡼 Esci da tutto schermo" : "⛶ Tutto schermo";
 }
 
-document.addEventListener("fullscreenchange", aggiornaTestoBottoneFullscreen);
-document.addEventListener("webkitfullscreenchange", aggiornaTestoBottoneFullscreen);
+document.addEventListener("fullscreenchange", () => {
+  aggiornaTestoBottoneFullscreen();
+  aggiornaLayoutTabellone();
+});
+document.addEventListener("webkitfullscreenchange", () => {
+  aggiornaTestoBottoneFullscreen();
+  aggiornaLayoutTabellone();
+});
 
 function rilevaEImpostaModalitaDesktop() {
   const puntatorePreciso = !!(window.matchMedia && window.matchMedia("(pointer: fine)").matches);
@@ -410,7 +416,6 @@ function aggiornaLayoutTabellone() {
   const mondo = document.getElementById("mondo-ruotato");
   if (!areaTabellone || !mondo) return;
 
-  const videoDesktopAttivo = document.body.classList.contains("modalita-desktop") && document.body.classList.contains("media-partita");
   const larghezzaFinestra = window.visualViewport ? window.visualViewport.width : window.innerWidth;
   const altezzaReale = window.visualViewport ? window.visualViewport.height : window.innerHeight;
   document.documentElement.style.setProperty("--altezza-reale", altezzaReale + "px");
@@ -422,28 +427,14 @@ function aggiornaLayoutTabellone() {
   document.documentElement.style.setProperty("--altezza-raccolta", altezzaRaccolta + "px");
   const margineOrizzontale = Math.max(10, larghezzaFinestra * 0.015);
   const spazioRaccolte = 2 * (altezzaRaccolta + 6);
-  let larghezzaDisponibile = larghezzaFinestra - margineOrizzontale * 2;
+  const larghezzaDisponibile = larghezzaFinestra - margineOrizzontale * 2;
   const altezzaDisponibile = altezzaReale - spazioRaccolte - 20;
-
-  if (videoDesktopAttivo) {
-    const larghezzaColonnaDesiderata = Math.min(340, Math.max(160, larghezzaFinestra * 0.16));
-    const distanzaDalTabellone = Math.max(12, larghezzaFinestra * 0.012);
-    larghezzaDisponibile = Math.max(320, larghezzaFinestra - (larghezzaColonnaDesiderata + distanzaDalTabellone) * 2);
-  }
-
-  const lato = Math.max(120, Math.min(larghezzaDisponibile, altezzaDisponibile));
-
-  if (videoDesktopAttivo) {
-    const spazioLaterale = (larghezzaFinestra - lato) / 2;
-    const margineEsterno = Math.max(14, larghezzaFinestra * 0.012);
-    const larghezzaColonnaVideo = Math.max(120, Math.min(340, spazioLaterale - margineEsterno - 10));
-    document.documentElement.style.setProperty("--larghezza-colonna-video", larghezzaColonnaVideo + "px");
-  } else {
-    document.documentElement.style.removeProperty("--larghezza-colonna-video");
-  }
+  const latoNaturale = Math.max(120, Math.min(larghezzaDisponibile, altezzaDisponibile));
+  const videoLaterale = mediaPartitaAttiva && !clientCellulareAudioOnly && larghezzaFinestra >= 600;
+  const lato = window.VideochiamataDue.dimensiona(larghezzaFinestra, latoNaturale, videoLaterale);
 
   const puntatorePreciso = !!window.matchMedia?.("(pointer: fine)").matches;
-  document.body.classList.toggle("modalita-desktop", puntatorePreciso && larghezzaFinestra >= 1000 && larghezzaFinestra - lato >= 600);
+  document.body.classList.toggle("modalita-desktop", puntatorePreciso && larghezzaFinestra >= 1000 && (videoLaterale || larghezzaFinestra - lato >= 600));
 
   areaTabellone.style.width = lato + "px";
   areaTabellone.style.height = lato + "px";
@@ -664,7 +655,6 @@ function aggiornaControlliMediaLocale() {
   const tracciaVideo = flussoMediaLocale && flussoMediaLocale.getVideoTracks().find(t => t.readyState === "live");
   const btnMic = document.getElementById("btn-toggle-microfono-media");
   const btnCam = document.getElementById("btn-toggle-webcam-media");
-  const tileLocale = document.getElementById("video-tile-locale");
 
   if (btnMic) {
     const acceso = !!(tracciaAudio && tracciaAudio.enabled);
@@ -690,7 +680,6 @@ function aggiornaControlliMediaLocale() {
     }
   }
 
-  if (tileLocale) tileLocale.hidden = clientCellulareAudioOnly;
 }
 
 function toggleMicrofonoMedia() {
@@ -1526,121 +1515,6 @@ let animazioniDaAttendereGenerazione = 0;
 const TIMEOUT_ANIMAZIONE_MS = 2500;
 const animazioniDischiAttive = true;
 
-/* =========================================================
-   DIAGNOSTICA TEMPORANEA SINCRONIZZAZIONE OTHELLO
-   ========================================================= */
-
-function firmaTavolaSyncOthello(tavola) {
-  if (!Array.isArray(tavola) || tavola.length !== 8) {
-    return "TAVOLA_NON_VALIDA";
-  }
-
-  return tavola.map(riga =>
-    riga.map(cella =>
-      cella === "nero" ? "N" :
-      cella === "bianco" ? "B" : "."
-    ).join("")
-  ).join("/");
-}
-
-function firmaTavolaDomSyncOthello() {
-  const tavolaDom = Array.from(
-    { length: 8 },
-    () => Array(8).fill(null)
-  );
-
-  for (const [chiave, posizione] of posizioniDischi) {
-    const [r, c] = chiave.split(",").map(Number);
-    const disco = posizione?.querySelector(".othello-disco");
-
-    if (tavolaDom[r] && c >= 0 && c < 8 && disco) {
-      tavolaDom[r][c] = disco.dataset.colore || null;
-    }
-  }
-
-  return firmaTavolaSyncOthello(tavolaDom);
-}
-
-function tracciaSyncOthello(evento, partitaRicevuta = null, extra = {}) {
-  const record = {
-    evento,
-    ora: new Date().toISOString(),
-    partitaId: stato?.id || partitaId || null,
-    mossaServer: partitaRicevuta?.numeroMossa ?? null,
-    turnoServer: partitaRicevuta?.turno ?? null,
-    faseServer: partitaRicevuta?.fase ?? null,
-    tavolaServer: firmaTavolaSyncOthello(partitaRicevuta?.tavola),
-    mossaLocale: stato?.numeroMossa ?? null,
-    turnoLocale: stato?.turno ?? null,
-    tavolaLocale: firmaTavolaSyncOthello(stato?.tavola),
-    tavolaDisegnata: firmaTavolaSyncOthello(tavolaDisegnata),
-    tavolaDOM: firmaTavolaDomSyncOthello(),
-    ultimoNumeroMossaAccettato,
-    attesaSnapshot,
-    mossaInAttesa,
-    animazioniDaAttendere,
-    socket: socket?.readyState ?? null,
-    ...extra
-  };
-
-  console.log("[OTHELLO-SYNC]", record);
-
-  try {
-    const logs = window.__othelloSyncLogs || (window.__othelloSyncLogs = []);
-    logs.push(record);
-    if (logs.length > 60) logs.shift();
-
-    let pannello = document.getElementById("othello-sync-mobile-panel");
-
-    if (!pannello) {
-      pannello = document.createElement("details");
-      pannello.id = "othello-sync-mobile-panel";
-      pannello.style.cssText =
-        "position:fixed;bottom:8px;left:8px;z-index:2147483647;" +
-        "max-width:95vw;background:#fff;color:#111;padding:8px;" +
-        "border:2px solid #222;border-radius:8px;font:13px Arial;";
-
-      const titolo = document.createElement("summary");
-      titolo.textContent = "Diagnostica Othello";
-      titolo.style.cursor = "pointer";
-
-      const area = document.createElement("textarea");
-      area.id = "othello-sync-mobile-log";
-      area.readOnly = true;
-      area.style.cssText =
-        "display:block;width:85vw;max-width:540px;height:220px;" +
-        "box-sizing:border-box;margin-top:8px;font:11px monospace;";
-
-      const copia = document.createElement("button");
-      copia.textContent = "Copia diagnostica";
-      copia.style.cssText = "margin-top:8px;padding:10px;";
-
-      copia.onclick = async () => {
-        try {
-          await navigator.clipboard.writeText(area.value);
-          copia.textContent = "Copiato!";
-        } catch (_) {
-          area.focus();
-          area.select();
-          const riuscito = document.execCommand("copy");
-          copia.textContent = riuscito
-            ? "Copiato!"
-            : "Testo selezionato: tieni premuto e copia";
-        }
-      };
-
-      pannello.append(titolo, area, copia);
-      document.body.appendChild(pannello);
-    }
-
-    const area = document.getElementById("othello-sync-mobile-log");
-    area.value = logs.map(x => JSON.stringify(x)).join("\n");
-    area.scrollTop = area.scrollHeight;
-  } catch (errore) {
-    console.warn("Diagnostica Othello non disponibile:", errore);
-  }
-}
-
 function aggiornaBottoneAnimazioniOthello() {
   const bottone = document.getElementById("btn-animazioni-othello");
   if (!bottone) return;
@@ -2051,10 +1925,6 @@ async function applicaStatoPartita(partita, istantanea = false) {
     return false;
   }
 
-    tracciaSyncOthello("APPLICAZIONE_INIZIATA", partita, {
-    istantanea
-  });
-
   const prossimo = { ...ultimoStatoRicevuto, ...partita };
   prossimo.tavola = copiaTavola(partita.tavola);
 
@@ -2125,11 +1995,7 @@ async function applicaStatoPartita(partita, istantanea = false) {
     avvisoTempoChiave = "";
   }
 
-    render();
-
-  tracciaSyncOthello("APPLICAZIONE_COMPLETATA", stato, {
-    istantanea
-  });
+  render();
 
   if (
     stato.fase === "in_corso" &&
@@ -2368,13 +2234,6 @@ async function abbandonaPartita() {
 
 function gestisciMessaggioSocket(dati) {
   if (!dati || typeof dati !== "object") return;
-
-  if (dati.tipo === "othello_stato" || dati.tipo === "othello_fine") {
-  tracciaSyncOthello(
-    "MESSAGGIO_RICEVUTO_" + dati.tipo,
-    dati.partita || null
-  );
-}
 
   if (spettatore?.gestisci(dati)) {
     paginaInChiusura = true;

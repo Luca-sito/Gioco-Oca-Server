@@ -3,6 +3,7 @@
 (() => {
   const blocco = document.getElementById("musica-youtube");
   if (!blocco) return;
+  const cookieYouTube = window.CookieYouTube;
 
   const agente = navigator.userAgent;
   const smartphone = /iPhone|iPod|Windows Phone|Android.*Mobile/i.test(agente) ||
@@ -21,6 +22,15 @@
           <button type="button" id="chiudi-musica-youtube" aria-label="Chiudi e interrompi la musica" title="Chiudi e interrompi la musica">×</button>
         </div>
       </div>
+      <section id="banner-cookie-youtube" aria-labelledby="titolo-cookie-youtube" hidden>
+        <strong id="titolo-cookie-youtube">Cookie e contenuti YouTube</strong>
+        <p>Per la ricerca inviamo a Google le parole che digiti. Le anteprime e il video si caricano da YouTube, che può ricevere dati del browser e usare cookie o tecnologie simili.</p>
+        <p><a href="/privacy-policy.html#youtube" target="_blank" rel="noopener">Privacy Policy</a> · <a href="/cookie-policy.html#youtube" target="_blank" rel="noopener">Cookie Policy</a> · <a href="https://www.youtube.com/t/terms?hl=it" target="_blank" rel="noopener">Termini di YouTube</a></p>
+        <div class="scelte-cookie-youtube">
+          <button type="button" id="rifiuta-cookie-youtube">Rifiuta YouTube</button>
+          <button type="button" id="accetta-cookie-youtube">Consenti YouTube</button>
+        </div>
+      </section>
       <form id="modulo-musica-youtube" role="search" aria-label="YouTube">
         <label class="solo-lettori-schermo" for="cerca-musica-youtube">Cerca su YouTube</label>
         <div class="riga-musica-youtube">
@@ -33,6 +43,7 @@
       <a id="apri-video-youtube" target="_blank" rel="noopener" hidden>Apri il video su YouTube ↗</a>
       <ul id="risultati-musica-youtube" aria-label="Risultati di ricerca"></ul>
       <button type="button" id="altri-risultati-youtube" hidden>Altri risultati</button>
+      <button type="button" id="preferenze-cookie-youtube" hidden>Preferenze cookie</button>
     </section>`;
 
   const nodo = id => document.getElementById(id);
@@ -48,6 +59,10 @@
   const apriVideo = nodo("apri-video-youtube");
   const risultati = nodo("risultati-musica-youtube");
   const altri = nodo("altri-risultati-youtube");
+  const bannerCookie = nodo("banner-cookie-youtube");
+  const accettaCookie = nodo("accetta-cookie-youtube");
+  const rifiutaCookie = nodo("rifiuta-cookie-youtube");
+  const preferenzeCookie = nodo("preferenze-cookie-youtube");
   const voci = new Map();
   const sogliaVoce = 0.012;
   const durataCodaVoce = 600;
@@ -152,11 +167,13 @@
 
   function cambiaVista(modo) {
     pannello.dataset.vista = modo;
+    const ricercaVisibile = modo === "elenco" && bannerCookie.hidden && cookieYouTube?.leggi() === true;
     const elenco = modo === "elenco";
-    modulo.hidden = !elenco;
-    risultati.hidden = !elenco;
-    altri.hidden = !elenco || !paginaSuccessiva;
-    vista.disabled = !contenitore.hasChildNodes();
+    modulo.hidden = !ricercaVisibile;
+    risultati.hidden = !ricercaVisibile;
+    altri.hidden = !ricercaVisibile || !paginaSuccessiva;
+    preferenzeCookie.hidden = !ricercaVisibile;
+    vista.disabled = !bannerCookie.hidden || !contenitore.hasChildNodes();
     const azioneVista = elenco ? "Mostra solo il video" : "Mostra lista e ricerca";
     vista.setAttribute("aria-label", azioneVista);
     vista.title = azioneVista;
@@ -204,6 +221,7 @@
     messaggio.textContent = "";
     apriVideo.hidden = true;
     apriVideo.removeAttribute("href");
+    bannerCookie.hidden = true;
     vistaPrimaDiRidurre = "elenco";
     cambiaVista("elenco");
     nascondiPannello(ripristinaFocus);
@@ -242,6 +260,7 @@
   }
 
   async function riproduci(video) {
+    if (cookieYouTube?.leggi() !== true) return;
     preparaAudio();
     rimuoviVideo();
     messaggio.textContent = "";
@@ -326,6 +345,7 @@
   }
 
   async function cerca(query, pagina = null) {
+    if (cookieYouTube?.leggi() !== true) return;
     chiamata?.abort();
     const richiesta = new AbortController();
     chiamata = richiesta;
@@ -347,7 +367,7 @@
         signal: richiesta.signal
       });
       const esito = await risposta.json();
-      if (chiamata !== richiesta) return;
+      if (chiamata !== richiesta || cookieYouTube?.leggi() !== true) return;
       if (!risposta.ok) throw new Error(esito.errore || "Ricerca non disponibile.");
       for (const video of esito.video) aggiungiRisultato(video);
       paginaSuccessiva = esito.paginaSuccessiva;
@@ -355,16 +375,39 @@
     } catch (errore) {
       if (chiamata === richiesta) messaggio.textContent = errore.message || "Ricerca non disponibile.";
     } finally {
-      if (chiamata === richiesta) altri.hidden = pannello.dataset.vista !== "elenco" || !paginaSuccessiva;
+      if (chiamata === richiesta) altri.hidden = modulo.hidden || !paginaSuccessiva;
     }
   }
 
   pulsante.addEventListener("click", () => {
-    preparaAudio();
     pannello.hidden = false;
     pulsante.hidden = true;
     pulsante.setAttribute("aria-expanded", "true");
-    ingresso.focus();
+    bannerCookie.hidden = cookieYouTube?.leggi() === true;
+    cambiaVista(pannello.dataset.vista);
+    if (bannerCookie.hidden) {
+      preparaAudio();
+      ingresso.focus();
+    } else {
+      rifiutaCookie.focus();
+    }
+  });
+  preferenzeCookie.addEventListener("click", () => {
+    bannerCookie.hidden = false;
+    cambiaVista("elenco");
+    rifiutaCookie.focus();
+  });
+  rifiutaCookie.addEventListener("click", () => cookieYouTube?.salva(false));
+  accettaCookie.addEventListener("click", () => cookieYouTube?.salva(true));
+  window.addEventListener("cookie-youtube", () => {
+    if (cookieYouTube?.leggi() !== true) {
+      chiudiPlayer(!pannello.hidden);
+    } else if (!pannello.hidden && !bannerCookie.hidden) {
+      bannerCookie.hidden = true;
+      cambiaVista("elenco");
+      preparaAudio();
+      ingresso.focus();
+    }
   });
   riduci.addEventListener("click", () => riduciPlayer(true));
   vista.addEventListener("click", () => cambiaVista(pannello.dataset.vista === "elenco" ? "video" : "elenco"));

@@ -1,0 +1,153 @@
+body.media-partita.videochiamata-laterale #videochiamata {
+  inset: 0;
+  width: auto;
+  max-height: none;
+  padding: 0;
+  overflow: visible;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  pointer-events: none;
+}
+
+body.media-partita.videochiamata-laterale #griglia-video {
+  --video-sinistra: calc(14px + env(safe-area-inset-left));
+  --video-destra: calc(14px + env(safe-area-inset-right));
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns:
+    min(420px, 88vh, calc(var(--spazio-video) - var(--video-sinistra)))
+    min(420px, 88vh, calc(var(--spazio-video) - var(--video-destra)));
+  grid-template-rows: minmax(0, 1fr);
+  align-items: center;
+  justify-content: space-between;
+  padding-inline: var(--video-sinistra) var(--video-destra);
+  gap: 0;
+  overflow: visible;
+  scroll-snap-type: none;
+}
+
+body.media-partita.videochiamata-laterale #griglia-video .video-tile {
+  width: 100%;
+  height: auto;
+  min-width: 0;
+  min-height: 0;
+  aspect-ratio: 4 / 3;
+  border-width: 2px;
+  border-radius: 14px;
+  box-shadow: 0 7px 24px rgba(0, 0, 0, .48);
+}
+
+body.media-partita.videochiamata-laterale .video-tile figcaption {
+  padding: 16px 10px 8px;
+  font-size: 13px;
+}
+
+body.media-partita.videochiamata-laterale #btn-sblocca-media {
+  position: absolute;
+  bottom: calc(52px + env(safe-area-inset-bottom));
+  left: 50%;
+  width: max-content;
+  max-width: calc(100% - 28px);
+  margin: 0;
+  transform: translateX(-50%);
+  pointer-events: auto;
+}
+
+.videochiamata-intestazione {
+  display: none !important;
+}
+
+#controlli-media-locale {
+  display: none !important;
+}
+
+.video-tile-controlli {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  z-index: 3;
+  display: flex;
+  gap: 6px;
+  pointer-events: auto;
+}
+
+.video-tile-controlli .controllo-media-tondo {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  min-height: 34px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+  background: rgba(10, 16, 22, 0.78);
+  border: 1px solid rgba(255, 215, 0, 0.42);
+  border-radius: 50%;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.video-tile-controlli .controllo-media-tondo:hover {
+  background: rgba(30, 38, 46, 0.92);
+}
+
+.video-tile-controlli .controllo-media-tondo.media-spento {
+  background: rgba(105, 24, 24, 0.9);
+  border-color: rgba(255, 110, 110, 0.55);
+}
+
+.video-tile-controlli .controllo-media-tondo:disabled {
+  opacity: .48;
+  cursor: default;
+}
+
+body:not(.videochiamata-laterale) .video-tile-controlli {
+  right: 5px;
+  bottom: 5px;
+  gap: 4px;
+}
+
+body:not(.videochiamata-laterale) .video-tile-controlli .controllo-media-tondo {
+  width: 26px;
+  height: 26px;
+  min-width: 26px;
+  min-height: 26px;
+  font-size: 12px;
+}
+
+body.client-cellulare-audio-only #video-locale,
+body.client-cellulare-audio-only #btn-toggle-webcam-media,
+body.client-cellulare-audio-only #griglia-video .video-tile:not(.video-locale),
+body.client-cellulare-audio-only .video-locale figcaption {
+  display: none !important;
+}
+
+body.client-cellulare-audio-only #controlli-media-locale {
+  display: block !important;
+  margin: 0;
+}
+
+body.client-cellulare-audio-only .videochiamata-intestazione {
+  display: flex !important;
+}
+
+body.client-cellulare-audio-only #video-tile-locale {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  aspect-ratio: auto;
+  background: transparent;
+  border: 0;
+}
+
+body.client-cellulare-audio-only .video-tile-controlli {
+  position: static;
+}

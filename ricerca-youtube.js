@@ -17,6 +17,13 @@ function chiaveYouTube() {
 module.exports = function registraRicercaYouTube(app, richiediAuth) {
   const chiave = chiaveYouTube();
   const ricerche = new Map();
+  const durataCache = 15 * 60 * 1000;
+  setInterval(() => {
+    const adesso = Date.now();
+    for (const [id, richiesta] of ricerche) {
+      if (richiesta.scadenza <= adesso) ricerche.delete(id);
+    }
+  }, 60 * 1000).unref();
   const limite = rateLimit({
     windowMs: 60 * 1000,
     max: 12,
@@ -71,7 +78,7 @@ module.exports = function registraRicercaYouTube(app, richiediAuth) {
     let richiesta = ricerche.get(id);
     if (!richiesta || richiesta.scadenza <= Date.now()) {
       if (!ricerche.has(id) && ricerche.size >= 150) ricerche.delete(ricerche.keys().next().value);
-      richiesta = { scadenza: Date.now() + 15 * 60 * 1000, risultato: cerca(query, pagina) };
+      richiesta = { scadenza: Date.now() + durataCache, risultato: cerca(query, pagina) };
       ricerche.set(id, richiesta);
     }
     try {

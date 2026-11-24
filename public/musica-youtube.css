@@ -64,6 +64,20 @@
 #musica-youtube button:hover { background: #393622; }
 #musica-youtube :focus-visible { outline: 2px solid #ffdd65; outline-offset: 2px; }
 
+#banner-cookie-youtube {
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, .28);
+  border-radius: 8px;
+}
+
+#banner-cookie-youtube p { margin: 5px 0 9px; }
+#banner-cookie-youtube a { color: #ffdd65; }
+.scelte-cookie-youtube { display: flex; flex-wrap: wrap; gap: 8px; }
+.scelte-cookie-youtube button,
+#preferenze-cookie-youtube { padding: 7px 10px; font: inherit; }
+#preferenze-cookie-youtube { margin-top: 9px; }
+
 .comandi-finestra-youtube button {
   width: 32px;
   height: 32px;

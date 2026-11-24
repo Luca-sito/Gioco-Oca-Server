@@ -301,8 +301,14 @@ function aggiornaTestoBottoneFullscreen() {
   b.textContent = (document.fullscreenElement || document.webkitFullscreenElement) ? "🡼 Esci da tutto schermo" : "⛶ Tutto schermo";
 }
 
-document.addEventListener("fullscreenchange", aggiornaTestoBottoneFullscreen);
-document.addEventListener("webkitfullscreenchange", aggiornaTestoBottoneFullscreen);
+document.addEventListener("fullscreenchange", () => {
+  aggiornaTestoBottoneFullscreen();
+  aggiornaLayoutTabellone();
+});
+document.addEventListener("webkitfullscreenchange", () => {
+  aggiornaTestoBottoneFullscreen();
+  aggiornaLayoutTabellone();
+});
 
 function rilevaEImpostaModalitaDesktop() {
   const puntatorePreciso = !!(window.matchMedia && window.matchMedia("(pointer: fine)").matches);
@@ -337,9 +343,11 @@ function aggiornaLayoutTabellone() {
   const spazioComandi = comandiLaterali ? 10 : 56;
   const larghezzaDisponibile = larghezzaCanvas - margineOrizzontale * 2;
   const altezzaDisponibile = altezzaCanvas - 2 * (altezzaRaccolta + 12 + spazioComandi);
-  const lato = Math.max(120, Math.min(larghezzaDisponibile, altezzaDisponibile));
+  const latoNaturale = Math.max(120, Math.min(larghezzaDisponibile, altezzaDisponibile));
+  const videoLaterale = mediaPartitaAttiva && !clientCellulareAudioOnly && larghezzaCanvas >= 600;
+  const lato = window.VideochiamataDue.dimensiona(larghezzaCanvas, latoNaturale, videoLaterale);
   const puntatorePreciso = !!window.matchMedia?.("(pointer: fine)").matches;
-  document.body.classList.toggle("modalita-desktop", puntatorePreciso && larghezzaCanvas >= 1000 && larghezzaCanvas - lato >= 600);
+  document.body.classList.toggle("modalita-desktop", puntatorePreciso && larghezzaCanvas >= 1000 && (videoLaterale || larghezzaCanvas - lato >= 600));
 
   areaTabellone.style.width = lato + "px";
   areaTabellone.style.height = lato + "px";
@@ -560,7 +568,6 @@ function aggiornaControlliMediaLocale() {
   const tracciaVideo = flussoMediaLocale && flussoMediaLocale.getVideoTracks().find(t => t.readyState === "live");
   const btnMic = document.getElementById("btn-toggle-microfono-media");
   const btnCam = document.getElementById("btn-toggle-webcam-media");
-  const tileLocale = document.getElementById("video-tile-locale");
 
   if (btnMic) {
     const acceso = !!(tracciaAudio && tracciaAudio.enabled);
@@ -586,7 +593,6 @@ function aggiornaControlliMediaLocale() {
     }
   }
 
-  if (tileLocale) tileLocale.hidden = clientCellulareAudioOnly;
 }
 
 function toggleMicrofonoMedia() {

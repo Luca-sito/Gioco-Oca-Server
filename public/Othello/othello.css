@@ -1334,16 +1334,6 @@ body:not(.modalita-desktop) .videochiamata-intestazione { justify-content: cente
   }
 }
 
-body.client-cellulare-audio-only #btn-toggle-webcam-media,
-body.client-cellulare-audio-only #video-tile-locale,
-body.client-cellulare-audio-only #griglia-video {
-  display: none !important;
-}
-
-body.client-cellulare-audio-only #controlli-media-locale {
-  grid-template-columns: 1fr;
-}
-
 body.client-cellulare-audio-only:not(.modalita-desktop) #videochiamata {
   top: calc(72px + env(safe-area-inset-top));
   left: calc(8px + env(safe-area-inset-left));
