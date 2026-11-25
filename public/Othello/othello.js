@@ -400,12 +400,6 @@ document.addEventListener("webkitfullscreenchange", () => {
   aggiornaLayoutTabellone();
 });
 
-function rilevaEImpostaModalitaDesktop() {
-  const puntatorePreciso = !!(window.matchMedia && window.matchMedia("(pointer: fine)").matches);
-  const eDesktop = puntatorePreciso && window.innerWidth >= 1000;
-  document.body.classList.toggle("modalita-desktop", eDesktop);
-}
-
 function aggiornaLayoutTabellone() {
   const areaTabellone = document.getElementById("area-tabellone");
   const mondo = document.getElementById("mondo-ruotato");
@@ -423,27 +417,53 @@ function aggiornaLayoutTabellone() {
   const margineOrizzontale = Math.max(10, larghezzaFinestra * 0.015);
   const spazioRaccolte = 2 * (altezzaRaccolta + 6);
   const larghezzaDisponibile = larghezzaFinestra - margineOrizzontale * 2;
-  const altezzaDisponibile = altezzaReale - spazioRaccolte - 20;
+  const tablet = tipoDispositivoMediaLocale === "tablet";
+  const tabletCompatto = tablet && (larghezzaFinestra < 900 || window.innerWidth <= window.innerHeight);
+  const videoSopra = tabletCompatto && mediaPartitaAttiva;
+  let altezzaDisponibile = altezzaReale - spazioRaccolte - 20;
+
+  if (tablet) {
+    const larghezzaVideo = Math.min(
+      (larghezzaFinestra - 32) / 2,
+      Math.max(108, Math.min(164, larghezzaFinestra * 0.2, altezzaReale * 0.2))
+    );
+    const fasciaComandi = tabletCompatto ? 72 : 18;
+    const spazioSopra = fasciaComandi + altezzaRaccolta + 10 + (videoSopra ? Math.ceil(larghezzaVideo * 0.75) + 8 : 0);
+    const spazioSotto = fasciaComandi + altezzaRaccolta + 12;
+    const stile = document.documentElement.style;
+    altezzaDisponibile = altezzaReale - spazioSopra - spazioSotto;
+    stile.setProperty("--othello-larghezza-video", larghezzaVideo + "px");
+    stile.setProperty("--othello-spazio-verticale", (spazioSopra + spazioSotto) + "px");
+    stile.setProperty("--othello-centro-verticale", (spazioSopra - spazioSotto) / 2 + "px");
+    stile.setProperty("--othello-larghezza-finestra", larghezzaFinestra + "px");
+  }
+  document.body.classList.toggle("othello-video-sopra", videoSopra);
+
   const latoNaturale = Math.max(120, Math.min(larghezzaDisponibile, altezzaDisponibile));
-  const videoLaterale = mediaPartitaAttiva && !clientCellulareAudioOnly && larghezzaFinestra >= 600;
+  const videoLaterale = mediaPartitaAttiva && !videoSopra && !clientCellulareAudioOnly && larghezzaFinestra >= 600;
   const lato = window.VideochiamataDue.dimensiona(larghezzaFinestra, latoNaturale, videoLaterale);
 
   const puntatorePreciso = !!window.matchMedia?.("(pointer: fine)").matches;
-  document.body.classList.toggle("modalita-desktop", puntatorePreciso && larghezzaFinestra >= 1000 && (videoLaterale || larghezzaFinestra - lato >= 600));
+  document.body.classList.toggle(
+    "modalita-desktop",
+    !tablet && puntatorePreciso && larghezzaFinestra >= 1000 && (videoLaterale || larghezzaFinestra - lato >= 600)
+  );
 
-  areaTabellone.style.width = lato + "px";
-  areaTabellone.style.height = lato + "px";
+  if (tablet) {
+    areaTabellone.style.setProperty("--othello-lato-tablet", lato + "px");
+  } else {
+    areaTabellone.style.width = lato + "px";
+    areaTabellone.style.height = lato + "px";
+  }
 }
 
 let timerDebounceResize = null;
 function gestisciResize() {
-  rilevaEImpostaModalitaDesktop();
   clearTimeout(timerDebounceResize);
   timerDebounceResize = setTimeout(aggiornaLayoutTabellone, 60);
 }
 
 function inizializzaGestioneLayout() {
-  rilevaEImpostaModalitaDesktop();
   aggiornaLayoutTabellone();
   window.addEventListener("resize", gestisciResize);
   window.addEventListener("orientationchange", () => setTimeout(gestisciResize, 300));
@@ -462,7 +482,8 @@ const mediaRichiestaDaLobby = params.get("media") === "1";
 
 function rilevaTipoDispositivoMediaLocale() {
   const ua = String(navigator.userAgent || "");
-  if (/iPad/i.test(ua) || (/Android/i.test(ua) && !/Mobile/i.test(ua))) return "tablet";
+  const ipadConUserAgentDesktop = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+  if (ipadConUserAgentDesktop || /iPad/i.test(ua) || (/Android/i.test(ua) && !/Mobile/i.test(ua))) return "tablet";
   if (/iPhone|iPod/i.test(ua) || (/Android/i.test(ua) && /Mobile/i.test(ua))) return "cellulare";
   return "computer";
 }
@@ -472,6 +493,8 @@ const clientCellulareAudioOnly = tipoDispositivoMediaLocale === "cellulare";
 document.body.classList.toggle("client-cellulare-audio-only", clientCellulareAudioOnly);
 document.body.classList.toggle("client-tablet", tipoDispositivoMediaLocale === "tablet");
 document.body.classList.toggle("client-computer", tipoDispositivoMediaLocale === "computer");
+const schermoInteroDisponibile = document.fullscreenEnabled || document.webkitFullscreenEnabled;
+document.body.classList.toggle("othello-tablet-schermo-intero", tipoDispositivoMediaLocale === "tablet" && !!schermoInteroDisponibile);
 
 let mediaPartitaAttiva = false;
 let flussoMediaLocale = null;
@@ -1498,17 +1521,30 @@ let tavolaDisegnata = null;
 let animazioniDaAttendere = 0;
 let animazioniDaAttendereGenerazione = 0;
 const TIMEOUT_ANIMAZIONE_MS = 2500;
-let animazioniDischiAttive = true;
-try { animazioniDischiAttive = localStorage.getItem("othello:animazioni") !== "off"; } catch (_) { /* Storage non disponibile. */ }
+const movimentoRidottoOthello = window.matchMedia?.("(prefers-reduced-motion: reduce)");
+let preferenzaAnimazioniOthello;
+try {
+  const salvata = localStorage.getItem("othello:animazioni");
+  if (salvata === "on" || salvata === "off") preferenzaAnimazioniOthello = salvata === "on";
+} catch (_) { /* Storage non disponibile. */ }
+
+function animazioniDischiAttive() {
+  return preferenzaAnimazioniOthello ?? !movimentoRidottoOthello?.matches;
+}
 
 function aggiornaBottoneAnimazioniOthello() {
-  window.MenuPartita.impostaInterruttore("btn-animazioni-othello", animazioniDischiAttive);
+  const attive = animazioniDischiAttive();
+  document.body.classList.toggle("othello-animazioni-dischi", attive);
+  window.MenuPartita.impostaInterruttore("btn-animazioni-othello", attive);
 }
 function toggleAnimazioniOthello() {
-  animazioniDischiAttive = !animazioniDischiAttive;
-  try { localStorage.setItem("othello:animazioni", animazioniDischiAttive ? "on" : "off"); } catch (_) { /* Preferenza valida per questa pagina. */ }
+  preferenzaAnimazioniOthello = !animazioniDischiAttive();
+  try { localStorage.setItem("othello:animazioni", preferenzaAnimazioniOthello ? "on" : "off"); } catch (_) { /* Preferenza valida per questa pagina. */ }
   aggiornaBottoneAnimazioniOthello();
 }
+movimentoRidottoOthello?.addEventListener?.("change", () => {
+  if (preferenzaAnimazioniOthello === undefined) aggiornaBottoneAnimazioniOthello();
+});
 aggiornaBottoneAnimazioniOthello();
 
 function chiaveCasella(r, c) { return r + "," + c; }
@@ -1638,15 +1674,15 @@ function distanzaScacchi(a, b) {
 }
 
 async function animaVersoTavola(prossimaTavola, istantanea, generazione) {
-  const movimentoRidotto = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-  if (istantanea || !tavolaDisegnata || movimentoRidotto) {
+  if (istantanea || !tavolaDisegnata) {
     sincronizzaDischiIstantaneo(prossimaTavola);
     return;
   }
 
   const { nuove, girati } = estraiDifferenzeTavola(tavolaDisegnata, prossimaTavola);
-  if (!animazioniDischiAttive) {
+  if (!animazioniDischiAttive()) {
     sincronizzaDischiIstantaneo(prossimaTavola);
+    if (movimentoRidottoOthello?.matches) return;
     if (nuove.length) suonaPosa();
     if (girati.length) suonaFlip(0);
     return;
@@ -1667,19 +1703,15 @@ async function animaVersoTavola(prossimaTavola, istantanea, generazione) {
       continue;
     }
     const posizione = document.createElement("div");
-posizione.className = "othello-posizione appena-giocato";
-posizione.appendChild(creaFacciaDisco(cella.colore));
-strato.appendChild(posizione);
-impostaPosizioneDisco(posizione, cella.r, cella.c);
-posizioniDischi.set(key, posizione);
+    posizione.className = "othello-posizione appena-giocato";
+    posizione.appendChild(creaFacciaDisco(cella.colore));
+    strato.appendChild(posizione);
+    impostaPosizioneDisco(posizione, cella.r, cella.c);
+    posizioniDischi.set(key, posizione);
 
-// La caduta dura 380 ms.
-// Rimuove la classe per consentire i successivi flip 3D.
-setTimeout(() => {
-  posizione.classList.remove("appena-giocato");
-}, 450);
-
-if (cella === nuove[0]) suonaPosa();
+    // La caduta dura 380 ms.
+    setTimeout(() => posizione.classList.remove("appena-giocato"), 450);
+    if (cella === nuove[0]) suonaPosa();
   }
 
   const flipPromesse = girati.map(cella => {
@@ -1693,6 +1725,11 @@ if (cella === nuove[0]) suonaPosa();
     return new Promise(resolve => {
       setTimeout(() => {
         if (generazione !== animazioniDaAttendereGenerazione) { resolve(); return; }
+        if (!animazioniDischiAttive()) {
+          disco.dataset.colore = cella.colore;
+          resolve();
+          return;
+        }
         posizione.classList.add("in-animazione");
         suonaFlip(0);
         let finito = false;
@@ -1707,9 +1744,11 @@ if (cella === nuove[0]) suonaPosa();
           }
           posizione.classList.remove("in-animazione");
           disco.removeEventListener("animationend", conclusa);
+          disco.removeEventListener("animationcancel", conclusa);
           resolve();
         };
         disco.addEventListener("animationend", conclusa, { once: true });
+        disco.addEventListener("animationcancel", conclusa, { once: true });
         disco.classList.add(classeFlip);
         timerFallback = setTimeout(conclusa, 1500);
       }, ritardo);

@@ -1578,28 +1578,33 @@ body.client-cellulare-audio-only #controlli-media-locale {
 
 /* Comparsa di un disco appena giocato: piccola "caduta" dall'alto */
 @keyframes othello-cade {
-  0% { transform: translateY(-38%) scale(.72); opacity: 0; }
-  60% { transform: translateY(4%) scale(1.05); opacity: 1; }
+  0% { transform: translateY(-30%) scale(.72); opacity: 0; }
+  60% { transform: translateY(3%) scale(1.05); opacity: 1; }
   100% { transform: translateY(0) scale(1); opacity: 1; }
 }
-.othello-posizione.appena-giocato .othello-disco {
+/* Anima il supporto e lascia al disco la rotazione che mostra il suo colore. */
+.othello-animazioni-dischi .othello-posizione.appena-giocato {
   animation: othello-cade .38s cubic-bezier(.34,1.4,.4,1) both;
 }
 
 /* Flip di cattura: il disco ruota di 180° su sé stesso mostrando il canto,
    con una leggera "sporgenza" a metà rotazione per dare peso reale. */
 @keyframes othello-flip-a-bianco {
-  0%   { transform: rotateY(0deg)   translateZ(0); }
-  45%  { transform: rotateY(90deg)  translateZ(6px) scale(1.06); }
-  100% { transform: rotateY(180deg) translateZ(0); }
-}
-@keyframes othello-flip-a-nero {
   0%   { transform: rotateY(180deg) translateZ(0); }
   45%  { transform: rotateY(90deg)  translateZ(6px) scale(1.06); }
   100% { transform: rotateY(0deg)   translateZ(0); }
 }
-.othello-disco.girando-a-bianco { animation: othello-flip-a-bianco .46s cubic-bezier(.4,.1,.25,1) both; }
-.othello-disco.girando-a-nero   { animation: othello-flip-a-nero   .46s cubic-bezier(.4,.1,.25,1) both; }
+@keyframes othello-flip-a-nero {
+  0%   { transform: rotateY(0deg)   translateZ(0); }
+  45%  { transform: rotateY(90deg)  translateZ(6px) scale(1.06); }
+  100% { transform: rotateY(180deg) translateZ(0); }
+}
+.othello-animazioni-dischi .othello-disco.girando-a-bianco {
+  animation: othello-flip-a-bianco .46s cubic-bezier(.4,.1,.25,1) both;
+}
+.othello-animazioni-dischi .othello-disco.girando-a-nero {
+  animation: othello-flip-a-nero .46s cubic-bezier(.4,.1,.25,1) both;
+}
 
 .othello-posizione.in-animazione { z-index: 10; }
 
@@ -1708,6 +1713,70 @@ body:not(.modalita-desktop) #messaggi-gioco {
   max-width: calc(100vw - 148px);
 }
 
+body.client-tablet #mondo-ruotato {
+  top: calc(50% + var(--othello-centro-verticale, 0px) + (env(safe-area-inset-top) - env(safe-area-inset-bottom)) / 2);
+}
+
+body.client-tablet #area-tabellone {
+  --lato-tavola: max(0px, min(
+    var(--othello-lato-tablet, 100vmin),
+    calc(var(--othello-larghezza-finestra, 100vw) - 20px - env(safe-area-inset-left) - env(safe-area-inset-right)),
+    calc(var(--altezza-reale) - var(--othello-spazio-verticale, 0px) - env(safe-area-inset-top) - env(safe-area-inset-bottom))
+  ));
+  width: var(--lato-tavola);
+  height: var(--lato-tavola);
+}
+
+body.client-tablet.othello-video-sopra #videochiamata {
+  top: calc(64px + env(safe-area-inset-top));
+  left: 50%;
+  right: auto;
+  width: max-content;
+  max-height: none;
+  padding: 0;
+  overflow: visible;
+  transform: translateX(-50%);
+  background: none;
+  border: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+body.client-tablet.othello-video-sopra #griglia-video {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  overflow: visible;
+}
+
+body.client-tablet.othello-video-sopra #griglia-video .video-tile {
+  width: var(--othello-larghezza-video);
+}
+
+body.client-tablet.othello-video-sopra #btn-sblocca-media {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 4;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  margin: 0;
+  transform: translate(-50%, -50%);
+}
+
+body.client-tablet #griglia-video .video-tile-controlli .controllo-media-tondo {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+}
+
+body.client-tablet:not(.modalita-desktop) #musica-youtube {
+  --musica-sinistra: calc(78px + env(safe-area-inset-left));
+}
+
+body.client-tablet.othello-tablet-schermo-intero #btn-toggle-fullscreen { display: grid; }
+
 @media (max-width: 600px) {
   :root { --bordo-tavola: 5px; --altezza-raccolta: 46px; }
   .othello-punteggio { padding-inline: 8px; }
@@ -1717,8 +1786,6 @@ body:not(.modalita-desktop) #messaggi-gioco {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .othello-disco,
-  .othello-posizione,
   .othello-casella.destinazione::before {
     animation: none !important;
   }
