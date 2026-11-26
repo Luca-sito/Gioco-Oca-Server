@@ -1,177 +1,336 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Impara a giocare a Scacchi su Giochi Società. Scopri come si muovono i pezzi, cos'è lo scacco matto e come iniziare una partita.">
-  <title>Scacchi | Come si gioca | Giochi Società</title>
-  <style>
-    :root {
-      color-scheme: light;
-      --sfondo: #f6f2e9;
-      --carta: #fffdf7;
-      --testo: #291b14;
-      --secondario: #664b3a;
-      --bordo: #e1d1b7;
-      --legno: #4a3020;
-      --oro: #ffe19a;
-      font-family: "Atkinson Hyperlegible Next", "Segoe UI", sans-serif;
-    }
-
-    * { box-sizing: border-box; }
-    body { margin: 0; color: var(--testo); background: var(--sfondo); line-height: 1.6; }
-    a { color: #6a3a20; text-underline-offset: 3px; }
-    :focus-visible { outline: 3px solid #8d5426; outline-offset: 4px; }
-
-    .testata {
-      padding: 40px 20px;
-      color: #fff5dd;
-      background: radial-gradient(ellipse at top right, #523724, transparent 75%), #261b16;
-      border-bottom: 4px solid #d4a24e;
-    }
-
-    .contenitore { width: min(100%, 1000px); margin: 0 auto; }
-    .marca { margin: 0 0 4px; color: var(--oro); font-size: .85rem; font-weight: 800; letter-spacing: .12em; }
-    h1, h2 { font-family: Cambria, Georgia, serif; line-height: 1.12; }
-    h1 { margin: 0; font-size: clamp(3rem, 9vw, 5rem); }
-    h2 { margin: 0 0 12px; font-size: clamp(1.65rem, 4vw, 2.2rem); }
-    p { margin: 0 0 12px; }
-    p:last-child { margin-bottom: 0; }
-    .sottotitolo { max-width: 48ch; margin: 12px 0 20px; color: #ffeed1; }
-
-    .azione {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 44px;
-      padding: 8px 16px;
-      border-radius: 6px;
-      color: #301e11;
-      background: var(--oro);
-      text-decoration: none;
-      font-weight: 750;
-    }
-
-    main { display: grid; gap: 22px; padding: 22px 20px 50px; }
-    nav { display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: center; }
-    nav a { display: inline-flex; align-items: center; min-height: 40px; font-weight: 650; }
-    .sezione { padding: clamp(16px, 4vw, 30px); border: 1px solid var(--bordo); border-radius: 12px; background: var(--carta); }
-    .passi { padding-left: 1.4em; margin: 0; }
-    .passi li + li { margin-top: 8px; }
-    .affiancati { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 22px; }
-    .pezzi { margin: 0; }
-    .pezzo { display: grid; grid-template-columns: 7.25rem minmax(0, 1fr); gap: 6px 12px; padding-block: 9px; border-bottom: 1px solid var(--bordo); }
-    .pezzo:last-child { border-bottom: 0; }
-    .pezzo dt { font-weight: 750; }
-    .pezzo dd { margin: 0; color: var(--secondario); }
-
-    figure { width: min(100%, 288px); margin: 0 auto; }
-    .diagramma {
-      position: relative;
-      overflow: hidden;
-      aspect-ratio: 1;
-      border: 6px solid var(--legno);
-      border-radius: 4px;
-      background: conic-gradient(#684735 25%, #f0e2c2 0 50%, #684735 0 75%, #f0e2c2 0) 0 0 / 25% 25%;
-      box-shadow: 0 0 0 1px #94704a, 0 3px 0 2px #241b15;
-    }
-    .quadrante { position: absolute; top: calc(var(--riga) * 12.5%); left: calc(var(--colonna) * 12.5%); display: grid; place-items: center; width: 12.5%; height: 12.5%; }
-    .mossa::before { content: ""; width: 45%; aspect-ratio: 1; border: 2px solid #332211; border-radius: 50%; background: #ffdc76; }
-    .cavallo { color: #2c1c13; text-shadow: 0 0 2px #fff8df, 0 0 4px #fff8df; font: clamp(1.2rem, 5vw, 2.15rem)/1 "Segoe UI Symbol", "DejaVu Sans", serif; }
-    figcaption { margin-top: 12px; color: var(--secondario); font-size: .9rem; }
-
-    .regole { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-    .regola { border-top: 1px solid var(--bordo); padding-top: 10px; }
-    .regola h3 { margin: 0 0 4px; font-size: 1rem; }
-    .regola p { color: var(--secondario); }
-    .fonte { color: var(--secondario); font-size: .94rem; }
-
-    @media (max-width: 660px) {
-      .testata { padding-top: 28px; }
-      .affiancati, .regole { grid-template-columns: 1fr; }
-      .pezzo { grid-template-columns: 1fr; gap: 0; }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Regole degli Scacchi, movimento dei pezzi, salto del cavallo e mosse speciali su Giochi Società.">
+<title>Scacchi - Dettagli del gioco | GIOCHI SOCIETÀ</title>
+<style>
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:#fff;color:#111;font-family:Arial,Helvetica,sans-serif;line-height:1.65}
+.header{background:#111;color:#fff;border-bottom:4px solid #ffd400;padding:28px 20px}
+.header-inner{width:min(1120px,calc(100% - 32px));margin:0 auto}
+.brand{display:inline-block;color:#ffd400;font-size:14px;font-weight:800;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px}
+.header h1{margin:0;font-size:clamp(30px,5vw,48px);line-height:1.1;font-weight:900}
+.header p{margin:10px 0 0;color:#ccc;font-size:15px}
+.container{width:min(1120px,calc(100% - 32px));margin:0 auto;padding:45px 0 70px}
+.indice{background:#111;border-radius:16px;padding:24px;margin-bottom:36px;border-left:6px solid #ffd400}
+.indice h2{margin:0 0 14px;color:#ffd400;font-size:18px}
+.indice-griglia{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 24px}
+.indice a{display:block;color:#fff;text-decoration:none;padding:7px 0;font-size:14px;transition:color .2s}
+.indice a:hover{color:#ffd400}
+.sezione{margin-bottom:46px}
+.sezione h2{position:relative;margin:0 0 18px;padding-bottom:10px;font-size:27px;line-height:1.2;font-weight:900;text-transform:uppercase}
+.sezione h2::after{content:"";display:block;width:62px;height:4px;background:#ffd400;margin-top:10px}
+.sezione p{margin:0 0 16px;font-size:16px}
+.introduzione{background:#f6f6f6;border:1px solid #ddd;border-radius:16px;padding:24px;margin-bottom:28px}
+.introduzione p:last-child{margin-bottom:0}
+.due-colonne{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:28px;align-items:center}
+.diagramma-box{background:#fff;border:1px solid #ddd;border-radius:16px;padding:18px;text-align:center}
+.diagramma-box svg{width:100%;height:auto;max-width:336px;display:block;margin:0 auto}
+.diagramma-didascalia{margin-top:10px;color:#555;font-size:13px;font-weight:700}
+.diagramma-doppio{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px}
+.diagramma-doppio svg{width:100%;height:auto;display:block}
+.diagramma-freccia{color:#ffd400;font-size:30px;font-weight:900}
+.regola{display:flex;align-items:flex-start;gap:16px;padding:18px 0;border-bottom:1px solid #e4e4e4}
+.regola:last-child{border-bottom:none}
+.regola-numero{flex:0 0 42px;width:42px;height:42px;border-radius:12px;background:#ffd400;color:#111;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px}
+.regola-testo{flex:1;font-size:16px}
+.box-evidenza{background:#111;color:#fff;border-radius:16px;padding:26px;border-left:6px solid #ffd400}
+.box-evidenza strong{color:#ffd400}
+.caselle-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.casella{background:#fff;border:1px solid #ddd;border-radius:14px;padding:18px;display:flex;gap:14px;align-items:flex-start;transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}
+.casella:hover{transform:translateY(-2px);border-color:#ffd400;box-shadow:0 8px 24px rgba(0,0,0,.08)}
+.casella-numero{flex:0 0 48px;width:48px;height:48px;background:#111;color:#ffd400;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900}
+.casella-testo{flex:1;font-size:15px}
+.casella-testo strong{display:block;margin-bottom:3px;color:#111}
+.priorita{counter-reset:p;list-style:none;margin:0;padding:0}
+.priorita li{counter-increment:p;position:relative;padding:15px 18px 15px 60px;border:1px solid #ddd;border-radius:12px;margin-bottom:10px;background:#fafafa}
+.priorita li::before{content:counter(p);position:absolute;left:16px;top:13px;width:30px;height:30px;border-radius:9px;background:#111;color:#ffd400;display:flex;align-items:center;justify-content:center;font-weight:900}
+.notazione{display:inline-block;background:#111;color:#ffd400;padding:3px 8px;border-radius:7px;font-weight:800;font-family:Consolas,monospace}
+.footer{background:#111;color:#aaa;text-align:center;padding:28px 20px;border-top:4px solid #ffd400;font-size:13px}
+.footer strong{color:#ffd400}
+.nota-fonti{font-size:13px;color:#666;border-top:1px solid #ddd;padding-top:16px;margin-top:22px}
+@media(max-width:760px){
+.container{padding-top:30px}
+.caselle-grid,.indice-griglia{grid-template-columns:1fr}
+.due-colonne{grid-template-columns:1fr}
+.diagramma-box svg{max-width:290px}
+.regola{gap:12px}
+.regola-numero{flex-basis:38px;width:38px;height:38px;border-radius:10px}
+.sezione h2{font-size:23px}
+.sezione p,.regola-testo{font-size:15px}
+}
+@media(max-width:480px){
+.header{padding:22px 16px}
+.container{width:min(100% - 22px,1120px)}
+.indice,.introduzione,.box-evidenza{padding:18px}
+.casella{padding:14px}
+}
+:focus-visible{outline:2px solid #9a7600;outline-offset:3px}
+.indice a:focus-visible{outline-color:#ffd400}
+.diagramma-box{margin:0}
+.simbolo{font-family:"Segoe UI Symbol","Apple Symbols","DejaVu Sans",serif}
+.scacchiera-schema{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));width:100%;max-width:336px;margin:auto;border:2px solid #222;border-radius:5px;overflow:hidden}
+.scacchiera-schema span{display:grid;position:relative;place-items:center;aspect-ratio:1;font-size:clamp(17px,4vw,29px);line-height:1}
+.scacchiera-schema .chiara{background:#f1f1f1;color:#234b37}
+.scacchiera-schema .scura{background:#1d5b3a;color:#e8f2e8}
+.scacchiera-schema .bianco{color:#fff;text-shadow:0 1px 2px #111,0 0 1px #111}
+.scacchiera-schema .nero{color:#111;text-shadow:0 0 2px #fff}
+.scacchiera-schema small{position:absolute;font:700 8px Arial,Helvetica,sans-serif}
+.scacchiera-schema .traversa{top:3px;left:3px}
+.scacchiera-schema .colonna{right:3px;bottom:3px}
+.scacchiera-schema .arrivo::after{content:"";width:32%;aspect-ratio:1;border-radius:50%;background:#ffd400;border:1px solid #624800}
+.dopo-evidenza{padding-top:22px}
+@media(max-width:760px){.scacchiera-schema{max-width:290px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.indice a,.casella{transition:none}}
+</style>
 </head>
 <body>
-  <header class="testata">
-    <div class="contenitore">
-      <p class="marca">GIOCHI SOCIETÀ</p>
-      <h1>Scacchi</h1>
-      <p class="sottotitolo">Due giocatori su una scacchiera di 64 caselle. Il Bianco muove per primo. L’obiettivo è dare scacco matto al re avversario.</p>
-      <a class="azione" href="stanzescacchi.html">Entra nelle stanze</a>
+
+<header class="header">
+  <div class="header-inner">
+    <div class="brand">GIOCHI SOCIETÀ</div>
+    <h1>SCACCHI</h1>
+    <p>Dettagli, regole, movimento dei pezzi e strategie per iniziare.</p>
+  </div>
+</header>
+
+<main class="container">
+  <nav class="indice" aria-label="Indice dei dettagli">
+    <h2>INDICE</h2>
+    <div class="indice-griglia">
+      <a href="#gioco">Scacchi</a>
+      <a href="#materiale">Materiale e disposizione iniziale</a>
+      <a href="#regole">Regole del gioco</a>
+      <a href="#movimento">Movimento dei pezzi</a>
+      <a href="#cavallo">Il salto del cavallo</a>
+      <a href="#speciali">Mosse speciali</a>
+      <a href="#fine">Fine partita e risultato</a>
+      <a href="#strategia">Consigli strategici</a>
     </div>
-  </header>
+  </nav>
 
-  <main class="contenitore">
-    <nav aria-label="Indice della guida">
-      <a href="#partita">Prima partita</a>
-      <a href="#pezzi">Movimento dei pezzi</a>
-      <a href="#mosse-speciali">Mosse speciali</a>
-      <a href="#esito">Scacco, matto e patta</a>
-    </nav>
+  <section class="sezione" id="gioco">
+    <h2>Scacchi</h2>
+    <div class="introduzione">
+      <p>Due giocatori si affrontano su una <strong>scacchiera di 64 caselle</strong>, con 16 pezzi bianchi e 16 neri. Il Bianco muove per primo e poi i giocatori si alternano.</p>
+      <p>L’obiettivo è dare <strong>scacco matto</strong>. Il re avversario è sotto attacco e il suo giocatore non ha più una mossa legale per metterlo al sicuro.</p>
+    </div>
+  </section>
 
-    <section class="sezione" id="partita">
-      <h2>La tua prima partita</h2>
-      <ol class="passi">
-        <li>Entra in una stanza e unisciti a un tavolo, oppure creane uno. Per fare pratica puoi scegliere <strong>Divertimento</strong> e impostare più tempo per ogni mossa.</li>
-        <li>Durante il tuo turno, tocca o clicca un tuo pezzo. Le caselle evidenziate indicano le mosse disponibili. Scegli una di quelle caselle per muoverlo.</li>
-        <li>Puoi regolare le animazioni dal <strong>Menu partita</strong>. Quella del cavallo mostra un piccolo arretramento prima del salto e un assestamento sulla casella di arrivo.</li>
-      </ol>
-    </section>
-
-    <section class="sezione" id="pezzi">
-      <h2>Come si muovono i pezzi</h2>
-      <div class="affiancati">
-        <dl class="pezzi">
-          <div class="pezzo"><dt>Re</dt><dd>Si sposta di una casella in qualsiasi direzione, scegliendo una casella al sicuro.</dd></div>
-          <div class="pezzo"><dt>Donna</dt><dd>Si sposta in linea retta, in orizzontale, in verticale o in diagonale.</dd></div>
-          <div class="pezzo"><dt>Torre</dt><dd>Si sposta in orizzontale o in verticale.</dd></div>
-          <div class="pezzo"><dt>Alfiere</dt><dd>Si sposta in diagonale.</dd></div>
-          <div class="pezzo"><dt>Cavallo</dt><dd>Si muove a L, due caselle in una direzione e una di lato. Può saltare sopra gli altri pezzi.</dd></div>
-          <div class="pezzo"><dt>Pedone</dt><dd>Avanza dritto di una casella libera. Alla prima mossa può avanzarne due se il percorso è libero. Cattura avanzando di una casella in diagonale.</dd></div>
-        </dl>
-        <figure>
-          <div class="diagramma" aria-hidden="true">
-            <span class="quadrante cavallo" style="--riga:4;--colonna:3">♞</span>
-            <span class="quadrante mossa" style="--riga:2;--colonna:2"></span>
-            <span class="quadrante mossa" style="--riga:2;--colonna:4"></span>
-            <span class="quadrante mossa" style="--riga:3;--colonna:1"></span>
-            <span class="quadrante mossa" style="--riga:3;--colonna:5"></span>
-            <span class="quadrante mossa" style="--riga:5;--colonna:1"></span>
-            <span class="quadrante mossa" style="--riga:5;--colonna:5"></span>
-            <span class="quadrante mossa" style="--riga:6;--colonna:2"></span>
-            <span class="quadrante mossa" style="--riga:6;--colonna:4"></span>
-          </div>
-          <figcaption>Da d4, con il tabellone libero, il cavallo può raggiungere b3, b5, c2, c6, e2, e6, f3 e f5.</figcaption>
-        </figure>
+  <section class="sezione" id="materiale">
+    <h2>Materiale e disposizione iniziale</h2>
+    <div class="due-colonne">
+      <div>
+        <p>Ogni giocatore dispone di un re, una donna, due torri, due alfieri, due cavalli e otto pedoni. La casella d’angolo in basso a destra è chiara.</p>
+        <p>Nella fila più vicina al giocatore, le torri stanno agli angoli, poi vengono i cavalli e gli alfieri. Al centro la donna occupa una casella del proprio colore e il re quella accanto. I pedoni occupano tutta la fila davanti.</p>
+        <p>Le colonne vanno da <strong>a</strong> a <strong>h</strong> e le traverse da <strong>1</strong> a <strong>8</strong>. Per esempio, il re bianco parte da <span class="notazione">e1</span>.</p>
       </div>
-    </section>
+      <figure class="diagramma-box">
+        <div class="scacchiera-schema simbolo" role="img" aria-label="Scacchiera iniziale, pezzi bianchi in basso e neri in alto">
+          <span class="chiara nero"><small class="traversa">8</small>♜</span>
+          <span class="scura nero">♞</span>
+          <span class="chiara nero">♝</span>
+          <span class="scura nero">♛</span>
+          <span class="chiara nero">♚</span>
+          <span class="scura nero">♝</span>
+          <span class="chiara nero">♞</span>
+          <span class="scura nero">♜</span>
+          <span class="scura nero"><small class="traversa">7</small>♟</span>
+          <span class="chiara nero">♟</span>
+          <span class="scura nero">♟</span>
+          <span class="chiara nero">♟</span>
+          <span class="scura nero">♟</span>
+          <span class="chiara nero">♟</span>
+          <span class="scura nero">♟</span>
+          <span class="chiara nero">♟</span>
+          <span class="chiara"><small class="traversa">6</small></span>
+          <span class="scura"></span>
+          <span class="chiara"></span>
+          <span class="scura"></span>
+          <span class="chiara"></span>
+          <span class="scura"></span>
+          <span class="chiara"></span>
+          <span class="scura"></span>
+          <span class="scura"><small class="traversa">5</small></span>
+          <span class="chiara"></span>
+          <span class="scura"></span>
+          <span class="chiara"></span>
+          <span class="scura"></span>
+          <span class="chiara"></span>
+          <span class="scura"></span>
+          <span class="chiara"></span>
+          <span class="chiara"><small class="traversa">4</small></span>
+          <span class="scura"></span>
+          <span class="chiara"></span>
+          <span class="scura"></span>
+          <span class="chiara"></span>
+          <span class="scura"></span>
+          <span class="chiara"></span>
+          <span class="scura"></span>
+          <span class="scura"><small class="traversa">3</small></span>
+          <span class="chiara"></span>
+          <span class="scura"></span>
+          <span class="chiara"></span>
+          <span class="scura"></span>
+          <span class="chiara"></span>
+          <span class="scura"></span>
+          <span class="chiara"></span>
+          <span class="chiara bianco"><small class="traversa">2</small>♙</span>
+          <span class="scura bianco">♙</span>
+          <span class="chiara bianco">♙</span>
+          <span class="scura bianco">♙</span>
+          <span class="chiara bianco">♙</span>
+          <span class="scura bianco">♙</span>
+          <span class="chiara bianco">♙</span>
+          <span class="scura bianco">♙</span>
+          <span class="scura bianco"><small class="traversa">1</small><small class="colonna">a</small>♖</span>
+          <span class="chiara bianco"><small class="colonna">b</small>♘</span>
+          <span class="scura bianco"><small class="colonna">c</small>♗</span>
+          <span class="chiara bianco"><small class="colonna">d</small>♕</span>
+          <span class="scura bianco"><small class="colonna">e</small>♔</span>
+          <span class="chiara bianco"><small class="colonna">f</small>♗</span>
+          <span class="scura bianco"><small class="colonna">g</small>♘</span>
+          <span class="chiara bianco"><small class="colonna">h</small>♖</span>
+        </div>
+        <figcaption class="diagramma-didascalia">Disposizione iniziale vista dalla parte del Bianco.</figcaption>
+      </figure>
+    </div>
+  </section>
 
-    <section class="sezione" id="mosse-speciali">
-      <h2>Mosse speciali</h2>
-      <div class="regole">
-        <article class="regola">
-          <h3>Arrocco</h3>
-          <p>Il re si sposta di due caselle verso una torre, che gli passa accanto dall’altro lato. Re e torre devono essere alla prima mossa, il percorso deve essere libero e le caselle del re devono essere al sicuro.</p>
-        </article>
-        <article class="regola">
-          <h3>Promozione</h3>
-          <p>Un pedone che raggiunge l’ultima traversa diventa una donna, una torre, un alfiere o un cavallo a tua scelta.</p>
-        </article>
-        <article class="regola">
-          <h3>Presa al varco</h3>
-          <p>Se un pedone avversario avanza di due caselle e finisce accanto a un tuo pedone, puoi catturarlo come se ne avesse avanzata una. Questa possibilità vale per la tua mossa immediatamente successiva.</p>
-        </article>
+  <section class="sezione" id="regole">
+    <h2>Regole del gioco</h2>
+    <div class="regola"><span class="regola-numero" aria-hidden="true">1</span><div class="regola-testo"><strong>Muovi un pezzo alla volta.</strong> Durante il tuo turno seleziona un tuo pezzo. La scacchiera evidenzia le destinazioni legali.</div></div>
+    <div class="regola"><span class="regola-numero" aria-hidden="true">2</span><div class="regola-testo"><strong>Cattura occupando la casella avversaria.</strong> Il pezzo catturato esce dalla scacchiera. Il pedone avanza dritto e cattura in diagonale.</div></div>
+    <div class="regola"><span class="regola-numero" aria-hidden="true">3</span><div class="regola-testo"><strong>Tieni al sicuro il tuo re.</strong> Una mossa è illegale se lascia il tuo re sotto attacco. Se sei in scacco, devi risolverlo con la mossa successiva.</div></div>
+  </section>
+
+  <section class="sezione" id="movimento">
+    <h2>Movimento dei pezzi</h2>
+    <div class="caselle-grid">
+      <article class="casella"><span class="casella-numero simbolo" aria-hidden="true">♚</span><div class="casella-testo"><strong>Re</strong>Una casella in qualsiasi direzione, purché la casella di arrivo sia al sicuro.</div></article>
+      <article class="casella"><span class="casella-numero simbolo" aria-hidden="true">♛</span><div class="casella-testo"><strong>Donna</strong>In orizzontale, in verticale o in diagonale, finché il percorso è libero.</div></article>
+      <article class="casella"><span class="casella-numero simbolo" aria-hidden="true">♜</span><div class="casella-testo"><strong>Torre</strong>In orizzontale o in verticale lungo le caselle libere.</div></article>
+      <article class="casella"><span class="casella-numero simbolo" aria-hidden="true">♝</span><div class="casella-testo"><strong>Alfiere</strong>In diagonale. Rimane sempre sulle caselle del colore da cui è partito.</div></article>
+      <article class="casella"><span class="casella-numero simbolo" aria-hidden="true">♞</span><div class="casella-testo"><strong>Cavallo</strong>Si muove a L e può saltare sopra gli altri pezzi.</div></article>
+      <article class="casella"><span class="casella-numero simbolo" aria-hidden="true">♟</span><div class="casella-testo"><strong>Pedone</strong>Avanza di una casella libera. Alla sua prima mossa può avanzarne due, se entrambe sono libere. Cattura una casella avanti in diagonale.</div></article>
+    </div>
+  </section>
+
+  <section class="sezione" id="cavallo">
+    <h2>Il salto del cavallo</h2>
+    <div class="due-colonne">
+      <div>
+        <p>Per trovare la casella di arrivo, conta <strong>due caselle in una direzione e una di lato</strong>. Le caselle tra partenza e arrivo possono essere occupate. Puoi atterrare su una casella libera o catturare un pezzo avversario.</p>
+        <p>Nel gioco il cavallo arretra leggermente, salta e si assesta quando atterra. Puoi regolare l’effetto dalla voce <strong>Animazioni pezzi</strong> nel Menu partita.</p>
       </div>
-    </section>
+      <figure class="diagramma-box">
+        <div class="scacchiera-schema simbolo" role="img" aria-label="Cavallo sulla casella d4 e otto destinazioni evidenziate in giallo">
+          <span class="chiara"><small class="traversa">8</small></span>
+          <span class="scura"></span>
+          <span class="chiara"></span>
+          <span class="scura"></span>
+          <span class="chiara"></span>
+          <span class="scura"></span>
+          <span class="chiara"></span>
+          <span class="scura"></span>
+          <span class="scura"><small class="traversa">7</small></span>
+          <span class="chiara"></span>
+          <span class="scura"></span>
+          <span class="chiara"></span>
+          <span class="scura"></span>
+          <span class="chiara"></span>
+          <span class="scura"></span>
+          <span class="chiara"></span>
+          <span class="chiara"><small class="traversa">6</small></span>
+          <span class="scura"></span>
+          <span class="chiara arrivo"></span>
+          <span class="scura"></span>
+          <span class="chiara arrivo"></span>
+          <span class="scura"></span>
+          <span class="chiara"></span>
+          <span class="scura"></span>
+          <span class="scura"><small class="traversa">5</small></span>
+          <span class="chiara arrivo"></span>
+          <span class="scura"></span>
+          <span class="chiara"></span>
+          <span class="scura"></span>
+          <span class="chiara arrivo"></span>
+          <span class="scura"></span>
+          <span class="chiara"></span>
+          <span class="chiara"><small class="traversa">4</small></span>
+          <span class="scura"></span>
+          <span class="chiara"></span>
+          <span class="scura nero">♞</span>
+          <span class="chiara"></span>
+          <span class="scura"></span>
+          <span class="chiara"></span>
+          <span class="scura"></span>
+          <span class="scura"><small class="traversa">3</small></span>
+          <span class="chiara arrivo"></span>
+          <span class="scura"></span>
+          <span class="chiara"></span>
+          <span class="scura"></span>
+          <span class="chiara arrivo"></span>
+          <span class="scura"></span>
+          <span class="chiara"></span>
+          <span class="chiara"><small class="traversa">2</small></span>
+          <span class="scura"></span>
+          <span class="chiara arrivo"></span>
+          <span class="scura"></span>
+          <span class="chiara arrivo"></span>
+          <span class="scura"></span>
+          <span class="chiara"></span>
+          <span class="scura"></span>
+          <span class="scura"><small class="traversa">1</small><small class="colonna">a</small></span>
+          <span class="chiara"><small class="colonna">b</small></span>
+          <span class="scura"><small class="colonna">c</small></span>
+          <span class="chiara"><small class="colonna">d</small></span>
+          <span class="scura"><small class="colonna">e</small></span>
+          <span class="chiara"><small class="colonna">f</small></span>
+          <span class="scura"><small class="colonna">g</small></span>
+          <span class="chiara"><small class="colonna">h</small></span>
+        </div>
+        <figcaption class="diagramma-didascalia">Da d4, su una scacchiera libera, il cavallo raggiunge b3, b5, c2, c6, e2, e6, f3 e f5.</figcaption>
+      </figure>
+    </div>
+  </section>
 
-    <section class="sezione" id="esito">
-      <h2>Scacco, matto e patta</h2>
-      <p>Quando il tuo re è minacciato sei <strong>in scacco</strong>. Devi metterlo al sicuro nella mossa successiva.</p>
-      <p>Se il re è in scacco e nessuna mossa legale può salvarlo, è <strong>scacco matto</strong> e vince l’avversario. Se è al sicuro ma il giocatore di turno è senza mosse legali, è <strong>stallo</strong> e la partita è patta.</p>
-      <p class="fonte"><a href="https://handbook.fide.com/chapter/e012023">Regole complete della FIDE</a></p>
-    </section>
-  </main>
+  <section class="sezione" id="speciali">
+    <h2>Mosse speciali</h2>
+    <ol class="priorita">
+      <li><strong>Arrocco.</strong> Il re si sposta di due caselle verso una torre e la torre gli passa accanto, dall’altro lato. Il re e quella torre devono essere alla loro prima mossa e lo spazio tra loro deve essere libero. Il re deve partire, passare e arrivare su caselle al sicuro.</li>
+      <li><strong>Promozione.</strong> Arrivato all’ultima traversa, il pedone diventa una donna, una torre, un alfiere o un cavallo a tua scelta.</li>
+      <li><strong>Presa al passaggio.</strong> Se il pedone avversario avanza di due caselle e finisce accanto al tuo, puoi catturarlo come se avesse avanzato di una sola casella. La presa va fatta subito, alla mossa successiva.</li>
+    </ol>
+  </section>
+
+  <section class="sezione" id="fine">
+    <h2>Fine partita e risultato</h2>
+    <div class="box-evidenza">
+      <strong>Scacco matto.</strong> Il re è minacciato e il giocatore di turno non ha una mossa legale per salvarlo. Vince l’avversario.
+    </div>
+    <p class="dopo-evidenza">Una partita è <strong>patta per stallo</strong> quando il giocatore di turno ha esaurito le mosse legali e il suo re è al sicuro. Sul sito la patta può scattare anche per materiale insufficiente, triplice ripetizione o cinquanta mosse per giocatore senza catture e senza avanzamenti di pedone.</p>
+    <p>Il tempo scelto quando crei il tavolo si applica a ogni mossa. Scade il tempo, vince l’avversario.</p>
+  </section>
+
+  <section class="sezione" id="strategia">
+    <h2>Consigli strategici</h2>
+    <div class="caselle-grid">
+      <article class="casella"><span class="casella-numero" aria-hidden="true">◆</span><div class="casella-testo"><strong>Controlla il centro</strong>All’inizio cerca di mettere i pedoni e i pezzi in condizione di controllare le caselle centrali.</div></article>
+      <article class="casella"><span class="casella-numero" aria-hidden="true">⇄</span><div class="casella-testo"><strong>Sviluppa cavalli e alfieri</strong>Portali in gioco presto, dove possono difendere più caselle e aiutarsi.</div></article>
+      <article class="casella"><span class="casella-numero" aria-hidden="true">◎</span><div class="casella-testo"><strong>Proteggi il re</strong>Valuta l’arrocco quando apre una posizione più sicura per il re.</div></article>
+      <article class="casella"><span class="casella-numero" aria-hidden="true">▲</span><div class="casella-testo"><strong>Guarda la risposta</strong>Prima di confermare, controlla quali pezzi può catturare o minacciare l’avversario.</div></article>
+    </div>
+    <p class="nota-fonti">Le regole dei pezzi e le condizioni di fine partita sono spiegate in <a href="https://handbook.fide.com/chapter/E012023">Laws of Chess della FIDE</a>.</p>
+  </section>
+</main>
+
+<footer class="footer">
+  <strong>GIOCHI SOCIETÀ</strong> · Dettagli del gioco Scacchi
+</footer>
+
 </body>
 </html>

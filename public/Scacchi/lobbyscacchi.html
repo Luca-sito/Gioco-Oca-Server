@@ -1708,21 +1708,6 @@ body.tema-scuro .giocatore-online{
 .segnalazione-invia:disabled{background:#cfd4d9 !important;border-color:#cfd4d9 !important;color:#fff !important;}
 
 
-.testata-scacchi {
-    display: flex;
-    align-items: baseline;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    gap: 4px 10px;
-}
-.testata-scacchi nav { display: flex; flex-wrap: wrap; gap: 4px 12px; }
-.testata-scacchi a {
-    color: #713416;
-    font-weight: 700;
-    text-underline-offset: 3px;
-}
-body.tema-scuro .testata-scacchi a { color: #ffcf6e; }
-.testata-scacchi a:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
 </style>
 <link rel="stylesheet" href="../schede-partita.css?v=layout-privacy-20261123">
 <script src="../schede-partita.js?v=spettatori-20261123"></script>
@@ -1815,13 +1800,7 @@ body.tema-scuro .testata-scacchi a { color: #ffcf6e; }
     </div>
   </div>
   <div class="centro">
-    <div class="testata-scacchi">
-      <h2>SCACCHI</h2>
-      <nav aria-label="Scacchi">
-        <a href="stanzescacchi.html">Stanze</a>
-        <a href="dettagliscacchi.html" target="_blank" rel="noopener">Come si gioca</a>
-      </nav>
-    </div>
+    <h2>SCACCHI</h2>
     <div id="partite"><p>Nessuna partita disponibile</p></div>
     <h2>Chat</h2>
     <div id="chat"></div>
