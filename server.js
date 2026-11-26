@@ -9102,22 +9102,8 @@ app.get("/api/giochi/dama/me", richiediAuth, async (req, res) => {
 
 
 
-// ============================================================================
-// OTHELLO — MODULO MULTIPLAYER SEPARATO INTEGRATO NEL SERVER PRINCIPALE
-// Account e JWT restano quelli di Giochi Società. Partite, stanze ed ELO sono
-// separati: le statistiche vivono in /utenti/{uid}/giochi/othello.
-// ============================================================================
-
-"use strict";
-
-// ============================================================================
-// OTHELLO — MODULO MULTIPLAYER SEPARATO (stessa architettura del modulo Dama)
-// ============================================================================
-// Account e JWT restano quelli di Giochi Società. Partite, stanze ed ELO sono
-// separati: le statistiche vivono in /utenti/{uid}/giochi/othello.
-// In questo file il modulo è integrato direttamente e viene inizializzato più sotto con le dipendenze del server.
-
-const creaModuloOthello = function creaModuloOthello(deps) {
+// Stanze, partite e classifiche per Othello e Scacchi. Ogni istanza conserva i propri dati.
+function creaModuloGiocoDaTavolo(deps, { gioco, nomeGioco, coloreIniziale, tempoMinimo, tempoPredefinito, regoleScacchi }) {
   const {
     WebSocket,
     socketsPerId,
@@ -9137,16 +9123,14 @@ const creaModuloOthello = function creaModuloOthello(deps) {
 
   const getDb = () => deps.getDb();
 
-  const OTHELLO_ID_GIOCO = "othello";
-  const OTHELLO_ELO_INIZIALE = 1500;
-  const OTHELLO_NOMI_STANZE = ["BAR", "PUB", "DISCOPUB", "SERATE"];
-  const OTHELLO_TEMPO_MINIMO_SECONDI = 10;
-  const OTHELLO_TEMPO_MASSIMO_SECONDI = 300;
+  const ELO_INIZIALE = 1500;
+  const NOMI_STANZE = ["BAR", "PUB", "DISCOPUB", "SERATE"];
+  const TEMPO_MASSIMO_SECONDI = 300;
 
-  const othelloStanze = Object.fromEntries(
-    OTHELLO_NOMI_STANZE.map(nome => [nome, { giocatoriOnline: {}, partite: {} }])
+  const stanzeGioco = Object.fromEntries(
+    NOMI_STANZE.map(nome => [nome, { giocatoriOnline: {}, partite: {} }])
   );
-  const othelloContestiSocket = new Map();
+  const contestiSocket = new Map();
   const mediaTavolo = require("./media-tavolo")(inviaSocket, configurazioneIcePerClient);
 
   /* =======================================================================
@@ -9154,14 +9138,13 @@ const creaModuloOthello = function creaModuloOthello(deps) {
      ======================================================================= */
 
   function messaggioAppartieneAlGioco(giocoRichiestoSocket, dati) {
+    if (giocoRichiestoSocket) return giocoRichiestoSocket === gioco;
     const tipo = typeof dati?.tipo === "string" ? dati.tipo : "";
-    return giocoRichiestoSocket === OTHELLO_ID_GIOCO ||
-      String(dati?.gioco || "").toLowerCase() === OTHELLO_ID_GIOCO ||
-      tipo.startsWith("othello_");
+    return String(dati?.gioco || "").toLowerCase() === gioco || tipo.startsWith(`${gioco}_`);
   }
 
   function contesto(socketId, socket, tipoDispositivo, uid = null) {
-    let c = othelloContestiSocket.get(socketId);
+    let c = contestiSocket.get(socketId);
     if (!c) {
       c = {
         socketId,
@@ -9174,7 +9157,7 @@ const creaModuloOthello = function creaModuloOthello(deps) {
         tipoDispositivo: tipoDispositivo || "computer",
         schermataPartita: false
       };
-      othelloContestiSocket.set(socketId, c);
+      contestiSocket.set(socketId, c);
     } else {
       c.socket = socket;
       if (uid) c.uid = uid;
@@ -9185,12 +9168,12 @@ const creaModuloOthello = function creaModuloOthello(deps) {
 
   function inviaSocket(socket, dati) {
     if (!socket || socket.readyState !== WebSocket.OPEN) return false;
-    socket.send(JSON.stringify({ gioco: OTHELLO_ID_GIOCO, ...dati }));
+    socket.send(JSON.stringify({ gioco, ...dati }));
     return true;
   }
 
   function inviaAllaStanza(stanza, dati) {
-    const s = othelloStanze[stanza];
+    const s = stanzeGioco[stanza];
     if (!s) return;
     for (const socketId of Object.keys(s.giocatoriOnline || {})) {
       inviaSocket(socketsPerId[socketId], dati);
@@ -9271,8 +9254,8 @@ const creaModuloOthello = function creaModuloOthello(deps) {
 
   function durataTurnoMs(partita) {
     const secondi = Math.max(
-      OTHELLO_TEMPO_MINIMO_SECONDI,
-      Math.min(OTHELLO_TEMPO_MASSIMO_SECONDI, parseInt(partita?.tempo, 10) || 15)
+      tempoMinimo,
+      Math.min(TEMPO_MASSIMO_SECONDI, parseInt(partita?.tempo, 10) || tempoPredefinito)
     );
     return secondi * 1000;
   }
@@ -9290,7 +9273,7 @@ const creaModuloOthello = function creaModuloOthello(deps) {
         nickname: g.nome || "Giocatore",
         avatar: g.avatar || null,
         colore: g.colore || null,
-        elo: Number.isFinite(Number(g.elo)) ? Math.round(Number(g.elo)) : OTHELLO_ELO_INIZIALE
+        elo: Number.isFinite(Number(g.elo)) ? Math.round(Number(g.elo)) : ELO_INIZIALE
       };
     }
     return risultato;
@@ -9302,8 +9285,13 @@ const creaModuloOthello = function creaModuloOthello(deps) {
       stanza: partita.stanza,
       fase: partita.fase,
       iniziata: partita.iniziata === true,
-      turno: partita.turno || "nero",
-      tavola: partita.tavola || creaTavolaIniziale(),
+      turno: partita.turno || coloreIniziale,
+      tavola: partita.tavola || (regoleScacchi ? regoleScacchi.tavola(regoleScacchi.creaMotore()) : creaTavolaIniziale()),
+      ...(regoleScacchi ? {
+        ...regoleScacchi.serializza(partita.motoreScacchi, partita.fase === "in_corso"),
+        notazione: partita.notazione || [],
+        chatAttiva: partita.chatAttiva !== false
+      } : {}),
       giocatori: serializzaGiocatori(partita),
       numeroMossa: Number(partita.numeroMossa || 0),
       ultimoMovimento: partita.ultimoMovimento || null,
@@ -9322,12 +9310,12 @@ const creaModuloOthello = function creaModuloOthello(deps) {
         nome: g.nome || "Giocatore",
         avatar: g.avatar || null,
         colore: g.colore || null,
-        elo: Number.isFinite(Number(g.elo)) ? Math.round(Number(g.elo)) : OTHELLO_ELO_INIZIALE
+        elo: Number.isFinite(Number(g.elo)) ? Math.round(Number(g.elo)) : ELO_INIZIALE
       };
     }
     return {
       id: partita.id,
-      gioco: OTHELLO_ID_GIOCO,
+      gioco,
       stanza: partita.stanza,
       creatore: partita.creatore,
       creatoDa: partita.creatoDa,
@@ -9342,8 +9330,9 @@ const creaModuloOthello = function creaModuloOthello(deps) {
       iniziataIl: partita.iniziataIl || null,
       giocatori,
       ordineGiocatori: partita.ordineGiocatori || [],
-      turno: partita.turno || "nero",
+      turno: partita.turno || coloreIniziale,
       tavola: partita.tavola || null,
+      ...(regoleScacchi ? { notazione: partita.notazione || [] } : {}),
       numeroMossa: Number(partita.numeroMossa || 0),
       ultimoMovimento: partita.ultimoMovimento || null,
       tempoInizioTurno: partita.tempoInizioTurno || null,
@@ -9355,7 +9344,7 @@ const creaModuloOthello = function creaModuloOthello(deps) {
   async function salvaPartita(partita) {
     const db = getDb();
     if (!db || !partita) return;
-    await db.ref(`giochi/${OTHELLO_ID_GIOCO}/partite/${partita.id}`).set(preparaPartitaFirebase(partita));
+    await db.ref(`giochi/${gioco}/partite/${partita.id}`).set(preparaPartitaFirebase(partita));
   }
 
   function fermaTimer(partita) {
@@ -9365,17 +9354,17 @@ const creaModuloOthello = function creaModuloOthello(deps) {
   }
 
   async function rimuoviPartita(stanza, partitaId) {
-    const partita = othelloStanze[stanza]?.partite?.[partitaId];
+    const partita = stanzeGioco[stanza]?.partite?.[partitaId];
     if (partita) fermaTimer(partita);
     spettatori.termina(partita);
-    if (othelloStanze[stanza]) delete othelloStanze[stanza].partite[partitaId];
+    if (stanzeGioco[stanza]) delete stanzeGioco[stanza].partite[partitaId];
 
     const db = getDb();
     if (db) {
       try {
-        await db.ref(`giochi/${OTHELLO_ID_GIOCO}/partite/${partitaId}`).remove();
+        await db.ref(`giochi/${gioco}/partite/${partitaId}`).remove();
       } catch (errore) {
-        console.error("Othello: errore rimozione partita da Firebase:", errore.message);
+        console.error(`${nomeGioco}: errore rimozione partita da Firebase:`, errore.message);
       }
     }
     inviaListaPartite(stanza);
@@ -9384,8 +9373,8 @@ const creaModuloOthello = function creaModuloOthello(deps) {
 
   function trovaPartita(partitaId) {
     if (!partitaId) return null;
-    for (const stanza of OTHELLO_NOMI_STANZE) {
-      const partita = othelloStanze[stanza]?.partite?.[partitaId];
+    for (const stanza of NOMI_STANZE) {
+      const partita = stanzeGioco[stanza]?.partite?.[partitaId];
       if (partita) return { partita, stanza };
     }
     return null;
@@ -9393,10 +9382,10 @@ const creaModuloOthello = function creaModuloOthello(deps) {
 
   function trovaPartitaPerUid(uid) {
     if (!uid) return null;
-    for (const stanza of OTHELLO_NOMI_STANZE) {
-      for (const partita of Object.values(othelloStanze[stanza].partite || {})) {
+    for (const stanza of NOMI_STANZE) {
+      for (const partita of Object.values(stanzeGioco[stanza].partite || {})) {
         if (partita?.giocatori?.[uid]) {
-          return { partitaId: partita.id, stanza, gioco: OTHELLO_ID_GIOCO };
+          return { partitaId: partita.id, stanza, gioco };
         }
       }
     }
@@ -9411,20 +9400,20 @@ const creaModuloOthello = function creaModuloOthello(deps) {
     const conteggi = {};
     const giocatori = {};
 
-    for (const nome of OTHELLO_NOMI_STANZE) {
-      giocatori[nome] = presenzeUnicheStanza(othelloStanze[nome]);
+    for (const nome of NOMI_STANZE) {
+      giocatori[nome] = presenzeUnicheStanza(stanzeGioco[nome]);
       conteggi[nome] = giocatori[nome].length;
     }
 
-    for (const c of othelloContestiSocket.values()) {
+    for (const c of contestiSocket.values()) {
       inviaSocket(c.socket, { tipo: "conteggioStanze", stanze: conteggi, giocatori });
     }
   }
 
   function inviaListaPartite(stanza) {
-    const stanzaOthello = othelloStanze[stanza];
-    if (!stanzaOthello) return;
-    spettatori.inviaLista(Object.values(stanzaOthello.partite), stanzaOthello.giocatoriOnline, p => ({
+    const stanzaGioco = stanzeGioco[stanza];
+    if (!stanzaGioco) return;
+    spettatori.inviaLista(Object.values(stanzaGioco.partite), stanzaGioco.giocatoriOnline, p => ({
       id: p.id,
       creatore: p.creatore,
       creatoDa: p.creatoDa,
@@ -9451,12 +9440,12 @@ const creaModuloOthello = function creaModuloOthello(deps) {
   async function leggiStatisticheUtente(uid) {
     const db = getDb();
     if (!db || !uid) {
-      return { elo: OTHELLO_ELO_INIZIALE, partiteGiocate: 0, partiteVinte: 0, pareggi: 0 };
+      return { elo: ELO_INIZIALE, partiteGiocate: 0, partiteVinte: 0, pareggi: 0 };
     }
-    const snap = await db.ref(`utenti/${uid}/giochi/${OTHELLO_ID_GIOCO}`).once("value");
+    const snap = await db.ref(`utenti/${uid}/giochi/${gioco}`).once("value");
     const dati = snap.val() || {};
     return {
-      elo: Number.isFinite(Number(dati.elo)) ? Math.round(Number(dati.elo)) : OTHELLO_ELO_INIZIALE,
+      elo: Number.isFinite(Number(dati.elo)) ? Math.round(Number(dati.elo)) : ELO_INIZIALE,
       partiteGiocate: Math.max(0, Number(dati.partiteGiocate) || 0),
       partiteVinte: Math.max(0, Number(dati.partiteVinte) || 0),
       pareggi: Math.max(0, Number(dati.pareggi) || 0)
@@ -9485,7 +9474,7 @@ const creaModuloOthello = function creaModuloOthello(deps) {
         : calcolaNuovoElo(prima[uid], [prima[avversario]], risultato);
 
       const stats = uid === uids[0] ? statsA : statsB;
-      const base = `utenti/${uid}/giochi/${OTHELLO_ID_GIOCO}`;
+      const base = `utenti/${uid}/giochi/${gioco}`;
       aggiornamenti[`${base}/elo`] = eloDopo;
       aggiornamenti[`${base}/partiteGiocate`] = stats.partiteGiocate + 1;
       aggiornamenti[`${base}/partiteVinte`] = stats.partiteVinte + (!pareggio && uid === vincitoreUid ? 1 : 0);
@@ -9501,9 +9490,9 @@ const creaModuloOthello = function creaModuloOthello(deps) {
       if (partita.giocatori[uid]) partita.giocatori[uid].elo = eloDopo;
     }
 
-    const storicoRef = db.ref(`giochi/${OTHELLO_ID_GIOCO}/storicoPartite`).push();
-    const conteggio = contaDischi(partita.tavola);
-    aggiornamenti[`giochi/${OTHELLO_ID_GIOCO}/storicoPartite/${storicoRef.key}`] = {
+    const storicoRef = db.ref(`giochi/${gioco}/storicoPartite`).push();
+    const conteggio = regoleScacchi ? null : contaDischi(partita.tavola);
+    aggiornamenti[`giochi/${gioco}/storicoPartite/${storicoRef.key}`] = {
       id: storicoRef.key,
       data: Date.now(),
       partitaId: partita.id,
@@ -9511,8 +9500,9 @@ const creaModuloOthello = function creaModuloOthello(deps) {
       classificata: partita.classificata !== false,
       vincitoreUid: pareggio ? null : vincitoreUid,
       pareggio: pareggio === true,
-      dischiNero: conteggio.nero,
-      dischiBianco: conteggio.bianco,
+      ...(regoleScacchi
+        ? { notazione: partita.notazione || [], motivoFine: partita.motivoFine }
+        : { dischiNero: conteggio.nero, dischiBianco: conteggio.bianco }),
       partecipanti: uids.map(uid => ({ uid, nome: partita.giocatori[uid]?.nome || "Giocatore" })),
       risultatiElo
     };
@@ -9527,9 +9517,9 @@ const creaModuloOthello = function creaModuloOthello(deps) {
 
   async function inviaStatoPartita(partita) {
     const stato = serializzaPartitaClient(partita);
-    spettatori.pubblica(partita, { tipo: "othello_stato", partita: stato });
+    spettatori.pubblica(partita, { tipo: `${gioco}_stato`, partita: stato });
     for (const g of Object.values(partita.giocatori || {})) {
-      inviaSocket(g.socket, { tipo: "othello_stato", partita: stato });
+      inviaSocket(g.socket, { tipo: `${gioco}_stato`, partita: stato });
     }
   }
 
@@ -9548,14 +9538,14 @@ const creaModuloOthello = function creaModuloOthello(deps) {
     try {
       risultatiElo = await aggiornaStatisticheFinali(partita, vincitoreUid, pareggio);
     } catch (errore) {
-      console.error("Othello: errore aggiornamento ELO:", errore.message);
+      console.error(`${nomeGioco}: errore aggiornamento ELO:`, errore.message);
     }
 
     const stato = serializzaPartitaClient(partita);
-    spettatori.pubblica(partita, { tipo: "othello_fine", partita: stato, vincitoreUid, motivo, pareggio });
+    spettatori.pubblica(partita, { tipo: `${gioco}_fine`, partita: stato, vincitoreUid, motivo, pareggio });
     for (const g of Object.values(partita.giocatori || {})) {
       inviaSocket(g.socket, {
-        tipo: "othello_fine",
+        tipo: `${gioco}_fine`,
         partita: stato,
         vincitoreUid: pareggio ? null : vincitoreUid,
         motivo: motivo || null,
@@ -9590,14 +9580,21 @@ const creaModuloOthello = function creaModuloOthello(deps) {
     if (typeof partita.timerTurno.unref === "function") partita.timerTurno.unref();
   }
 
-  // Dopo una mossa: passa il turno all'avversario; se lui non può muovere il
-  // turno resta al giocatore corrente; se nessuno può muovere la partita finisce.
+  // Negli scacchi il turno alterna sempre. In Othello può saltare un turno.
   async function finalizzaMossa(partita) {
     const moventeColore = partita.turno;
     const prossimoColore = coloreAvversario(moventeColore);
     partita.numeroMossa = Number(partita.numeroMossa || 0) + 1;
 
-    if (mosseLegaliPer(partita.tavola, prossimoColore).length > 0) {
+    if (regoleScacchi) {
+      partita.turno = prossimoColore;
+      const esito = regoleScacchi.esito(partita.motoreScacchi);
+      if (esito) {
+        const vincitore = esito.vincitore ? uidPerColore(partita, esito.vincitore) : null;
+        await concludiPartita(partita, vincitore, esito.motivo, !esito.vincitore);
+        return;
+      }
+    } else if (mosseLegaliPer(partita.tavola, prossimoColore).length > 0) {
       partita.turno = prossimoColore;
     } else if (mosseLegaliPer(partita.tavola, moventeColore).length === 0) {
       const conteggio = contaDischi(partita.tavola);
@@ -9618,16 +9615,30 @@ const creaModuloOthello = function creaModuloOthello(deps) {
 
     avviaTimer(partita, false);
     try { await salvaPartita(partita); }
-    catch (errore) { console.error("Othello: errore salvataggio mossa:", errore.message); }
+    catch (errore) { console.error(`${nomeGioco}: errore salvataggio mossa:`, errore.message); }
     await inviaStatoPartita(partita);
   }
 
-  async function eseguiMossa(partita, uid, a) {
+  async function eseguiMossa(partita, uid, dati) {
     if (!partita || partita.fase !== "in_corso") return { ok: false, errore: "Partita non disponibile." };
     const giocatore = partita.giocatori?.[uid];
     if (!giocatore || giocatore.colore !== partita.turno) return { ok: false, errore: "Non è il tuo turno." };
 
-    const r = Number(a?.r), c = Number(a?.c);
+    if (regoleScacchi) {
+      if (partita.scadenzaTurno && Date.now() >= partita.scadenzaTurno) {
+        await concludiPartita(partita, uidPerColore(partita, coloreAvversario(partita.turno)), "Tempo esaurito.", false);
+        return { ok: true };
+      }
+      const movimento = regoleScacchi.eseguiMossa(partita.motoreScacchi, dati, uid);
+      if (!movimento) return { ok: false, errore: "Mossa non consentita." };
+      partita.tavola = regoleScacchi.tavola(partita.motoreScacchi);
+      partita.notazione.push(movimento.san);
+      partita.ultimoMovimento = movimento;
+      await finalizzaMossa(partita);
+      return { ok: true };
+    }
+
+    const r = Number(dati.a?.r), c = Number(dati.a?.c);
     if (!Number.isInteger(r) || !Number.isInteger(c) || !dentro(r, c)) {
       return { ok: false, errore: "Mossa non valida." };
     }
@@ -9655,8 +9666,14 @@ const creaModuloOthello = function creaModuloOthello(deps) {
 
     partita.giocatori[uidNero].colore = "nero";
     partita.giocatori[uidBianco].colore = "bianco";
-    partita.tavola = creaTavolaIniziale();
-    partita.turno = "nero"; // in Othello il Nero muove sempre per primo
+    if (regoleScacchi) {
+      partita.motoreScacchi = regoleScacchi.creaMotore();
+      partita.notazione = [];
+      partita.tavola = regoleScacchi.tavola(partita.motoreScacchi);
+    } else {
+      partita.tavola = creaTavolaIniziale();
+    }
+    partita.turno = coloreIniziale;
     partita.fase = "in_corso";
     partita.iniziata = true;
     partita.iniziataIl = Date.now();
@@ -9665,7 +9682,7 @@ const creaModuloOthello = function creaModuloOthello(deps) {
     avviaTimer(partita, false);
 
     try { await salvaPartita(partita); }
-    catch (errore) { console.error("Othello: errore salvataggio avvio partita:", errore.message); }
+    catch (errore) { console.error(`${nomeGioco}: errore salvataggio avvio partita:`, errore.message); }
 
     for (const g of Object.values(partita.giocatori)) {
       inviaSocket(g.socket, { tipo: "partitaAvviata", partitaId: partita.id, mediaAttiva: partita.mediaAttiva === true });
@@ -9699,18 +9716,18 @@ const creaModuloOthello = function creaModuloOthello(deps) {
       caricaUtenteRealtimeLeggero(uid, nicknameFallback), leggiStatisticheUtente(uid)
     ]);
     if (!base) return null;
-    return { ...base, eloOthello: stats.elo };
+    return { ...base, eloGioco: stats.elo };
   }
 
   async function ripristinaPartiteDaFirebase() {
     const db = getDb();
     if (!db) return;
-    const snap = await db.ref(`giochi/${OTHELLO_ID_GIOCO}/partite`).once("value");
+    const snap = await db.ref(`giochi/${gioco}/partite`).once("value");
     const salvate = snap.val() || {};
     let ripristinate = 0;
 
     for (const [id, dati] of Object.entries(salvate)) {
-      if (!dati || !othelloStanze[dati.stanza]) continue;
+      if (!dati || !stanzeGioco[dati.stanza]) continue;
 
       const giocatori = {};
       for (const [uid, g] of Object.entries(dati.giocatori || {})) {
@@ -9718,7 +9735,7 @@ const creaModuloOthello = function creaModuloOthello(deps) {
           nome: g.nome || "Giocatore",
           avatar: g.avatar || null,
           colore: g.colore || null,
-          elo: Number.isFinite(Number(g.elo)) ? Math.round(Number(g.elo)) : OTHELLO_ELO_INIZIALE,
+          elo: Number.isFinite(Number(g.elo)) ? Math.round(Number(g.elo)) : ELO_INIZIALE,
           socket: null
         };
       }
@@ -9726,7 +9743,7 @@ const creaModuloOthello = function creaModuloOthello(deps) {
       const partita = {
         ...dati,
         id,
-        gioco: OTHELLO_ID_GIOCO,
+        gioco,
         maxGiocatori: 2,
         mediaAttiva: dati.mediaAttiva === true,
         giocatori,
@@ -9736,14 +9753,27 @@ const creaModuloOthello = function creaModuloOthello(deps) {
         timerTurno: null
       };
 
-      othelloStanze[dati.stanza].partite[id] = partita;
+      if (regoleScacchi && partita.iniziata === true) {
+        try {
+          partita.notazione = Array.isArray(dati.notazione) ? dati.notazione : [];
+          partita.motoreScacchi = regoleScacchi.creaMotore(partita.notazione);
+          partita.tavola = regoleScacchi.tavola(partita.motoreScacchi);
+          partita.turno = regoleScacchi.colore(partita.motoreScacchi.turn());
+          partita.numeroMossa = partita.notazione.length;
+        } catch (errore) {
+          console.error("Scacchi: errore nel ripristino della partita:", id, errore.message);
+          continue;
+        }
+      }
+
+      stanzeGioco[dati.stanza].partite[id] = partita;
       ripristinate++;
 
       if (partita.fase === "in_corso" && partita.iniziata === true && partita.tavola) {
         avviaTimer(partita, true);
       }
     }
-    console.log("Partite Othello ripristinate da Firebase:", ripristinate);
+    console.log(`Partite ${nomeGioco} ripristinate da Firebase:`, ripristinate);
   }
 
   /* =======================================================================
@@ -9760,7 +9790,7 @@ const creaModuloOthello = function creaModuloOthello(deps) {
       inviaSocket(socket, { tipo: "sessioneScaduta" });
       return;
     }
-    if (typeof stanza !== "string" || !othelloStanze[stanza]) {
+    if (typeof stanza !== "string" || !stanzeGioco[stanza]) {
       inviaSocket(socket, { tipo: "errore", messaggio: "Stanza non valida." });
       return;
     }
@@ -9784,8 +9814,8 @@ const creaModuloOthello = function creaModuloOthello(deps) {
     }
 
     const c = contesto(socketId, socket, tipoDispositivo, uid);
-    if (c.stanza && c.stanza !== stanza && othelloStanze[c.stanza]) {
-      delete othelloStanze[c.stanza].giocatoriOnline[socketId];
+    if (c.stanza && c.stanza !== stanza && stanzeGioco[c.stanza]) {
+      delete stanzeGioco[c.stanza].giocatoriOnline[socketId];
     }
 
     c.uid = uid;
@@ -9795,8 +9825,8 @@ const creaModuloOthello = function creaModuloOthello(deps) {
     c.schermataPartita = false;
     c.partitaId = null;
 
-    completaRientroLobby(othelloStanze[stanza], uid);
-    othelloStanze[stanza].giocatoriOnline[socketId] = {
+    completaRientroLobby(stanzeGioco[stanza], uid);
+    stanzeGioco[stanza].giocatoriOnline[socketId] = {
       uid,
       nickname: c.nickname,
       avatar: c.avatar,
@@ -9805,11 +9835,11 @@ const creaModuloOthello = function creaModuloOthello(deps) {
       partitaIdAttiva: null
     };
 
-    for (const partita of Object.values(othelloStanze[stanza].partite || {})) {
+    for (const partita of Object.values(stanzeGioco[stanza].partite || {})) {
       if (partita.giocatori?.[uid] && partita.fase === "attesa_giocatori") {
         partita.giocatori[uid].socket = socket;
         partita.giocatori[uid].avatar = c.avatar;
-        partita.giocatori[uid].elo = utente.eloOthello;
+        partita.giocatori[uid].elo = utente.eloGioco;
       }
     }
 
@@ -9818,12 +9848,12 @@ const creaModuloOthello = function creaModuloOthello(deps) {
     inviaListaPartite(stanza);
     inviaSocket(socket, {
       tipo: "online",
-      numero: presenzeUnicheStanza(othelloStanze[stanza]).length
+      numero: presenzeUnicheStanza(stanzeGioco[stanza]).length
     });
     inviaSocket(socket, { tipo: "statoPartitaPersonale", partitaAttiva: trovaPartitaPerUid(uid) });
   }
 
-  // Ritorna true se il messaggio è stato gestito (sempre, se appartiene a Othello).
+  // Ritorna true se il messaggio appartiene a questo gioco.
   async function gestisciMessaggioSocket({
     socket, socketId, tipoDispositivo, uid, datiTokenIniziali, giocoRichiestoSocket, ingressoLobby, dati
   }) {
@@ -9834,7 +9864,7 @@ const creaModuloOthello = function creaModuloOthello(deps) {
     const tipo = typeof dati.tipo === "string" ? dati.tipo : "";
 
     if (tipo === "richiediConteggio") {
-      annullaRientroLobby(othelloStanze, uid, dati.rientro);
+      annullaRientroLobby(stanzeGioco, uid, dati.rientro);
       inviaConteggioStanze();
       return true;
     }
@@ -9845,14 +9875,14 @@ const creaModuloOthello = function creaModuloOthello(deps) {
     }
 
     if (tipo === "lasciaLobby") {
-      const annullato = annullaRientroLobby(othelloStanze, uid, dati.rientro);
-      if (c.stanza && othelloStanze[c.stanza]) {
+      const annullato = annullaRientroLobby(stanzeGioco, uid, dati.rientro);
+      if (c.stanza && stanzeGioco[c.stanza]) {
         const stanza = c.stanza;
         c.stanza = null;
-        delete othelloStanze[stanza].giocatoriOnline[socketId];
+        delete stanzeGioco[stanza].giocatoriOnline[socketId];
         inviaConteggioStanze();
 
-        for (const partita of Object.values(othelloStanze[stanza].partite || {})) {
+        for (const partita of Object.values(stanzeGioco[stanza].partite || {})) {
           if (
             partita.fase === "attesa_giocatori" &&
             partita.giocatori?.[c.uid] &&
@@ -9874,7 +9904,7 @@ const creaModuloOthello = function creaModuloOthello(deps) {
     }
 
     if (tipo === "rientroLobby") {
-      preparaRientroLobby(othelloStanze[c.stanza], socketId, dati.idRientro, inviaConteggioStanze);
+      preparaRientroLobby(stanzeGioco[c.stanza], socketId, dati.idRientro, inviaConteggioStanze);
       inviaSocket(socket, { tipo: "rientroLobbyPronto" });
       return true;
     }
@@ -9888,19 +9918,24 @@ const creaModuloOthello = function creaModuloOthello(deps) {
 
     if (tipo === "creaPartita") {
       const stanza = c.stanza;
-      if (!stanza || !othelloStanze[stanza]) return true;
+      if (!stanza || !stanzeGioco[stanza]) return true;
       if (trovaPartitaPerUid(uid)) {
-        inviaSocket(socket, { tipo: "errore", messaggio: "Fai già parte di una partita di Othello attiva." });
+        inviaSocket(socket, { tipo: "errore", messaggio: `Fai già parte di una partita di ${nomeGioco} attiva.` });
         return true;
       }
 
       const tempoRichiesto = parseInt(dati.tempo, 10);
       const tempo = String(Math.max(
-        OTHELLO_TEMPO_MINIMO_SECONDI,
-        Math.min(OTHELLO_TEMPO_MASSIMO_SECONDI, Number.isFinite(tempoRichiesto) ? tempoRichiesto : 15)
+        tempoMinimo,
+        Math.min(TEMPO_MASSIMO_SECONDI, Number.isFinite(tempoRichiesto) ? tempoRichiesto : tempoPredefinito)
       ));
-      const id = "othello_" + Date.now() + "_" + Math.floor(Math.random() * 100000);
+      const id = `${gioco}_` + Date.now() + "_" + Math.floor(Math.random() * 100000);
       const stats = await leggiStatisticheUtente(uid);
+      if (c.stanza !== stanza || socket.readyState !== WebSocket.OPEN) return true;
+      if (trovaPartitaPerUid(uid)) {
+        inviaSocket(socket, { tipo: "errore", messaggio: `Fai già parte di una partita di ${nomeGioco} attiva.` });
+        return true;
+      }
 
       if (dati.mediaAttiva === true && dati.mediaConsenso !== true) {
         inviaSocket(socket, { tipo: "errore", messaggio: "Autorizza i dispositivi richiesti per creare il tavolo." });
@@ -9909,7 +9944,7 @@ const creaModuloOthello = function creaModuloOthello(deps) {
 
       const partita = {
         id,
-        gioco: OTHELLO_ID_GIOCO,
+        gioco,
         stanza,
         creatore: c.nickname || "Giocatore",
         creatoDa: uid,
@@ -9932,7 +9967,7 @@ const creaModuloOthello = function creaModuloOthello(deps) {
           }
         },
         ordineGiocatori: [uid],
-        turno: "nero",
+        turno: coloreIniziale,
         tavola: null,
         numeroMossa: 0,
         ultimoMovimento: null,
@@ -9942,12 +9977,12 @@ const creaModuloOthello = function creaModuloOthello(deps) {
         timerTurno: null
       };
 
-      othelloStanze[stanza].partite[id] = partita;
+      stanzeGioco[stanza].partite[id] = partita;
       try {
         await salvaPartita(partita);
       } catch (errore) {
-        delete othelloStanze[stanza].partite[id];
-        console.error("Othello: errore creazione partita:", errore.message);
+        delete stanzeGioco[stanza].partite[id];
+        console.error(`${nomeGioco}: errore creazione partita:`, errore.message);
         inviaSocket(socket, { tipo: "errore", messaggio: "Non è stato possibile creare la partita." });
         return true;
       }
@@ -9959,7 +9994,7 @@ const creaModuloOthello = function creaModuloOthello(deps) {
 
     if (tipo === "entraPartita") {
       const stanza = c.stanza;
-      const partita = stanza ? othelloStanze[stanza]?.partite?.[dati.id] : null;
+      const partita = stanza ? stanzeGioco[stanza]?.partite?.[dati.id] : null;
       if (!partita) return true;
       if (partita.mediaAttiva === true && dati.mediaConsenso !== true) {
         inviaSocket(socket, { tipo: "errore", messaggio: "Autorizza i dispositivi richiesti per entrare nel tavolo." });
@@ -9971,7 +10006,7 @@ const creaModuloOthello = function creaModuloOthello(deps) {
       }
       if (partita.giocatori[uid]) return true;
       if (trovaPartitaPerUid(uid)) {
-        inviaSocket(socket, { tipo: "errore", messaggio: "Fai già parte di un'altra partita di Othello." });
+        inviaSocket(socket, { tipo: "errore", messaggio: `Fai già parte di un'altra partita di ${nomeGioco}.` });
         return true;
       }
       if (partita.modalita === "privata") {
@@ -9985,6 +10020,12 @@ const creaModuloOthello = function creaModuloOthello(deps) {
       if (Object.keys(partita.giocatori).length >= 2) return true;
 
       const stats = await leggiStatisticheUtente(uid);
+      if (socket.readyState !== WebSocket.OPEN || c.stanza !== stanza) return true;
+      if (stanzeGioco[stanza].partite[partita.id] !== partita || partita.fase !== "attesa_giocatori" ||
+          Object.keys(partita.giocatori).length >= 2 || trovaPartitaPerUid(uid)) {
+        inviaSocket(socket, { tipo: "errore", messaggio: "La partita non è più disponibile." });
+        return true;
+      }
       partita.giocatori[uid] = {
         nome: c.nickname || "Giocatore",
         avatar: c.avatar || null,
@@ -10013,8 +10054,8 @@ const creaModuloOthello = function creaModuloOthello(deps) {
         return true;
       }
 
-      const socketIdDest = Object.keys(othelloStanze[stanza].giocatoriOnline || {}).find(
-        sid => othelloStanze[stanza].giocatoriOnline[sid]?.uid === destinatarioUid
+      const socketIdDest = Object.keys(stanzeGioco[stanza].giocatoriOnline || {}).find(
+        sid => stanzeGioco[stanza].giocatoriOnline[sid]?.uid === destinatarioUid
       );
       if (!socketIdDest) {
         inviaSocket(socket, { tipo: "errore", messaggio: "Questo giocatore non è più online in questa stanza." });
@@ -10033,7 +10074,7 @@ const creaModuloOthello = function creaModuloOthello(deps) {
       inviaSocket(socket, {
         tipo: "invitoInviato",
         destinatarioUid,
-        destinatarioNome: othelloStanze[stanza].giocatoriOnline[socketIdDest]?.nickname || "Giocatore"
+        destinatarioNome: stanzeGioco[stanza].giocatoriOnline[socketIdDest]?.nickname || "Giocatore"
       });
       return true;
     }
@@ -10063,7 +10104,7 @@ const creaModuloOthello = function creaModuloOthello(deps) {
         return true;
       }
       if (trovaPartitaPerUid(uid)) {
-        inviaSocket(socket, { tipo: "errore", messaggio: "Fai già parte di un'altra partita di Othello." });
+        inviaSocket(socket, { tipo: "errore", messaggio: `Fai già parte di un'altra partita di ${nomeGioco}.` });
         return true;
       }
       if (await partitaContieneUtenteBloccato(partita, uid)) {
@@ -10073,6 +10114,12 @@ const creaModuloOthello = function creaModuloOthello(deps) {
       }
 
       const stats = await leggiStatisticheUtente(uid);
+      if (socket.readyState !== WebSocket.OPEN) return true;
+      if (stanzeGioco[stanza].partite[partita.id] !== partita || partita.fase !== "attesa_giocatori" ||
+          !partita.invitati?.[uid] || Object.keys(partita.giocatori).length >= 2 || trovaPartitaPerUid(uid)) {
+        inviaSocket(socket, { tipo: "errore", messaggio: "La partita non è più disponibile." });
+        return true;
+      }
       c.stanza = stanza;
       partita.giocatori[uid] = {
         nome: c.nickname || "Giocatore",
@@ -10092,7 +10139,7 @@ const creaModuloOthello = function creaModuloOthello(deps) {
     if (tipo === "eliminaPartita") {
       const stanza = c.stanza;
       if (!stanza) return true;
-      const partita = Object.values(othelloStanze[stanza].partite || {}).find(
+      const partita = Object.values(stanzeGioco[stanza].partite || {}).find(
         p => p.creatoDa === uid && p.fase === "attesa_giocatori"
       );
       if (!partita) {
@@ -10132,13 +10179,13 @@ const creaModuloOthello = function creaModuloOthello(deps) {
           nome: c.nickname || "Giocatore",
           testo,
           ambito: "lobby",
-          stanza: `OTHELLO/${stanza}`
+          stanza: `${gioco.toUpperCase()}/${stanza}`
         });
       } catch (errore) {
-        console.error("Othello: errore log chat Lobby:", errore.message);
+        console.error(`${nomeGioco}: errore log chat Lobby:`, errore.message);
       }
 
-      for (const [sid, presenza] of Object.entries(othelloStanze[stanza].giocatoriOnline || {})) {
+      for (const [sid, presenza] of Object.entries(stanzeGioco[stanza].giocatoriOnline || {})) {
         if (!presenza?.uid) continue;
         if (presenza.uid !== uid && await sonoBloccatiTraLoro(uid, presenza.uid)) continue;
         inviaSocket(socketsPerId[sid], {
@@ -10153,16 +10200,16 @@ const creaModuloOthello = function creaModuloOthello(deps) {
 
     /* ---------------------------- PARTITA ---------------------------- */
 
-    if (tipo === "othello_entra") {
+    if (tipo === `${gioco}_entra`) {
       const trovato = trovaPartita(dati.partitaId);
       if (!trovato) {
-        inviaSocket(socket, { tipo: "othello_errore", errore: "Partita di Othello non trovata." });
+        inviaSocket(socket, { tipo: `${gioco}_errore`, errore: `Partita di ${nomeGioco} non trovata.` });
         return true;
       }
       const { partita, stanza } = trovato;
       const giocatore = partita.giocatori?.[uid];
       if (!giocatore) {
-        inviaSocket(socket, { tipo: "othello_errore", errore: "Non fai parte di questa partita." });
+        inviaSocket(socket, { tipo: `${gioco}_errore`, errore: "Non fai parte di questa partita." });
         return true;
       }
 
@@ -10175,7 +10222,7 @@ const creaModuloOthello = function creaModuloOthello(deps) {
       giocatore.socket = socket;
       giocatore.nome = utente.nickname || giocatore.nome;
       giocatore.avatar = utente.avatar || null;
-      giocatore.elo = utente.eloOthello;
+      giocatore.elo = utente.eloGioco;
 
       c.uid = uid;
       c.nickname = giocatore.nome;
@@ -10184,8 +10231,8 @@ const creaModuloOthello = function creaModuloOthello(deps) {
       c.partitaId = partita.id;
       c.schermataPartita = true;
 
-      completaRientroLobby(othelloStanze[stanza], uid);
-      othelloStanze[stanza].giocatoriOnline[socketId] = {
+      completaRientroLobby(stanzeGioco[stanza], uid);
+      stanzeGioco[stanza].giocatoriOnline[socketId] = {
         uid,
         nickname: giocatore.nome,
         avatar: giocatore.avatar,
@@ -10194,9 +10241,9 @@ const creaModuloOthello = function creaModuloOthello(deps) {
         partitaIdAttiva: partita.id
       };
 
-      inviaSocket(socket, { tipo: "othello_identita", uid, colore: giocatore.colore });
+      inviaSocket(socket, { tipo: `${gioco}_identita`, uid, colore: giocatore.colore });
       inviaSocket(socket, {
-        tipo: "othello_stato",
+        tipo: `${gioco}_stato`,
         uid,
         colore: giocatore.colore,
         partita: serializzaPartitaClient(partita)
@@ -10206,19 +10253,21 @@ const creaModuloOthello = function creaModuloOthello(deps) {
       return true;
     }
 
-    if (tipo === "othello_mossa") {
+    if (tipo === `${gioco}_mossa`) {
       const trovato = trovaPartita(dati.partitaId);
       if (!trovato || !trovato.partita.giocatori?.[uid]) return true;
-      const risultato = await eseguiMossa(trovato.partita, uid, dati.a);
+      if (regoleScacchi && trovato.partita.giocatori[uid].socket !== socket) return true;
+      const risultato = await eseguiMossa(trovato.partita, uid, dati);
       if (!risultato.ok) {
-        inviaSocket(socket, { tipo: "othello_errore", errore: risultato.errore || "Mossa non valida." });
+        inviaSocket(socket, { tipo: `${gioco}_errore`, errore: risultato.errore || "Mossa non valida." });
       }
       return true;
     }
 
-    if (tipo === "othello_chat") {
+    if (tipo === `${gioco}_chat`) {
       const trovato = trovaPartita(dati.partitaId);
       if (!trovato || !trovato.partita.giocatori?.[uid]) return true;
+      if (regoleScacchi && trovato.partita.chatAttiva === false) return true;
       const testo = pulisciTesto(dati.messaggio, 250);
       if (!testo) return true;
 
@@ -10229,17 +10278,17 @@ const creaModuloOthello = function creaModuloOthello(deps) {
           nome: mittente.nome,
           testo,
           ambito: "partita",
-          stanza: `OTHELLO/${trovato.stanza}`,
+          stanza: `${gioco.toUpperCase()}/${trovato.stanza}`,
           partitaId: trovato.partita.id
         });
       } catch (errore) {
-        console.error("Othello: errore log chat Partita:", errore.message);
+        console.error(`${nomeGioco}: errore log chat Partita:`, errore.message);
       }
 
       for (const [destUid, g] of Object.entries(trovato.partita.giocatori)) {
         if (destUid !== uid && await sonoBloccatiTraLoro(uid, destUid)) continue;
         inviaSocket(g.socket, {
-          tipo: "othello_chat",
+          tipo: `${gioco}_chat`,
           uid,
           nickname: mittente.nome,
           messaggio: testo
@@ -10248,7 +10297,7 @@ const creaModuloOthello = function creaModuloOthello(deps) {
       return true;
     }
 
-    if (tipo === "othello_abbandona") {
+    if (tipo === `${gioco}_abbandona`) {
       const trovato = trovaPartita(dati.partitaId);
       if (!trovato || !trovato.partita.giocatori?.[uid]) return true;
       const avversarioUid = Object.keys(trovato.partita.giocatori).find(x => x !== uid);
@@ -10265,13 +10314,13 @@ const creaModuloOthello = function creaModuloOthello(deps) {
       return true;
     }
 
-    if (tipo === "othello_rivincita") {
+    if (tipo === `${gioco}_rivincita`) {
       const trovato = trovaPartita(dati.partitaId);
       if (!trovato || trovato.partita.giocatori?.[uid]?.socket !== socket) return true;
       const avversarioUid = Object.keys(trovato.partita.giocatori || {}).find(x => x !== uid);
       if (avversarioUid) {
         inviaSocket(trovato.partita.giocatori[avversarioUid]?.socket, {
-          tipo: "othello_rivincita",
+          tipo: `${gioco}_rivincita`,
           daUid: uid,
           messaggio: `${trovato.partita.giocatori[uid]?.nome || "L'avversario"} chiede una rivincita.`
         });
@@ -10279,22 +10328,22 @@ const creaModuloOthello = function creaModuloOthello(deps) {
       return true;
     }
 
-    inviaSocket(socket, { tipo: "othello_errore", errore: "Comando Othello non riconosciuto." });
+    inviaSocket(socket, { tipo: `${gioco}_errore`, errore: `Comando ${nomeGioco} non riconosciuto.` });
     return true;
   }
 
-  // Da chiamare alla chiusura del socket. Ritorna true se il socket era di Othello.
+  // Ritorna true se il socket apparteneva a questo gioco.
   async function chiudiSocket(socketId, socket) {
-    const c = othelloContestiSocket.get(socketId);
+    const c = contestiSocket.get(socketId);
     if (!c) return false;
-    othelloContestiSocket.delete(socketId);
+    contestiSocket.delete(socketId);
 
     const stanza = c.stanza;
-    if (stanza && othelloStanze[stanza]) {
-      delete othelloStanze[stanza].giocatoriOnline[socketId];
+    if (stanza && stanzeGioco[stanza]) {
+      delete stanzeGioco[stanza].giocatoriOnline[socketId];
       inviaConteggioStanze();
 
-      for (const partita of Object.values(othelloStanze[stanza].partite || {})) {
+      for (const partita of Object.values(stanzeGioco[stanza].partite || {})) {
         const giocatore = partita.giocatori?.[c.uid];
         if (!giocatore || (giocatore.socket && giocatore.socket !== socket)) continue;
 
@@ -10314,7 +10363,7 @@ const creaModuloOthello = function creaModuloOthello(deps) {
      API HTTP (classifica, profilo pubblico, statistiche personali)
      ======================================================================= */
 
-  app.get("/api/giochi/othello/top-giocatori", async (req, res) => {
+  app.get(`/api/giochi/${gioco}/top-giocatori`, async (req, res) => {
     try {
       const db = getDb();
       if (!db) return res.status(503).json({ errore: "Database non disponibile." });
@@ -10322,11 +10371,11 @@ const creaModuloOthello = function creaModuloOthello(deps) {
       const utenti = snap.val() || {};
       const giocatori = Object.entries(utenti)
         .map(([uid, utente]) => {
-          const stats = utente?.giochi?.[OTHELLO_ID_GIOCO] || {};
+          const stats = utente?.giochi?.[gioco] || {};
           return {
             uid,
             nickname: utente?.nickname || "Giocatore",
-            elo: Number.isFinite(Number(stats.elo)) ? Math.round(Number(stats.elo)) : OTHELLO_ELO_INIZIALE,
+            elo: Number.isFinite(Number(stats.elo)) ? Math.round(Number(stats.elo)) : ELO_INIZIALE,
             vinte: Math.max(0, Number(stats.partiteVinte) || 0),
             giocate: Math.max(0, Number(stats.partiteGiocate) || 0)
           };
@@ -10335,14 +10384,14 @@ const creaModuloOthello = function creaModuloOthello(deps) {
         .sort((a, b) => b.elo - a.elo || b.vinte - a.vinte || a.nickname.localeCompare(b.nickname, "it"))
         .slice(0, 100);
 
-      return res.json({ gioco: OTHELLO_ID_GIOCO, giocatori });
+      return res.json({ gioco, giocatori });
     } catch (errore) {
-      console.error("Othello: errore classifica:", errore.message);
-      return res.status(500).json({ errore: "Impossibile caricare la classifica di Othello." });
+      console.error(`${nomeGioco}: errore classifica:`, errore.message);
+      return res.status(500).json({ errore: `Impossibile caricare la classifica di ${nomeGioco}.` });
     }
   });
 
-  app.get("/api/giochi/othello/profilo-pubblico/:nickname", richiediAuth, async (req, res) => {
+  app.get(`/api/giochi/${gioco}/profilo-pubblico/:nickname`, richiediAuth, async (req, res) => {
     try {
       const db = getDb();
       if (!db) return res.status(503).json({ errore: "Database non disponibile." });
@@ -10370,17 +10419,17 @@ const creaModuloOthello = function creaModuloOthello(deps) {
         streakVittorieMassima: 0,
         vittoriaPiuVeloceSecondi: null,
         badge: [],
-        gioco: OTHELLO_ID_GIOCO,
+        gioco,
         statoAmicizia: statoAmiciziaCorrente,
         statoBlocco
       });
     } catch (errore) {
-      console.error("Othello: errore profilo pubblico:", errore.message);
-      return res.status(500).json({ errore: "Impossibile caricare il profilo Othello." });
+      console.error(`${nomeGioco}: errore profilo pubblico:`, errore.message);
+      return res.status(500).json({ errore: `Impossibile caricare il profilo ${nomeGioco}.` });
     }
   });
 
-  app.get("/api/giochi/othello/me", richiediAuth, async (req, res) => {
+  app.get(`/api/giochi/${gioco}/me`, richiediAuth, async (req, res) => {
     try {
       const db = getDb();
       if (!db) return res.status(503).json({ errore: "Database non disponibile." });
@@ -10398,31 +10447,30 @@ const creaModuloOthello = function creaModuloOthello(deps) {
           Boolean(utente.avatarPresente || utente.avatar),
           Number(utente.avatarAggiornatoIl) || 1
         ),
-        gioco: OTHELLO_ID_GIOCO,
+        gioco,
         ...stats
       });
     } catch (errore) {
-      console.error("Othello: errore lettura statistiche account:", errore.message);
-      return res.status(500).json({ errore: "Impossibile leggere le statistiche di Othello." });
+      console.error(`${nomeGioco}: errore lettura statistiche account:`, errore.message);
+      return res.status(500).json({ errore: `Impossibile leggere le statistiche di ${nomeGioco}.` });
     }
   });
 
-  spettatori.registra(OTHELLO_ID_GIOCO, {
+  spettatori.registra(gioco, {
     trova: trovaPartita,
-    partiteDelGiocatore: uid => partiteDelGiocatore(othelloStanze, uid),
-    stato: partita => ({ tipo: "othello_stato", partita: serializzaPartitaClient(partita) }),
+    partiteDelGiocatore: uid => partiteDelGiocatore(stanzeGioco, uid),
+    stato: partita => ({ tipo: `${gioco}_stato`, partita: serializzaPartitaClient(partita) }),
     aggiornaLobby: inviaListaPartite
   });
 
   return {
-    ID_GIOCO: OTHELLO_ID_GIOCO,
     gestisciMessaggioSocket,
     chiudiSocket,
     ripristinaPartiteDaFirebase
   };
-};
+}
 
-const othello = creaModuloOthello({
+const dipendenzeGiochiDaTavolo = {
   WebSocket,
   socketsPerId,
   app,
@@ -10438,7 +10486,16 @@ const othello = creaModuloOthello({
   calcolaNuovoElo,
   creaUrlAvatarRealtime,
   getDb: () => db
+};
+
+const othello = creaModuloGiocoDaTavolo(dipendenzeGiochiDaTavolo, {
+  gioco: "othello", nomeGioco: "Othello", coloreIniziale: "nero", tempoMinimo: 10, tempoPredefinito: 15
 });
+const scacchi = creaModuloGiocoDaTavolo(dipendenzeGiochiDaTavolo, {
+  gioco: "scacchi", nomeGioco: "Scacchi", coloreIniziale: "bianco", tempoMinimo: 15, tempoPredefinito: 60,
+  regoleScacchi: require("./scacchi-server")
+});
+const giochiDaTavolo = [othello, scacchi];
 
 function partiteDelGiocatore(stanzeDelGioco, uid) {
   const partite = [];
@@ -10482,17 +10539,16 @@ wss.on("connection", (socket, request) => {
   const socketId = "s" + (contatoreId++);
   socketsPerId[socketId] = socket;
 
-  // La Dama usa lo stesso account/JWT del resto di Giochi Società. Il parametro
-  // ?gioco=dama serve solo a separare il traffico realtime dei diversi giochi.
+  // I giochi condividono gli account. Il parametro gioco separa le connessioni realtime.
   const giocoRichiestoSocket = damaGiocoDaRequest(request);
   const socketSpettatore = /[?&]spettatore=1(?:&|$)/.test(request.url || "");
 
   let stanzaAttuale = null, nickname = null, mioAvatar = null;
   const tokenDalCookie = estraiTokenDaCookieHeader(request.headers.cookie);
-  const tokenDamaDaQuery = (giocoRichiestoSocket === DAMA_ID_GIOCO || giocoRichiestoSocket === "othello")
+  const tokenGiocoDaQuery = [DAMA_ID_GIOCO, "othello", "scacchi"].includes(giocoRichiestoSocket)
     ? damaTokenDaRequest(request)
     : null;
-  const datiTokenIniziali = verificaToken(tokenDalCookie || tokenDamaDaQuery);
+  const datiTokenIniziali = verificaToken(tokenDalCookie || tokenGiocoDaQuery);
   let uid = datiTokenIniziali ? datiTokenIniziali.uid : null;
   socket.gsUid = uid;
   socket.gsAccessChecked = false;
@@ -10555,11 +10611,8 @@ wss.on("connection", (socket, request) => {
         return;
       }
 
-      // I messaggi di Othello e della Dama vengono gestiti prima della logica
-      // del Gioco dell'Oca. In questo modo condividono account e server, ma
-      // partite, stanze ed ELO restano completamente separati.
-      if (othello) {
-        const gestitoOthello = await othello.gestisciMessaggioSocket({
+      for (const modulo of giochiDaTavolo) {
+        const gestito = await modulo.gestisciMessaggioSocket({
           socket,
           request,
           socketId,
@@ -10570,7 +10623,7 @@ wss.on("connection", (socket, request) => {
           ingressoLobby,
           dati
         });
-        if (gestitoOthello) return;
+        if (gestito) return;
       }
 
       if (damaMessaggioAppartieneAlGioco(giocoRichiestoSocket, dati)) {
@@ -11255,11 +11308,11 @@ socket.on("close", async () => {
       return;
     }
 
-    // Se questa connessione appartiene a Othello, la pulizia viene eseguita dal
-    // modulo Othello e non entra nella gestione delle stanze della Dama/Oca.
-    if (await othello.chiudiSocket(socketId, socket)) {
-      delete socketsPerId[socketId];
-      return;
+    for (const modulo of giochiDaTavolo) {
+      if (await modulo.chiudiSocket(socketId, socket)) {
+        delete socketsPerId[socketId];
+        return;
+      }
     }
 
     // Se questa connessione appartiene alla Dama, la pulizia viene eseguita dal
@@ -11316,7 +11369,9 @@ server.listen(PORT, () => {
   console.log("Server avviato sulla porta " + PORT);
   ripristinaPartiteDaFirebase()
     .then(() => damaRipristinaPartiteDaFirebase())
-    .then(() => othello.ripristinaPartiteDaFirebase())
+    .then(async () => {
+      for (const modulo of giochiDaTavolo) await modulo.ripristinaPartiteDaFirebase();
+    })
     .then(() => {
       databasePronto = Boolean(db);
     })

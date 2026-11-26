@@ -1,0 +1,2550 @@
+"use strict";
+
+/* =========================================================
+   SCACCHI
+   Il server valida le mosse. Il browser presenta la posizione
+   confermata e anima il movimento dei pezzi.
+   ========================================================= */
+
+const origineConfigurata = typeof window.GIOCO_SERVER_URL === "string" ? window.GIOCO_SERVER_URL.trim() : "";
+const hostLocale = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" || window.location.hostname === "[::1]";
+const paginaSulServerUfficiale = window.location.hostname === "api.giochisocieta.com";
+const ORIGINE_SERVER = (origineConfigurata || ((hostLocale || paginaSulServerUfficiale)
+  ? window.location.origin
+  : "https://api.giochisocieta.com")).replace(/\/$/, "");
+const URL_WEBSOCKET = ORIGINE_SERVER.replace(/^http:/, "ws:").replace(/^https:/, "wss:");
+
+const params = new URLSearchParams(window.location.search);
+const spettatore = window.SpettatoreGioco;
+const partitaId = params.get("partita") || params.get("id") || "";
+const stanza = params.get("stanza") || "BAR";
+const CHIAVE_TOKEN_AUTH = "giochiSocietaAuthToken";
+
+let socket = null;
+let timerRiconnessione = null;
+let paginaInChiusura = false;
+let mioUid = null;
+let mioColore = null;
+let mosseLegaliCorrenti = [];
+let messaggiChatNonLetti = 0;
+let graficaCaricata = false;
+let statoInizialeRicevuto = false;
+let timerMassimoCaricamento = null;
+let percentualeCaricamento = 10;
+let presentazioneSfidaAperta = false;
+let timerChiusuraPresentazioneSfida = null;
+let avvisoTempoChiave = "";
+let mossaInAttesa = false;
+let timerMossaInAttesa = null;
+let vittoriaMostrata = false;
+
+let ultimoNumeroMossaAccettato = -1;
+
+/* =========================================================
+   MOTORE DI REGOLE SCACCHI
+   ========================================================= */
+
+const nomiPezzi = Object.freeze({
+  p: "Pedone", n: "Cavallo", b: "Alfiere", r: "Torre", q: "Donna", k: "Re"
+});
+
+function tavolaInizialeScacchi() {
+  const tavola = Array.from({ length: 8 }, () => Array(8).fill(null));
+  const ordine = ["r", "n", "b", "q", "k", "b", "n", "r"];
+  for (let c = 0; c < 8; c++) {
+    tavola[0][c] = { tipo: ordine[c], colore: "nero" };
+    tavola[1][c] = { tipo: "p", colore: "nero" };
+    tavola[6][c] = { tipo: "p", colore: "bianco" };
+    tavola[7][c] = { tipo: ordine[c], colore: "bianco" };
+  }
+  return tavola;
+}
+
+function contaPezzi(tavola) {
+  const conteggio = { nero: 0, bianco: 0 };
+  for (const pezzo of tavola.flat()) if (pezzo) conteggio[pezzo.colore]++;
+  return conteggio;
+}
+
+function tavolaValida(tavola) {
+  return Array.isArray(tavola) && tavola.length === 8
+    && tavola.every(riga => Array.isArray(riga) && riga.length === 8
+      && riga.every(cella => cella === null || (coloreValido(cella?.colore) && Object.hasOwn(nomiPezzi, cella.tipo))));
+}
+
+function copiaTavola(tavola) {
+  return tavola.map(riga => riga.slice());
+}
+
+function coloreValido(colore) {
+  return colore === "nero" || colore === "bianco";
+}
+
+function avversarioDi(colore) {
+  return colore === "nero" ? "bianco" : colore === "bianco" ? "nero" : null;
+}
+
+function coloreUtenteDaPartita(partita = stato) {
+  const scheda = mioUid && partita?.giocatori ? partita.giocatori[mioUid] : null;
+  if (scheda && coloreValido(scheda.colore)) return scheda.colore;
+  return coloreValido(mioColore) ? mioColore : null;
+}
+
+function sincronizzaIdentitaDaPartita(partita, coloreFallback = null) {
+  const canonico = coloreUtenteDaPartita(partita);
+  if (canonico) {
+    if (mioColore && mioColore !== canonico) {
+      console.warn("Scacchi: colore locale corretto dal colore canonico della partita", {
+        precedente: mioColore,
+        corretto: canonico,
+        uid: mioUid
+      });
+    }
+    mioColore = canonico;
+    return canonico;
+  }
+  if (coloreValido(coloreFallback)) {
+    mioColore = coloreFallback;
+    return mioColore;
+  }
+  return null;
+}
+
+/* =========================================================
+   STATO
+   ========================================================= */
+
+let stato = {
+  id: partitaId || null,
+  stanza,
+  fase: "attesa_giocatori",
+  iniziata: false,
+  turno: "bianco",
+  tavola: tavolaInizialeScacchi(),
+  mosseLegali: [],
+  scacco: false,
+  chatAttiva: true,
+  giocatori: {},
+  numeroMossa: 0,
+  ultimoMovimento: null,
+  scadenzaTurno: null,
+  durataTurnoMs: null,
+  classificata: true,
+  vincitoreUid: null,
+  motivoFine: null
+};
+let ultimoStatoRicevuto = stato;
+let attesaSnapshot = true;
+
+/* =========================================================
+   TOKEN / SOCKET
+   ========================================================= */
+
+function tokenAutenticazione() {
+  try {
+    const hash = new URLSearchParams(location.hash.replace(/^#/, ""));
+    const daUrl = hash.get("auth_token");
+    if (daUrl) {
+      sessionStorage.setItem(CHIAVE_TOKEN_AUTH, daUrl);
+      hash.delete("auth_token");
+      history.replaceState(null, "", location.pathname + location.search + (hash.toString() ? "#" + hash.toString() : ""));
+      return daUrl;
+    }
+    return sessionStorage.getItem(CHIAVE_TOKEN_AUTH) || "";
+  } catch (_) {
+    return "";
+  }
+}
+
+function inviaSocket(dati) {
+  if (spettatore && dati.tipo !== "spettatore_entra") return false;
+  if (!socket || socket.readyState !== WebSocket.OPEN) return false;
+  try {
+    const token = tokenAutenticazione();
+    socket.send(JSON.stringify(token ? { ...dati, token } : dati));
+    return true;
+  } catch (errore) {
+    console.error("Invio WebSocket non riuscito:", errore);
+    return false;
+  }
+}
+
+function impostaStatoConnessione(disconnesso) {
+  const banner = document.getElementById("banner-disconnesso");
+  if (banner) banner.classList.toggle("nascosto", !disconnesso);
+  document.body.classList.toggle("disconnesso", disconnesso);
+}
+
+/* =========================================================
+   CARICAMENTO
+   ========================================================= */
+
+function aggiornaCaricamento(testo, percentuale) {
+  const testoEl = document.getElementById("caricamento-testo");
+  const barra = document.getElementById("caricamento-progress-bar");
+  const progresso = document.getElementById("caricamento-progress");
+  if (testoEl && testo) testoEl.textContent = testo;
+  if (Number.isFinite(percentuale)) {
+    percentualeCaricamento = Math.max(percentualeCaricamento, Math.max(0, Math.min(100, percentuale)));
+    if (barra) barra.style.width = percentualeCaricamento + "%";
+    if (progresso) progresso.setAttribute("aria-valuenow", String(percentualeCaricamento));
+  }
+}
+
+function terminaCaricamento(testoFinale) {
+  const overlay = document.getElementById("overlay-caricamento");
+  if (!overlay || overlay.classList.contains("caricamento-finito")) return;
+  aggiornaCaricamento(testoFinale || "Partita pronta", 100);
+  document.body.classList.remove("caricamento-in-corso");
+  if (timerMassimoCaricamento) {
+    clearTimeout(timerMassimoCaricamento);
+    timerMassimoCaricamento = null;
+  }
+  setTimeout(() => overlay.classList.add("caricamento-finito"), 180);
+}
+
+function verificaFineCaricamento() {
+  if (graficaCaricata && statoInizialeRicevuto) terminaCaricamento();
+}
+
+function segnalaGraficaCaricata() {
+  graficaCaricata = true;
+  aggiornaCaricamento(statoInizialeRicevuto ? "Partita pronta" : "Connessione alla partita…", statoInizialeRicevuto ? 100 : 55);
+  verificaFineCaricamento();
+}
+
+function segnalaStatoInizialeRicevuto() {
+  if (statoInizialeRicevuto) return;
+  statoInizialeRicevuto = true;
+  aggiornaCaricamento(graficaCaricata ? "Partita pronta" : "Caricamento tavola…", graficaCaricata ? 100 : 85);
+  verificaFineCaricamento();
+}
+
+/* =========================================================
+   NOTIFICHE / FLASH
+   ========================================================= */
+
+function mostraNotificaGioco(testo) {
+  const contenitore = document.getElementById("contenitore-notifiche-gioco");
+  if (!contenitore) {
+    console.error(testo);
+    return;
+  }
+  const toast = document.createElement("div");
+  toast.className = "notifica-toast-gioco";
+  toast.textContent = testo;
+  contenitore.appendChild(toast);
+  setTimeout(() => toast.remove(), 5000);
+}
+
+let timerFlashMessaggio = null;
+function mostraMessaggioGiocoGrande(testo, opzioni = {}) {
+  const overlay = document.getElementById("flash-messaggio-gioco");
+  const titolo = document.getElementById("flash-titolo-gioco");
+  const dettaglio = document.getElementById("flash-dettaglio-gioco");
+  const icona = document.getElementById("flash-icona-gioco");
+  if (!overlay || !titolo || !testo) return;
+
+  clearTimeout(timerFlashMessaggio);
+  titolo.textContent = testo;
+
+  if (dettaglio) {
+    dettaglio.textContent = opzioni.dettaglio || "";
+    dettaglio.hidden = !opzioni.dettaglio;
+  }
+  if (icona) {
+    icona.textContent = opzioni.icona || "";
+    icona.hidden = !opzioni.icona;
+  }
+
+  const durata = Math.max(900, Number(opzioni.durata) || 2200);
+  overlay.style.setProperty("--durata-flash-gioco", durata + "ms");
+  overlay.classList.remove("visibile");
+  void overlay.offsetWidth;
+  overlay.classList.add("visibile");
+  timerFlashMessaggio = setTimeout(() => overlay.classList.remove("visibile"), durata);
+}
+
+/* =========================================================
+   AUDIO
+   ========================================================= */
+
+let suoniAttivi = true;
+try { suoniAttivi = localStorage.getItem("suoniAttivi") !== "off"; } catch (_) {}
+let contestoAudio = null;
+let interazioneUtenteRegistrata = false;
+
+function ottieniContestoAudio() {
+  if (!interazioneUtenteRegistrata) return null;
+  if (!contestoAudio) {
+    const C = window.AudioContext || window.webkitAudioContext;
+    if (!C) return null;
+    try { contestoAudio = new C(); } catch (_) { return null; }
+  }
+  if (contestoAudio.state === "suspended") {
+    const p = contestoAudio.resume();
+    if (p && typeof p.catch === "function") p.catch(() => {});
+  }
+  return contestoAudio;
+}
+
+function registraPrimaInterazioneAudio() {
+  interazioneUtenteRegistrata = true;
+  document.removeEventListener("pointerdown", registraPrimaInterazioneAudio, true);
+  document.removeEventListener("keydown", registraPrimaInterazioneAudio, true);
+  if (suoniAttivi) ottieniContestoAudio();
+}
+
+document.addEventListener("pointerdown", registraPrimaInterazioneAudio, { capture: true, passive: true });
+document.addEventListener("keydown", registraPrimaInterazioneAudio, true);
+
+function suonaTono(frequenza, durataMs, tipoOnda = "sine", volume = 0.1, ritardoMs = 0) {
+  if (!suoniAttivi) return;
+  const ctx = ottieniContestoAudio();
+  if (!ctx) return;
+  const inizio = ctx.currentTime + ritardoMs / 1000;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = tipoOnda;
+  osc.frequency.setValueAtTime(frequenza, inizio);
+  gain.gain.setValueAtTime(0, inizio);
+  gain.gain.linearRampToValueAtTime(volume, inizio + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.0001, inizio + durataMs / 1000);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(inizio);
+  osc.stop(inizio + durataMs / 1000 + 0.02);
+}
+
+function suonaPosa() { suonaTono(500, 55, "sine", 0.09, 0); }
+function suonaFlip(ritardoMs) { suonaTono(320, 70, "triangle", 0.07, ritardoMs); }
+function suonaTuoTurno() { suonaTono(660, 120, "sine", 0.11, 0); suonaTono(880, 160, "sine", 0.11, 120); }
+function suonaVittoria() { suonaTono(523, 130, "sine", 0.13, 0); suonaTono(659, 130, "sine", 0.13, 130); suonaTono(784, 130, "sine", 0.13, 260); suonaTono(1047, 260, "sine", 0.14, 390); }
+function suonaMessaggioChat() { suonaTono(740, 70, "sine", 0.08, 0); }
+function suonaAvvisoTempo() { suonaTono(300, 90, "triangle", 0.14, 0); }
+
+function toggleSuoni() { impostaSuoni(!suoniAttivi); }
+function impostaSuoni(attivi) {
+  suoniAttivi = !!attivi;
+  try { localStorage.setItem("suoniAttivi", suoniAttivi ? "on" : "off"); } catch (_) {}
+  if (suoniAttivi && interazioneUtenteRegistrata) ottieniContestoAudio();
+  aggiornaTestoBottoneSuoni();
+}
+function aggiornaTestoBottoneSuoni() {
+  window.MenuPartita.impostaInterruttore("btn-toggle-suoni", suoniAttivi);
+}
+
+/* =========================================================
+   FULLSCREEN / LAYOUT
+   ========================================================= */
+
+function toggleFullscreen() {
+  try {
+    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+      const elemento = document.documentElement;
+      const richiesta = elemento.requestFullscreen || elemento.webkitRequestFullscreen || elemento.mozRequestFullScreen || elemento.msRequestFullscreen;
+      if (!richiesta) {
+        mostraNotificaGioco("Il tuo browser non supporta lo schermo intero.");
+        return;
+      }
+      const risultato = richiesta.call(elemento);
+      if (risultato && typeof risultato.catch === "function") risultato.catch(() => mostraNotificaGioco("Non è stato possibile attivare lo schermo intero."));
+    } else {
+      const esci = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
+      if (esci) esci.call(document);
+    }
+  } catch (_) {
+    mostraNotificaGioco("Errore durante l'attivazione dello schermo intero.");
+  }
+}
+
+const aggiornaTestoBottoneFullscreen = window.MenuPartita.aggiornaSchermoIntero;
+
+document.addEventListener("fullscreenchange", () => {
+  aggiornaTestoBottoneFullscreen();
+  aggiornaLayoutTabellone();
+});
+document.addEventListener("webkitfullscreenchange", () => {
+  aggiornaTestoBottoneFullscreen();
+  aggiornaLayoutTabellone();
+});
+
+function aggiornaLayoutTabellone() {
+  const areaTabellone = document.getElementById("area-tabellone");
+  const mondo = document.getElementById("mondo-ruotato");
+  if (!areaTabellone || !mondo) return;
+
+  const larghezzaFinestra = window.visualViewport ? window.visualViewport.width : window.innerWidth;
+  const altezzaReale = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+  document.documentElement.style.setProperty("--altezza-reale", altezzaReale + "px");
+
+  mondo.style.width = larghezzaFinestra + "px";
+  mondo.style.height = altezzaReale + "px";
+
+  const altezzaRaccolta = larghezzaFinestra < 600 ? 38 : 46;
+  document.documentElement.style.setProperty("--altezza-raccolta", altezzaRaccolta + "px");
+  const margineOrizzontale = Math.max(10, larghezzaFinestra * 0.015);
+  const spazioRaccolte = 2 * (altezzaRaccolta + 6);
+  const larghezzaDisponibile = larghezzaFinestra - margineOrizzontale * 2;
+  const tablet = tipoDispositivoMediaLocale === "tablet";
+  const tabletCompatto = tablet && (larghezzaFinestra < 900 || window.innerWidth <= window.innerHeight);
+  const videoSopra = tabletCompatto && mediaPartitaAttiva;
+  let altezzaDisponibile = altezzaReale - spazioRaccolte - 20;
+
+  if (tablet) {
+    const larghezzaVideo = Math.min(
+      (larghezzaFinestra - 32) / 2,
+      Math.max(108, Math.min(164, larghezzaFinestra * 0.2, altezzaReale * 0.2))
+    );
+    const fasciaComandi = tabletCompatto ? 72 : 18;
+    const spazioSopra = fasciaComandi + altezzaRaccolta + 10 + (videoSopra ? Math.ceil(larghezzaVideo * 0.75) + 8 : 0);
+    const spazioSotto = fasciaComandi + altezzaRaccolta + 12;
+    const stile = document.documentElement.style;
+    altezzaDisponibile = altezzaReale - spazioSopra - spazioSotto;
+    stile.setProperty("--othello-larghezza-video", larghezzaVideo + "px");
+    stile.setProperty("--othello-spazio-verticale", (spazioSopra + spazioSotto) + "px");
+    stile.setProperty("--othello-centro-verticale", (spazioSopra - spazioSotto) / 2 + "px");
+    stile.setProperty("--othello-larghezza-finestra", larghezzaFinestra + "px");
+  }
+  document.body.classList.toggle("othello-video-sopra", videoSopra);
+
+  const latoNaturale = Math.max(120, Math.min(larghezzaDisponibile, altezzaDisponibile));
+  const videoLaterale = mediaPartitaAttiva && !videoSopra && !clientCellulareAudioOnly && larghezzaFinestra >= 600;
+  const lato = window.VideochiamataDue.dimensiona(larghezzaFinestra, latoNaturale, videoLaterale);
+
+  const puntatorePreciso = !!window.matchMedia?.("(pointer: fine)").matches;
+  document.body.classList.toggle(
+    "modalita-desktop",
+    !tablet && puntatorePreciso && larghezzaFinestra >= 1000 && (videoLaterale || larghezzaFinestra - lato >= 600)
+  );
+
+  if (tablet) {
+    areaTabellone.style.setProperty("--othello-lato-tablet", lato + "px");
+  } else {
+    areaTabellone.style.width = lato + "px";
+    areaTabellone.style.height = lato + "px";
+  }
+}
+
+let timerDebounceResize = null;
+function gestisciResize() {
+  clearTimeout(timerDebounceResize);
+  timerDebounceResize = setTimeout(aggiornaLayoutTabellone, 60);
+}
+
+function inizializzaGestioneLayout() {
+  aggiornaLayoutTabellone();
+  window.addEventListener("resize", gestisciResize);
+  window.addEventListener("orientationchange", () => setTimeout(gestisciResize, 300));
+  if (window.visualViewport) window.visualViewport.addEventListener("resize", gestisciResize);
+  requestAnimationFrame(() => {
+    aggiornaLayoutTabellone();
+    segnalaGraficaCaricata();
+  });
+}
+
+/* =========================================================
+   VIDEOCHIAMATA DI TAVOLO — stessa logica del Gioco dell'Oca
+   ========================================================= */
+
+const mediaRichiestaDaLobby = params.get("media") === "1";
+
+function rilevaTipoDispositivoMediaLocale() {
+  const ua = String(navigator.userAgent || "");
+  const ipadConUserAgentDesktop = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+  if (ipadConUserAgentDesktop || /iPad/i.test(ua) || (/Android/i.test(ua) && !/Mobile/i.test(ua))) return "tablet";
+  if (/iPhone|iPod/i.test(ua) || (/Android/i.test(ua) && /Mobile/i.test(ua))) return "cellulare";
+  return "computer";
+}
+
+const tipoDispositivoMediaLocale = rilevaTipoDispositivoMediaLocale();
+const clientCellulareAudioOnly = tipoDispositivoMediaLocale === "cellulare";
+document.body.classList.toggle("client-cellulare-audio-only", clientCellulareAudioOnly);
+document.body.classList.toggle("client-tablet", tipoDispositivoMediaLocale === "tablet");
+document.body.classList.toggle("client-computer", tipoDispositivoMediaLocale === "computer");
+const schermoInteroDisponibile = document.fullscreenEnabled || document.webkitFullscreenEnabled;
+document.body.classList.toggle("othello-tablet-schermo-intero", tipoDispositivoMediaLocale === "tablet" && !!schermoInteroDisponibile);
+
+let mediaPartitaAttiva = false;
+let flussoMediaLocale = null;
+let avvioMediaInCorso = null;
+let mediaProntoSegnalato = false;
+let mediaRichiedeRiprovaManuale = false;
+let puliziaMediaInCorso = false;
+let connessioniPeer = {};
+let elementiVideoRemoti = {};
+let candidatiIceInAttesa = {};
+let timerRiprovaPeer = {};
+let timerDisconnessionePeer = {};
+let partecipantiMediaPronti = new Set();
+let partecipantiMediaInfo = new Map();
+const nomiPartecipantiMedia = new Map();
+let CONFIGURAZIONE_ICE = {
+  iceServers: [
+    { urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302", "stun:stun2.l.google.com:19302"] }
+  ],
+  iceCandidatePoolSize: 4,
+  bundlePolicy: "max-bundle"
+};
+
+const VINCOLI_AUDIO = {
+  echoCancellation: true,
+  noiseSuppression: true,
+  autoGainControl: true
+};
+
+const VINCOLI_MEDIA = {
+  audio: VINCOLI_AUDIO,
+  video: {
+    width: { ideal: 320, max: 640 },
+    height: { ideal: 240, max: 480 },
+    frameRate: { ideal: 15, max: 20 },
+    facingMode: { ideal: "user" }
+  }
+};
+
+function normalizzaTipoDispositivoMedia(tipo) {
+  if (tipo === "cellulare" || tipo === "tablet" || tipo === "computer") return tipo;
+  return "computer";
+}
+
+function descrittoreMediaPerUid(uid) {
+  const salvato = partecipantiMediaInfo.get(uid);
+  if (salvato) return salvato;
+  const giocatore = giocatoriStato().find(g => g && g.uid === uid);
+  const tipoDispositivo = normalizzaTipoDispositivoMedia(giocatore && giocatore.tipoDispositivo);
+  return {
+    uid,
+    tipoDispositivo,
+    videoDisponibile: tipoDispositivo !== "cellulare"
+  };
+}
+
+function peerSupportaVideo(uid) {
+  const info = descrittoreMediaPerUid(uid);
+  return info.tipoDispositivo !== "cellulare" && info.videoDisponibile !== false;
+}
+
+function streamLocaleMediaPronto(stream) {
+  if (!stream) return false;
+  const audioVivo = stream.getAudioTracks().some(t => t.readyState === "live");
+  if (!audioVivo) return false;
+  if (clientCellulareAudioOnly) return true;
+  return stream.getVideoTracks().some(t => t.readyState === "live");
+}
+
+function aspettaWebRtc(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function nomeErroreMediaPartita(errore) {
+  return String(errore && errore.name ? errore.name : "");
+}
+
+function descriviErroreMediaPartita(errore) {
+  const nome = nomeErroreMediaPartita(errore);
+  if (nome === "NotAllowedError" || nome === "SecurityError" || nome === "PermissionDeniedError") {
+    return clientCellulareAudioOnly
+      ? "Permesso negato: abilita il microfono nelle impostazioni del browser."
+      : "Permesso negato: abilita webcam e microfono nelle impostazioni del browser.";
+  }
+  if (nome === "NotFoundError" || nome === "DevicesNotFoundError") {
+    return clientCellulareAudioOnly ? "Microfono non trovato." : "Webcam o microfono non trovati.";
+  }
+  if (nome === "NotReadableError" || nome === "TrackStartError") {
+    return clientCellulareAudioOnly
+      ? "Il microfono è occupato da un'altra app o scheda."
+      : "Webcam o microfono sono occupati da un'altra app o scheda.";
+  }
+  if (nome === "OverconstrainedError" || nome === "ConstraintNotSatisfiedError") {
+    return clientCellulareAudioOnly
+      ? "Il dispositivo non supporta le impostazioni audio richieste."
+      : "Il dispositivo non supporta le impostazioni video richieste.";
+  }
+  if (nome === "AbortError") {
+    return clientCellulareAudioOnly
+      ? "Apertura del microfono interrotta dal browser."
+      : "Apertura di webcam o microfono interrotta dal browser.";
+  }
+  return clientCellulareAudioOnly ? "Microfono non disponibile." : "Webcam o microfono non disponibili.";
+}
+
+function aggiornaNomiPartecipanti(dati) {
+  if (!dati || !Array.isArray(dati.giocatori)) return;
+  dati.giocatori.forEach(giocatore => {
+    const uidGiocatore = giocatore && (giocatore.id || giocatore.uid);
+    if (!uidGiocatore) return;
+    nomiPartecipantiMedia.set(uidGiocatore, giocatore.nome || "Giocatore");
+    if (!partecipantiMediaInfo.has(uidGiocatore) && giocatore.tipoDispositivo) {
+      const tipoDispositivo = normalizzaTipoDispositivoMedia(giocatore.tipoDispositivo);
+      partecipantiMediaInfo.set(uidGiocatore, {
+        uid: uidGiocatore,
+        tipoDispositivo,
+        videoDisponibile: tipoDispositivo !== "cellulare"
+      });
+    }
+  });
+  Object.entries(elementiVideoRemoti).forEach(([uidGiocatore, elementi]) => {
+    if (elementi && elementi.didascalia) {
+      elementi.didascalia.textContent = nomiPartecipantiMedia.get(uidGiocatore) || "Giocatore";
+    }
+  });
+}
+
+function aggiornaConfigurazioneIce(configurazione) {
+  if (!configurazione || !Array.isArray(configurazione.iceServers)) return;
+  const iceServers = configurazione.iceServers.slice(0, 6).filter(server => {
+    const urls = Array.isArray(server && server.urls) ? server.urls : [server && server.urls];
+    return urls.length > 0 && urls.every(url => typeof url === "string" && /^(stun|stuns|turn|turns):/i.test(url));
+  }).map(server => ({
+    urls: server.urls,
+    ...(typeof server.username === "string" ? { username: server.username } : {}),
+    ...(typeof server.credential === "string" ? { credential: server.credential } : {})
+  }));
+  if (iceServers.length) {
+    CONFIGURAZIONE_ICE = {
+      iceServers,
+      iceCandidatePoolSize: 4,
+      bundlePolicy: "max-bundle"
+    };
+  }
+}
+
+function aggiornaInterfacciaMedia(testo, errore) {
+  const layoutMediaEraAttivo = document.body.classList.contains("media-partita");
+  document.body.classList.toggle("media-partita", mediaPartitaAttiva);
+  document.body.classList.toggle("client-cellulare-audio-only", clientCellulareAudioOnly);
+  if (layoutMediaEraAttivo !== mediaPartitaAttiva) requestAnimationFrame(aggiornaLayoutTabellone);
+
+  const pannello = document.getElementById("videochiamata");
+  const statoTesto = document.getElementById("stato-media-connessione");
+  if (pannello) pannello.classList.toggle("nascosto", !mediaPartitaAttiva);
+  if (statoTesto) {
+    statoTesto.textContent = testo || (mediaPartitaAttiva ? "Collegamento…" : "Non attiva");
+    statoTesto.style.color = errore ? "#ff8a80" : "";
+  }
+  window.MenuPartita.impostaVideochiamata(mediaPartitaAttiva, clientCellulareAudioOnly, errore);
+  aggiornaControlliMediaLocale();
+}
+
+function aggiornaControlliMediaLocale() {
+  const tracciaAudio = flussoMediaLocale && flussoMediaLocale.getAudioTracks().find(t => t.readyState === "live");
+  const tracciaVideo = flussoMediaLocale && flussoMediaLocale.getVideoTracks().find(t => t.readyState === "live");
+  const btnMic = document.getElementById("btn-toggle-microfono-media");
+  const btnCam = document.getElementById("btn-toggle-webcam-media");
+
+  if (btnMic) {
+    const acceso = !!(tracciaAudio && tracciaAudio.enabled);
+    btnMic.disabled = !tracciaAudio;
+    btnMic.textContent = acceso ? "🎙️" : "🔇";
+    btnMic.setAttribute("aria-pressed", acceso ? "false" : "true");
+    btnMic.setAttribute("aria-label", acceso ? "Disattiva microfono" : "Attiva microfono");
+    btnMic.title = acceso ? "Disattiva microfono" : "Attiva microfono";
+    btnMic.classList.toggle("media-spento", !!tracciaAudio && !acceso);
+  }
+
+  if (btnCam) {
+    btnCam.hidden = clientCellulareAudioOnly;
+    btnCam.setAttribute("aria-hidden", clientCellulareAudioOnly ? "true" : "false");
+    if (!clientCellulareAudioOnly) {
+      const acceso = !!(tracciaVideo && tracciaVideo.enabled);
+      btnCam.disabled = !tracciaVideo;
+      btnCam.textContent = acceso ? "📷" : "🚫";
+      btnCam.setAttribute("aria-pressed", acceso ? "false" : "true");
+      btnCam.setAttribute("aria-label", acceso ? "Disattiva webcam" : "Attiva webcam");
+      btnCam.title = acceso ? "Disattiva webcam" : "Attiva webcam";
+      btnCam.classList.toggle("media-spento", !!tracciaVideo && !acceso);
+    }
+  }
+
+}
+
+function toggleMicrofonoMedia() {
+  const traccia = flussoMediaLocale && flussoMediaLocale.getAudioTracks().find(t => t.readyState === "live");
+  if (!traccia) {
+    mostraNotificaGioco(clientCellulareAudioOnly
+      ? "Microfono non disponibile. Usa 'Riprova microfono'."
+      : "Microfono non disponibile. Usa 'Riprova webcam e microfono'.");
+    return;
+  }
+  traccia.enabled = !traccia.enabled;
+  aggiornaControlliMediaLocale();
+}
+
+function toggleWebcamMedia() {
+  if (clientCellulareAudioOnly) return;
+  const traccia = flussoMediaLocale && flussoMediaLocale.getVideoTracks().find(t => t.readyState === "live");
+  if (!traccia) {
+    mostraNotificaGioco("Webcam non disponibile. Usa 'Riprova webcam e microfono'.");
+    return;
+  }
+  traccia.enabled = !traccia.enabled;
+  aggiornaControlliMediaLocale();
+}
+
+function impostaMediaPartitaAttiva(attiva) {
+  if (attiva !== true) {
+    mediaPartitaAttiva = false;
+    mediaProntoSegnalato = false;
+    mediaRichiedeRiprovaManuale = false;
+    partecipantiMediaPronti.clear();
+    partecipantiMediaInfo.clear();
+    if (flussoMediaLocale) {
+      const streamDaChiudere = flussoMediaLocale;
+      flussoMediaLocale = null;
+      streamDaChiudere.getTracks().forEach(traccia => {
+        traccia.onended = null;
+        try { traccia.stop(); } catch (e) {}
+      });
+    }
+    Object.keys(connessioniPeer).forEach(chiudiConnessioneMedia);
+    Object.values(timerRiprovaPeer).forEach(clearTimeout);
+    Object.values(timerDisconnessionePeer).forEach(clearTimeout);
+    timerRiprovaPeer = {};
+    timerDisconnessionePeer = {};
+    const locale = document.getElementById("video-locale");
+    if (locale) locale.srcObject = null;
+    aggiornaInterfacciaMedia("Non attiva", false);
+    return;
+  }
+
+  mediaPartitaAttiva = true;
+  if (mediaRichiedeRiprovaManuale) {
+    aggiornaInterfacciaMedia(
+      clientCellulareAudioOnly ? "Autorizzazione microfono da verificare" : "Autorizzazione o dispositivo da verificare",
+      true
+    );
+    return;
+  }
+  aggiornaInterfacciaMedia(
+    flussoMediaLocale ? "Collegata" : (clientCellulareAudioOnly ? "Avvio microfono…" : "Avvio webcam e microfono…"),
+    false
+  );
+  gestisciPromessaWebRtc(inizializzaMediaPartita());
+}
+
+function segnalaMediaPronto() {
+  if (!mediaPartitaAttiva || !flussoMediaLocale || mediaProntoSegnalato) return;
+  if (!streamLocaleMediaPronto(flussoMediaLocale)) return;
+  const videoDisponibile = !clientCellulareAudioOnly &&
+    flussoMediaLocale.getVideoTracks().some(t => t.readyState === "live");
+  if (inviaSocket({
+    tipo: "mediaPronto",
+    partitaId: stato.id || partitaId,
+    attivo: true,
+    tipoDispositivo: tipoDispositivoMediaLocale,
+    videoDisponibile
+  })) {
+    mediaProntoSegnalato = true;
+  }
+}
+
+function gestisciInterruzioneMediaLocale() {
+  if (puliziaMediaInCorso || !flussoMediaLocale) return;
+  if (streamLocaleMediaPronto(flussoMediaLocale)) return;
+
+  const streamDaChiudere = flussoMediaLocale;
+  flussoMediaLocale = null;
+  streamDaChiudere.getTracks().forEach(traccia => {
+    traccia.onended = null;
+    try { if (traccia.readyState === "live") traccia.stop(); } catch (e) {}
+  });
+  mediaProntoSegnalato = false;
+  mediaRichiedeRiprovaManuale = true;
+  inviaSocket({ tipo: "mediaPronto", partitaId: stato.id || partitaId, attivo: false });
+  partecipantiMediaPronti.delete(mioUid);
+  partecipantiMediaInfo.delete(mioUid);
+  Object.keys(connessioniPeer).forEach(chiudiConnessioneMedia);
+  const locale = document.getElementById("video-locale");
+  if (locale) locale.srcObject = null;
+  aggiornaInterfacciaMedia(clientCellulareAudioOnly ? "Microfono scollegato" : "Webcam o microfono scollegati", true);
+  const riprova = document.getElementById("btn-sblocca-media");
+  if (riprova) {
+    riprova.textContent = clientCellulareAudioOnly ? "Riprova microfono" : "Riprova webcam e microfono";
+    riprova.classList.remove("nascosto");
+  }
+}
+
+async function ottieniFlussoMediaRobusto() {
+  const tentativiVincoli = clientCellulareAudioOnly
+    ? [
+        { audio: VINCOLI_AUDIO, video: false },
+        { audio: { echoCancellation: true, noiseSuppression: true }, video: false },
+        { audio: true, video: false }
+      ]
+    : [
+        VINCOLI_MEDIA,
+        { audio: { echoCancellation: true, noiseSuppression: true }, video: { facingMode: { ideal: "user" } } },
+        { audio: true, video: true }
+      ];
+  let ultimoErrore = null;
+
+  for (let indice = 0; indice < tentativiVincoli.length; indice++) {
+    const vincoli = tentativiVincoli[indice];
+    for (let tentativoOccupato = 0; tentativoOccupato < 3; tentativoOccupato++) {
+      try {
+        return await navigator.mediaDevices.getUserMedia(vincoli);
+      } catch (errore) {
+        ultimoErrore = errore;
+        const nome = nomeErroreMediaPartita(errore);
+        const vincoliTroppoStretti = nome === "OverconstrainedError" || nome === "ConstraintNotSatisfiedError";
+        const dispositivoTemporaneamenteOccupato = nome === "NotReadableError" || nome === "TrackStartError" || nome === "AbortError";
+        if (vincoliTroppoStretti) break;
+        if (dispositivoTemporaneamenteOccupato && tentativoOccupato < 2) {
+          await aspettaWebRtc(450 + tentativoOccupato * 550);
+          continue;
+        }
+        throw errore;
+      }
+    }
+  }
+  throw ultimoErrore || new Error(clientCellulareAudioOnly
+    ? "Impossibile aprire il microfono"
+    : "Impossibile aprire webcam e microfono");
+}
+
+async function inizializzaMediaPartita() {
+  if (!mediaPartitaAttiva || paginaInChiusura) return false;
+  if (flussoMediaLocale && streamLocaleMediaPronto(flussoMediaLocale)) {
+    segnalaMediaPronto();
+    aggiornaControlliMediaLocale();
+    return true;
+  }
+  if (avvioMediaInCorso) return avvioMediaInCorso;
+
+  avvioMediaInCorso = (async () => {
+    try {
+      if (!window.isSecureContext || !navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== "function") {
+        throw new DOMException("getUserMedia non disponibile", "NotSupportedError");
+      }
+      if (typeof RTCPeerConnection !== "function") {
+        throw new DOMException("WebRTC non disponibile", "NotSupportedError");
+      }
+      const policy = document.permissionsPolicy || document.featurePolicy;
+      if (policy && typeof policy.allowsFeature === "function") {
+        const microfonoConsentito = policy.allowsFeature("microphone");
+        const webcamConsentita = clientCellulareAudioOnly || policy.allowsFeature("camera");
+        if (!microfonoConsentito || !webcamConsentita) {
+          throw new DOMException(
+            clientCellulareAudioOnly
+              ? "Il contenitore iframe non autorizza il microfono"
+              : "Il contenitore iframe non autorizza camera/microfono",
+            "NotAllowedError"
+          );
+        }
+      }
+
+      const stream = await ottieniFlussoMediaRobusto();
+      if (!mediaPartitaAttiva || paginaInChiusura) {
+        stream.getTracks().forEach(traccia => traccia.stop());
+        return false;
+      }
+
+      const audio = stream.getAudioTracks().find(t => t.readyState === "live");
+      const video = stream.getVideoTracks().find(t => t.readyState === "live");
+      if (!audio || (!clientCellulareAudioOnly && !video)) {
+        stream.getTracks().forEach(traccia => traccia.stop());
+        throw new DOMException(
+          clientCellulareAudioOnly ? "È necessaria una traccia audio" : "Sono necessarie entrambe le tracce",
+          "NotFoundError"
+        );
+      }
+
+      flussoMediaLocale = stream;
+      mediaRichiedeRiprovaManuale = false;
+      stream.getTracks().forEach(traccia => {
+        traccia.onended = gestisciInterruzioneMediaLocale;
+      });
+
+      const videoLocale = document.getElementById("video-locale");
+      if (videoLocale) {
+        if (clientCellulareAudioOnly) {
+          videoLocale.srcObject = null;
+        } else {
+          videoLocale.srcObject = stream;
+          videoLocale.muted = true;
+          videoLocale.playsInline = true;
+          videoLocale.play().catch(() => {});
+        }
+      }
+
+      const riprova = document.getElementById("btn-sblocca-media");
+      if (riprova) riprova.classList.add("nascosto");
+      aggiornaControlliMediaLocale();
+      aggiornaInterfacciaMedia("In attesa degli altri giocatori…", false);
+      segnalaMediaPronto();
+      return true;
+    } catch (errore) {
+      console.warn(clientCellulareAudioOnly ? "Avvio microfono non riuscito:" : "Avvio webcam/microfono non riuscito:", errore);
+      mediaRichiedeRiprovaManuale = true;
+      mediaProntoSegnalato = false;
+      inviaSocket({ tipo: "mediaPronto", partitaId: stato.id || partitaId, attivo: false });
+      const dettaglio = descriviErroreMediaPartita(errore);
+      aggiornaInterfacciaMedia(dettaglio, true);
+      mostraNotificaGioco(dettaglio + " La partita attenderà finché non riprovi.");
+      const riprova = document.getElementById("btn-sblocca-media");
+      if (riprova) {
+        riprova.textContent = clientCellulareAudioOnly ? "Riprova microfono" : "Riprova webcam e microfono";
+        riprova.classList.remove("nascosto");
+      }
+      aggiornaControlliMediaLocale();
+      return false;
+    } finally {
+      avvioMediaInCorso = null;
+    }
+  })();
+  return avvioMediaInCorso;
+}
+
+function creaIconaCellulareBarratoElemento() {
+  const contenitore = document.createElement("span");
+  contenitore.className = "icona-cellulare-barrato";
+  contenitore.setAttribute("aria-hidden", "true");
+  contenitore.innerHTML = `
+    <svg viewBox="0 0 28 28" focusable="false">
+      <rect x="8" y="3.5" width="12" height="21" rx="2.4" fill="none" stroke="currentColor" stroke-width="2"/>
+      <line x1="11.5" y1="21" x2="16.5" y2="21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+      <line x1="4" y1="24" x2="24" y2="4" stroke="currentColor" stroke-width="2.7" stroke-linecap="round"/>
+    </svg>`;
+  return contenitore;
+}
+
+function creaElementiVideoRemoto(altroUid) {
+  if (elementiVideoRemoti[altroUid]) return elementiVideoRemoti[altroUid];
+
+  const info = descrittoreMediaPerUid(altroUid);
+  const remotoCellulare = info.tipoDispositivo === "cellulare";
+  const mostraVideo = !clientCellulareAudioOnly && peerSupportaVideo(altroUid);
+
+  const figura = document.createElement("figure");
+  figura.className = "video-tile" + (mostraVideo ? "" : " video-tile-mobile-audio");
+  figura.dataset.uid = altroUid;
+
+  let video = null;
+  let placeholder = null;
+
+  if (mostraVideo) {
+    video = document.createElement("video");
+    video.autoplay = true;
+    video.playsInline = true;
+    video.muted = true;
+    figura.appendChild(video);
+  } else {
+    placeholder = document.createElement("div");
+    placeholder.className = "placeholder-mobile-audio";
+    if (remotoCellulare) {
+      placeholder.appendChild(creaIconaCellulareBarratoElemento());
+      const testo = document.createElement("span");
+      testo.textContent = "Da cellulare · solo audio";
+      placeholder.appendChild(testo);
+    } else {
+      const testo = document.createElement("span");
+      testo.textContent = "Solo audio";
+      placeholder.appendChild(testo);
+    }
+    figura.appendChild(placeholder);
+  }
+
+  const audio = document.createElement("audio");
+  audio.autoplay = true;
+  audio.preload = "auto";
+  figura.appendChild(audio);
+
+  const didascalia = document.createElement("figcaption");
+  const giocatoreNoto = giocatoriStato().find(g => g.uid === altroUid);
+  didascalia.textContent = nomiPartecipantiMedia.get(altroUid) || (giocatoreNoto && (giocatoreNoto.nome || giocatoreNoto.nickname)) || "Giocatore";
+  figura.appendChild(didascalia);
+
+  const griglia = document.getElementById("griglia-video");
+  if (griglia) griglia.appendChild(figura);
+
+  elementiVideoRemoti[altroUid] = {
+    figura,
+    video,
+    audio,
+    didascalia,
+    placeholder,
+    streamAudioRemoto: new MediaStream(),
+    streamVideoRemoto: new MediaStream()
+  };
+  return elementiVideoRemoti[altroUid];
+}
+
+function mostraPulsanteSbloccoAudio(testo) {
+  const pulsante = document.getElementById("btn-sblocca-media");
+  if (!pulsante) return;
+  if (testo) pulsante.textContent = testo;
+  pulsante.classList.remove("nascosto");
+}
+
+function tentaRiproduzioneElementoMedia(elemento) {
+  if (!elemento || typeof elemento.play !== "function") return Promise.resolve(false);
+  return elemento.play().then(() => true).catch(() => {
+    mostraPulsanteSbloccoAudio("🔊 Attiva l'audio");
+    return false;
+  });
+}
+
+function chiudiPeerSenzaRimuovereTile(altroUid) {
+  if (timerRiprovaPeer[altroUid]) { clearTimeout(timerRiprovaPeer[altroUid]); delete timerRiprovaPeer[altroUid]; }
+  if (timerDisconnessionePeer[altroUid]) { clearTimeout(timerDisconnessionePeer[altroUid]); delete timerDisconnessionePeer[altroUid]; }
+  const pc = connessioniPeer[altroUid];
+  delete connessioniPeer[altroUid];
+  if (pc && pc.connectionState !== "closed") {
+    try { pc.onicecandidate = null; pc.ontrack = null; pc.onconnectionstatechange = null; pc.oniceconnectionstatechange = null; pc.close(); } catch (e) {}
+  }
+  delete candidatiIceInAttesa[altroUid];
+}
+
+function creaConnessionePeer(altroUid) {
+  const esistente = connessioniPeer[altroUid];
+  if (esistente && esistente.connectionState !== "closed" && esistente.connectionState !== "failed") return esistente;
+  if (!flussoMediaLocale) throw new Error("Stream locale non pronto");
+
+  const pc = new RTCPeerConnection(CONFIGURAZIONE_ICE);
+  const peerAccettaVideo = peerSupportaVideo(altroUid);
+
+  flussoMediaLocale.getTracks().forEach(traccia => {
+    if (traccia.kind === "video" && !peerAccettaVideo) return;
+    const sender = pc.addTrack(traccia, flussoMediaLocale);
+    if (traccia.kind === "video" && sender && typeof sender.getParameters === "function") {
+      const parametri = sender.getParameters();
+      if (!parametri.encodings || !parametri.encodings.length) parametri.encodings = [{}];
+      parametri.encodings[0].maxBitrate = 260000;
+      parametri.encodings[0].maxFramerate = 20;
+      sender.setParameters(parametri).catch(() => {});
+    }
+  });
+
+  pc.onicecandidate = evento => {
+    if (evento.candidate) {
+      inviaSocket({
+        tipo: "webrtc-ice-candidate",
+        partitaId: stato.id || partitaId,
+        destinatarioUid: altroUid,
+        candidate: evento.candidate.toJSON ? evento.candidate.toJSON() : evento.candidate
+      });
+    }
+  };
+
+  pc.ontrack = evento => {
+    if (!evento || !evento.track) return;
+    const elementi = creaElementiVideoRemoto(altroUid);
+
+    if (evento.track.kind === "audio") {
+      if (!elementi.streamAudioRemoto.getTracks().some(t => t.id === evento.track.id)) {
+        elementi.streamAudioRemoto.addTrack(evento.track);
+      }
+      elementi.audio.srcObject = elementi.streamAudioRemoto;
+      window.MusicaYouTube?.registraVoce(elementi.audio);
+      evento.track.onended = () => {
+        try { elementi.streamAudioRemoto.removeTrack(evento.track); } catch (e) {}
+      };
+      tentaRiproduzioneElementoMedia(elementi.audio);
+      return;
+    }
+
+    if (evento.track.kind === "video") {
+      if (clientCellulareAudioOnly || !elementi.video || !peerSupportaVideo(altroUid)) return;
+      if (!elementi.streamVideoRemoto.getTracks().some(t => t.id === evento.track.id)) {
+        elementi.streamVideoRemoto.addTrack(evento.track);
+      }
+      elementi.video.srcObject = elementi.streamVideoRemoto;
+      evento.track.onended = () => {
+        try { elementi.streamVideoRemoto.removeTrack(evento.track); } catch (e) {}
+      };
+      tentaRiproduzioneElementoMedia(elementi.video);
+    }
+  };
+
+  const gestisciStatoConnessione = () => {
+    const statoConn = pc.connectionState;
+    const statoIce = pc.iceConnectionState;
+    if (statoConn === "connected" || statoIce === "connected" || statoIce === "completed") {
+      if (timerDisconnessionePeer[altroUid]) clearTimeout(timerDisconnessionePeer[altroUid]);
+      delete timerDisconnessionePeer[altroUid];
+      aggiornaInterfacciaMedia(`${partecipantiMediaPronti.size} partecipanti collegati`, false);
+      return;
+    }
+    if (statoConn === "failed" || statoIce === "failed") {
+      chiudiPeerSenzaRimuovereTile(altroUid);
+      pianificaRiprovaConnessioneMedia(altroUid, 900);
+      return;
+    }
+    if (statoConn === "disconnected" || statoIce === "disconnected") {
+      if (!timerDisconnessionePeer[altroUid]) {
+        timerDisconnessionePeer[altroUid] = setTimeout(() => {
+          delete timerDisconnessionePeer[altroUid];
+          const attuale = connessioniPeer[altroUid];
+          if (attuale === pc && (pc.connectionState === "disconnected" || pc.iceConnectionState === "disconnected")) {
+            chiudiPeerSenzaRimuovereTile(altroUid);
+            pianificaRiprovaConnessioneMedia(altroUid, 600);
+          }
+        }, 6500);
+      }
+    }
+  };
+  pc.onconnectionstatechange = gestisciStatoConnessione;
+  pc.oniceconnectionstatechange = gestisciStatoConnessione;
+  pc.onicecandidateerror = evento => console.warn("ICE candidate error:", evento && evento.errorText ? evento.errorText : evento);
+
+  connessioniPeer[altroUid] = pc;
+  return pc;
+}
+
+async function avviaConnessioneMedia(altroUid, riavvioIce = false) {
+  if (!flussoMediaLocale || !partecipantiMediaPronti.has(altroUid) || !mioUid) return;
+  if (String(mioUid) >= String(altroUid)) return;
+
+  let pc = connessioniPeer[altroUid];
+  if (pc && pc.connectionState === "connected" && !riavvioIce) return;
+  if (pc && pc.signalingState !== "stable") return;
+  if (!pc || pc.connectionState === "closed" || pc.connectionState === "failed") pc = creaConnessionePeer(altroUid);
+
+  const offerta = await pc.createOffer(riavvioIce ? { iceRestart: true } : undefined);
+  if (pc.signalingState !== "stable") return;
+  await pc.setLocalDescription(offerta);
+  inviaSocket({ tipo: "webrtc-offer", partitaId: stato.id || partitaId, destinatarioUid: altroUid, sdp: pc.localDescription });
+}
+
+async function applicaCandidatiIceInAttesa(altroUid) {
+  const pc = connessioniPeer[altroUid];
+  if (!pc || !pc.remoteDescription) return;
+  const candidati = candidatiIceInAttesa[altroUid] || [];
+  delete candidatiIceInAttesa[altroUid];
+  for (const candidate of candidati.slice(0, 100)) {
+    try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); }
+    catch (errore) { console.warn("Candidato ICE ignorato:", errore); }
+  }
+}
+
+async function gestisciOffertaRicevuta(mittenteUid, sdp) {
+  if (!mediaPartitaAttiva || !flussoMediaLocale || !partecipantiMediaPronti.has(mittenteUid) || !sdp) return;
+  if (sdp.type !== "offer") return;
+
+  let pc = connessioniPeer[mittenteUid];
+  if (pc && pc.signalingState !== "stable") {
+    chiudiPeerSenzaRimuovereTile(mittenteUid);
+    pc = null;
+  }
+  if (!pc) pc = creaConnessionePeer(mittenteUid);
+
+  await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+  await applicaCandidatiIceInAttesa(mittenteUid);
+  const risposta = await pc.createAnswer();
+  await pc.setLocalDescription(risposta);
+  inviaSocket({ tipo: "webrtc-answer", partitaId: stato.id || partitaId, destinatarioUid: mittenteUid, sdp: pc.localDescription });
+}
+
+async function gestisciRispostaRicevuta(mittenteUid, sdp) {
+  const pc = connessioniPeer[mittenteUid];
+  if (!pc || !sdp || sdp.type !== "answer") return;
+  if (pc.signalingState !== "have-local-offer") return;
+  await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+  await applicaCandidatiIceInAttesa(mittenteUid);
+}
+
+async function gestisciCandidatoRicevuto(mittenteUid, candidate) {
+  if (!candidate || typeof candidate !== "object") return;
+  const pc = connessioniPeer[mittenteUid];
+  if (!pc || !pc.remoteDescription) {
+    if (!candidatiIceInAttesa[mittenteUid]) candidatiIceInAttesa[mittenteUid] = [];
+    if (candidatiIceInAttesa[mittenteUid].length < 100) candidatiIceInAttesa[mittenteUid].push(candidate);
+    return;
+  }
+  try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); }
+  catch (errore) { console.warn("Candidato ICE ignorato:", errore); }
+}
+
+function chiudiConnessioneMedia(altroUid) {
+  chiudiPeerSenzaRimuovereTile(altroUid);
+  const elementi = elementiVideoRemoti[altroUid];
+  if (elementi) {
+    if (elementi.video) elementi.video.srcObject = null;
+    window.MusicaYouTube?.rimuoviVoce(elementi.audio);
+    if (elementi.audio) elementi.audio.srcObject = null;
+    try {
+      elementi.streamAudioRemoto.getTracks().forEach(t => elementi.streamAudioRemoto.removeTrack(t));
+      elementi.streamVideoRemoto.getTracks().forEach(t => elementi.streamVideoRemoto.removeTrack(t));
+    } catch (e) {}
+    elementi.figura.remove();
+    delete elementiVideoRemoti[altroUid];
+  }
+}
+
+function pianificaRiprovaConnessioneMedia(altroUid, ritardoMs = 1800) {
+  if (!altroUid || timerRiprovaPeer[altroUid] || !mioUid || String(mioUid) >= String(altroUid)) return;
+  if (!mediaPartitaAttiva || !flussoMediaLocale || !partecipantiMediaPronti.has(altroUid)) return;
+  timerRiprovaPeer[altroUid] = setTimeout(() => {
+    delete timerRiprovaPeer[altroUid];
+    if (partecipantiMediaPronti.has(altroUid)) gestisciPromessaWebRtc(avviaConnessioneMedia(altroUid, true));
+  }, Math.max(400, Number(ritardoMs) || 1800));
+}
+
+function normalizzaDescrittorePartecipanteMedia(valore) {
+  if (!valore || typeof valore !== "object" || typeof valore.uid !== "string") return null;
+  const tipoDispositivo = normalizzaTipoDispositivoMedia(valore.tipoDispositivo);
+  return {
+    uid: valore.uid,
+    tipoDispositivo,
+    videoDisponibile: tipoDispositivo !== "cellulare" && valore.videoDisponibile !== false
+  };
+}
+
+function gestisciStatoMedia(dati) {
+  impostaMediaPartitaAttiva(dati.mediaAttiva === true);
+  if (!mediaPartitaAttiva) return;
+
+  const infoPrecedenti = partecipantiMediaInfo;
+  const descrittori = Array.isArray(dati.partecipantiMedia)
+    ? dati.partecipantiMedia.map(normalizzaDescrittorePartecipanteMedia).filter(Boolean)
+    : [];
+
+  if (descrittori.length) {
+    partecipantiMediaInfo = new Map(descrittori.map(info => [info.uid, info]));
+    partecipantiMediaPronti = new Set(descrittori.map(info => info.uid));
+  } else {
+    partecipantiMediaPronti = new Set(
+      Array.isArray(dati.partecipanti)
+        ? dati.partecipanti.filter(uid => typeof uid === "string")
+        : []
+    );
+    partecipantiMediaInfo = new Map(
+      Array.from(partecipantiMediaPronti).map(uid => {
+        const info = descrittoreMediaPerUid(uid);
+        return [uid, info];
+      })
+    );
+  }
+
+  Object.keys(connessioniPeer).forEach(uid => {
+    if (!partecipantiMediaPronti.has(uid)) {
+      chiudiConnessioneMedia(uid);
+      return;
+    }
+    const prima = infoPrecedenti.get(uid);
+    const dopo = partecipantiMediaInfo.get(uid);
+    if (prima && dopo && (
+      prima.tipoDispositivo !== dopo.tipoDispositivo ||
+      prima.videoDisponibile !== dopo.videoDisponibile
+    )) {
+      chiudiConnessioneMedia(uid);
+    }
+  });
+  Object.keys(elementiVideoRemoti).forEach(uid => {
+    if (!partecipantiMediaPronti.has(uid)) chiudiConnessioneMedia(uid);
+  });
+
+  const quanti = partecipantiMediaPronti.size;
+  aggiornaInterfacciaMedia(quanti > 1 ? `${quanti} partecipanti collegati` : "In attesa degli altri giocatori…", false);
+
+  if (flussoMediaLocale && mioUid && !partecipantiMediaPronti.has(mioUid)) {
+    mediaProntoSegnalato = false;
+    segnalaMediaPronto();
+    return;
+  }
+  if (!flussoMediaLocale || !mioUid || !partecipantiMediaPronti.has(mioUid)) return;
+
+  partecipantiMediaPronti.forEach(altroUid => {
+    if (altroUid !== mioUid && String(mioUid) < String(altroUid)) {
+      gestisciPromessaWebRtc(avviaConnessioneMedia(altroUid));
+    }
+  });
+  renderPannelloGiocatori();
+}
+
+async function sbloccaRiproduzioneMedia() {
+  if (!flussoMediaLocale) {
+    mediaRichiedeRiprovaManuale = false;
+    if (!(await inizializzaMediaPartita())) return;
+  }
+
+  const elementiDaRiprodurre = Object.values(elementiVideoRemoti)
+    .flatMap(elementi => [elementi.audio, elementi.video])
+    .filter(Boolean);
+  const risultati = await Promise.allSettled(elementiDaRiprodurre.map(elemento => elemento.play()));
+  const fallita = risultati.some(risultato => risultato.status === "rejected");
+  const pulsante = document.getElementById("btn-sblocca-media");
+  if (pulsante) {
+    pulsante.textContent = fallita ? "🔊 Attiva l'audio" : "🔊 Audio attivo";
+    pulsante.classList.toggle("nascosto", !fallita);
+  }
+}
+
+document.addEventListener("pointerdown", () => {
+  if (!mediaPartitaAttiva || !flussoMediaLocale) return;
+  const audioRemoti = Object.values(elementiVideoRemoti).map(elementi => elementi.audio).filter(Boolean);
+  audioRemoti.forEach(audio => audio.play().catch(() => mostraPulsanteSbloccoAudio("🔊 Attiva l'audio")));
+}, { passive: true });
+
+function pulisciMediaPagina() {
+  if (puliziaMediaInCorso) return;
+  puliziaMediaInCorso = true;
+  paginaInChiusura = true;
+  clearTimeout(timerRiconnessione);
+  clearTimeout(timerChiusuraPresentazioneSfida);
+  if (mediaProntoSegnalato) inviaSocket({ tipo: "mediaPronto", partitaId: stato.id || partitaId, attivo: false });
+  if (flussoMediaLocale) {
+    flussoMediaLocale.getTracks().forEach(traccia => {
+      traccia.onended = null;
+      try { traccia.stop(); } catch (e) {}
+    });
+  }
+  flussoMediaLocale = null;
+  Object.keys(connessioniPeer).forEach(chiudiConnessioneMedia);
+  Object.values(timerRiprovaPeer).forEach(clearTimeout);
+  Object.values(timerDisconnessionePeer).forEach(clearTimeout);
+  timerRiprovaPeer = {};
+  timerDisconnessionePeer = {};
+  partecipantiMediaPronti.clear();
+  partecipantiMediaInfo.clear();
+  aggiornaControlliMediaLocale();
+  try { socket?.close(); } catch (e) {}
+}
+window.addEventListener("pagehide", pulisciMediaPagina);
+
+function gestisciPromessaWebRtc(promessa) {
+  Promise.resolve(promessa).catch(errore => {
+    console.error("Errore WebRTC:", errore);
+    mostraNotificaGioco("La connessione audio/video non è riuscita.");
+  });
+}
+
+/* =========================================================
+   PRESENTAZIONE SFIDA
+   ========================================================= */
+
+function chiavePresentazioneSfida() {
+  return "giochi-societa:scacchi:presentazione-sfida:" + (partitaId || "sconosciuta");
+}
+function presentazioneSfidaGiaVista() {
+  try { return sessionStorage.getItem(chiavePresentazioneSfida()) === "1"; } catch (_) { return false; }
+}
+function marcaPresentazioneSfidaVista() {
+  try { sessionStorage.setItem(chiavePresentazioneSfida(), "1"); } catch (_) {}
+}
+function iniziale(nome) { return (nome || "?").trim().charAt(0).toUpperCase(); }
+function coloreDaNome(nome) {
+  const colori = ["#6a2c70", "#1e40af", "#43a047", "#f57c00", "#c0ca33", "#e53935", "#00838f", "#8d6e63"];
+  let somma = 0;
+  for (let i = 0; i < (nome || "?").length; i++) somma += nome.charCodeAt(i);
+  return colori[somma % colori.length];
+}
+function escapeHtml(valore) {
+  return String(valore == null ? "" : valore)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+function stelleDaElo(elo) {
+  const valore = Number.isFinite(Number(elo)) ? Number(elo) : 1500;
+  if (valore < 1300) return 1;
+  if (valore < 1500) return 2;
+  if (valore < 1700) return 3;
+  if (valore < 1900) return 4;
+  return 5;
+}
+function htmlStelle(elo) {
+  const piene = stelleDaElo(elo);
+  let html = "";
+  for (let i = 1; i <= 5; i++) html += i <= piene ? "★" : '<span class="vuota">★</span>';
+  return html;
+}
+function htmlAvatar(giocatore) {
+  const nome = escapeHtml(giocatore.nome || giocatore.nickname || "Giocatore");
+  if (typeof giocatore.avatar === "string" && giocatore.avatar.trim()) {
+    return `<div class="sfida-avatar"><img src="${escapeHtml(giocatore.avatar)}" alt="Avatar di ${nome}" referrerpolicy="no-referrer"></div>`;
+  }
+  return `<div class="sfida-avatar" style="background:${coloreDaNome(giocatore.nome || giocatore.nickname)}">${escapeHtml(iniziale(giocatore.nome || giocatore.nickname))}</div>`;
+}
+function probabilitaVittoriaElo(eloA, eloB) {
+  return 1 / (1 + Math.pow(10, (Number(eloB) - Number(eloA)) / 400));
+}
+function variazioniElo(eloA, eloB) {
+  const a = Number.isFinite(Number(eloA)) ? Number(eloA) : 1500;
+  const b = Number.isFinite(Number(eloB)) ? Number(eloB) : 1500;
+  const p = probabilitaVittoriaElo(a, b);
+  return {
+    vittoria: Math.max(100, Math.round(a + 32 * (1 - p))) - Math.round(a),
+    sconfitta: Math.max(100, Math.round(a + 32 * (0 - p))) - Math.round(a)
+  };
+}
+
+function giocatoriStato() {
+  return Object.entries(stato.giocatori || {}).map(([uid, g]) => ({ uid, ...g }));
+}
+
+function disegnaPresentazioneSfida() {
+  const contenitore = document.getElementById("sfida-giocatori");
+  if (!contenitore) return;
+  const elenco = giocatoriStato();
+  if (elenco.length < 2) {
+    contenitore.innerHTML = '<div class="sfida-caricamento">In attesa dell\'avversario…</div>';
+    return;
+  }
+
+  const sx = elenco.find(g => g.colore === "nero") || elenco[0];
+  const dx = elenco.find(g => g.colore === "bianco") || elenco[1];
+
+  const card = (g, lato) => {
+    const destra = lato === "destra" ? " sfida-giocatore-destra" : "";
+    const nome = escapeHtml(g.nome || g.nickname || "Giocatore");
+    const elo = Number.isFinite(Number(g.elo)) ? Math.round(Number(g.elo)) : 1500;
+    return `<article class="sfida-giocatore${destra}">
+      <div class="sfida-identita">
+        ${htmlAvatar(g)}
+        <div class="sfida-nome-wrap">
+          <div class="sfida-nome" title="${nome}">${nome}</div>
+          <div class="sfida-stelle" aria-label="Indicatore grafico ELO">${htmlStelle(elo)}</div>
+        </div>
+      </div>
+      <div class="sfida-stat-riga"><div class="sfida-stat-barra"><div class="sfida-stat-riempimento" style="width:${Math.max(8, Math.min(100, elo / 20))}%"></div></div><span class="sfida-stat-valore">${elo}</span></div>
+      <div class="sfida-stat-riga"><div class="sfida-stat-barra"><div class="sfida-stat-riempimento" style="width:0%"></div></div><span class="sfida-stat-valore">—</span></div>
+      <div class="sfida-stat-riga"><div class="sfida-stat-barra"><div class="sfida-stat-riempimento" style="width:0%"></div></div><span class="sfida-stat-valore">—</span></div>
+    </article>`;
+  };
+
+  contenitore.innerHTML = `<div class="sfida-duello">
+    ${card(sx, "sinistra")}
+    <div class="sfida-vs-colonna" aria-hidden="true">
+      <div class="sfida-vs">VS</div>
+      <div class="sfida-vs-etichetta">ELO</div>
+      <div class="sfida-vs-etichetta">Giocate</div>
+      <div class="sfida-vs-etichetta">Vinte</div>
+    </div>
+    ${card(dx, "destra")}
+  </div>`;
+
+  const mio = elenco.find(g => g.uid === mioUid) || sx;
+  const avversario = elenco.find(g => g.uid !== mio.uid) || dx;
+  const variazione = variazioniElo(mio.elo, avversario.elo);
+  const classificata = stato.classificata !== false;
+  const boxVariazione = document.getElementById("sfida-box-variazione-elo");
+  if (boxVariazione) boxVariazione.hidden = !classificata;
+  const v = document.getElementById("sfida-elo-vittoria");
+  const s = document.getElementById("sfida-elo-sconfitta");
+  if (v) v.textContent = classificata ? ((variazione.vittoria >= 0 ? "+" : "") + variazione.vittoria) : "";
+  if (s) s.textContent = classificata ? String(variazione.sconfitta) : "";
+  const streak = document.getElementById("sfida-streak");
+  const wr = document.getElementById("sfida-winrate");
+  if (streak) streak.textContent = "—";
+  if (wr) wr.textContent = "—";
+}
+
+function mostraPresentazioneSfida() {
+  if (spettatore || presentazioneSfidaAperta || presentazioneSfidaGiaVista() || giocatoriStato().length < 2) return;
+  const overlay = document.getElementById("overlay-presentazione-sfida");
+  if (!overlay) return;
+
+  const classificata = stato.classificata !== false;
+  const testoModalita = document.getElementById("sfida-modalita-testo");
+  const descrizione = document.getElementById("sfida-descrizione-modalita");
+  const statoSfida = document.getElementById("sfida-stato");
+  if (testoModalita) testoModalita.textContent = classificata
+    ? "Partita classificata · Scacchi · ELO attivo"
+    : "Partita Divertimento · Scacchi · ELO invariato";
+  if (descrizione) descrizione.textContent = classificata
+    ? "Giocatori reali · il risultato modifica il rating ELO della modalità Scacchi"
+    : "Giocatori reali · questa partita non modifica il rating ELO";
+  if (statoSfida) statoSfida.textContent = classificata
+    ? "Confronto ELO Scacchi · K = 32"
+    : "Modalità Divertimento: ELO invariato";
+
+  disegnaPresentazioneSfida();
+  presentazioneSfidaAperta = true;
+  overlay.classList.add("aperto");
+  overlay.setAttribute("aria-hidden", "false");
+  clearTimeout(timerChiusuraPresentazioneSfida);
+  timerChiusuraPresentazioneSfida = setTimeout(() => chiudiPresentazioneSfida(true), 6000);
+  setTimeout(() => document.getElementById("btn-entra-partita")?.focus(), 0);
+}
+
+function chiudiPresentazioneSfida() {
+  if (!presentazioneSfidaAperta) return;
+  clearTimeout(timerChiusuraPresentazioneSfida);
+  timerChiusuraPresentazioneSfida = null;
+  presentazioneSfidaAperta = false;
+  marcaPresentazioneSfidaVista();
+  const overlay = document.getElementById("overlay-presentazione-sfida");
+  if (overlay) {
+    overlay.classList.remove("aperto");
+    overlay.setAttribute("aria-hidden", "true");
+  }
+}
+
+document.getElementById("btn-entra-partita")?.addEventListener("click", () => chiudiPresentazioneSfida(false));
+
+/* =========================================================
+   TAVOLA / DISCHI / ANIMAZIONI
+   ========================================================= */
+
+function nomeColore(colore) {
+  return colore === "nero" ? "Nero" : colore === "bianco" ? "Bianco" : "—";
+}
+
+
+const caselleTavola = new Map();
+const posizioniPezzi = new Map();
+const animazioniInCorso = new Set();
+let tavolaDisegnata = null;
+let coloreTavolaDisegnata = null;
+let selezione = null;
+let promozioneInAttesa = null;
+let animazioniDaAttendere = 0;
+let animazioniDaAttendereGenerazione = 0;
+const TIMEOUT_ANIMAZIONE_MS = 1100;
+const movimentoRidottoScacchi = window.matchMedia?.("(prefers-reduced-motion: reduce)");
+const chiavePreferenzaAnimazioni = "scacchi:animazioni";
+let preferenzaAnimazioniScacchi;
+try {
+  const salvata = localStorage.getItem(chiavePreferenzaAnimazioni);
+  if (salvata === "on" || salvata === "off") preferenzaAnimazioniScacchi = salvata === "on";
+} catch (_) { /* Storage non disponibile. */ }
+
+function animazioniPezziAttive() {
+  return preferenzaAnimazioniScacchi ?? !movimentoRidottoScacchi?.matches;
+}
+
+function aggiornaBottoneAnimazioniScacchi() {
+  const attive = animazioniPezziAttive();
+  window.MenuPartita.impostaInterruttore("btn-animazioni-scacchi", attive);
+  if (!attive) for (const animazione of animazioniInCorso) animazione.cancel();
+}
+
+function toggleAnimazioniScacchi() {
+  preferenzaAnimazioniScacchi = !animazioniPezziAttive();
+  try { localStorage.setItem(chiavePreferenzaAnimazioni, preferenzaAnimazioniScacchi ? "on" : "off"); }
+  catch (_) { /* Preferenza valida per questa pagina. */ }
+  aggiornaBottoneAnimazioniScacchi();
+}
+
+movimentoRidottoScacchi?.addEventListener?.("change", aggiornaBottoneAnimazioniScacchi);
+aggiornaBottoneAnimazioniScacchi();
+
+const stilePezzi = {
+  bianco: { luce: "#fff6d7", tono: "#e4c788", ombra: "#88704c", contorno: "#3e2c23", riflesso: "#fff5da" },
+  nero: { luce: "#8a6962", tono: "#3e2a2f", ombra: "#1b1019", contorno: "#f2c085", riflesso: "#f0ba88" }
+};
+
+// Sagome originali con base tornita, pensate per essere leggibili anche a piccole dimensioni.
+const profiliPezzi = {
+  p: {
+    corpo: '<path d="M29 72c8-9 11-23 11-32h20c0 9 3 23 11 32z"/><circle cx="50" cy="32" r="13"/>',
+    dettagli: '<path d="M44 27c2-4 6-5 9-4M34 67h32"/>'
+  },
+  n: {
+    corpo: '<path d="M27 74c0-8 8-15 14-25l-9 7-12-5c0-3 2-9 6-15l17-17 6-10 9 8c18 4 26 23 23 55z"/>',
+    dettagli: '<path d="M54 22c11 4 18 15 19 30m-39-20 4-3m-13 16 4 1m15 4c4-5 9-9 13-9"/><circle cx="44" cy="28" r="1.9" fill="currentColor" stroke="none"/>'
+  },
+  b: {
+    corpo: '<path d="M28 73c8-9 12-16 13-30h18c1 14 5 21 13 30z"/><path d="M50 13c4 3 17 12 17 24 0 9-7 16-17 16s-17-7-17-16c0-12 13-21 17-24z"/><circle cx="50" cy="12" r="4"/>',
+    dettagli: '<path d="M45 33l11-11m-21 43h30m-28-25c6 4 20 4 26 0"/>'
+  },
+  r: {
+    corpo: '<path d="M28 73c5-7 9-14 9-22V34l-8-5V15h10v8h6v-8h10v8h6v-8h10v14l-8 5v17c0 8 4 15 9 22z"/>',
+    dettagli: '<path d="M35 32h30M37 47h26m-29 20h32"/>'
+  },
+  q: {
+    corpo: '<path d="M26 73c8-8 12-15 12-26l-12-23 16 9 8-14 8 14 16-9-12 23c0 11 4 18 12 26z"/><circle cx="24" cy="21" r="4"/><circle cx="50" cy="16" r="4"/><circle cx="76" cy="21" r="4"/>',
+    dettagli: '<path d="M36 43h28m-26 8h24m-29 16h34"/>'
+  },
+  k: {
+    corpo: '<path d="M28 74c7-8 10-16 10-25-7-7-13-13-10-20 4-8 14-6 22 2 8-8 18-10 22-2 3 7-3 13-10 20 0 9 3 17 10 25z"/><path d="M46 10h8v6h7v8h-7v8h-8v-8h-7v-8h7z"/>',
+    dettagli: '<path d="M36 45h28m-27 7h26m-28 15h30"/>'
+  }
+};
+
+let progressivoPezzo = 0;
+
+function creaFiguraPezzo(pezzo) {
+  const contenitore = document.createElement("span");
+  const profilo = profiliPezzi[pezzo.tipo];
+  const colore = stilePezzi[pezzo.colore];
+  const gradiente = "scacchi-legno-" + ++progressivoPezzo;
+  contenitore.innerHTML = '<svg class="scacchi-figura" viewBox="0 0 100 100" aria-hidden="true" focusable="false" style="color:' + colore.contorno + '">'
+    + '<defs><linearGradient id="' + gradiente + '" x1="0" y1="0" x2="1" y2=".2" gradientUnits="objectBoundingBox">'
+    + '<stop offset="0" stop-color="' + colore.ombra + '"/><stop offset=".34" stop-color="' + colore.luce + '"/>'
+    + '<stop offset=".68" stop-color="' + colore.tono + '"/><stop offset="1" stop-color="' + colore.ombra + '"/></linearGradient></defs>'
+    + '<g fill="url(#' + gradiente + ')" stroke="' + colore.contorno + '" stroke-width="2">'
+    + profilo.corpo
+    + '<path d="M26 71h48l7 9v6H19v-6z"/><path d="M22 81h56l6 6v4c-14 4-54 4-68 0v-4z"/></g>'
+    + '<g fill="none" stroke="' + colore.riflesso + '" stroke-width="1.5" opacity=".8">' + profilo.dettagli
+    + '<path d="M27 77h46M22 87c15 2 41 2 56 0"/></g></svg>';
+  return contenitore.firstElementChild;
+}
+
+function chiaveCasella(r, c) { return r + "," + c; }
+function stessaCasella(a, b) { return a && b && a.r === b.r && a.c === b.c; }
+function casellaValida(a) {
+  return a && Number.isInteger(a.r) && Number.isInteger(a.c) && a.r >= 0 && a.r < 8 && a.c >= 0 && a.c < 8;
+}
+function notazioneCasella(r, c) { return "abcdefgh"[c] + (8 - r); }
+
+function coordinateVisive(r, c) {
+  return coloreUtenteDaPartita(stato) === "nero" ? { r: 7 - r, c: 7 - c } : { r, c };
+}
+
+function preparaTavola() {
+  const tavola = document.getElementById("scacchi-tavola");
+  if (caselleTavola.size) return tavola;
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const casella = document.createElement("button");
+      casella.type = "button";
+      casella.setAttribute("role", "gridcell");
+      casella.dataset.r = String(r);
+      casella.dataset.c = String(c);
+      casella.addEventListener("click", () => cliccaCasella(r, c));
+      tavola.appendChild(casella);
+      caselleTavola.set(chiaveCasella(r, c), casella);
+    }
+  }
+  const strato = document.createElement("div");
+  strato.id = "scacchi-strato-pezzi";
+  strato.setAttribute("aria-hidden", "true");
+  tavola.appendChild(strato);
+  return tavola;
+}
+
+function sincronizzaPezzi(tavolaStato) {
+  preparaTavola();
+  const strato = document.getElementById("scacchi-strato-pezzi");
+  const frammento = document.createDocumentFragment();
+  posizioniPezzi.clear();
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const pezzo = tavolaStato[r][c];
+      if (!pezzo) continue;
+      const posizione = document.createElement("div");
+      posizione.className = "scacchi-posizione";
+      posizione.dataset.colore = pezzo.colore;
+      posizione.dataset.tipo = pezzo.tipo;
+      posizione.dataset.casella = notazioneCasella(r, c);
+      const visiva = coordinateVisive(r, c);
+      posizione.style.left = visiva.c * 12.5 + "%";
+      posizione.style.top = visiva.r * 12.5 + "%";
+      const ombra = document.createElement("span");
+      ombra.className = "scacchi-ombra";
+      const corpo = document.createElement("span");
+      corpo.className = "scacchi-corpo";
+      corpo.appendChild(creaFiguraPezzo(pezzo));
+      posizione.append(ombra, corpo);
+      frammento.appendChild(posizione);
+      posizioniPezzi.set(chiaveCasella(r, c), posizione);
+    }
+  }
+  strato.replaceChildren(frammento);
+  tavolaDisegnata = copiaTavola(tavolaStato);
+  coloreTavolaDisegnata = coloreUtenteDaPartita(stato);
+}
+
+function renderTavola() {
+  const tavola = preparaTavola();
+  const colore = coloreUtenteDaPartita(stato);
+  if (!tavolaDisegnata || colore !== coloreTavolaDisegnata) sincronizzaPezzi(stato.tavola);
+  const mioTurno = !spettatore && stato.fase === "in_corso" && colore && stato.turno === colore;
+  const bloccata = animazioniDaAttendere > 0 || mossaInAttesa || attesaSnapshot;
+  const origini = new Set(mosseLegaliCorrenti.map(mossa => chiaveCasella(mossa.da.r, mossa.da.c)));
+  const destinazioni = new Set(mosseLegaliCorrenti.filter(mossa => stessaCasella(mossa.da, selezione))
+    .map(mossa => chiaveCasella(mossa.a.r, mossa.a.c)));
+  tavola.setAttribute("aria-busy", String(bloccata));
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const key = chiaveCasella(r, c);
+      const casella = caselleTavola.get(key);
+      const visiva = coordinateVisive(r, c);
+      casella.style.gridRow = String(visiva.r + 1);
+      casella.style.gridColumn = String(visiva.c + 1);
+      const pezzo = tavolaDisegnata[r][c];
+      const destinazione = !!mioTurno && !bloccata && destinazioni.has(key);
+      const casellaAttuale = { r, c };
+      casella.className = "scacchi-casella " + ((r + c) % 2 ? "scura" : "chiara");
+      casella.classList.toggle("selezionata", !!stessaCasella(selezione, casellaAttuale));
+      casella.classList.toggle("destinazione", destinazione && !pezzo);
+      casella.classList.toggle("destinazione-presa", destinazione && !!pezzo);
+      casella.classList.toggle("ultima-mossa", !!(stessaCasella(stato.ultimoMovimento?.da, casellaAttuale)
+        || stessaCasella(stato.ultimoMovimento?.a, casellaAttuale)));
+      casella.classList.toggle("scacco", !!(stato.scacco && pezzo?.tipo === "k" && pezzo.colore === stato.turno));
+      casella.setAttribute("aria-label", notazioneCasella(r, c) + (pezzo ? ", " + nomiPezzi[pezzo.tipo] + " " + pezzo.colore : ", vuota")
+        + (destinazione ? ", mossa disponibile" : ""));
+      casella.setAttribute("aria-selected", String(!!stessaCasella(selezione, casellaAttuale)));
+      casella.disabled = !mioTurno || bloccata || !(origini.has(key) || destinazione);
+      const segni = [];
+      if (visiva.c === 0) segni.push(["traversa", String(8 - r)]);
+      if (visiva.r === 7) segni.push(["colonna", "abcdefgh"[c]]);
+      casella.replaceChildren(...segni.map(([classe, testo]) => {
+        const segno = document.createElement("span");
+        segno.className = "scacchi-coordinata " + classe;
+        segno.textContent = testo;
+        segno.setAttribute("aria-hidden", "true");
+        return segno;
+      }));
+    }
+  }
+}
+
+function animaElemento(elemento, fotogrammi, durata) {
+  const animazione = elemento.animate(fotogrammi, { duration: durata, fill: "both" });
+  animazioniInCorso.add(animazione);
+  return animazione.finished.catch(() => {}).finally(() => animazioniInCorso.delete(animazione));
+}
+
+function animaPezzo(da, a, cavallo) {
+  const posizione = posizioniPezzi.get(chiaveCasella(da.r, da.c));
+  if (!posizione) return [];
+  const origine = coordinateVisive(da.r, da.c);
+  const arrivo = coordinateVisive(a.r, a.c);
+  const dx = arrivo.c - origine.c;
+  const dy = arrivo.r - origine.r;
+  const direzione = Math.sign(dx || -dy);
+  const trasla = (progresso, verticale = 0, orizzontale = 0) =>
+    "translate(" + (100 * (dx * progresso + orizzontale)) + "%," + (100 * (dy * progresso + verticale)) + "%)";
+  posizione.classList.add("in-movimento");
+  if (!cavallo) {
+    const durata = Math.min(420, 230 + Math.max(Math.abs(dx), Math.abs(dy)) * 25);
+    return [animaElemento(posizione, [
+      { transform: trasla(0), easing: "cubic-bezier(.22,.76,.24,1)" },
+      { transform: trasla(1, 0, direzione * .018), offset: .92 },
+      { transform: trasla(1) }
+    ], durata)];
+  }
+  // Prima carica il salto all'indietro, poi avanza in un arco e si assesta.
+  const durata = 700;
+  const corpo = posizione.querySelector(".scacchi-corpo");
+  const ombra = posizione.querySelector(".scacchi-ombra");
+  return [
+    animaElemento(posizione, [
+      { transform: trasla(0), easing: "ease-out" },
+      { transform: trasla(-.095), offset: .19, easing: "cubic-bezier(.2,.52,.35,1)" },
+      { transform: trasla(.58), offset: .52, easing: "ease-in" },
+      { transform: trasla(1.025), offset: .8, easing: "ease-out" },
+      { transform: trasla(.99), offset: .91 },
+      { transform: trasla(1) }
+    ], durata),
+    animaElemento(corpo, [
+      { transform: "translateY(0) rotate(0deg)" },
+      { transform: "translateY(4%) rotate(" + (-direzione * 12) + "deg) scale(1.04,.91)", offset: .19 },
+      { transform: "translateY(-53%) rotate(" + (direzione * 12) + "deg) scale(1.12)", offset: .49 },
+      { transform: "translateY(-15%) rotate(" + (direzione * 7) + "deg) scale(1.05)", offset: .7 },
+      { transform: "translateY(3%) rotate(" + (direzione * 3) + "deg) scale(1.03,.92)", offset: .82 },
+      { transform: "translateY(-5%) rotate(" + (-direzione * 2) + "deg)", offset: .91 },
+      { transform: "translateY(0) rotate(0deg)" }
+    ], durata),
+    animaElemento(ombra, [
+      { transform: "scale(1)", opacity: 1 },
+      { transform: "scale(.62)", opacity: .35, offset: .49 },
+      { transform: "scale(1.12)", opacity: 1, offset: .82 },
+      { transform: "scale(1)", opacity: 1 }
+    ], durata)
+  ];
+}
+
+async function animaVersoTavola(prossimo, istantanea, generazione) {
+  const mossa = prossimo.ultimoMovimento;
+  const nuovaMossa = Number(prossimo.numeroMossa) === Number(stato.numeroMossa) + 1;
+  const valida = casellaValida(mossa?.da) && casellaValida(mossa?.a);
+  if (istantanea || !tavolaDisegnata || !nuovaMossa || !valida) {
+    sincronizzaPezzi(prossimo.tavola);
+    return;
+  }
+  const pezzo = tavolaDisegnata[mossa.da.r][mossa.da.c];
+  if (pezzo && !spettatore) {
+    suonaPosa();
+    if (casellaValida(mossa.cattura)) suonaFlip(135);
+  }
+  if (pezzo && animazioniPezziAttive() && typeof Element.prototype.animate === "function") {
+    const cavallo = pezzo.tipo === "n";
+    const promesse = animaPezzo(mossa.da, mossa.a, cavallo);
+    if (casellaValida(mossa.torre?.da) && casellaValida(mossa.torre?.a)) {
+      promesse.push(...animaPezzo(mossa.torre.da, mossa.torre.a, false));
+    }
+    if (casellaValida(mossa.cattura)) {
+      const preso = posizioniPezzi.get(chiaveCasella(mossa.cattura.r, mossa.cattura.c));
+      if (preso) promesse.push(animaElemento(preso, [
+        { opacity: 1, transform: "scale(1)" },
+        { opacity: 1, transform: "scale(1)", offset: cavallo ? .72 : .62 },
+        { opacity: 0, transform: "scale(.62) translateY(-14%)" }
+      ], cavallo ? 700 : 340));
+    }
+    await Promise.all(promesse);
+  }
+  if (generazione === animazioniDaAttendereGenerazione) sincronizzaPezzi(prossimo.tavola);
+}
+
+/* =========================================================
+   PUNTEGGIO
+   ========================================================= */
+
+function renderPunteggio() {
+  const conteggio = contaPezzi(stato.tavola);
+  const coloreLocale = coloreUtenteDaPartita(stato) || "bianco";
+  for (const [lato, colore] of [["giocatore", coloreLocale], ["avversario", avversarioDi(coloreLocale)]]) {
+    const utente = giocatoriStato().find(g => g.colore === colore);
+    const etichetta = document.getElementById("punteggio-" + lato + "-etichetta");
+    const valore = document.getElementById("punteggio-" + lato + "-conteggio");
+    const simbolo = document.getElementById("punteggio-" + lato + "-colore");
+    etichetta.textContent = utente?.nome || utente?.nickname || nomeColore(colore);
+    valore.textContent = conteggio[colore] + " pezzi";
+    if (simbolo.dataset.colore !== colore) {
+      simbolo.dataset.colore = colore;
+      simbolo.replaceChildren(creaFiguraPezzo({ tipo: "k", colore }));
+    }
+  }
+}
+
+/* =========================================================
+   PANNELLO GIOCATORI / TURNO
+   ========================================================= */
+
+function creaAvatarMini(nome, avatar) {
+  if (typeof avatar === "string" && avatar.trim()) {
+    const immagine = document.createElement("img");
+    immagine.className = "avatar-mini";
+    immagine.src = avatar;
+    immagine.alt = "Avatar di " + (nome || "giocatore");
+    immagine.referrerPolicy = "no-referrer";
+    return immagine;
+  }
+  const inizialeEl = document.createElement("div");
+  inizialeEl.className = "avatar-mini";
+  inizialeEl.style.background = coloreDaNome(nome);
+  inizialeEl.textContent = iniziale(nome);
+  inizialeEl.setAttribute("aria-hidden", "true");
+  return inizialeEl;
+}
+
+function renderPannelloGiocatori() {
+  const lista = document.getElementById("lista-giocatori");
+  if (!lista) return;
+  lista.textContent = "";
+
+  const giocatori = giocatoriStato().sort((a, b) => {
+    if (a.colore === b.colore) return 0;
+    return a.colore === "bianco" ? -1 : 1;
+  });
+
+  for (const giocatore of giocatori) {
+    const attivo = stato.fase === "in_corso" && giocatore.colore === stato.turno;
+    const card = document.createElement("div");
+    card.className = "giocatore-card" + (attivo ? " attivo" : "");
+    card.appendChild(creaAvatarMini(giocatore.nome || giocatore.nickname, giocatore.avatar));
+
+    const link = document.createElement("a");
+    link.href = "/profilo-pubblico.html?nickname=" + encodeURIComponent(giocatore.nome || giocatore.nickname || "");
+    link.target = "_blank";
+    link.rel = "noopener";
+    link.style.color = "inherit";
+    link.style.textDecoration = "none";
+    link.style.flexGrow = "1";
+    link.textContent = giocatore.nome || giocatore.nickname || "Giocatore";
+    card.appendChild(link);
+
+    const elo = document.createElement("span");
+    elo.className = "stato-media";
+    elo.textContent = "ELO " + (Number.isFinite(Number(giocatore.elo)) ? Math.round(Number(giocatore.elo)) : "—");
+    elo.title = "ELO Scacchi";
+    card.appendChild(elo);
+
+    if (attivo) {
+      const countdown = document.createElement("span");
+      countdown.className = "countdown-turno";
+      countdown.id = "countdown-turno";
+      countdown.textContent = "⏱ --s";
+      card.appendChild(countdown);
+    }
+
+    const colore = document.createElement("span");
+    colore.className = "othello-colore-riga";
+    colore.textContent = nomeColore(giocatore.colore);
+    card.appendChild(colore);
+    lista.appendChild(card);
+  }
+}
+
+function aggiornaInterfacciaPartita() {
+  const rigaTurno = document.getElementById("riga-turno");
+  const messaggi = document.getElementById("messaggi-gioco");
+  const inCorso = stato.fase === "in_corso";
+  const coloreLocale = coloreUtenteDaPartita(stato);
+  const mioTurno = inCorso && !!coloreLocale && stato.turno === coloreLocale;
+
+  if (rigaTurno) {
+    if (stato.fase === "attesa_giocatori") rigaTurno.textContent = "⏳ In attesa dell'avversario…";
+    else if (stato.fase === "terminata") rigaTurno.textContent = "Partita terminata";
+    else if (spettatore && inCorso) {
+      const attivo = giocatoriStato().find(g => g.colore === stato.turno);
+      rigaTurno.textContent = attivo ? "Turno di " + attivo.nome : "Partita in corso";
+    } else rigaTurno.textContent = mioTurno ? "● È il tuo turno!" : "⏳ In attesa…";
+  }
+
+  if (messaggi) {
+    if (stato.fase === "attesa_giocatori") messaggi.textContent = "In attesa dell'avversario…";
+    else if (stato.fase === "terminata") messaggi.textContent = "Partita terminata";
+    else if (stato.scacco) messaggi.textContent = "Scacco al re " + nomeColore(stato.turno).toLowerCase();
+    else messaggi.textContent = "";
+  }
+}
+
+function render() {
+  const coloreLocale = coloreUtenteDaPartita(stato);
+  if (coloreLocale) mioColore = coloreLocale;
+  mosseLegaliCorrenti = (!spettatore && stato.fase === "in_corso" && stato.turno === coloreLocale && Array.isArray(stato.mosseLegali))
+    ? stato.mosseLegali.filter(mossa => casellaValida(mossa?.da) && casellaValida(mossa?.a)) : [];
+  renderTavola();
+  renderPunteggio();
+  renderPannelloGiocatori();
+  aggiornaInterfacciaPartita();
+  const chatVisibile = !spettatore && stato.chatAttiva !== false;
+  document.getElementById("chat-wrapper").hidden = !chatVisibile;
+  if (!chatVisibile) chiudiChat();
+}
+
+/* =========================================================
+   TIMER TURNO
+   ========================================================= */
+
+function aggiornaCountdownTurno() {
+  const el = document.getElementById("countdown-turno");
+  if (!el) return;
+  if (!stato.scadenzaTurno || stato.fase !== "in_corso") {
+    el.textContent = "⏱ --s";
+    return;
+  }
+
+  const secondi = Math.max(0, Math.ceil((Number(stato.scadenzaTurno) - Date.now()) / 1000));
+  el.textContent = "⏱ " + secondi + "s";
+  el.classList.toggle("countdown-scaduto", secondi <= 5);
+
+  const chiave = stato.numeroMossa + ":" + stato.turno;
+  if (secondi <= 10 && secondi > 0 && avvisoTempoChiave !== chiave && stato.turno === coloreUtenteDaPartita(stato)) {
+    avvisoTempoChiave = chiave;
+    suonaAvvisoTempo();
+  }
+}
+
+/* =========================================================
+   APPLICAZIONE STATO / SOCKET
+   ========================================================= */
+
+/* Applica in sequenza gli stati WebSocket e le animazioni di ogni mossa. */
+let codaAggiornamentiStatoScacchi = Promise.resolve();
+function accodaAggiornamentoStatoScacchi(azione) {
+  codaAggiornamentiStatoScacchi = codaAggiornamentiStatoScacchi
+    .then(azione)
+    .catch(errore => console.error("Scacchi: errore nell'applicazione dello stato in coda:", errore));
+  return codaAggiornamentiStatoScacchi;
+}
+
+async function applicaStatoPartita(partita, istantanea = false) {
+  if (!partita || typeof partita !== "object") return false;
+  if (!tavolaValida(partita.tavola)) {
+    mostraNotificaGioco("Stato della tavola non valido: attendo la sincronizzazione.");
+    attesaSnapshot = true;
+    return false;
+  }
+
+  const prossimo = { ...ultimoStatoRicevuto, ...partita };
+  prossimo.tavola = copiaTavola(partita.tavola);
+
+  const numeroMossaIngresso = Number.isFinite(Number(prossimo.numeroMossa))
+    ? Number(prossimo.numeroMossa)
+    : 0;
+  const numeroMossaCorrente = Number.isFinite(Number(stato.numeroMossa))
+    ? Number(stato.numeroMossa)
+    : 0;
+
+  if (!istantanea && numeroMossaIngresso < Math.max(numeroMossaCorrente, ultimoNumeroMossaAccettato)) {
+    console.warn("Scacchi: ignorato stato arretrato", {
+      ricevuto: numeroMossaIngresso,
+      corrente: numeroMossaCorrente,
+      accettato: ultimoNumeroMossaAccettato
+    });
+    return false;
+  }
+
+  ultimoStatoRicevuto = prossimo;
+  sincronizzaIdentitaDaPartita(prossimo);
+
+  const interrompeAnimazione = animazioniDaAttendere > 0;
+  const generazione = ++animazioniDaAttendereGenerazione;
+  animazioniDaAttendere = 1;
+  const precedenteNumeroMossa = numeroMossaCorrente;
+  const tavolaPrecedente = tavolaDisegnata;
+  if (istantanea || numeroMossaIngresso !== precedenteNumeroMossa || prossimo.fase !== "in_corso") {
+    selezione = null;
+    chiudiPromozione();
+  }
+  renderTavola();
+
+  let timerSicurezza = null;
+  try {
+    const animazione = animaVersoTavola(
+      prossimo,
+      istantanea || interrompeAnimazione || !tavolaPrecedente,
+      generazione
+    ).then(() => true);
+
+    const scaduto = new Promise(resolve => {
+      timerSicurezza = setTimeout(() => resolve(false), TIMEOUT_ANIMAZIONE_MS);
+    });
+
+    const finita = await Promise.race([animazione, scaduto]);
+    if (!finita && generazione === animazioniDaAttendereGenerazione) {
+      for (const effetto of animazioniInCorso) effetto.cancel();
+      sincronizzaPezzi(prossimo.tavola);
+    }
+  } catch (errore) {
+    console.error("Animazione tavola Scacchi:", errore);
+    if (generazione === animazioniDaAttendereGenerazione) {
+      sincronizzaPezzi(prossimo.tavola);
+    }
+  } finally {
+    clearTimeout(timerSicurezza);
+  }
+
+  if (generazione !== animazioniDaAttendereGenerazione) return false;
+
+  stato = prossimo;
+  ultimoStatoRicevuto = prossimo;
+  ultimoNumeroMossaAccettato = Math.max(ultimoNumeroMossaAccettato, numeroMossaIngresso);
+  sincronizzaIdentitaDaPartita(stato);
+  animazioniDaAttendere = 0;
+
+  if (istantanea || prossimo.fase !== "in_corso" || stato.numeroMossa !== precedenteNumeroMossa) {
+    mossaInAttesa = false;
+    clearTimeout(timerMossaInAttesa);
+  }
+  if (stato.numeroMossa !== precedenteNumeroMossa) {
+    avvisoTempoChiave = "";
+  }
+
+  render();
+
+  if (
+    stato.fase === "in_corso" &&
+    stato.turno === coloreUtenteDaPartita(stato) &&
+    stato.numeroMossa !== precedenteNumeroMossa
+  ) {
+    suonaTuoTurno();
+  }
+
+  if (stato.fase === "in_corso" && giocatoriStato().length >= 2 && !presentazioneSfidaGiaVista()) {
+    setTimeout(() => {
+      if (stato.fase === "in_corso") mostraPresentazioneSfida();
+    }, 260);
+  }
+
+  if (stato.fase === "terminata" || (stato.vincitoreUid !== undefined && stato.motivoFine)) {
+    mostraVittoria(stato);
+  }
+
+  return true;
+}
+
+function cliccaCasella(r, c) {
+  if (spettatore || animazioniDaAttendere || mossaInAttesa || attesaSnapshot || promozioneInAttesa) return;
+  const coloreLocale = coloreUtenteDaPartita(stato);
+  if (stato.fase !== "in_corso" || !coloreLocale || stato.turno !== coloreLocale) return;
+  const casella = { r, c };
+  const candidate = mosseLegaliCorrenti.filter(m => stessaCasella(m.da, selezione) && stessaCasella(m.a, casella));
+  if (candidate.length) {
+    if (candidate.some(mossa => mossa.promozione)) scegliPromozione(candidate, coloreLocale);
+    else inviaMossa(candidate[0]);
+    return;
+  }
+  selezione = !stessaCasella(selezione, casella) && mosseLegaliCorrenti.some(mossa => stessaCasella(mossa.da, casella))
+    ? casella : null;
+  renderTavola();
+}
+
+function scegliPromozione(mosse, colore) {
+  const dialogo = document.getElementById("scacchi-promozione");
+  const scelte = document.getElementById("scacchi-scelte-promozione");
+  const ordinati = ["q", "r", "b", "n"].map(tipo => mosse.find(mossa => mossa.promozione === tipo)).filter(Boolean);
+  promozioneInAttesa = ordinati;
+  dialogo.returnValue = "";
+  scelte.replaceChildren(...ordinati.map(mossa => {
+    const pulsante = document.createElement("button");
+    pulsante.value = mossa.promozione;
+    pulsante.append(creaFiguraPezzo({ tipo: mossa.promozione, colore }), nomiPezzi[mossa.promozione]);
+    return pulsante;
+  }));
+  dialogo.showModal();
+}
+
+function chiudiPromozione() {
+  promozioneInAttesa = null;
+  const dialogo = document.getElementById("scacchi-promozione");
+  if (dialogo.open) dialogo.close("");
+}
+
+document.getElementById("scacchi-promozione").addEventListener("close", evento => {
+  const mossa = promozioneInAttesa?.find(azione => azione.promozione === evento.currentTarget.returnValue);
+  promozioneInAttesa = null;
+  if (mossa && !attesaSnapshot && !animazioniDaAttendere && !mossaInAttesa) inviaMossa(mossa);
+});
+
+function inviaMossa(mossa) {
+  const { da, a, promozione } = mossa;
+  if (!inviaSocket({ tipo: "scacchi_mossa", partitaId: stato.id || partitaId, da, a, promozione })) {
+    mostraNotificaGioco("Connessione assente: la mossa non è stata inviata.");
+    return;
+  }
+  mossaInAttesa = true;
+  clearTimeout(timerMossaInAttesa);
+  timerMossaInAttesa = setTimeout(() => {
+    if (!mossaInAttesa) return;
+    mostraNotificaGioco("Conferma della mossa in ritardo: sincronizzazione in corso…");
+    attesaSnapshot = true;
+    if (!inviaSocket({ tipo: "scacchi_entra", partitaId: stato.id || partitaId, stanza })) socket?.close();
+  }, 8000);
+  renderTavola();
+}
+
+/* =========================================================
+   VITTORIA
+   ========================================================= */
+
+function mostraVittoria(dati = {}) {
+  if (vittoriaMostrata) return;
+  vittoriaMostrata = true;
+  chiudiPresentazioneSfida();
+  impostaMediaPartitaAttiva(false);
+  const vincitoreUid = dati.vincitoreUid || stato.vincitoreUid || null;
+  const vincitore = vincitoreUid ? (stato.giocatori?.[vincitoreUid] || null) : null;
+  if (spettatore) { spettatore.esito(vincitore?.nome || vincitore?.nickname); return; }
+  suonaVittoria();
+  const testo = document.getElementById("testo-vincitore");
+  if (testo) {
+    if (!vincitoreUid) testo.textContent = "Partita terminata in patta";
+    else if (vincitoreUid === mioUid) testo.textContent = "Hai vinto!";
+    else testo.textContent = "Ha vinto " + (vincitore?.nome || vincitore?.nickname || "l'avversario");
+    const motivo = document.getElementById("scacchi-motivo-fine");
+    if (motivo) motivo.textContent = dati.motivoFine || "";
+  }
+  const overlay = document.getElementById("overlay-vittoria");
+  if (overlay) {
+    overlay.classList.add("aperto");
+    const bottone = overlay.querySelector("button");
+    if (bottone) bottone.focus();
+  }
+}
+
+/* =========================================================
+   CHAT
+   ========================================================= */
+
+function aggiornaBadgeChatPartita() {
+  const badge = document.getElementById("badge-chat-partita");
+  if (!badge) return;
+  if (messaggiChatNonLetti > 0) {
+    badge.style.display = "flex";
+    badge.textContent = messaggiChatNonLetti > 9 ? "9+" : String(messaggiChatNonLetti);
+  } else {
+    badge.style.display = "none";
+  }
+}
+
+function aggiungiMessaggioChatPartita(nome, testo) {
+  suonaMessaggioChat();
+  const box = document.getElementById("chat-messaggi");
+  if (!box) return;
+  const riga = document.createElement("div");
+  riga.className = "chat-msg";
+  const autore = document.createElement("b");
+  autore.textContent = (nome || "Giocatore") + ":";
+  riga.append(autore, document.createTextNode(" " + (testo || "")));
+  box.appendChild(riga);
+  box.scrollTop = box.scrollHeight;
+
+  const pannelloChat = document.getElementById("pannello-chat");
+  if (pannelloChat && pannelloChat.classList.contains("nascosto")) {
+    messaggiChatNonLetti++;
+    aggiornaBadgeChatPartita();
+  }
+}
+
+function inviaChatPartita() {
+  if (spettatore || stato.chatAttiva === false) return;
+  const input = document.getElementById("chat-input");
+  if (!input) return;
+  const testo = input.value.trim();
+  if (!testo) return;
+  if (inviaSocket({ tipo: "scacchi_chat", partitaId: stato.id || partitaId, messaggio: testo })) input.value = "";
+  else mostraNotificaGioco("Connessione assente: il messaggio non è stato inviato.");
+}
+
+/* =========================================================
+   MENU / PANNELLI
+   ========================================================= */
+
+const chiudiMenu = window.MenuPartita.chiudi;
+
+function chiudiPannelloGiocatori() {
+  document.getElementById("pannello-giocatori")?.classList.remove("aperto");
+  document.getElementById("backdrop-giocatori")?.classList.remove("aperto");
+  const bottone = document.getElementById("btn-giocatori");
+  if (bottone) {
+    bottone.setAttribute("aria-expanded", "false");
+    bottone.setAttribute("aria-label", "Mostra giocatori");
+  }
+}
+
+function chiudiChat() {
+  document.getElementById("pannello-chat")?.classList.add("nascosto");
+  const bottone = document.getElementById("btn-chat");
+  if (bottone) {
+    bottone.setAttribute("aria-expanded", "false");
+    bottone.setAttribute("aria-label", "Apri chat");
+  }
+}
+
+function urlLobby() {
+  return stanza ? "lobbyscacchi.html?stanza=" + encodeURIComponent(stanza) : "lobbyscacchi.html";
+}
+let rientroLobbyInCorso = false;
+function tornaAllaLobby() {
+  if (rientroLobbyInCorso) return;
+  rientroLobbyInCorso = true;
+  paginaInChiusura = true;
+  window.rientraInLobby(urlLobby(), spettatore ? null : socket, inviaSocket);
+}
+
+let risolviConfermaGioco = null;
+function chiudiConfermaGioco(esito) {
+  const overlay = document.getElementById("overlay-conferma-gioco");
+  if (overlay) {
+    overlay.classList.remove("aperto");
+    overlay.setAttribute("aria-hidden", "true");
+  }
+  const risolvi = risolviConfermaGioco;
+  risolviConfermaGioco = null;
+  if (typeof risolvi === "function") risolvi(!!esito);
+}
+
+function chiediConfermaGioco({ titolo, messaggio, testoConferma } = {}) {
+  const overlay = document.getElementById("overlay-conferma-gioco");
+  const titoloEl = document.getElementById("titolo-conferma-gioco");
+  const testoEl = document.getElementById("testo-conferma-gioco");
+  const annulla = document.getElementById("btn-annulla-conferma-gioco");
+  const conferma = document.getElementById("btn-conferma-gioco");
+  if (!overlay || !annulla || !conferma) return Promise.resolve(false);
+
+  if (risolviConfermaGioco) chiudiConfermaGioco(false);
+  if (titoloEl) titoloEl.textContent = titolo || "Confermare l'operazione?";
+  if (testoEl) testoEl.textContent = messaggio || "Vuoi continuare?";
+  conferma.textContent = testoConferma || "Conferma";
+  overlay.classList.add("aperto");
+  overlay.setAttribute("aria-hidden", "false");
+
+  return new Promise(resolve => {
+    risolviConfermaGioco = resolve;
+    annulla.onclick = () => chiudiConfermaGioco(false);
+    conferma.onclick = () => chiudiConfermaGioco(true);
+    overlay.onclick = evento => {
+      if (evento.target === overlay) chiudiConfermaGioco(false);
+    };
+    annulla.focus();
+  });
+}
+
+async function abbandonaPartita() {
+  chiudiMenu();
+  const confermato = await chiediConfermaGioco({
+    titolo: "Abbandonare la partita?",
+    messaggio: "Uscirai dalla partita e tornerai alla Lobby.",
+    testoConferma: "Abbandona"
+  });
+  if (!confermato) return;
+  if (!inviaSocket({ tipo: "scacchi_abbandona", partitaId: stato.id || partitaId })) {
+    mostraNotificaGioco("Connessione assente: attendi la riconnessione prima di abbandonare la partita.");
+    return;
+  }
+  paginaInChiusura = true;
+  setTimeout(tornaAllaLobby, 120);
+}
+
+/* =========================================================
+   WEBSOCKET SCACCHI
+   ========================================================= */
+
+function gestisciMessaggioSocket(dati) {
+  if (!dati || typeof dati !== "object") return;
+
+  if (spettatore?.gestisci(dati)) {
+    paginaInChiusura = true;
+    return;
+  }
+  aggiornaNomiPartecipanti(dati);
+  if (typeof dati.mediaAttiva === "boolean") impostaMediaPartitaAttiva(dati.mediaAttiva);
+
+  if (dati.tipo === "scacchi_identita") {
+    mioUid = dati.uid || mioUid;
+    if (coloreValido(dati.colore) && !coloreUtenteDaPartita(stato)) {
+      mioColore = dati.colore;
+      tavolaDisegnata = null;
+      render();
+    }
+    return;
+  }
+
+  if (dati.tipo === "scacchi_stato") {
+    if (dati.uid) mioUid = dati.uid;
+    if (!dati.partita || !tavolaValida(dati.partita.tavola)) return;
+
+    const istantanea = attesaSnapshot;
+    attesaSnapshot = false;
+    accodaAggiornamentoStatoScacchi(() =>
+      applicaStatoPartita(dati.partita, istantanea).then(ok => {
+        if (!ok && istantanea) attesaSnapshot = true;
+        if (ok) segnalaStatoInizialeRicevuto();
+      })
+    );
+    return;
+  }
+
+  if (dati.tipo === "scacchi_chat") {
+    aggiungiMessaggioChatPartita(dati.nickname || "Giocatore", dati.messaggio || "");
+    return;
+  }
+
+  if (dati.tipo === "scacchi_fine") {
+    const conclusa = { ...(dati.partita || {}), fase: "terminata" };
+    if (Object.prototype.hasOwnProperty.call(dati, "vincitoreUid")) conclusa.vincitoreUid = dati.vincitoreUid;
+    if (dati.motivo) conclusa.motivoFine = dati.motivo;
+    accodaAggiornamentoStatoScacchi(() => applicaStatoPartita(conclusa));
+    return;
+  }
+
+  if (dati.tipo === "scacchi_rivincita") {
+    mostraNotificaGioco(dati.messaggio || "L'avversario chiede una rivincita.");
+    return;
+  }
+
+  if (dati.tipo === "statoMedia") { gestisciStatoMedia(dati); return; }
+  if (dati.tipo === "configMedia") { aggiornaConfigurazioneIce(dati.configurazioneIce); return; }
+  if (dati.tipo === "webrtc-offer") { gestisciPromessaWebRtc(gestisciOffertaRicevuta(dati.mittenteUid, dati.sdp)); return; }
+  if (dati.tipo === "webrtc-answer") { gestisciPromessaWebRtc(gestisciRispostaRicevuta(dati.mittenteUid, dati.sdp)); return; }
+  if (dati.tipo === "webrtc-ice-candidate") { gestisciPromessaWebRtc(gestisciCandidatoRicevuto(dati.mittenteUid, dati.candidate)); return; }
+
+  if (dati.tipo === "scacchi_errore") {
+    mossaInAttesa = false;
+    clearTimeout(timerMossaInAttesa);
+    attesaSnapshot = true;
+    renderTavola();
+    const errore = dati.errore || "Operazione non consentita.";
+    mostraNotificaGioco(errore);
+
+    inviaSocket({ tipo: "scacchi_entra", partitaId: stato.id || partitaId, stanza });
+
+    const minuscolo = errore.toLowerCase();
+    if (minuscolo.includes("non trovata") || minuscolo.includes("non fai parte")) setTimeout(tornaAllaLobby, 2200);
+    return;
+  }
+
+  if (dati.tipo === "sessioneScaduta") {
+    paginaInChiusura = true;
+    window.location.href = ORIGINE_SERVER + "/login.html?redirect=" + encodeURIComponent(window.location.href);
+  }
+}
+
+function connetti() {
+  clearTimeout(timerRiconnessione);
+  if (paginaInChiusura) return;
+  if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) return;
+
+  const q = new URLSearchParams({ gioco: "scacchi", stanza });
+  if (spettatore) q.set("spettatore", "1");
+  const token = tokenAutenticazione();
+  if (token) q.set("token", token);
+  if (partitaId) q.set("partita", partitaId);
+
+  let ws;
+  try {
+    ws = new WebSocket(URL_WEBSOCKET + "/?" + q.toString());
+    socket = ws;
+  } catch (errore) {
+    console.error("Apertura WebSocket non riuscita:", errore);
+    impostaStatoConnessione(true);
+    timerRiconnessione = setTimeout(connetti, 1800);
+    return;
+  }
+
+  ws.onopen = () => {
+    attesaSnapshot = true;
+    mossaInAttesa = false;
+    clearTimeout(timerMossaInAttesa);
+    impostaStatoConnessione(false);
+    aggiornaCaricamento("Sincronizzazione partita…", 70);
+
+    if (socket === ws) {
+      inviaSocket({ tipo: spettatore ? "spettatore_entra" : "scacchi_entra", partitaId: partitaId || null, stanza });
+    }
+  };
+
+  ws.onmessage = evento => {
+    if (socket !== ws) return;
+
+    let dati;
+    try {
+      dati = JSON.parse(evento.data);
+    } catch (errore) {
+      console.error("Messaggio WebSocket non valido:", errore);
+      return;
+    }
+    gestisciMessaggioSocket(dati);
+  };
+
+  ws.onerror = () => {};
+
+  ws.onclose = () => {
+    if (socket !== ws) return;
+
+    socket = null;
+    if (paginaInChiusura) return;
+
+    attesaSnapshot = true;
+    mossaInAttesa = false;
+    selezione = null;
+    chiudiPromozione();
+    clearTimeout(timerMossaInAttesa);
+    impostaStatoConnessione(true);
+
+    const messaggi = document.getElementById("messaggi-gioco");
+    if (messaggi) messaggi.textContent = "Connessione persa — riconnessione in corso…";
+
+    clearTimeout(timerRiconnessione);
+    timerRiconnessione = setTimeout(connetti, 1800);
+  };
+}
+
+async function avvia() {
+  inizializzaGestioneLayout();
+  aggiornaTestoBottoneSuoni();
+  render();
+
+  if (!partitaId) {
+    aggiornaCaricamento("Partita non specificata", 100);
+    terminaCaricamento("Partita non specificata");
+    mostraNotificaGioco("Manca l'identificativo della partita. Ritorno alla lobby…");
+    setTimeout(tornaAllaLobby, 1800);
+    return;
+  }
+
+  timerMassimoCaricamento = setTimeout(() => {
+    const overlay = document.getElementById("overlay-caricamento");
+    if (overlay && !overlay.classList.contains("caricamento-finito")) {
+      document.body.classList.remove("caricamento-in-corso");
+      overlay.classList.add("caricamento-finito");
+      mostraNotificaGioco("Il caricamento sta richiedendo più tempo del previsto. La connessione continuerà in automatico.");
+    }
+  }, 20000);
+
+  aggiornaCaricamento("Verifica accesso…", 25);
+  try {
+    const token = tokenAutenticazione();
+    const opzioni = {
+      credentials: "include",
+      cache: "no-store",
+      headers: token ? { Authorization: "Bearer " + token } : {}
+    };
+    let risposta = await fetch(ORIGINE_SERVER + "/api/me-menu", opzioni);
+    if (token && (risposta.status === 401 || risposta.status === 403)) {
+      risposta = await fetch(ORIGINE_SERVER + "/api/me-menu", { credentials: "include", cache: "no-store" });
+      if (risposta.ok) {
+        try { if (sessionStorage.getItem(CHIAVE_TOKEN_AUTH) === token) sessionStorage.removeItem(CHIAVE_TOKEN_AUTH); } catch (_) {}
+      }
+    }
+    if (risposta.status === 401 || risposta.status === 403) {
+      paginaInChiusura = true;
+      window.location.href = ORIGINE_SERVER + "/login.html?redirect=" + encodeURIComponent(window.location.href);
+      return;
+    }
+    if (risposta.ok) {
+      const profilo = await risposta.json();
+      if (profilo && profilo.uid) mioUid = profilo.uid;
+      if (profilo?.uid && !spettatore) window.MusicaYouTube?.avvia(profilo.preferenze, ORIGINE_SERVER, tokenAutenticazione);
+    }
+  } catch (errore) {
+    console.warn("Verifica HTTP non disponibile, provo il WebSocket:", errore);
+  }
+
+  aggiornaCaricamento("Connessione alla partita…", 55);
+  connetti();
+}
+
+/* =========================================================
+   EVENTI UI
+   ========================================================= */
+
+window.MenuPartita.inizializza(() => {
+  chiudiChat();
+  chiudiPannelloGiocatori();
+});
+
+const btnGiocatori = document.getElementById("btn-giocatori");
+if (btnGiocatori) {
+  btnGiocatori.onclick = evento => {
+    evento.stopPropagation();
+    const pannello = document.getElementById("pannello-giocatori");
+    if (!pannello) return;
+    const staPerAprirsi = !pannello.classList.contains("aperto");
+    if (staPerAprirsi) {
+      chiudiMenu();
+      chiudiChat();
+    }
+    const aperto = pannello.classList.toggle("aperto");
+    document.getElementById("backdrop-giocatori")?.classList.toggle("aperto", aperto);
+    btnGiocatori.setAttribute("aria-expanded", aperto ? "true" : "false");
+    btnGiocatori.setAttribute("aria-label", aperto ? "Nascondi giocatori" : "Mostra giocatori");
+  };
+}
+
+document.getElementById("backdrop-giocatori")?.addEventListener("click", chiudiPannelloGiocatori);
+
+const btnChat = document.getElementById("btn-chat");
+if (btnChat) {
+  btnChat.onclick = evento => {
+    evento.stopPropagation();
+    const pannello = document.getElementById("pannello-chat");
+    if (!pannello) return;
+    const staPerAprirsi = pannello.classList.contains("nascosto");
+    if (staPerAprirsi) {
+      chiudiMenu();
+      chiudiPannelloGiocatori();
+    }
+    const aperto = pannello.classList.toggle("nascosto") === false;
+    btnChat.setAttribute("aria-expanded", aperto ? "true" : "false");
+    btnChat.setAttribute("aria-label", aperto ? "Chiudi chat" : "Apri chat");
+    if (aperto) {
+      messaggiChatNonLetti = 0;
+      aggiornaBadgeChatPartita();
+      setTimeout(() => document.getElementById("chat-input")?.focus(), 0);
+    }
+  };
+}
+
+document.getElementById("chat-input")?.addEventListener("keydown", evento => {
+  if (evento.key === "Enter" && !evento.isComposing) {
+    evento.preventDefault();
+    inviaChatPartita();
+  }
+});
+
+document.addEventListener("keydown", evento => {
+  if (evento.key !== "Escape") return;
+  chiudiMenu(true);
+  chiudiChat();
+  chiudiPannelloGiocatori();
+  if (risolviConfermaGioco) chiudiConfermaGioco(false);
+});
+
+window.addEventListener("beforeunload", () => {
+  pulisciMediaPagina();
+});
+
+aggiornaInterfacciaMedia(mediaRichiestaDaLobby ? "Verifica impostazioni del tavolo…" : "Non attiva", false);
+setInterval(aggiornaCountdownTurno, 250);
+avvia();

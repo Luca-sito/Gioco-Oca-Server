@@ -1,0 +1,208 @@
+/* Finitura, profondità e caselle riprese dalla damiera della Dama. */
+:root { --bordo-damiera: 9px; }
+
+#scacchi-tavola {
+  position: relative;
+  display: grid;
+  grid-template: repeat(8, minmax(0, 1fr)) / repeat(8, minmax(0, 1fr));
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  border: var(--bordo-damiera) solid #4a3020;
+  border-radius: 5px;
+  background: #4a3020;
+  box-shadow:
+    0 0 0 1px #94704a,
+    0 3px 0 2px #241b15,
+    0 8px 0 1px #1b1713,
+    0 18px 35px rgba(0, 0, 0, .5),
+    inset 0 0 0 1px rgba(255, 255, 255, .25);
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+.scacchi-casella {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  appearance: none;
+  color: #553722;
+}
+
+.scacchi-casella.chiara {
+  background:
+    repeating-linear-gradient(98deg, transparent 0 7px, rgba(125, 83, 38, .025) 8px 9px),
+    linear-gradient(125deg, #f0e2c2, #dfc99f);
+}
+
+.scacchi-casella.scura {
+  color: #f8e3b7;
+  background:
+    repeating-linear-gradient(98deg, transparent 0 8px, rgba(255, 212, 151, .035) 9px 10px),
+    linear-gradient(125deg, #684735, #493021);
+}
+
+.scacchi-casella:not(:disabled) { cursor: pointer; }
+
+@media (hover: hover) {
+  .scacchi-casella:not(:disabled):hover { filter: brightness(1.09); }
+}
+
+.scacchi-coordinata {
+  position: absolute;
+  font-size: clamp(9px, 1.3vmin, 14px);
+  font-weight: 800;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.scacchi-coordinata.traversa { top: 4%; left: 5%; }
+.scacchi-coordinata.colonna { right: 5%; bottom: 4%; }
+
+.scacchi-casella.ultima-mossa { box-shadow: inset 0 0 0 2px #f5c969b5; }
+.scacchi-casella.selezionata { box-shadow: inset 0 0 0 3px #ffd769; }
+.scacchi-casella.scacco { box-shadow: inset 0 0 0 3px #c3342f, inset 0 0 20px #ef483dbb; }
+
+.scacchi-casella:focus-visible {
+  z-index: 3;
+  outline: 3px solid #fff;
+  outline-offset: -5px;
+}
+
+.scacchi-casella.destinazione::after {
+  content: "";
+  width: 22%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #ffe28b;
+  box-shadow: 0 0 0 4px #ffcf4d61, 0 2px 4px #1b150b;
+  pointer-events: none;
+}
+
+.scacchi-casella.destinazione-presa::after {
+  content: "";
+  position: absolute;
+  inset: 5%;
+  border: 3px solid #ffe28b;
+  border-radius: 25%;
+  pointer-events: none;
+}
+
+#scacchi-strato-pezzi {
+  position: absolute;
+  z-index: 4;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.scacchi-posizione {
+  position: absolute;
+  width: 12.5%;
+  height: 12.5%;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.scacchi-posizione.in-movimento { z-index: 2; }
+
+.scacchi-ombra {
+  position: absolute;
+  inset: 73% 16% 7%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, #1d0d0bbe 10%, #1d0d0b60 49%, transparent 72%);
+  transform-origin: center;
+}
+
+.scacchi-corpo {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 92%;
+  height: 108%;
+  transform-origin: 50% 83%;
+}
+
+.scacchi-figura {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 1px 1px #1e0e09ac);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.scacchi-punteggio-colore {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 26px;
+  flex: none;
+}
+
+.scacchi-punteggio-colore .scacchi-figura { filter: none; }
+#area-tabellone .othello-conteggio { min-width: 0; font-size: clamp(13px, 2.2vmin, 20px); }
+#chat-wrapper[hidden] { display: none !important; }
+
+#scacchi-promozione {
+  width: min(380px, calc(100vw - 32px));
+  padding: 20px;
+  color: #f5e8cf;
+  background: #142637;
+  border: 1px solid #776343;
+  border-radius: 15px;
+  box-shadow: 0 16px 60px #070d16c0;
+}
+
+#scacchi-promozione::backdrop { background: #070d16b0; }
+#scacchi-promozione h2 { margin: 0 0 8px; font-size: 20px; }
+#scacchi-promozione p { margin: 0 0 14px; color: #d7c9ae; font-size: 14px; }
+
+#scacchi-scelte-promozione {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+}
+
+#scacchi-scelte-promozione button {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 2px;
+  padding: 5px 1px 7px;
+  min-height: 68px;
+  color: #271b11;
+  background: #eed9a9;
+  border: 1px solid #a48852;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+#scacchi-scelte-promozione .scacchi-figura { width: 38px; height: 42px; }
+
+.scacchi-annulla-promozione {
+  display: block;
+  margin: 12px 0 0 auto;
+  padding: 8px 12px;
+  min-height: 38px;
+  color: inherit;
+  border: 1px solid #8a7c62;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+}
+
+@media (max-width: 600px) {
+  :root { --bordo-damiera: 5px; }
+}
